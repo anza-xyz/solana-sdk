@@ -1,4 +1,15 @@
-# solana-sdk
-Rust SDK for the Solana blockchain, used by on-chain program developers and the Agave validator
+<p align="center">
+  <a href="https://solana.com">
+    <img alt="Solana" src="https://i.imgur.com/uBVzyX3.png" width="250" />
+  </a>
+</p>
 
-NOTE: This repository is currently a work in progress, and will contain everything within https://github.com/anza-xyz/agave/tree/master/sdk once the v2.2 branch is cut.
+# Solana SDK
+
+Use the Solana SDK Crate to write client side applications in Rust.  If writing on-chain programs, use the [Solana Program Crate](https://crates.io/crates/solana-program) instead.
+
+More information about Solana is available in the [Solana documentation](https://docs.solana.com/).
+
+The [Solana Program Library](https://github.com/solana-labs/solana-program-library) provides examples of how to use this crate.
+
+Still have questions?  Ask us on [Discord](https://discordapp.com/invite/pquxPsq)
