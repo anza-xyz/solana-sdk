@@ -1,10 +1,6 @@
 //! Optional pubkeys that can be used a `Pod`s
-use {
-    bytemuck::{Pod, Zeroable},
-    solana_program::{program_error::ProgramError, program_option::COption, pubkey::Pubkey},
-    solana_zk_token_sdk::zk_token_elgamal::pod::ElGamalPubkey,
-};
-
+#[cfg(feature = "borsh")]
+use borsh::{BorshDeserialize, BorshSchema, BorshSerialize};
 #[cfg(feature = "serde-traits")]
 use {
     base64::{prelude::BASE64_STANDARD, Engine},
@@ -12,12 +8,14 @@ use {
     serde::{Deserialize, Deserializer, Serialize, Serializer},
     std::{convert::TryFrom, fmt, str::FromStr},
 };
+use {
+    bytemuck::{Pod, Zeroable},
+    solana_program::{program_error::ProgramError, program_option::COption, pubkey::Pubkey},
+    solana_zk_token_sdk::zk_token_elgamal::pod::ElGamalPubkey,
+};
 
-#[cfg(feature = "borsh")]
-use borsh::{BorshDeserialize, BorshSchema, BorshSerialize};
-
-/// A Pubkey that encodes `None` as all `0`, meant to be usable as a Pod type, similar to all
-/// NonZero* number types from the bytemuck library.
+/// A Pubkey that encodes `None` as all `0`, meant to be usable as a Pod type,
+/// similar to all NonZero* number types from the bytemuck library.
 #[cfg_attr(
     feature = "borsh",
     derive(BorshDeserialize, BorshSerialize, BorshSchema)
@@ -129,13 +127,14 @@ impl<'de> Deserialize<'de> for OptionalNonZeroPubkey {
     }
 }
 
-/// An ElGamalPubkey that encodes `None` as all `0`, meant to be usable as a Pod type.
+/// An ElGamalPubkey that encodes `None` as all `0`, meant to be usable as a Pod
+/// type.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Pod, Zeroable)]
 #[repr(transparent)]
 pub struct OptionalNonZeroElGamalPubkey(ElGamalPubkey);
 impl OptionalNonZeroElGamalPubkey {
-    /// Checks equality between an OptionalNonZeroElGamalPubkey and an ElGamalPubkey when
-    /// interpreted as bytes.
+    /// Checks equality between an OptionalNonZeroElGamalPubkey and an
+    /// ElGamalPubkey when interpreted as bytes.
     pub fn equals(&self, other: &ElGamalPubkey) -> bool {
         &self.0 == other
     }

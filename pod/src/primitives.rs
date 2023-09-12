@@ -1,11 +1,9 @@
 //! primitive types that can be used in `Pod`s
-use bytemuck::{Pod, Zeroable};
-
-#[cfg(feature = "serde-traits")]
-use serde::{Deserialize, Serialize};
-
 #[cfg(feature = "borsh")]
 use borsh::{BorshDeserialize, BorshSchema, BorshSerialize};
+use bytemuck::{Pod, Zeroable};
+#[cfg(feature = "serde-traits")]
+use serde::{Deserialize, Serialize};
 
 /// The standard `bool` is not a `Pod`, define a replacement that is
 #[cfg_attr(feature = "serde-traits", derive(Serialize, Deserialize))]
@@ -38,7 +36,8 @@ impl From<PodBool> for bool {
     }
 }
 
-/// Simple macro for implementing conversion functions between Pod* ints and standard ints.
+/// Simple macro for implementing conversion functions between Pod* ints and
+/// standard ints.
 ///
 /// The standard int types can cause alignment issues when placed in a `Pod`,
 /// so these replacements are usable in all `Pod`s.
