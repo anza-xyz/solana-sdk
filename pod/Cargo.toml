@@ -14,14 +14,14 @@ borsh = ["dep:borsh"]
 [dependencies]
 base64 = { version = "0.21.7", optional = true }
 borsh = { version = "0.10", optional = true }
-bytemuck = { version = "1.14.1" }
-serde = { version = "1.0.196", optional = true }
+bytemuck = { version = "1.14.3" }
+serde = { version = "1.0.197", optional = true }
 solana-program = ">=1.17.17,<=2"
 solana-zk-token-sdk = ">=1.17.17,<=2"
 spl-program-error = { version = "0.3", path = "../program-error" }
 
 [dev-dependencies]
-serde_json = "1.0.113"
+serde_json = "1.0.114"
 
 [lib]
 crate-type = ["cdylib", "lib"]
