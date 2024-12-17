@@ -1,4 +1,4 @@
-//! wrappers for bytemuck functions
+//! wrappers for `bytemuck` functions
 
 use {bytemuck::Pod, solana_program_error::ProgramError};
 

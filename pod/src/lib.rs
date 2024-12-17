@@ -1,4 +1,4 @@
-//! Crate containing `Pod` types and `bytemuck` utils used in SPL
+//! Crate containing `Pod` types and `bytemuck` utilities used in SPL
 
 pub mod bytemuck;
 pub mod error;
