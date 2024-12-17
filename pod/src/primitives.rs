@@ -41,10 +41,10 @@ impl From<PodBool> for bool {
     }
 }
 
-/// Simple macro for implementing conversion functions between Pod* ints and
-/// standard ints.
+/// Simple macro for implementing conversion functions between Pod* integers and
+/// standard integers.
 ///
-/// The standard int types can cause alignment issues when placed in a `Pod`,
+/// The standard integer types can cause alignment issues when placed in a `Pod`,
 /// so these replacements are usable in all `Pod`s.
 #[macro_export]
 macro_rules! impl_int_conversion {
