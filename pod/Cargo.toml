@@ -12,12 +12,12 @@ serde-traits = ["dep:serde"]
 borsh = ["dep:borsh"]
 
 [dependencies]
-borsh = { version = "1.5.3", optional = true }
-bytemuck = { version = "1.20.0" }
-bytemuck_derive = { version = "1.8.0" }
+borsh = { version = "1.5.5", optional = true }
+bytemuck = { version = "1.22.0" }
+bytemuck_derive = { version = "1.8.1" }
 num-derive = "0.4"
 num-traits = "0.2"
-serde = { version = "1.0.216", optional = true }
+serde = { version = "1.0.218", optional = true }
 solana-decode-error = "2.1.0"
 solana-msg = "2.1.0"
 solana-program-error = "2.1.0"
@@ -27,7 +27,7 @@ solana-zk-sdk = "2.1.0"
 thiserror = "2.0"
 
 [dev-dependencies]
-serde_json = "1.0.133"
+serde_json = "1.0.140"
 base64 = { version = "0.22.1" }
 
 [lib]
