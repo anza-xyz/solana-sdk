@@ -104,9 +104,7 @@ impl StakeHistoryGetEntry for StakeHistory {
 
 #[cfg(test)]
 mod tests {
-    use solana_sysvar_id::SysvarId;
-
-    use super::*;
+    use {super::*, solana_sysvar_id::SysvarId};
 
     #[test]
     fn test_stake_history() {
