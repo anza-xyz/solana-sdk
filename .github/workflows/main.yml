@@ -1,4 +1,4 @@
-name: SDK
+name: Main
 
 on:
   push:
@@ -23,13 +23,13 @@ jobs:
           cargo-cache-fallback-key: cargo-stable
 
       - name: Check repo is in porcelain state
-        run: ./sdk/scripts/check-porcelain.sh
+        run: ./scripts/check-porcelain.sh
 
       - name: Check code nits
-        run: ./sdk/scripts/check-nits.sh
+        run: ./scripts/check-nits.sh
 
       - name: Run ShellCheck
-        run: ./sdk/scripts/check-shell.sh
+        run: ./scripts/check-shell.sh
 
   check-crates:
     name: Check crate ownership
@@ -63,7 +63,7 @@ jobs:
           echo "COMMIT_RANGE=${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }}" >> $GITHUB_ENV
 
       - name: Check crate ownership
-        run: ./sdk/scripts/check-crates.sh
+        run: ./scripts/check-crates.sh
 
   format:
     name: Format
@@ -81,7 +81,7 @@ jobs:
           cargo-cache-fallback-key: cargo-nightly
 
       - name: Check formatting
-        run: ./sdk/scripts/check-fmt.sh
+        run: ./scripts/check-fmt.sh
 
   check:
     name: Cargo check
@@ -99,7 +99,7 @@ jobs:
           cargo-cache-fallback-key: cargo-nightly
 
       - name: Run checks
-        run: ./sdk/scripts/check-nightly.sh
+        run: ./scripts/check-nightly.sh
 
   clippy:
     name: Clippy
@@ -134,7 +134,7 @@ jobs:
           echo "OPENSSL_INCLUDE_DIR=C:\OpenSSL\include" >> $GITHUB_ENV
 
       - name: Run clippy
-        run: ./sdk/scripts/check-clippy.sh
+        run: ./scripts/check-clippy.sh
 
   audit:
     name: Audit
@@ -156,7 +156,7 @@ jobs:
           tool: cargo-audit
 
       - name: Run cargo-audit
-        run: ./sdk/scripts/check-audit.sh
+        run: ./scripts/check-audit.sh
 
   semver:
     if: false # enable after 2.2.0 is cut
@@ -180,7 +180,7 @@ jobs:
           tool: cargo-semver-checks
 
       - name: Run semver checks
-        run: ./sdk/scripts/check-semver.sh
+        run: ./scripts/check-semver.sh
 
   hack:
     name: Cargo hack check
@@ -203,7 +203,7 @@ jobs:
           tool: cargo-hack
 
       - name: Run hack check
-        run: ./sdk/scripts/check-hack.sh
+        run: ./scripts/check-hack.sh
 
   check-crate-order-for-publishing:
     name: Check crate dependencies for publishing
@@ -214,7 +214,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Check crates for publishing
-        run: ./sdk/scripts/order-crates-for-publishing.py
+        run: ./scripts/order-crates-for-publishing.py
 
   sort:
     name: Check sorting of crate dependencies
@@ -237,7 +237,7 @@ jobs:
           tool: cargo-sort
 
       - name: Check toml ordering
-        run: ./sdk/scripts/check-sort.sh
+        run: ./scripts/check-sort.sh
 
   check-dcou:
     name: Check declarations of `dev-context-only-utils` feature
@@ -255,7 +255,7 @@ jobs:
           cargo-cache-fallback-key: cargo-nightly
 
       - name: Check dev-context-only-utils declarations
-        run: ./sdk/scripts/check-dev-context-only-utils.sh
+        run: ./scripts/check-dev-context-only-utils.sh
 
   miri:
     name: Test miri
@@ -273,7 +273,7 @@ jobs:
           cargo-cache-fallback-key: cargo-nightly
 
       - name: Run miri tests
-        run: ./sdk/scripts/test-miri.sh
+        run: ./scripts/test-miri.sh
 
   frozen-abi:
     name: Run frozen-abi tests
@@ -291,7 +291,7 @@ jobs:
           cargo-cache-fallback-key: cargo-nightly
 
       - name: Run frozen-abi tests
-        run: ./sdk/scripts/test-frozen-abi.sh
+        run: ./scripts/test-frozen-abi.sh
 
   test-wasm:
     name: Build wasm packages and run tests
@@ -319,7 +319,7 @@ jobs:
           tool: wasm-pack
 
       - name: Build and test wasm packages
-        run: ./sdk/scripts/test-wasm.sh
+        run: ./scripts/test-wasm.sh
 
   test-coverage:
     name: Run coverage tests
@@ -342,7 +342,7 @@ jobs:
           tool: grcov
 
       - name: Run coverage tests
-        run: ./sdk/scripts/test-coverage.sh
+        run: ./scripts/test-coverage.sh
 
   test-stable:
     name: Run tests on stable toolchain
@@ -360,7 +360,7 @@ jobs:
           cargo-cache-fallback-key: cargo-stable
 
       - name: Run tests
-        run: ./sdk/scripts/test-stable.sh
+        run: ./scripts/test-stable.sh
 
   test-bench:
     name: Run benches
@@ -378,4 +378,4 @@ jobs:
           cargo-cache-fallback-key: cargo-nightly
 
       - name: Run benches
-        run: ./sdk/scripts/test-bench.sh
+        run: ./scripts/test-bench.sh

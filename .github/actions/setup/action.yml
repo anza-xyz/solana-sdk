@@ -61,7 +61,7 @@ runs:
     - name: Set Environment Variables
       shell: bash
       run: |
-        source ./sdk/scripts/rust-version.sh
+        source ./scripts/rust-version.sh
         echo "RUST_STABLE=${rust_stable}" >> $GITHUB_ENV
         echo "RUST_NIGHTLY=${rust_nightly}" >> $GITHUB_ENV
 

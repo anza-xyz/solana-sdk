@@ -1,0 +1,13 @@
+target/
+
+**/*.rs.bk
+.cargo
+/config/
+.cache
+
+# intellij files
+.idea/
+/solana.iml
+/.vscode/
+
+.DS_Store
