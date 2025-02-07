@@ -5,4 +5,4 @@ here="$(dirname "$0")"
 src_root="$(readlink -f "${here}/..")"
 cd "${src_root}"
 
-./cargo nightly check --locked --workspace --all-targets --features dummy-for-ci-check,frozen-abi
+./cargo nightly check --locked --workspace --all-targets --features frozen-abi

@@ -15,7 +15,7 @@ cd "${src_root}"
 # the bench itself isn't stabilized yet...
 #   ref: https://github.com/rust-lang/rust/issues/66287
 ./cargo nightly clippy \
-  --workspace --all-targets --features dummy-for-ci-check,frozen-abi -- \
+  --workspace --all-targets --features frozen-abi -- \
   --deny=warnings \
   --deny=clippy::default_trait_access \
   --deny=clippy::arithmetic_side_effects \
