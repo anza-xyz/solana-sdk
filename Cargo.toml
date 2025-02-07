@@ -34,7 +34,7 @@ members = [
     "fee-structure",
     "file-download",
     "frozen-abi",
-    "frozen-abi/macro",
+    "frozen-abi-macro",
     "genesis-config",
     "hard-forks",
     "hash",
@@ -47,7 +47,6 @@ members = [
     "loader-v3-interface",
     "loader-v4-interface",
     "logger",
-    "macro",
     "message",
     "msg",
     "native-token",
@@ -77,6 +76,7 @@ members = [
     "sanitize",
     "sdk",
     "sdk-ids",
+    "sdk-macro",
     "secp256k1-program",
     "secp256k1-recover",
     "secp256r1-program",
@@ -224,7 +224,7 @@ solana-feature-set = { path = "feature-set", version = "=2.2.0" }
 solana-fee-calculator = { path = "fee-calculator", version = "=2.2.0" }
 solana-fee-structure = { path = "fee-structure", version = "=2.2.0" }
 solana-frozen-abi = { path = "frozen-abi", version = "=2.2.0" }
-solana-frozen-abi-macro = { path = "frozen-abi/macro", version = "=2.2.0" }
+solana-frozen-abi-macro = { path = "frozen-abi-macro", version = "=2.2.0" }
 solana-file-download = { path = "file-download", version = "=2.2.0" }
 solana-genesis-config = { path = "genesis-config", version = "=2.2.0" }
 solana-hard-forks = { path = "hard-forks", version = "=2.2.0", default-features = false }
@@ -279,7 +279,7 @@ solana-slot-history = { path = "slot-history", version = "=2.2.0" }
 solana-time-utils = { path = "time-utils", version = "=2.2.0" }
 solana-sdk = { path = "sdk", version = "=2.2.0" }
 solana-sdk-ids = { path = "sdk-ids", version = "=2.2.0" }
-solana-sdk-macro = { path = "macro", version = "=2.2.0" }
+solana-sdk-macro = { path = "sdk-macro", version = "=2.2.0" }
 solana-secp256k1-program = { path = "secp256k1-program", version = "=2.2.0" }
 solana-secp256k1-recover = { path = "secp256k1-recover", version = "=2.2.0" }
 solana-short-vec = { path = "short-vec", version = "=2.2.0" }
