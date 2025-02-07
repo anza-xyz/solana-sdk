@@ -2,7 +2,7 @@
 name = "solana-atomic-u64"
 description = "Solana atomic u64 implementation. For internal use only."
 documentation = "https://docs.rs/solana-atomic-u64"
-version = { workspace = true }
+version = "2.2.0"
 authors = { workspace = true }
 repository = { workspace = true }
 homepage = { workspace = true }

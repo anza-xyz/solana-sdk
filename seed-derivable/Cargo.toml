@@ -2,7 +2,7 @@
 name = "solana-seed-derivable"
 description = "Solana trait defining the interface by which keys are derived."
 documentation = "https://docs.rs/solana-seed-derivable"
-version = { workspace = true }
+version = "2.2.0"
 authors = { workspace = true }
 repository = { workspace = true }
 homepage = { workspace = true }

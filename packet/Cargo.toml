@@ -2,7 +2,7 @@
 name = "solana-packet"
 description = "The definition of a Solana network packet."
 documentation = "https://docs.rs/solana-packet"
-version = { workspace = true }
+version = "2.2.0"
 authors = { workspace = true }
 repository = { workspace = true }
 homepage = { workspace = true }

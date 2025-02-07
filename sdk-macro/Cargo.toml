@@ -2,7 +2,7 @@
 name = "solana-sdk-macro"
 description = "Solana SDK Macro"
 documentation = "https://docs.rs/solana-sdk-macro"
-version = { workspace = true }
+version = "2.2.0"
 authors = { workspace = true }
 repository = { workspace = true }
 homepage = { workspace = true }

@@ -2,7 +2,7 @@
 name = "solana-validator-exit"
 description = "Solana validator exit handling."
 documentation = "https://docs.rs/solana-validator-exit"
-version = { workspace = true }
+version = "2.2.0"
 authors = { workspace = true }
 repository = { workspace = true }
 homepage = { workspace = true }

@@ -2,7 +2,7 @@
 name = "solana-signature"
 description = "Solana 64-byte signature type"
 documentation = "https://docs.rs/solana-signature"
-version = { workspace = true }
+version = "2.2.0"
 authors = { workspace = true }
 repository = { workspace = true }
 homepage = { workspace = true }

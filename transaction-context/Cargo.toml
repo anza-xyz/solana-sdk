@@ -2,7 +2,7 @@
 name = "solana-transaction-context"
 description = "Solana data shared between program runtime and built-in programs as well as SBF programs."
 documentation = "https://docs.rs/solana-transaction-context"
-version = { workspace = true }
+version = "2.2.0"
 authors = { workspace = true }
 repository = { workspace = true }
 homepage = { workspace = true }

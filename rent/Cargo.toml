@@ -2,7 +2,7 @@
 name = "solana-rent"
 description = "Configuration for Solana network rent."
 documentation = "https://docs.rs/solana-rent"
-version = { workspace = true }
+version = "2.2.0"
 authors = { workspace = true }
 repository = { workspace = true }
 homepage = { workspace = true }

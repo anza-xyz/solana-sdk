@@ -3,7 +3,7 @@ name = "solana-program"
 description = "Solana Program"
 documentation = "https://docs.rs/solana-program"
 readme = "README.md"
-version = { workspace = true }
+version = "2.2.0"
 authors = { workspace = true }
 repository = { workspace = true }
 homepage = { workspace = true }

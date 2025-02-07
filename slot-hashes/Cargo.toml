@@ -2,7 +2,7 @@
 name = "solana-slot-hashes"
 description = "Types and utilities for the Solana SlotHashes sysvar."
 documentation = "https://docs.rs/solana-slot-hashes"
-version = { workspace = true }
+version = "2.2.0"
 authors = { workspace = true }
 repository = { workspace = true }
 homepage = { workspace = true }

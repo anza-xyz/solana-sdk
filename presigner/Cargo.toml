@@ -2,7 +2,7 @@
 name = "solana-presigner"
 description = "A Solana `Signer` implementation representing an externally-constructed `Signature`."
 documentation = "https://docs.rs/solana-presigner"
-version = { workspace = true }
+version = "2.2.0"
 authors = { workspace = true }
 repository = { workspace = true }
 homepage = { workspace = true }

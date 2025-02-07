@@ -2,7 +2,7 @@
 name = "solana-shred-version"
 description = "Calculation of shred versions."
 documentation = "https://docs.rs/solana-shred-version"
-version = { workspace = true }
+version = "2.2.0"
 authors = { workspace = true }
 repository = { workspace = true }
 homepage = { workspace = true }

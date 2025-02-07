@@ -2,7 +2,7 @@
 name = "solana-stable-layout"
 description = "Solana types with stable memory layouts. Internal use only."
 documentation = "https://docs.rs/solana-stable-layout"
-version = { workspace = true }
+version = "2.2.0"
 authors = { workspace = true }
 repository = { workspace = true }
 homepage = { workspace = true }

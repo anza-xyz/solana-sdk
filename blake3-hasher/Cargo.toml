@@ -2,7 +2,7 @@
 name = "solana-blake3-hasher"
 description = "Solana BLAKE3 hashing"
 documentation = "https://docs.rs/solana-blake3-hasher"
-version = { workspace = true }
+version = "2.2.0"
 authors = { workspace = true }
 repository = { workspace = true }
 homepage = { workspace = true }

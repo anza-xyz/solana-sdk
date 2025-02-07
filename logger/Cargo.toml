@@ -2,7 +2,7 @@
 name = "solana-logger"
 description = "Solana Logger"
 documentation = "https://docs.rs/solana-logger"
-version = { workspace = true }
+version = "2.2.0"
 authors = { workspace = true }
 repository = { workspace = true }
 homepage = { workspace = true }

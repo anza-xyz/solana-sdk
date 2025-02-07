@@ -2,7 +2,7 @@
 name = "solana-transaction-error"
 description = "Solana TransactionError type"
 documentation = "https://docs.rs/solana-transaction-error"
-version = { workspace = true }
+version = "2.2.0"
 authors = { workspace = true }
 repository = { workspace = true }
 homepage = { workspace = true }

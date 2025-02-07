@@ -2,7 +2,7 @@
 name = "solana-pubkey"
 description = "Solana account addresses"
 documentation = "https://docs.rs/solana-pubkey"
-version = { workspace = true }
+version = "2.2.0"
 authors = { workspace = true }
 repository = { workspace = true }
 homepage = { workspace = true }

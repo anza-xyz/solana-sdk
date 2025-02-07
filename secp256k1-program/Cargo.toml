@@ -2,7 +2,7 @@
 name = "solana-secp256k1-program"
 description = "Instructions for the Solana Secp256k1 native program."
 documentation = "https://docs.rs/solana-secp256k1-program"
-version = { workspace = true }
+version = "2.2.0"
 authors = { workspace = true }
 repository = { workspace = true }
 homepage = { workspace = true }

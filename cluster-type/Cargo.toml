@@ -2,7 +2,7 @@
 name = "solana-cluster-type"
 description = "Solana ClusterType enum"
 documentation = "https://docs.rs/solana-cluster-type"
-version = { workspace = true }
+version = "2.2.0"
 authors = { workspace = true }
 repository = { workspace = true }
 homepage = { workspace = true }

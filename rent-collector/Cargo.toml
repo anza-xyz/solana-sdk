@@ -2,7 +2,7 @@
 name = "solana-rent-collector"
 description = "Calculate and collect rent from accounts."
 documentation = "https://docs.rs/solana-rent-collector"
-version = { workspace = true }
+version = "2.2.0"
 authors = { workspace = true }
 repository = { workspace = true }
 homepage = { workspace = true }

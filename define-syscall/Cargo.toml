@@ -2,7 +2,7 @@
 name = "solana-define-syscall"
 description = "Solana define_syscall macro and core syscall definitions."
 documentation = "https://docs.rs/solana-define-syscall"
-version = { workspace = true }
+version = "2.2.0"
 authors = { workspace = true }
 repository = { workspace = true }
 homepage = { workspace = true }

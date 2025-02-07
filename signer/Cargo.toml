@@ -2,7 +2,7 @@
 name = "solana-signer"
 description = "Abstractions for Solana transaction signers. See `solana-keypair` for a concrete implementation."
 documentation = "https://docs.rs/solana-signer"
-version = { workspace = true }
+version = "2.2.0"
 authors = { workspace = true }
 repository = { workspace = true }
 homepage = { workspace = true }

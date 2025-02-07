@@ -2,7 +2,7 @@
 name = "solana-offchain-message"
 description = "Solana offchain message signing"
 documentation = "https://docs.rs/solana-offchain-message"
-version = { workspace = true }
+version = "2.2.0"
 authors = { workspace = true }
 repository = { workspace = true }
 homepage = { workspace = true }

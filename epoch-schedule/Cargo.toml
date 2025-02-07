@@ -2,7 +2,7 @@
 name = "solana-epoch-schedule"
 description = "Configuration for Solana epochs and slots."
 documentation = "https://docs.rs/solana-epoch-schedule"
-version = { workspace = true }
+version = "2.2.0"
 authors = { workspace = true }
 repository = { workspace = true }
 homepage = { workspace = true }

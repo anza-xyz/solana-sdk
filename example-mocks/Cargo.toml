@@ -2,7 +2,7 @@
 name = "solana-example-mocks"
 description = "Solana mock types for use in examples"
 documentation = "https://docs.rs/solana-example-mocks"
-version = { workspace = true }
+version = "2.2.0"
 authors = { workspace = true }
 repository = { workspace = true }
 homepage = { workspace = true }

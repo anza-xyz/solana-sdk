@@ -2,7 +2,7 @@
 name = "solana-sha256-hasher"
 description = "Solana SHA256 hashing"
 documentation = "https://docs.rs/solana-sha256-hasher"
-version = { workspace = true }
+version = "2.2.0"
 authors = { workspace = true }
 repository = { workspace = true }
 homepage = { workspace = true }

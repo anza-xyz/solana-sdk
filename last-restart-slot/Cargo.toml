@@ -2,7 +2,7 @@
 name = "solana-last-restart-slot"
 description = "Types and utilities for the Solana LastRestartSlot sysvar."
 documentation = "https://docs.rs/solana-last-restart-slot"
-version = { workspace = true }
+version = "2.2.0"
 authors = { workspace = true }
 repository = { workspace = true }
 homepage = { workspace = true }

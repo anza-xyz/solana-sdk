@@ -2,7 +2,7 @@
 name = "solana-reserved-account-keys"
 description = "Reserved Solana account keys"
 documentation = "https://docs.rs/solana-reserved-account-keys"
-version = { workspace = true }
+version = "2.2.0"
 authors = { workspace = true }
 repository = { workspace = true }
 homepage = { workspace = true }

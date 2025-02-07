@@ -2,7 +2,7 @@
 name = "solana-clock"
 description = "Solana Clock and Time Definitions"
 documentation = "https://docs.rs/solana-clock"
-version = { workspace = true }
+version = "2.2.0"
 authors = { workspace = true }
 repository = { workspace = true }
 homepage = { workspace = true }

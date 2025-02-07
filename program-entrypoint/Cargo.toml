@@ -2,7 +2,7 @@
 name = "solana-program-entrypoint"
 description = "The Solana BPF program entrypoint supported by the latest BPF loader."
 documentation = "https://docs.rs/solana-program-entrypoint"
-version = { workspace = true }
+version = "2.2.0"
 authors = { workspace = true }
 repository = { workspace = true }
 homepage = { workspace = true }
