@@ -2,6 +2,8 @@
 
 set -eo pipefail
 here="$(dirname "$0")"
+# pacify shellcheck: cannot follow dynamic path
+# shellcheck disable=SC1090,SC1091
 source "$here"/patch-crates-functions.sh
 
 usage() {
