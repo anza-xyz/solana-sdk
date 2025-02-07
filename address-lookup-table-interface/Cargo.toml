@@ -2,7 +2,7 @@
 name = "solana-address-lookup-table-interface"
 description = "Solana address lookup table interface."
 documentation = "https://docs.rs/solana-address-lookup-table-interface"
-version = "2.2.0"
+version = "2.2.1"
 authors = { workspace = true }
 repository = { workspace = true }
 homepage = { workspace = true }

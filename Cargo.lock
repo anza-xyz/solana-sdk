@@ -1129,7 +1129,6 @@ version = "0.14.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "85649ca51fd72272d7821adaf274ad91c288277713d9c18820d8499a7ff69e9a"
 dependencies = [
- "serde",
  "typenum",
  "version_check",
 ]
@@ -2546,9 +2545,9 @@ dependencies = [
  "serde_derive",
  "solana-account",
  "solana-account-info",
- "solana-clock 2.2.0",
- "solana-frozen-abi 2.2.0",
- "solana-frozen-abi-macro 2.2.0",
+ "solana-clock",
+ "solana-frozen-abi",
+ "solana-frozen-abi-macro",
  "solana-instruction",
  "solana-logger",
  "solana-pubkey",
@@ -2569,16 +2568,16 @@ dependencies = [
 
 [[package]]
 name = "solana-address-lookup-table-interface"
-version = "2.2.0"
+version = "2.2.1"
 dependencies = [
  "bincode",
  "bytemuck",
  "serde",
  "serde_derive",
  "solana-address-lookup-table-interface",
- "solana-clock 2.2.0",
- "solana-frozen-abi 2.2.0",
- "solana-frozen-abi-macro 2.2.0",
+ "solana-clock",
+ "solana-frozen-abi",
+ "solana-frozen-abi-macro",
  "solana-hash",
  "solana-instruction",
  "solana-pubkey",
@@ -2627,8 +2626,8 @@ dependencies = [
  "serde_derive",
  "solana-blake3-hasher",
  "solana-define-syscall",
- "solana-frozen-abi 2.2.0",
- "solana-frozen-abi-macro 2.2.0",
+ "solana-frozen-abi",
+ "solana-frozen-abi-macro",
  "solana-hash",
  "solana-sanitize",
 ]
@@ -2680,22 +2679,13 @@ dependencies = [
 
 [[package]]
 name = "solana-clock"
-version = "2.1.11"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "97864f28abd43d03e7ca7242059e340bb6e637e0ce99fd66f6420c43fa359898"
-dependencies = [
- "solana-sdk-macro 2.1.11",
-]
-
-[[package]]
-name = "solana-clock"
 version = "2.2.0"
 dependencies = [
  "serde",
  "serde_derive",
- "solana-clock 2.2.0",
+ "solana-clock",
  "solana-sdk-ids",
- "solana-sdk-macro 2.2.0",
+ "solana-sdk-macro",
  "solana-sysvar-id",
  "static_assertions",
 ]
@@ -2706,8 +2696,8 @@ version = "2.2.0"
 dependencies = [
  "serde",
  "serde_derive",
- "solana-frozen-abi 2.2.0",
- "solana-frozen-abi-macro 2.2.0",
+ "solana-frozen-abi",
+ "solana-frozen-abi-macro",
  "solana-hash",
 ]
 
@@ -2726,8 +2716,8 @@ dependencies = [
  "borsh 1.5.5",
  "serde",
  "serde_derive",
- "solana-frozen-abi 2.2.0",
- "solana-frozen-abi-macro 2.2.0",
+ "solana-frozen-abi",
+ "solana-frozen-abi-macro",
  "solana-instruction",
  "solana-sdk-ids",
 ]
@@ -2746,15 +2736,6 @@ dependencies = [
  "solana-stable-layout",
  "solana-system-interface",
  "static_assertions",
-]
-
-[[package]]
-name = "solana-decode-error"
-version = "2.1.11"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6c92852914fe0cfec234576a30b1de4b11516dd729226d5de04e4c67d80447a7"
-dependencies = [
- "num-traits",
 ]
 
 [[package]]
@@ -2814,11 +2795,11 @@ dependencies = [
  "serde",
  "serde_derive",
  "solana-epoch-rewards",
- "solana-frozen-abi 2.2.0",
- "solana-frozen-abi-macro 2.2.0",
+ "solana-frozen-abi",
+ "solana-frozen-abi-macro",
  "solana-hash",
  "solana-sdk-ids",
- "solana-sdk-macro 2.2.0",
+ "solana-sdk-macro",
  "solana-sysvar-id",
 ]
 
@@ -2837,12 +2818,12 @@ version = "2.2.0"
 dependencies = [
  "serde",
  "serde_derive",
- "solana-clock 2.2.0",
+ "solana-clock",
  "solana-epoch-schedule",
- "solana-frozen-abi 2.2.0",
- "solana-frozen-abi-macro 2.2.0",
+ "solana-frozen-abi",
+ "solana-frozen-abi-macro",
  "solana-sdk-ids",
- "solana-sdk-macro 2.2.0",
+ "solana-sdk-macro",
  "solana-sysvar-id",
  "static_assertions",
 ]
@@ -2854,7 +2835,7 @@ dependencies = [
  "serde",
  "serde_derive",
  "solana-address-lookup-table-interface",
- "solana-clock 2.2.0",
+ "solana-clock",
  "solana-hash",
  "solana-instruction",
  "solana-keccak-hasher",
@@ -2891,8 +2872,8 @@ dependencies = [
  "ahash",
  "lazy_static",
  "solana-epoch-schedule",
- "solana-frozen-abi 2.2.0",
- "solana-frozen-abi-macro 2.2.0",
+ "solana-frozen-abi",
+ "solana-frozen-abi-macro",
  "solana-hash",
  "solana-pubkey",
  "solana-sha256-hasher",
@@ -2905,9 +2886,9 @@ dependencies = [
  "log",
  "serde",
  "serde_derive",
- "solana-clock 2.2.0",
- "solana-frozen-abi 2.2.0",
- "solana-frozen-abi-macro 2.2.0",
+ "solana-clock",
+ "solana-frozen-abi",
+ "solana-frozen-abi-macro",
  "solana-logger",
  "static_assertions",
 ]
@@ -2918,7 +2899,7 @@ version = "2.2.0"
 dependencies = [
  "serde",
  "serde_derive",
- "solana-frozen-abi 2.2.0",
+ "solana-frozen-abi",
  "solana-message",
  "solana-native-token",
 ]
@@ -2931,26 +2912,6 @@ dependencies = [
  "indicatif",
  "log",
  "reqwest",
-]
-
-[[package]]
-name = "solana-frozen-abi"
-version = "2.1.11"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "678445b04904b247eae4f2d1da6b18431b6ccf5a928663aaad28e36f71e72d79"
-dependencies = [
- "bs58",
- "bv",
- "generic-array",
- "im",
- "log",
- "memmap2",
- "serde",
- "serde_derive",
- "serde_with",
- "sha2 0.10.8",
- "solana-frozen-abi-macro 2.1.11",
- "thiserror 1.0.69",
 ]
 
 [[package]]
@@ -2968,20 +2929,9 @@ dependencies = [
  "serde_derive",
  "serde_with",
  "sha2 0.10.8",
- "solana-frozen-abi-macro 2.2.0",
+ "solana-frozen-abi-macro",
  "solana-logger",
  "thiserror 2.0.11",
-]
-
-[[package]]
-name = "solana-frozen-abi-macro"
-version = "2.1.11"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d9bec595c0d9d82355a158efe8b4e07c4ea4eb5541181a95236fdef1fef08094"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn 2.0.96",
 ]
 
 [[package]]
@@ -3003,12 +2953,12 @@ dependencies = [
  "serde",
  "serde_derive",
  "solana-account",
- "solana-clock 2.2.0",
+ "solana-clock",
  "solana-cluster-type",
  "solana-epoch-schedule",
  "solana-fee-calculator",
- "solana-frozen-abi 2.2.0",
- "solana-frozen-abi-macro 2.2.0",
+ "solana-frozen-abi",
+ "solana-frozen-abi-macro",
  "solana-genesis-config",
  "solana-hash",
  "solana-inflation",
@@ -3031,8 +2981,8 @@ version = "2.2.0"
 dependencies = [
  "serde",
  "serde_derive",
- "solana-frozen-abi 2.2.0",
- "solana-frozen-abi-macro 2.2.0",
+ "solana-frozen-abi",
+ "solana-frozen-abi-macro",
 ]
 
 [[package]]
@@ -3047,8 +2997,8 @@ dependencies = [
  "serde",
  "serde_derive",
  "solana-atomic-u64",
- "solana-frozen-abi 2.2.0",
- "solana-frozen-abi-macro 2.2.0",
+ "solana-frozen-abi",
+ "solana-frozen-abi-macro",
  "solana-hash",
  "solana-sanitize",
  "wasm-bindgen",
@@ -3060,8 +3010,8 @@ version = "2.2.0"
 dependencies = [
  "serde",
  "serde_derive",
- "solana-frozen-abi 2.2.0",
- "solana-frozen-abi-macro 2.2.0",
+ "solana-frozen-abi",
+ "solana-frozen-abi-macro",
 ]
 
 [[package]]
@@ -3076,8 +3026,8 @@ dependencies = [
  "serde",
  "serde_derive",
  "solana-define-syscall",
- "solana-frozen-abi 2.2.0",
- "solana-frozen-abi-macro 2.2.0",
+ "solana-frozen-abi",
+ "solana-frozen-abi-macro",
  "solana-instruction",
  "solana-pubkey",
  "wasm-bindgen",
@@ -3108,8 +3058,8 @@ dependencies = [
  "serde_derive",
  "sha3",
  "solana-define-syscall",
- "solana-frozen-abi 2.2.0",
- "solana-frozen-abi-macro 2.2.0",
+ "solana-frozen-abi",
+ "solana-frozen-abi-macro",
  "solana-hash",
  "solana-sanitize",
 ]
@@ -3141,7 +3091,7 @@ dependencies = [
  "serde",
  "serde_derive",
  "solana-sdk-ids",
- "solana-sdk-macro 2.2.0",
+ "solana-sdk-macro",
  "solana-sysvar-id",
 ]
 
@@ -3165,8 +3115,8 @@ dependencies = [
  "serde",
  "serde_bytes",
  "serde_derive",
- "solana-frozen-abi 2.2.0",
- "solana-frozen-abi-macro 2.2.0",
+ "solana-frozen-abi",
+ "solana-frozen-abi-macro",
  "solana-instruction",
  "solana-loader-v3-interface",
  "solana-pubkey",
@@ -3182,8 +3132,8 @@ dependencies = [
  "serde",
  "serde_bytes",
  "serde_derive",
- "solana-frozen-abi 2.2.0",
- "solana-frozen-abi-macro 2.2.0",
+ "solana-frozen-abi",
+ "solana-frozen-abi-macro",
  "solana-instruction",
  "solana-loader-v4-interface",
  "solana-pubkey",
@@ -3215,8 +3165,8 @@ dependencies = [
  "serde_derive",
  "serde_json",
  "solana-bincode",
- "solana-frozen-abi 2.2.0",
- "solana-frozen-abi-macro 2.2.0",
+ "solana-frozen-abi",
+ "solana-frozen-abi-macro",
  "solana-hash",
  "solana-instruction",
  "solana-logger",
@@ -3317,8 +3267,8 @@ dependencies = [
  "serde",
  "serde_derive",
  "serde_with",
- "solana-frozen-abi 2.2.0",
- "solana-frozen-abi-macro 2.2.0",
+ "solana-frozen-abi",
+ "solana-frozen-abi-macro",
  "solana-packet",
  "static_assertions",
 ]
@@ -3329,9 +3279,9 @@ version = "2.2.0"
 dependencies = [
  "serde",
  "serde_derive",
- "solana-clock 2.2.0",
- "solana-frozen-abi 2.2.0",
- "solana-frozen-abi-macro 2.2.0",
+ "solana-clock",
+ "solana-frozen-abi",
+ "solana-frozen-abi-macro",
  "static_assertions",
 ]
 
@@ -3340,7 +3290,7 @@ name = "solana-precompile-error"
 version = "2.2.0"
 dependencies = [
  "num-traits",
- "solana-decode-error 2.2.0",
+ "solana-decode-error",
 ]
 
 [[package]]
@@ -3403,17 +3353,17 @@ dependencies = [
  "solana-bincode",
  "solana-blake3-hasher",
  "solana-borsh",
- "solana-clock 2.2.0",
+ "solana-clock",
  "solana-cpi",
- "solana-decode-error 2.2.0",
+ "solana-decode-error",
  "solana-define-syscall",
  "solana-epoch-rewards",
  "solana-epoch-schedule",
  "solana-example-mocks",
  "solana-feature-gate-interface",
  "solana-fee-calculator",
- "solana-frozen-abi 2.2.0",
- "solana-frozen-abi-macro 2.2.0",
+ "solana-frozen-abi",
+ "solana-frozen-abi-macro",
  "solana-hash",
  "solana-instruction",
  "solana-instructions-sysvar",
@@ -3436,7 +3386,7 @@ dependencies = [
  "solana-rent",
  "solana-sanitize",
  "solana-sdk-ids",
- "solana-sdk-macro 2.2.0",
+ "solana-sdk-macro",
  "solana-secp256k1-recover",
  "solana-serde-varint",
  "solana-serialize-utils",
@@ -3472,7 +3422,7 @@ dependencies = [
  "num-traits",
  "serde",
  "serde_derive",
- "solana-decode-error 2.2.0",
+ "solana-decode-error",
  "solana-instruction",
  "solana-msg",
  "solana-pubkey",
@@ -3517,10 +3467,10 @@ dependencies = [
  "serde",
  "serde_derive",
  "solana-atomic-u64",
- "solana-decode-error 2.2.0",
+ "solana-decode-error",
  "solana-define-syscall",
- "solana-frozen-abi 2.2.0",
- "solana-frozen-abi-macro 2.2.0",
+ "solana-frozen-abi",
+ "solana-frozen-abi-macro",
  "solana-program",
  "solana-pubkey",
  "solana-sanitize",
@@ -3543,11 +3493,11 @@ version = "2.2.0"
 dependencies = [
  "serde",
  "serde_derive",
- "solana-clock 2.2.0",
- "solana-frozen-abi 2.2.0",
- "solana-frozen-abi-macro 2.2.0",
+ "solana-clock",
+ "solana-frozen-abi",
+ "solana-frozen-abi-macro",
  "solana-sdk-ids",
- "solana-sdk-macro 2.2.0",
+ "solana-sdk-macro",
  "solana-sysvar-id",
  "static_assertions",
 ]
@@ -3560,10 +3510,10 @@ dependencies = [
  "serde",
  "serde_derive",
  "solana-account",
- "solana-clock 2.2.0",
+ "solana-clock",
  "solana-epoch-schedule",
- "solana-frozen-abi 2.2.0",
- "solana-frozen-abi-macro 2.2.0",
+ "solana-frozen-abi",
+ "solana-frozen-abi-macro",
  "solana-genesis-config",
  "solana-logger",
  "solana-pubkey",
@@ -3585,8 +3535,8 @@ version = "2.2.0"
 dependencies = [
  "lazy_static",
  "solana-feature-set",
- "solana-frozen-abi 2.2.0",
- "solana-frozen-abi-macro 2.2.0",
+ "solana-frozen-abi",
+ "solana-frozen-abi-macro",
  "solana-message",
  "solana-pubkey",
  "solana-sdk-ids",
@@ -3599,8 +3549,8 @@ version = "2.2.0"
 dependencies = [
  "serde",
  "serde_derive",
- "solana-frozen-abi 2.2.0",
- "solana-frozen-abi-macro 2.2.0",
+ "solana-frozen-abi",
+ "solana-frozen-abi-macro",
 ]
 
 [[package]]
@@ -3630,7 +3580,7 @@ dependencies = [
  "solana-cluster-type",
  "solana-commitment-config",
  "solana-compute-budget-interface",
- "solana-decode-error 2.2.0",
+ "solana-decode-error",
  "solana-derivation-path",
  "solana-ed25519-program",
  "solana-epoch-info",
@@ -3663,7 +3613,7 @@ dependencies = [
  "solana-sanitize",
  "solana-sdk",
  "solana-sdk-ids",
- "solana-sdk-macro 2.2.0",
+ "solana-sdk-macro",
  "solana-secp256k1-program",
  "solana-secp256k1-recover",
  "solana-secp256r1-program",
@@ -3690,18 +3640,6 @@ name = "solana-sdk-ids"
 version = "2.2.0"
 dependencies = [
  "solana-pubkey",
-]
-
-[[package]]
-name = "solana-sdk-macro"
-version = "2.1.11"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9055600bc70a91936458b3a43a4173f8b8cd4ee64a0dc83cbb00737cadc519a5"
-dependencies = [
- "bs58",
- "proc-macro2",
- "quote",
- "syn 2.0.96",
 ]
 
 [[package]]
@@ -3752,8 +3690,8 @@ dependencies = [
  "borsh 1.5.5",
  "libsecp256k1",
  "solana-define-syscall",
- "solana-frozen-abi 2.2.0",
- "solana-frozen-abi-macro 2.2.0",
+ "solana-frozen-abi",
+ "solana-frozen-abi-macro",
  "solana-program",
  "thiserror 2.0.11",
 ]
@@ -3838,8 +3776,8 @@ dependencies = [
  "bincode",
  "serde",
  "serde_json",
- "solana-frozen-abi 2.2.0",
- "solana-frozen-abi-macro 2.2.0",
+ "solana-frozen-abi",
+ "solana-frozen-abi-macro",
 ]
 
 [[package]]
@@ -3864,8 +3802,8 @@ dependencies = [
  "serde-big-array",
  "serde_derive",
  "serde_json",
- "solana-frozen-abi 2.2.0",
- "solana-frozen-abi-macro 2.2.0",
+ "solana-frozen-abi",
+ "solana-frozen-abi-macro",
  "solana-pubkey",
  "solana-sanitize",
  "solana-short-vec",
@@ -3924,11 +3862,11 @@ dependencies = [
  "num-traits",
  "serde",
  "serde_derive",
- "solana-clock 2.1.11",
+ "solana-clock",
  "solana-cpi",
- "solana-decode-error 2.1.11",
- "solana-frozen-abi 2.1.11",
- "solana-frozen-abi-macro 2.1.11",
+ "solana-decode-error",
+ "solana-frozen-abi",
+ "solana-frozen-abi-macro",
  "solana-instruction",
  "solana-program-error",
  "solana-pubkey",
@@ -3946,7 +3884,7 @@ dependencies = [
  "num-traits",
  "serde",
  "serde_derive",
- "solana-decode-error 2.1.11",
+ "solana-decode-error",
  "solana-instruction",
  "solana-pubkey",
  "wasm-bindgen",
@@ -3979,13 +3917,13 @@ dependencies = [
  "serde_derive",
  "serial_test",
  "solana-account-info",
- "solana-clock 2.2.0",
+ "solana-clock",
  "solana-define-syscall",
  "solana-epoch-rewards",
  "solana-epoch-schedule",
  "solana-fee-calculator",
- "solana-frozen-abi 2.2.0",
- "solana-frozen-abi-macro 2.2.0",
+ "solana-frozen-abi",
+ "solana-frozen-abi-macro",
  "solana-hash",
  "solana-instruction",
  "solana-instructions-sysvar",
@@ -4000,7 +3938,7 @@ dependencies = [
  "solana-sanitize",
  "solana-sdk",
  "solana-sdk-ids",
- "solana-sdk-macro 2.2.0",
+ "solana-sdk-macro",
  "solana-sha256-hasher",
  "solana-slot-hashes",
  "solana-slot-history",
@@ -4033,8 +3971,8 @@ dependencies = [
  "serde_derive",
  "solana-bincode",
  "solana-feature-set",
- "solana-frozen-abi 2.2.0",
- "solana-frozen-abi-macro 2.2.0",
+ "solana-frozen-abi",
+ "solana-frozen-abi-macro",
  "solana-hash",
  "solana-instruction",
  "solana-keypair",
@@ -4085,8 +4023,8 @@ version = "2.2.0"
 dependencies = [
  "serde",
  "serde_derive",
- "solana-frozen-abi 2.2.0",
- "solana-frozen-abi-macro 2.2.0",
+ "solana-frozen-abi",
+ "solana-frozen-abi-macro",
  "solana-instruction",
  "solana-sanitize",
 ]
@@ -4107,11 +4045,11 @@ dependencies = [
  "rand 0.8.5",
  "serde",
  "serde_derive",
- "solana-clock 2.2.0",
- "solana-decode-error 2.2.0",
+ "solana-clock",
+ "solana-decode-error",
  "solana-epoch-schedule",
- "solana-frozen-abi 2.2.0",
- "solana-frozen-abi-macro 2.2.0",
+ "solana-frozen-abi",
+ "solana-frozen-abi-macro",
  "solana-hash",
  "solana-instruction",
  "solana-logger",
