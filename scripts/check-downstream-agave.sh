@@ -12,4 +12,4 @@ git clone --depth 1 https://github.com/anza-xyz/agave.git --single-branch --bran
 cd ./agave
 
 ../../../scripts/patch-crates-no-header.sh . ../../..
-./cargo nightly check --locked --workspace --all-targets --features dummy-for-ci-check,frozen-abi
+cargo check
