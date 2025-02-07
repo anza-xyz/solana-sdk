@@ -28,6 +28,9 @@ inputs:
   llvm-tools-preview:
     description: Install llvm-tools-preview if `true`. Defaults to `false`.
     required: false
+  agave:
+    description: Install required packages for Agave if `true`. Defaults to `false`.
+    required: false
   purge:
     description: Purge unused directories if `true`. Defaults to `false`.
     required: false
@@ -104,6 +107,11 @@ runs:
       with:
         toolchain: ${{ env.RUST_NIGHTLY }}
         components: llvm-tools-preview
+
+    - name: Install Agave build dependencies
+      if: ${{ inputs.agave == 'true' }}
+      shell: bash
+      run: sudo apt update && sudo apt install -y libudev-dev protobuf-compiler
 
     - name: Cache Cargo Dependencies
       if: ${{ inputs.cargo-cache-key && !inputs.cargo-cache-fallback-key }}

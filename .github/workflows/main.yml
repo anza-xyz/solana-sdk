@@ -112,6 +112,7 @@ jobs:
       - name: Setup Environment
         uses: ./.github/actions/setup
         with:
+          agave: true
           nightly-toolchain: true
           cargo-cache-key: cargo-downstream-agave-check
           cargo-cache-fallback-key: cargo-downstream-agave
