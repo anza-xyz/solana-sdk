@@ -597,6 +597,10 @@ impl AccountSharedData {
         self.data.capacity()
     }
 
+    pub fn data_clone(&self) -> Arc<Vec<u8>> {
+        Arc::clone(&self.data)
+    }
+
     fn data_mut(&mut self) -> &mut Vec<u8> {
         Arc::make_mut(&mut self.data)
     }
