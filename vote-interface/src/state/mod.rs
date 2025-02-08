@@ -654,6 +654,7 @@ impl VoteState {
     ///
     ///  if commission calculation is 100% one way or other,
     ///   indicate with false for was_split
+    #[deprecated(since = "2.2.0", note = "logic was moved into the agave runtime crate")]
     pub fn commission_split(&self, on: u64) -> (u64, u64, bool) {
         match self.commission.min(100) {
             0 => (0, on, false),
@@ -1353,6 +1354,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(deprecated)]
     fn test_vote_state_commission_split() {
         let vote_state = VoteState::default();
 
