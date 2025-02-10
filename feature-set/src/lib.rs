@@ -936,6 +936,10 @@ pub mod drop_unchained_merkle_shreds {
     solana_pubkey::declare_id!("3A9WtMU4aHuryD3VN7SFKdfXto8HStLb1Jj6HjkgfnGL");
 }
 
+pub mod relax_intrabatch_account_locks {
+    solana_pubkey::declare_id!("EbAhnReKK8Sf88CvAfAXbgKji8DV48rsp4q2sgHqgWef");
+}
+
 lazy_static! {
     /// Map of feature identifiers to user-visible description
     pub static ref FEATURE_NAMES: AHashMap<Pubkey, &'static str> = [
@@ -1165,6 +1169,7 @@ lazy_static! {
         (raise_block_limits_to_50m::id(), "Raise block limit to 50M SIMD-0207"),
         (fix_alt_bn128_multiplication_input_length::id(), "fix alt_bn128 multiplication input length SIMD-0222 #3686"),
         (drop_unchained_merkle_shreds::id(), "drops unchained Merkle shreds #2149"),
+        (relax_intrabatch_account_locks::id(), "Allow batched transactions to read/write and write/write the same accounts SIMD-0083"),
         /*************** ADD NEW FEATURES HERE ***************/
     ]
     .iter()
