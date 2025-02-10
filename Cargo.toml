@@ -301,7 +301,7 @@ syn = "2.0"
 test-case = "3.3.1"
 thiserror = "2.0.11"
 tiny-bip39 = "0.8.2"
-toml = "0.8.12"
+toml = "0.8.20"
 uriparse = "0.6.4"
 wasm-bindgen = "0.2"
 
