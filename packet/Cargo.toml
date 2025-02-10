@@ -12,6 +12,7 @@ edition = { workspace = true }
 [dependencies]
 bincode = { workspace = true, optional = true }
 bitflags = { workspace = true }
+bytes = { workspace = true }
 cfg_eval = { workspace = true, optional = true }
 serde = { workspace = true, optional = true }
 serde_derive = { workspace = true, optional = true }
