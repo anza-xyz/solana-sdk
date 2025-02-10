@@ -30,6 +30,29 @@ pub struct Ed25519SignatureOffsets {
     message_instruction_index: u16,    // index of instruction data to get message data
 }
 
+/// Convenience function to convert signature offsets into a single ed25519 instruction
+/// The caller can choose to extend the data buffer and write the verification data at
+/// `DATA_START` or store the verification data in a different instruction.
+pub fn offsets_to_ed25519_instruction(offsets: &[Ed25519SignatureOffsets]) -> Instruction {
+    let mut instruction_data = Vec::with_capacity(
+        SIGNATURE_OFFSETS_START
+            .saturating_add(SIGNATURE_OFFSETS_SERIALIZED_SIZE.saturating_mul(offsets.len())),
+    );
+
+    let num_signatures = offsets.len() as u16;
+    instruction_data.extend_from_slice(&num_signatures.to_le_bytes());
+
+    for offsets in offsets {
+        instruction_data.extend_from_slice(bytes_of(offsets));
+    }
+
+    Instruction {
+        program_id: solana_sdk_ids::ed25519_program::id(),
+        accounts: vec![],
+        data: instruction_data,
+    }
+}
+
 pub fn new_ed25519_instruction(keypair: &ed25519_dalek::Keypair, message: &[u8]) -> Instruction {
     let signature = keypair.sign(message).to_bytes();
     let pubkey = keypair.public.to_bytes();
@@ -81,6 +104,59 @@ pub fn new_ed25519_instruction(keypair: &ed25519_dalek::Keypair, message: &[u8])
         accounts: vec![],
         data: instruction_data,
     }
+}
+
+/// Creates an ed25519 instruction for verifying multiple messages signed by `keypair`
+/// The verification is stored in the instruction data, so it is up to the caller to check
+/// that the messages will fit within the maximum transaction size.
+pub fn new_multi_ed25519_instruction(
+    keypair: &ed25519_dalek::Keypair,
+    messages: &[&[u8]],
+) -> Instruction {
+    let data_start = messages
+        .len()
+        .saturating_mul(SIGNATURE_OFFSETS_SERIALIZED_SIZE)
+        .saturating_add(SIGNATURE_OFFSETS_START);
+    let mut data_offset = data_start.saturating_add(PUBKEY_SERIALIZED_SIZE);
+    let (offsets, signature_messages): (Vec<_>, Vec<_>) = messages
+        .iter()
+        .map(|message| {
+            let signature = keypair.sign(message).to_bytes();
+
+            assert_eq!(signature.len(), SIGNATURE_SERIALIZED_SIZE);
+
+            let signature_offset = data_offset;
+            let message_data_offset = signature_offset.saturating_add(SIGNATURE_SERIALIZED_SIZE);
+            data_offset = data_offset
+                .saturating_add(SIGNATURE_SERIALIZED_SIZE)
+                .saturating_add(message.len());
+
+            let offsets = Ed25519SignatureOffsets {
+                signature_offset: signature_offset as u16,
+                signature_instruction_index: u16::MAX,
+                public_key_offset: data_start as u16,
+                public_key_instruction_index: u16::MAX,
+                message_data_offset: message_data_offset as u16,
+                message_data_size: message.len() as u16,
+                message_instruction_index: u16::MAX,
+            };
+
+            (offsets, (signature, message))
+        })
+        .unzip();
+
+    let mut instruction = offsets_to_ed25519_instruction(&offsets);
+
+    let pubkey = keypair.public.as_ref();
+    assert_eq!(pubkey.len(), PUBKEY_SERIALIZED_SIZE);
+    instruction.data.extend_from_slice(pubkey);
+
+    for (signature, message) in signature_messages {
+        instruction.data.extend_from_slice(&signature);
+        instruction.data.extend_from_slice(message);
+    }
+
+    instruction
 }
 
 pub fn verify(
@@ -410,6 +486,43 @@ pub mod test {
         let privkey = ed25519_dalek::Keypair::generate(&mut thread_rng());
         let message_arr = b"hello";
         let mut instruction = new_ed25519_instruction(&privkey, message_arr);
+        let mint_keypair = Keypair::new();
+        let feature_set = FeatureSet::all_enabled();
+
+        let tx = Transaction::new_signed_with_payer(
+            &[instruction.clone()],
+            Some(&mint_keypair.pubkey()),
+            &[&mint_keypair],
+            Hash::default(),
+        );
+
+        assert!(tx.verify_precompiles(&feature_set).is_ok());
+
+        let index = loop {
+            let index = thread_rng().gen_range(0, instruction.data.len());
+            // byte 1 is not used, so this would not cause the verify to fail
+            if index != 1 {
+                break index;
+            }
+        };
+
+        instruction.data[index] = instruction.data[index].wrapping_add(12);
+        let tx = Transaction::new_signed_with_payer(
+            &[instruction],
+            Some(&mint_keypair.pubkey()),
+            &[&mint_keypair],
+            Hash::default(),
+        );
+        assert!(tx.verify_precompiles(&feature_set).is_err());
+    }
+
+    #[test]
+    fn test_multi_ed25519() {
+        solana_logger::setup();
+
+        let privkey = ed25519_dalek::Keypair::generate(&mut thread_rng());
+        let messages: [&[u8]; 3] = [b"hello", b"IBRL", b"goodbye"];
+        let mut instruction = new_multi_ed25519_instruction(&privkey, &messages);
         let mint_keypair = Keypair::new();
         let feature_set = FeatureSet::all_enabled();
 
