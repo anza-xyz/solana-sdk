@@ -124,7 +124,7 @@ pub enum TransactionError {
     /// LoadedAccountsDataSizeLimit set for transaction must be greater than 0.
     InvalidLoadedAccountsDataSizeLimit,
 
-    /// Sanitized transaction differed before/after feature activiation. Needs to be resanitized.
+    /// Sanitized transaction differed before/after feature activation. Needs to be resanitized.
     ResanitizationNeeded,
 
     /// Program execution is temporarily restricted on an account.
