@@ -32,9 +32,13 @@ pub struct Ed25519SignatureOffsets {
 
 /// Encode just the signature offsets in a single ed25519 instruction.
 ///
-/// This is a convenience function for cases when verification data is to be read from a different instruction
-/// or acount. The caller can optionally choose to extend the instruction buffer with the verification data to
-/// form a properly verifiable instruction.
+/// This is a convenience function for rare cases where we wish to verify multiple messages in
+/// the same instruction. The verification data can be stored in a separate instruction specified
+/// by the `*_instruction_index` fields of `offsets`, or in this instruction by extending the data
+/// buffer.
+///
+/// Note: If the signer for these messages are the same, it is cheaper to concatenate the messages
+/// and have the signer sign the single buffer and use [`new_ed25519_instruction`].
 pub fn offsets_to_ed25519_instruction(offsets: &[Ed25519SignatureOffsets]) -> Instruction {
     let mut instruction_data = Vec::with_capacity(
         SIGNATURE_OFFSETS_START
