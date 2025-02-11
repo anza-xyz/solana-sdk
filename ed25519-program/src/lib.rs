@@ -30,9 +30,11 @@ pub struct Ed25519SignatureOffsets {
     message_instruction_index: u16,    // index of instruction data to get message data
 }
 
-/// Convenience function to convert signature offsets into a single ed25519 instruction
-/// The caller can choose to extend the data buffer and write the verification data at
-/// `DATA_START` or store the verification data in a different instruction.
+/// Encode just the signature offsets in a single ed25519 instruction.
+///
+/// This is a convenience function for cases when verification data is to be read from a different instruction
+/// or acount. The caller can optionally choose to extend the instruction buffer with the verification data to
+/// form a properly verifiable instruction.
 pub fn offsets_to_ed25519_instruction(offsets: &[Ed25519SignatureOffsets]) -> Instruction {
     let mut instruction_data = Vec::with_capacity(
         SIGNATURE_OFFSETS_START
@@ -104,59 +106,6 @@ pub fn new_ed25519_instruction(keypair: &ed25519_dalek::Keypair, message: &[u8])
         accounts: vec![],
         data: instruction_data,
     }
-}
-
-/// Creates an ed25519 instruction for verifying multiple messages signed by `keypair`
-/// The verification is stored in the instruction data, so it is up to the caller to check
-/// that the messages will fit within the maximum transaction size.
-pub fn new_multi_ed25519_instruction(
-    keypair: &ed25519_dalek::Keypair,
-    messages: &[&[u8]],
-) -> Instruction {
-    let data_start = messages
-        .len()
-        .saturating_mul(SIGNATURE_OFFSETS_SERIALIZED_SIZE)
-        .saturating_add(SIGNATURE_OFFSETS_START);
-    let mut data_offset = data_start.saturating_add(PUBKEY_SERIALIZED_SIZE);
-    let (offsets, signature_messages): (Vec<_>, Vec<_>) = messages
-        .iter()
-        .map(|message| {
-            let signature = keypair.sign(message).to_bytes();
-
-            assert_eq!(signature.len(), SIGNATURE_SERIALIZED_SIZE);
-
-            let signature_offset = data_offset;
-            let message_data_offset = signature_offset.saturating_add(SIGNATURE_SERIALIZED_SIZE);
-            data_offset = data_offset
-                .saturating_add(SIGNATURE_SERIALIZED_SIZE)
-                .saturating_add(message.len());
-
-            let offsets = Ed25519SignatureOffsets {
-                signature_offset: signature_offset as u16,
-                signature_instruction_index: u16::MAX,
-                public_key_offset: data_start as u16,
-                public_key_instruction_index: u16::MAX,
-                message_data_offset: message_data_offset as u16,
-                message_data_size: message.len() as u16,
-                message_instruction_index: u16::MAX,
-            };
-
-            (offsets, (signature, message))
-        })
-        .unzip();
-
-    let mut instruction = offsets_to_ed25519_instruction(&offsets);
-
-    let pubkey = keypair.public.as_ref();
-    assert_eq!(pubkey.len(), PUBKEY_SERIALIZED_SIZE);
-    instruction.data.extend_from_slice(pubkey);
-
-    for (signature, message) in signature_messages {
-        instruction.data.extend_from_slice(&signature);
-        instruction.data.extend_from_slice(message);
-    }
-
-    instruction
 }
 
 pub fn verify(
@@ -264,6 +213,7 @@ fn get_data_slice<'a>(
 pub mod test {
     use {
         super::*,
+        ed25519_dalek::Signer as EdSigner,
         hex,
         rand0_7::{thread_rng, Rng},
         solana_feature_set::FeatureSet,
@@ -517,12 +467,46 @@ pub mod test {
     }
 
     #[test]
-    fn test_multi_ed25519() {
+    fn test_offsets_to_ed25519_instruction() {
         solana_logger::setup();
 
         let privkey = ed25519_dalek::Keypair::generate(&mut thread_rng());
         let messages: [&[u8]; 3] = [b"hello", b"IBRL", b"goodbye"];
-        let mut instruction = new_multi_ed25519_instruction(&privkey, &messages);
+        let data_start =
+            messages.len() * SIGNATURE_OFFSETS_SERIALIZED_SIZE + SIGNATURE_OFFSETS_START;
+        let mut data_offset = data_start + PUBKEY_SERIALIZED_SIZE;
+        let (offsets, messages): (Vec<_>, Vec<_>) = messages
+            .into_iter()
+            .map(|message| {
+                let signature_offset = data_offset;
+                let message_data_offset = signature_offset + SIGNATURE_SERIALIZED_SIZE;
+                data_offset += SIGNATURE_SERIALIZED_SIZE + message.len();
+
+                let offsets = Ed25519SignatureOffsets {
+                    signature_offset: signature_offset as u16,
+                    signature_instruction_index: u16::MAX,
+                    public_key_offset: data_start as u16,
+                    public_key_instruction_index: u16::MAX,
+                    message_data_offset: message_data_offset as u16,
+                    message_data_size: message.len() as u16,
+                    message_instruction_index: u16::MAX,
+                };
+
+                (offsets, message)
+            })
+            .unzip();
+
+        let mut instruction = offsets_to_ed25519_instruction(&offsets);
+
+        let pubkey = privkey.public.as_ref();
+        instruction.data.extend_from_slice(pubkey);
+
+        for message in messages {
+            let signature = privkey.sign(message).to_bytes();
+            instruction.data.extend_from_slice(&signature);
+            instruction.data.extend_from_slice(message);
+        }
+
         let mint_keypair = Keypair::new();
         let feature_set = FeatureSet::all_enabled();
 
