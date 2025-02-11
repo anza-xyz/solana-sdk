@@ -940,6 +940,10 @@ pub mod relax_intrabatch_account_locks {
     solana_pubkey::declare_id!("EbAhnReKK8Sf88CvAfAXbgKji8DV48rsp4q2sgHqgWef");
 }
 
+pub mod create_slashing_program {
+    solana_pubkey::declare_id!("sProgVaNWkYdP2eTRAy1CPrgb3b9p8yXCASrPEqo6VJ");
+}
+
 lazy_static! {
     /// Map of feature identifiers to user-visible description
     pub static ref FEATURE_NAMES: AHashMap<Pubkey, &'static str> = [
@@ -1170,6 +1174,7 @@ lazy_static! {
         (fix_alt_bn128_multiplication_input_length::id(), "fix alt_bn128 multiplication input length SIMD-0222 #3686"),
         (drop_unchained_merkle_shreds::id(), "drops unchained Merkle shreds #2149"),
         (relax_intrabatch_account_locks::id(), "Allow batched transactions to read/write and write/write the same accounts SIMD-0083"),
+        (create_slashing_program::id(), "creates an enshrined slashing program SIMD-0204"),
         /*************** ADD NEW FEATURES HERE ***************/
     ]
     .iter()
