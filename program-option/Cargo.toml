@@ -2,7 +2,7 @@
 name = "solana-program-option"
 description = "A C representation of Rust's Option, used in Solana programs."
 documentation = "https://docs.rs/solana-program-option"
-version = "2.2.0"
+version = "2.2.1"
 authors = { workspace = true }
 repository = { workspace = true }
 homepage = { workspace = true }

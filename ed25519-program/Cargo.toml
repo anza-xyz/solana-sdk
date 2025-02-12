@@ -2,7 +2,7 @@
 name = "solana-ed25519-program"
 description = "Instructions for the Solana ed25519 native program"
 documentation = "https://docs.rs/solana-ed25519-program"
-version = "2.2.0"
+version = "2.2.1"
 authors = { workspace = true }
 repository = { workspace = true }
 homepage = { workspace = true }

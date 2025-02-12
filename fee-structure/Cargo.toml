@@ -2,7 +2,7 @@
 name = "solana-fee-structure"
 description = "Solana fee structures."
 documentation = "https://docs.rs/solana-fee-structure"
-version = "2.2.0"
+version = "2.2.1"
 authors = { workspace = true }
 repository = { workspace = true }
 homepage = { workspace = true }

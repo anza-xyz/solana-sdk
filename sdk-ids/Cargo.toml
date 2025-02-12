@@ -2,7 +2,7 @@
 name = "solana-sdk-ids"
 description = "Solana SDK IDs"
 documentation = "https://docs.rs/solana-sdk-ids"
-version = "2.2.0"
+version = "2.2.1"
 authors = { workspace = true }
 repository = { workspace = true }
 homepage = { workspace = true }

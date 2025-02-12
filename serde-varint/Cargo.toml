@@ -2,7 +2,7 @@
 name = "solana-serde-varint"
 description = "Solana definitions for integers that serialize to variable size"
 documentation = "https://docs.rs/solana-serde-varint"
-version = "2.2.0"
+version = "2.2.1"
 authors = { workspace = true }
 repository = { workspace = true }
 homepage = { workspace = true }

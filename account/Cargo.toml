@@ -2,7 +2,7 @@
 name = "solana-account"
 description = "Solana Account type"
 documentation = "https://docs.rs/solana-account"
-version = "2.2.0"
+version = "2.2.1"
 authors = { workspace = true }
 repository = { workspace = true }
 homepage = { workspace = true }

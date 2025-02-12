@@ -2,7 +2,7 @@
 name = "solana-serde"
 description = "Solana serde helpers"
 documentation = "https://docs.rs/solana-serde"
-version = "2.2.0"
+version = "2.2.1"
 authors = { workspace = true }
 repository = { workspace = true }
 homepage = { workspace = true }

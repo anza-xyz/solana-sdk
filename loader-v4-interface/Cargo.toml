@@ -2,7 +2,7 @@
 name = "solana-loader-v4-interface"
 description = "Solana loader V4 interface."
 documentation = "https://docs.rs/solana-loader-v4-interface"
-version = "2.2.0"
+version = "2.2.1"
 authors = { workspace = true }
 repository = { workspace = true }
 homepage = { workspace = true }

@@ -2,7 +2,7 @@
 name = "solana-package-metadata"
 description = "Solana Package Metadata"
 documentation = "https://docs.rs/solana-package-metadata"
-version = "2.2.0"
+version = "2.2.1"
 authors = { workspace = true }
 repository = { workspace = true }
 homepage = { workspace = true }

@@ -2,7 +2,7 @@
 name = "solana-program-error"
 description = "Solana ProgramError type and related definitions."
 documentation = "https://docs.rs/solana-program-error"
-version = "2.2.0"
+version = "2.2.1"
 authors = { workspace = true }
 repository = { workspace = true }
 homepage = { workspace = true }

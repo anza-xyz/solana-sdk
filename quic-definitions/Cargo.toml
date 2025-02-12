@@ -2,7 +2,7 @@
 name = "solana-quic-definitions"
 description = "Definitions related to Solana over QUIC."
 documentation = "https://docs.rs/solana-quic-definitions"
-version = "2.2.0"
+version = "2.2.1"
 authors = { workspace = true }
 repository = { workspace = true }
 homepage = { workspace = true }

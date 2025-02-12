@@ -2,7 +2,7 @@
 name = "solana-program-memory"
 description = "Basic low-level memory operations for Solana."
 documentation = "https://docs.rs/solana-program-memory"
-version = "2.2.0"
+version = "2.2.1"
 authors = { workspace = true }
 repository = { workspace = true }
 homepage = { workspace = true }

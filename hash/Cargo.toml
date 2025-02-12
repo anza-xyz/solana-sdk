@@ -2,7 +2,7 @@
 name = "solana-hash"
 description = "Solana wrapper for the 32-byte output of a hashing algorithm."
 documentation = "https://docs.rs/solana-hash"
-version = "2.2.0"
+version = "2.2.1"
 authors = { workspace = true }
 repository = { workspace = true }
 homepage = { workspace = true }

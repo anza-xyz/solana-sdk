@@ -2,7 +2,7 @@
 name = "solana-secp256k1-recover"
 description = "Solana SECP256K1 Recover"
 documentation = "https://docs.rs/solana-secp256k1-recover"
-version = "2.2.0"
+version = "2.2.1"
 authors = { workspace = true }
 repository = { workspace = true }
 homepage = { workspace = true }

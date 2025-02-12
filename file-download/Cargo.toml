@@ -2,7 +2,7 @@
 name = "solana-file-download"
 description = "Solana File Download Utility"
 documentation = "https://docs.rs/solana-file-download"
-version = "2.2.0"
+version = "2.2.1"
 authors = { workspace = true }
 repository = { workspace = true }
 homepage = { workspace = true }

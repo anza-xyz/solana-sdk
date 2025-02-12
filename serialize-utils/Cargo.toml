@@ -2,7 +2,7 @@
 name = "solana-serialize-utils"
 description = "Solana helpers for reading and writing bytes."
 documentation = "https://docs.rs/solana-serialize-utils"
-version = "2.2.0"
+version = "2.2.1"
 authors = { workspace = true }
 repository = { workspace = true }
 homepage = { workspace = true }

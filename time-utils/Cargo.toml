@@ -2,7 +2,7 @@
 name = "solana-time-utils"
 description = "`std::time` utilities for Solana"
 documentation = "https://docs.rs/solana-time-utils"
-version = "2.2.0"
+version = "2.2.1"
 authors = { workspace = true }
 repository = { workspace = true }
 homepage = { workspace = true }

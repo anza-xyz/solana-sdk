@@ -2,7 +2,7 @@
 name = "solana-secp256r1-program"
 description = "Precompile implementation for the secp256r1 elliptic curve."
 documentation = "https://docs.rs/solana-secp256r1"
-version = "2.2.0"
+version = "2.2.1"
 authors = { workspace = true }
 repository = { workspace = true }
 homepage = { workspace = true }

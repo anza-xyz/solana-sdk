@@ -2,7 +2,7 @@
 name = "solana-frozen-abi"
 description = "Solana Frozen ABI"
 documentation = "https://docs.rs/solana-frozen-abi"
-version = "2.2.0"
+version = "2.2.1"
 authors = { workspace = true }
 repository = { workspace = true }
 homepage = { workspace = true }

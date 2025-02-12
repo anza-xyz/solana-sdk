@@ -2,7 +2,7 @@
 name = "solana-cpi"
 description = "Solana Cross-program Invocation"
 documentation = "https://docs.rs/solana-cpi"
-version = "2.2.0"
+version = "2.2.1"
 authors = { workspace = true }
 repository = { workspace = true }
 homepage = { workspace = true }

@@ -2,7 +2,7 @@
 name = "solana-epoch-info"
 description = "Information about a Solana epoch."
 documentation = "https://docs.rs/solana-epoch-info"
-version = "2.2.0"
+version = "2.2.1"
 authors = { workspace = true }
 repository = { workspace = true }
 homepage = { workspace = true }

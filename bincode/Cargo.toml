@@ -2,7 +2,7 @@
 name = "solana-bincode"
 description = "Solana bincode utilities"
 documentation = "https://docs.rs/solana-bincode"
-version = "2.2.0"
+version = "2.2.1"
 authors = { workspace = true }
 repository = { workspace = true }
 homepage = { workspace = true }

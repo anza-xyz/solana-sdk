@@ -2,7 +2,7 @@
 name = "solana-slot-history"
 description = "Types and utilities for the Solana SlotHistory sysvar."
 documentation = "https://docs.rs/solana-slot-history"
-version = "2.2.0"
+version = "2.2.1"
 authors = { workspace = true }
 repository = { workspace = true }
 homepage = { workspace = true }

@@ -2,7 +2,7 @@
 name = "solana-precompile-error"
 description = "Solana PrecompileError type"
 documentation = "https://docs.rs/solana-precompile-error"
-version = "2.2.0"
+version = "2.2.1"
 authors = { workspace = true }
 repository = { workspace = true }
 homepage = { workspace = true }

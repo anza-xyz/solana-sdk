@@ -2,7 +2,7 @@
 name = "solana-program-pack"
 description = "Solana Pack serialization trait."
 documentation = "https://docs.rs/solana-program-pack"
-version = "2.2.0"
+version = "2.2.1"
 authors = { workspace = true }
 repository = { workspace = true }
 homepage = { workspace = true }

@@ -2,7 +2,7 @@
 name = "solana-derivation-path"
 description = "Solana BIP44 derivation paths."
 documentation = "https://docs.rs/solana-derivation-path"
-version = "2.2.0"
+version = "2.2.1"
 authors = { workspace = true }
 repository = { workspace = true }
 homepage = { workspace = true }

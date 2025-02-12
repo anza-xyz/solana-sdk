@@ -2,7 +2,7 @@
 name = "solana-borsh"
 description = "Solana Borsh utilities"
 documentation = "https://docs.rs/solana-borsh"
-version = "2.2.0"
+version = "2.2.1"
 authors = { workspace = true }
 repository = { workspace = true }
 homepage = { workspace = true }

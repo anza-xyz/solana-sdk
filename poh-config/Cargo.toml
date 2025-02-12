@@ -2,7 +2,7 @@
 name = "solana-poh-config"
 description = "Definitions of Solana's proof of history."
 documentation = "https://docs.rs/solana-poh-config"
-version = "2.2.0"
+version = "2.2.1"
 authors = { workspace = true }
 repository = { workspace = true }
 homepage = { workspace = true }
