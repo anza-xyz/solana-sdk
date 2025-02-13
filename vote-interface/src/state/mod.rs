@@ -1,5 +1,7 @@
 //! Vote state
 
+#[cfg(feature = "dev-context-only-utils")]
+use arbitrary::Arbitrary;
 #[cfg(all(not(target_os = "solana"), feature = "bincode"))]
 use bincode::deserialize;
 #[cfg(feature = "bincode")]
@@ -18,10 +20,7 @@ use {
     std::{collections::VecDeque, fmt::Debug},
 };
 #[cfg(test)]
-use {
-    arbitrary::{Arbitrary, Unstructured},
-    solana_epoch_schedule::MAX_LEADER_SCHEDULE_EPOCH_OFFSET,
-};
+use {arbitrary::Unstructured, solana_epoch_schedule::MAX_LEADER_SCHEDULE_EPOCH_OFFSET};
 
 mod vote_state_0_23_5;
 pub mod vote_state_1_14_11;
@@ -82,7 +81,7 @@ impl Vote {
 #[cfg_attr(feature = "frozen-abi", derive(AbiExample))]
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[derive(Default, Debug, PartialEq, Eq, Copy, Clone)]
-#[cfg_attr(test, derive(Arbitrary))]
+#[cfg_attr(feature = "dev-context-only-utils", derive(Arbitrary))]
 pub struct Lockout {
     slot: Slot,
     confirmation_count: u32,
@@ -132,7 +131,7 @@ impl Lockout {
 #[cfg_attr(feature = "frozen-abi", derive(AbiExample))]
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[derive(Default, Debug, PartialEq, Eq, Copy, Clone)]
-#[cfg_attr(test, derive(Arbitrary))]
+#[cfg_attr(feature = "dev-context-only-utils", derive(Arbitrary))]
 pub struct LandedVote {
     // Latency is the difference in slot number between the slot that was voted on (lockout.slot) and the slot in
     // which the vote that added this Lockout landed.  For votes which were cast before versions of the validator
@@ -354,7 +353,7 @@ pub struct VoteAuthorizeCheckedWithSeedArgs {
 #[cfg_attr(feature = "frozen-abi", derive(AbiExample))]
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[derive(Debug, Default, PartialEq, Eq, Clone)]
-#[cfg_attr(test, derive(Arbitrary))]
+#[cfg_attr(feature = "dev-context-only-utils", derive(Arbitrary))]
 pub struct BlockTimestamp {
     pub slot: Slot,
     pub timestamp: UnixTimestamp,
@@ -366,7 +365,7 @@ const MAX_ITEMS: usize = 32;
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[cfg_attr(feature = "frozen-abi", derive(AbiExample))]
 #[derive(Debug, PartialEq, Eq, Clone)]
-#[cfg_attr(test, derive(Arbitrary))]
+#[cfg_attr(feature = "dev-context-only-utils", derive(Arbitrary))]
 pub struct CircBuf<I> {
     buf: [I; MAX_ITEMS],
     /// next pointer
@@ -419,7 +418,7 @@ impl<I> CircBuf<I> {
 )]
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[derive(Debug, Default, PartialEq, Eq, Clone)]
-#[cfg_attr(test, derive(Arbitrary))]
+#[cfg_attr(feature = "dev-context-only-utils", derive(Arbitrary))]
 pub struct VoteState {
     /// the node that votes in this account
     pub node_pubkey: Pubkey,

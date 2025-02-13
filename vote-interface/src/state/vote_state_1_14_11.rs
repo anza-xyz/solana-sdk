@@ -1,5 +1,5 @@
 use super::*;
-#[cfg(test)]
+#[cfg(feature = "dev-context-only-utils")]
 use arbitrary::Arbitrary;
 
 // Offset used for VoteState version 1_14_11
@@ -12,7 +12,7 @@ const DEFAULT_PRIOR_VOTERS_OFFSET: usize = 82;
 )]
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[derive(Debug, Default, PartialEq, Eq, Clone)]
-#[cfg_attr(test, derive(Arbitrary))]
+#[cfg_attr(feature = "dev-context-only-utils", derive(Arbitrary))]
 pub struct VoteState1_14_11 {
     /// the node that votes in this account
     pub node_pubkey: Pubkey,
