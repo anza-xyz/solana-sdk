@@ -2867,7 +2867,7 @@ dependencies = [
 
 [[package]]
 name = "solana-feature-set"
-version = "2.2.1"
+version = "2.2.2"
 dependencies = [
  "ahash",
  "lazy_static",
