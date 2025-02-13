@@ -219,7 +219,7 @@ solana-epoch-rewards-hasher = { path = "epoch-rewards-hasher", version = "2.2.1"
 solana-epoch-schedule = { path = "epoch-schedule", version = "2.2.1" }
 solana-example-mocks = { path = "example-mocks", version = "2.2.1" }
 solana-feature-gate-interface = { path = "feature-gate-interface", version = "2.2.1" }
-solana-feature-set = { path = "feature-set", version = "2.2.1" }
+solana-feature-set = { path = "feature-set", version = "2.2.2" }
 solana-fee-calculator = { path = "fee-calculator", version = "2.2.1" }
 solana-fee-structure = { path = "fee-structure", version = "2.2.1" }
 solana-frozen-abi = { path = "frozen-abi", version = "2.2.1" }
