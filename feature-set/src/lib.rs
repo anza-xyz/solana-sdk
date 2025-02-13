@@ -944,6 +944,14 @@ pub mod create_slashing_program {
     solana_pubkey::declare_id!("sProgVaNWkYdP2eTRAy1CPrgb3b9p8yXCASrPEqo6VJ");
 }
 
+pub mod disable_partitioned_rent_collection {
+    solana_pubkey::declare_id!("2B2SBNbUcr438LtGXNcJNBP2GBSxjx81F945SdSkUSfC");
+}
+
+pub mod enable_vote_address_leader_schedule {
+    solana_pubkey::declare_id!("5JsG4NWH8Jbrqdd8uL6BNwnyZK3dQSoieRXG5vmofj9y");
+}
+
 lazy_static! {
     /// Map of feature identifiers to user-visible description
     pub static ref FEATURE_NAMES: AHashMap<Pubkey, &'static str> = [
@@ -1175,6 +1183,8 @@ lazy_static! {
         (drop_unchained_merkle_shreds::id(), "drops unchained Merkle shreds #2149"),
         (relax_intrabatch_account_locks::id(), "Allow batched transactions to read/write and write/write the same accounts SIMD-0083"),
         (create_slashing_program::id(), "creates an enshrined slashing program SIMD-0204"),
+        (disable_partitioned_rent_collection::id(), "Disable partitioned rent collection SIMD-0175 #4562"),
+        (enable_vote_address_leader_schedule::id(), "Enable vote address leader schedule SIMD-0180 #4573"),
         /*************** ADD NEW FEATURES HERE ***************/
     ]
     .iter()
