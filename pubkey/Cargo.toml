@@ -29,6 +29,7 @@ solana-frozen-abi = { workspace = true, optional = true, features = [
 solana-frozen-abi-macro = { workspace = true, optional = true, features = [
     "frozen-abi",
 ] }
+solana-pubkey-error = { workspace = true, features = ["num-traits"] }
 solana-sanitize = { workspace = true }
 
 [target.'cfg(target_os = "solana")'.dependencies]
@@ -72,9 +73,9 @@ frozen-abi = [
     "std",
 ]
 rand = ["dep:rand", "std"]
-serde = ["dep:serde", "dep:serde_derive"]
+serde = ["dep:serde", "dep:serde_derive", "solana-pubkey-error/serde"]
 sha2 = ["dep:solana-sha256-hasher", "solana-sha256-hasher/sha2"]
-std = []
+std = ["solana-pubkey-error/std"]
 
 [package.metadata.docs.rs]
 targets = ["x86_64-unknown-linux-gnu", "wasm32-unknown-unknown"]

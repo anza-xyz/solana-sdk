@@ -1,51 +1,23 @@
+#![no_std]
+#![cfg_attr(feature = "frozen-abi", feature(min_specialization))]
 use core::fmt;
+#[cfg(feature = "num-traits")]
+use num_traits::ToPrimitive;
 #[cfg(feature = "frozen-abi")]
 use solana_frozen_abi_macro::{AbiEnumVisitor, AbiExample};
 #[cfg(feature = "std")]
-use {
-    num_traits::ToPrimitive,
-    std::string::{String, ToString},
+extern crate std;
+use solana_program_error::ProgramError;
+pub use solana_program_error::{
+    ACCOUNT_ALREADY_INITIALIZED, ACCOUNT_BORROW_FAILED, ACCOUNT_DATA_TOO_SMALL,
+    ACCOUNT_NOT_RENT_EXEMPT, ARITHMETIC_OVERFLOW, BORSH_IO_ERROR,
+    BUILTIN_PROGRAMS_MUST_CONSUME_COMPUTE_UNITS, CUSTOM_ZERO, ILLEGAL_OWNER, IMMUTABLE,
+    INCORRECT_AUTHORITY, INCORRECT_PROGRAM_ID, INSUFFICIENT_FUNDS, INVALID_ACCOUNT_DATA,
+    INVALID_ACCOUNT_DATA_REALLOC, INVALID_ACCOUNT_OWNER, INVALID_ARGUMENT,
+    INVALID_INSTRUCTION_DATA, INVALID_SEEDS, MAX_ACCOUNTS_DATA_ALLOCATIONS_EXCEEDED,
+    MAX_INSTRUCTION_TRACE_LENGTH_EXCEEDED, MAX_SEED_LENGTH_EXCEEDED, MISSING_REQUIRED_SIGNATURES,
+    NOT_ENOUGH_ACCOUNT_KEYS, UNINITIALIZED_ACCOUNT, UNSUPPORTED_SYSVAR,
 };
-
-/// Builtin return values occupy the upper 32 bits
-const BUILTIN_BIT_SHIFT: usize = 32;
-macro_rules! to_builtin {
-    ($error:expr) => {
-        ($error as u64) << BUILTIN_BIT_SHIFT
-    };
-}
-
-pub const CUSTOM_ZERO: u64 = to_builtin!(1);
-pub const INVALID_ARGUMENT: u64 = to_builtin!(2);
-pub const INVALID_INSTRUCTION_DATA: u64 = to_builtin!(3);
-pub const INVALID_ACCOUNT_DATA: u64 = to_builtin!(4);
-pub const ACCOUNT_DATA_TOO_SMALL: u64 = to_builtin!(5);
-pub const INSUFFICIENT_FUNDS: u64 = to_builtin!(6);
-pub const INCORRECT_PROGRAM_ID: u64 = to_builtin!(7);
-pub const MISSING_REQUIRED_SIGNATURES: u64 = to_builtin!(8);
-pub const ACCOUNT_ALREADY_INITIALIZED: u64 = to_builtin!(9);
-pub const UNINITIALIZED_ACCOUNT: u64 = to_builtin!(10);
-pub const NOT_ENOUGH_ACCOUNT_KEYS: u64 = to_builtin!(11);
-pub const ACCOUNT_BORROW_FAILED: u64 = to_builtin!(12);
-pub const MAX_SEED_LENGTH_EXCEEDED: u64 = to_builtin!(13);
-pub const INVALID_SEEDS: u64 = to_builtin!(14);
-pub const BORSH_IO_ERROR: u64 = to_builtin!(15);
-pub const ACCOUNT_NOT_RENT_EXEMPT: u64 = to_builtin!(16);
-pub const UNSUPPORTED_SYSVAR: u64 = to_builtin!(17);
-pub const ILLEGAL_OWNER: u64 = to_builtin!(18);
-pub const MAX_ACCOUNTS_DATA_ALLOCATIONS_EXCEEDED: u64 = to_builtin!(19);
-pub const INVALID_ACCOUNT_DATA_REALLOC: u64 = to_builtin!(20);
-pub const MAX_INSTRUCTION_TRACE_LENGTH_EXCEEDED: u64 = to_builtin!(21);
-pub const BUILTIN_PROGRAMS_MUST_CONSUME_COMPUTE_UNITS: u64 = to_builtin!(22);
-pub const INVALID_ACCOUNT_OWNER: u64 = to_builtin!(23);
-pub const ARITHMETIC_OVERFLOW: u64 = to_builtin!(24);
-pub const IMMUTABLE: u64 = to_builtin!(25);
-pub const INCORRECT_AUTHORITY: u64 = to_builtin!(26);
-// Warning: Any new error codes added here must also be:
-// - Added to the below conversions
-// - Added as an equivalent to ProgramError and InstructionError
-// - Be featurized in the BPF loader to return `InstructionError::InvalidError`
-//   until the feature is activated
 
 /// Reasons the runtime might have rejected an instruction.
 ///
@@ -54,7 +26,6 @@ pub const INCORRECT_AUTHORITY: u64 = to_builtin!(26);
 /// an error be consistent across software versions.  For example, it is
 /// dangerous to include error strings from 3rd party crates because they could
 /// change at any time and changes to them are difficult to detect.
-#[cfg(feature = "std")]
 #[cfg_attr(feature = "frozen-abi", derive(AbiExample, AbiEnumVisitor))]
 #[cfg_attr(
     feature = "serde",
@@ -202,15 +173,7 @@ pub enum InstructionError {
     IncorrectAuthority,
 
     /// Failed to serialize or deserialize account data
-    ///
-    /// Warning: This error should never be emitted by the runtime.
-    ///
-    /// This error includes strings from the underlying 3rd party Borsh crate
-    /// which can be dangerous because the error strings could change across
-    /// Borsh versions. Only programs can use this error because they are
-    /// consistent across Solana software versions.
-    ///
-    BorshIoError(String),
+    BorshIoError,
 
     /// An account does not have enough lamports to be rent-exempt
     AccountNotRentExempt,
@@ -245,7 +208,6 @@ pub enum InstructionError {
 #[cfg(feature = "std")]
 impl std::error::Error for InstructionError {}
 
-#[cfg(feature = "std")]
 impl fmt::Display for InstructionError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
@@ -361,8 +323,8 @@ impl fmt::Display for InstructionError {
             InstructionError::ProgramFailedToCompile => f.write_str("Program failed to compile"),
             InstructionError::Immutable => f.write_str("Account is immutable"),
             InstructionError::IncorrectAuthority => f.write_str("Incorrect authority provided"),
-            InstructionError::BorshIoError(s) => {
-                write!(f, "Failed to serialize or deserialize account data: {s}",)
+            InstructionError::BorshIoError => {
+                f.write_str("Failed to serialize or deserialize account data")
             }
             InstructionError::AccountNotRentExempt => {
                 f.write_str("An account does not have enough lamports to be rent-exempt")
@@ -385,7 +347,7 @@ impl fmt::Display for InstructionError {
     }
 }
 
-#[cfg(feature = "std")]
+#[cfg(feature = "num-traits")]
 impl<T> From<T> for InstructionError
 where
     T: ToPrimitive,
@@ -407,7 +369,7 @@ where
             ACCOUNT_BORROW_FAILED => Self::AccountBorrowFailed,
             MAX_SEED_LENGTH_EXCEEDED => Self::MaxSeedLengthExceeded,
             INVALID_SEEDS => Self::InvalidSeeds,
-            BORSH_IO_ERROR => Self::BorshIoError("Unknown".to_string()),
+            BORSH_IO_ERROR => Self::BorshIoError,
             ACCOUNT_NOT_RENT_EXEMPT => Self::AccountNotRentExempt,
             UNSUPPORTED_SYSVAR => Self::UnsupportedSysvar,
             ILLEGAL_OWNER => Self::IllegalOwner,
@@ -423,7 +385,7 @@ where
             INCORRECT_AUTHORITY => Self::IncorrectAuthority,
             _ => {
                 // A valid custom error has no bits set in the upper 32
-                if error >> BUILTIN_BIT_SHIFT == 0 {
+                if error >> solana_program_error::BUILTIN_BIT_SHIFT == 0 {
                     Self::Custom(error as u32)
                 } else {
                     Self::InvalidError
@@ -453,12 +415,53 @@ impl fmt::Display for LamportsError {
     }
 }
 
-#[cfg(feature = "std")]
 impl From<LamportsError> for InstructionError {
     fn from(error: LamportsError) -> Self {
         match error {
             LamportsError::ArithmeticOverflow => InstructionError::ArithmeticOverflow,
             LamportsError::ArithmeticUnderflow => InstructionError::ArithmeticOverflow,
+        }
+    }
+}
+
+impl TryFrom<InstructionError> for ProgramError {
+    type Error = InstructionError;
+
+    fn try_from(error: InstructionError) -> Result<Self, Self::Error> {
+        match error {
+            Self::Error::Custom(err) => Ok(Self::Custom(err)),
+            Self::Error::InvalidArgument => Ok(Self::InvalidArgument),
+            Self::Error::InvalidInstructionData => Ok(Self::InvalidInstructionData),
+            Self::Error::InvalidAccountData => Ok(Self::InvalidAccountData),
+            Self::Error::AccountDataTooSmall => Ok(Self::AccountDataTooSmall),
+            Self::Error::InsufficientFunds => Ok(Self::InsufficientFunds),
+            Self::Error::IncorrectProgramId => Ok(Self::IncorrectProgramId),
+            Self::Error::MissingRequiredSignature => Ok(Self::MissingRequiredSignature),
+            Self::Error::AccountAlreadyInitialized => Ok(Self::AccountAlreadyInitialized),
+            Self::Error::UninitializedAccount => Ok(Self::UninitializedAccount),
+            Self::Error::NotEnoughAccountKeys => Ok(Self::NotEnoughAccountKeys),
+            Self::Error::AccountBorrowFailed => Ok(Self::AccountBorrowFailed),
+            Self::Error::MaxSeedLengthExceeded => Ok(Self::MaxSeedLengthExceeded),
+            Self::Error::InvalidSeeds => Ok(Self::InvalidSeeds),
+            Self::Error::BorshIoError => Ok(Self::BorshIoError),
+            Self::Error::AccountNotRentExempt => Ok(Self::AccountNotRentExempt),
+            Self::Error::UnsupportedSysvar => Ok(Self::UnsupportedSysvar),
+            Self::Error::IllegalOwner => Ok(Self::IllegalOwner),
+            Self::Error::MaxAccountsDataAllocationsExceeded => {
+                Ok(Self::MaxAccountsDataAllocationsExceeded)
+            }
+            Self::Error::InvalidRealloc => Ok(Self::InvalidRealloc),
+            Self::Error::MaxInstructionTraceLengthExceeded => {
+                Ok(Self::MaxInstructionTraceLengthExceeded)
+            }
+            Self::Error::BuiltinProgramsMustConsumeComputeUnits => {
+                Ok(Self::BuiltinProgramsMustConsumeComputeUnits)
+            }
+            Self::Error::InvalidAccountOwner => Ok(Self::InvalidAccountOwner),
+            Self::Error::ArithmeticOverflow => Ok(Self::ArithmeticOverflow),
+            Self::Error::Immutable => Ok(Self::Immutable),
+            Self::Error::IncorrectAuthority => Ok(Self::IncorrectAuthority),
+            _ => Err(error),
         }
     }
 }
