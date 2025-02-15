@@ -183,6 +183,7 @@ curve25519-dalek = { workspace = true }
 ed25519-dalek = { workspace = true }
 libsecp256k1 = { workspace = true, features = ["hmac"] }
 openssl = { workspace = true }
+rand = { workspace = true }
 rand0-7 = { workspace = true }
 serde_derive = { workspace = true }
 serde_with = { workspace = true, features = ["macros"] }
