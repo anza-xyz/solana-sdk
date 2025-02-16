@@ -3432,7 +3432,6 @@ dependencies = [
 name = "solana-program-memory"
 version = "2.2.1"
 dependencies = [
- "num-traits",
  "solana-define-syscall",
 ]
 

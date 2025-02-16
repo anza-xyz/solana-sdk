@@ -11,19 +11,13 @@ pub mod syscalls {
 }
 
 /// Check that two regions do not overlap.
-///
-/// Hidden to share with bpf_loader without being part of the API surface.
-#[doc(hidden)]
-pub fn is_nonoverlapping<N>(src: N, src_len: N, dst: N, dst_len: N) -> bool
-where
-    N: Ord + num_traits::SaturatingSub,
-{
+fn is_nonoverlapping(src: usize, src_len: usize, dst: usize, dst_len: usize) -> bool {
     // If the absolute distance between the ptrs is at least as big as the size of the other,
     // they do not overlap.
     if src > dst {
-        src.saturating_sub(&dst) >= dst_len
+        src.saturating_sub(dst) >= dst_len
     } else {
-        dst.saturating_sub(&src) >= src_len
+        dst.saturating_sub(src) >= src_len
     }
 }
 
@@ -229,7 +223,7 @@ mod tests {
         for dst in 13..20 {
             assert!(is_nonoverlapping(10, 3, dst, 3));
         }
-        assert!(is_nonoverlapping::<u8>(255, 3, 254, 1));
-        assert!(!is_nonoverlapping::<u8>(255, 2, 254, 3));
+        assert!(is_nonoverlapping(255, 3, 254, 1));
+        assert!(!is_nonoverlapping(255, 2, 254, 3));
     }
 }
