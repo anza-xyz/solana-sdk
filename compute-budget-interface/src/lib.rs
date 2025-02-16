@@ -39,7 +39,7 @@ pub enum ComputeBudgetInstruction {
 
 macro_rules! to_instruction {
     ($discriminator: expr, $num: expr, $num_type: ty) => {{
-        let mut data = [0u8; size_of::<$num_type>() + 1];
+        let mut data = [0u8; ::core::mem::size_of::<$num_type>() + 1];
         data[0] = $discriminator;
         data[1..].copy_from_slice(&$num.to_le_bytes());
         Instruction {
