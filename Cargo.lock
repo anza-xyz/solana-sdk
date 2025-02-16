@@ -496,6 +496,9 @@ name = "bytes"
 version = "1.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f61dac84819c6588b558454b194026eb1f09c293b9036ae9b159e74e73ab6cf9"
+dependencies = [
+ "serde",
+]
 
 [[package]]
 name = "cast"
@@ -3263,6 +3266,7 @@ version = "2.2.1"
 dependencies = [
  "bincode",
  "bitflags 2.8.0",
+ "bytes",
  "cfg_eval",
  "serde",
  "serde_derive",
