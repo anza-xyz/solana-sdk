@@ -6,7 +6,6 @@ use {
     solana_account::{AccountSharedData, ReadableAccount, WritableAccount},
     solana_clock::Epoch,
     solana_epoch_schedule::EpochSchedule,
-    solana_genesis_config::GenesisConfig,
     solana_pubkey::Pubkey,
     solana_rent::{Rent, RentDue},
     solana_sdk_ids::incinerator,
@@ -27,11 +26,15 @@ pub struct RentCollector {
 
 impl Default for RentCollector {
     fn default() -> Self {
+        // slots_per_year derived from GenesisConfig::default() without calculations
+        // then checked in case it changes
+        let slots_per_year = 78892314.984;
+        #[cfg(test)]
+        assert!(slots_per_year == solana_genesis_config::GenesisConfig::default().slots_per_year());
         Self {
             epoch: Epoch::default(),
             epoch_schedule: EpochSchedule::default(),
-            // derive default value using GenesisConfig::default()
-            slots_per_year: GenesisConfig::default().slots_per_year(),
+            slots_per_year,
             rent: Rent::default(),
         }
     }
