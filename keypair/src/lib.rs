@@ -70,13 +70,15 @@ impl Keypair {
     /// Recovers a `Keypair` from a base58-encoded string
     pub fn from_base58_string(s: &str) -> Self {
         let mut buf = [0u8; ed25519_dalek::KEYPAIR_LENGTH];
-        bs58::decode(s).onto(&mut buf).unwrap();
+        five8::decode_64(s, &mut buf).unwrap();
         Self::from_bytes(&buf).unwrap()
     }
 
     /// Returns this `Keypair` as a base58-encoded string
     pub fn to_base58_string(&self) -> String {
-        bs58::encode(&self.0.to_bytes()).into_string()
+        let mut out = [0u8; five8::BASE58_ENCODED_64_MAX_LEN];
+        let len = five8::encode_64(&self.0.to_bytes(), &mut out);
+        out[..len as usize].iter().map(|c| *c as char).collect()
     }
 
     /// Gets this `Keypair`'s SecretKey
