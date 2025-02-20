@@ -122,7 +122,7 @@ check-cfg = [
 
 [workspace.dependencies]
 ahash = "0.8.11"
-anyhow = "1.0.95"
+anyhow = "1.0.96"
 arbitrary = "1.4.1"
 ark-bn254 = "0.4.0"
 ark-ec = "0.4.0"
