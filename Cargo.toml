@@ -165,7 +165,7 @@ libsecp256k1 = { version = "0.6.0", default-features = false, features = [
     "std",
     "static-context",
 ] }
-log = "0.4.25"
+log = "0.4.26"
 memmap2 = "0.5.10"
 memoffset = "0.9"
 num-bigint = "0.4.6"
