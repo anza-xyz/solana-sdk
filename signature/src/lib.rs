@@ -39,6 +39,14 @@ impl Default for Signature {
 
 impl solana_sanitize::Sanitize for Signature {}
 
+impl Signature {
+    /// Return a reference to the `Signature`'s byte array.
+    #[inline(always)]
+    pub const fn as_array(&self) -> &[u8; SIGNATURE_BYTES] {
+        &self.0
+    }
+}
+
 #[cfg(feature = "rand")]
 impl Signature {
     pub fn new_unique() -> Self {
