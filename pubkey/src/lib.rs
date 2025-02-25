@@ -12,6 +12,7 @@ use arbitrary::Arbitrary;
 use bytemuck_derive::{Pod, Zeroable};
 #[cfg(feature = "serde")]
 use serde_derive::{Deserialize, Serialize};
+pub use solana_pubkey_error::PubkeyError;
 #[cfg(any(feature = "std", target_arch = "wasm32"))]
 use std::vec::Vec;
 #[cfg(feature = "borsh")]
@@ -53,85 +54,6 @@ const PDA_MARKER: &[u8; 21] = b"ProgramDerivedAddress";
 /// to avoid a `solana_program` dependency
 #[cfg(target_os = "solana")]
 const SUCCESS: u64 = 0;
-
-// Use strum when testing to ensure our FromPrimitive
-// impl is exhaustive
-#[cfg_attr(test, derive(strum_macros::FromRepr, strum_macros::EnumIter))]
-#[cfg_attr(feature = "serde", derive(Serialize))]
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum PubkeyError {
-    /// Length of the seed is too long for address generation
-    MaxSeedLengthExceeded,
-    InvalidSeeds,
-    IllegalOwner,
-}
-
-impl ToPrimitive for PubkeyError {
-    #[inline]
-    fn to_i64(&self) -> Option<i64> {
-        Some(match *self {
-            PubkeyError::MaxSeedLengthExceeded => PubkeyError::MaxSeedLengthExceeded as i64,
-            PubkeyError::InvalidSeeds => PubkeyError::InvalidSeeds as i64,
-            PubkeyError::IllegalOwner => PubkeyError::IllegalOwner as i64,
-        })
-    }
-    #[inline]
-    fn to_u64(&self) -> Option<u64> {
-        self.to_i64().map(|x| x as u64)
-    }
-}
-
-impl FromPrimitive for PubkeyError {
-    #[inline]
-    fn from_i64(n: i64) -> Option<Self> {
-        if n == PubkeyError::MaxSeedLengthExceeded as i64 {
-            Some(PubkeyError::MaxSeedLengthExceeded)
-        } else if n == PubkeyError::InvalidSeeds as i64 {
-            Some(PubkeyError::InvalidSeeds)
-        } else if n == PubkeyError::IllegalOwner as i64 {
-            Some(PubkeyError::IllegalOwner)
-        } else {
-            None
-        }
-    }
-    #[inline]
-    fn from_u64(n: u64) -> Option<Self> {
-        Self::from_i64(n as i64)
-    }
-}
-
-#[cfg(feature = "std")]
-impl std::error::Error for PubkeyError {}
-
-impl fmt::Display for PubkeyError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            PubkeyError::MaxSeedLengthExceeded => {
-                f.write_str("Length of the seed is too long for address generation")
-            }
-            PubkeyError::InvalidSeeds => {
-                f.write_str("Provided seeds do not result in a valid address")
-            }
-            PubkeyError::IllegalOwner => f.write_str("Provided owner is not allowed"),
-        }
-    }
-}
-
-impl<T> DecodeError<T> for PubkeyError {
-    fn type_of() -> &'static str {
-        "PubkeyError"
-    }
-}
-impl From<u64> for PubkeyError {
-    fn from(error: u64) -> Self {
-        match error {
-            0 => PubkeyError::MaxSeedLengthExceeded,
-            1 => PubkeyError::InvalidSeeds,
-            2 => PubkeyError::IllegalOwner,
-            _ => panic!("Unsupported PubkeyError"),
-        }
-    }
-}
 
 /// The address of a [Solana account][acc].
 ///
@@ -1372,18 +1294,6 @@ mod tests {
             Err(PubkeyError::IllegalOwner)
         );
         assert!(pubkey_from_seed_by_marker(&PDA_MARKER[1..]).is_ok());
-    }
-
-    #[test]
-    fn test_pubkey_error_from_primitive_exhaustive() {
-        for variant in PubkeyError::iter() {
-            let variant_i64 = variant.clone() as i64;
-            assert_eq!(
-                PubkeyError::from_repr(variant_i64 as usize),
-                PubkeyError::from_i64(variant_i64)
-            );
-            assert_eq!(PubkeyError::from(variant_i64 as u64), variant);
-        }
     }
 
     #[test]
