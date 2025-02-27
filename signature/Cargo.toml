@@ -10,8 +10,8 @@ license = { workspace = true }
 edition = { workspace = true }
 
 [dependencies]
-bs58 = { workspace = true }
 ed25519-dalek = { workspace = true, optional = true }
+five8 = { workspace = true }
 rand = { workspace = true, optional = true }
 serde = { workspace = true, optional = true }
 serde-big-array = { workspace = true, optional = true }
