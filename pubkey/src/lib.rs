@@ -248,6 +248,13 @@ impl FromStr for Pubkey {
     }
 }
 
+impl From<&Pubkey> for Pubkey {
+    #[inline]
+    fn from(value: &Pubkey) -> Self {
+        *value
+    }
+}
+
 impl From<[u8; 32]> for Pubkey {
     #[inline]
     fn from(from: [u8; 32]) -> Self {
