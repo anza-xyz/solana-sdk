@@ -287,7 +287,10 @@ mod tests {
         let bytes = [1u8; 64];
         let signature = Signature::from(bytes);
         assert_eq!(signature.as_array(), &bytes);
-        assert_eq!(signature.as_array(), &<Signature as Into<[u8; 64]>>::into(signature));
+        assert_eq!(
+            signature.as_array(),
+            &<Signature as Into<[u8; 64]>>::into(signature)
+        );
         // Sanity check: ensure the pointer is the same.
         assert_eq!(signature.as_array().as_ptr(), signature.0.as_ptr());
     }
