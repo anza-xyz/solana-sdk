@@ -48,15 +48,20 @@ impl Keypair {
     }
 
     /// Recovers a `Keypair` from a base58-encoded string
+    pub fn try_from_base58_string(s: &str) -> Result<Self, SignatureError> {
+        let mut buf = [0u8; ed25519_dalek::KEYPAIR_LENGTH];
+        five8::decode_64(s, &mut buf).map_err(SignatureError::from_source)?;
+        Self::try_from(&buf[..])
+    }
+
+    /// Recovers a `Keypair` from a base58-encoded string
     ///
     /// # Panics
     ///
     /// Panics if given a malformed base58 string, or if the contents of the
     /// encoded string is invalid Keypair data.
     pub fn from_base58_string(s: &str) -> Self {
-        let mut buf = [0u8; ed25519_dalek::KEYPAIR_LENGTH];
-        five8::decode_64(s, &mut buf).unwrap();
-        Self::try_from(&buf[..]).unwrap()
+        Self::try_from_base58_string(s).unwrap()
     }
 
     /// Returns this `Keypair` as a base58-encoded string
