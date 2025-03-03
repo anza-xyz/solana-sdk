@@ -92,7 +92,7 @@ impl Serialize for OptionalNonZeroPubkey {
 struct OptionalNonZeroPubkeyVisitor;
 
 #[cfg(feature = "serde-traits")]
-impl<'de> Visitor<'de> for OptionalNonZeroPubkeyVisitor {
+impl Visitor<'_> for OptionalNonZeroPubkeyVisitor {
     type Value = OptionalNonZeroPubkey;
 
     fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
@@ -183,7 +183,7 @@ impl Serialize for OptionalNonZeroElGamalPubkey {
 struct OptionalNonZeroElGamalPubkeyVisitor;
 
 #[cfg(feature = "serde-traits")]
-impl<'de> Visitor<'de> for OptionalNonZeroElGamalPubkeyVisitor {
+impl Visitor<'_> for OptionalNonZeroElGamalPubkeyVisitor {
     type Value = OptionalNonZeroElGamalPubkey;
 
     fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
