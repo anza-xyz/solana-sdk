@@ -150,7 +150,7 @@ jobs:
           echo "PERL=$(which perl)" >> $GITHUB_ENV
           echo "OPENSSL_SRC_PERL=$(which perl)" >> $GITHUB_ENV
           choco install openssl --version 3.4.1 --install-arguments="'/DIR=C:\OpenSSL'" -y
-          echo "OPENSSL_LIB_DIR=\"C:\OpenSSL\lib\VC\x64\MT\"" >> $GITHUB_ENV
+          echo "OPENSSL_LIB_DIR=C:\OpenSSL\lib\VC\x64\MT" >> $GITHUB_ENV
           echo "OPENSSL_INCLUDE_DIR=C:\OpenSSL\include" >> $GITHUB_ENV
 
       - name: Run clippy
