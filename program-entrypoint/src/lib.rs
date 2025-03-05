@@ -291,16 +291,25 @@ pub struct BumpAllocator {
 unsafe impl std::alloc::GlobalAlloc for BumpAllocator {
     #[inline]
     unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
+        dbg!("Start");
+        dbg!(&layout);
+        dbg!(self.start);
         let pos_ptr = self.start as *mut usize;
 
         let mut pos = *pos_ptr;
+        dbg!(pos);
         if pos == 0 {
+            dbg!("first time");
             // First time, set starting position
             pos = self.start + self.len;
         }
+        dbg!(pos);
         pos = pos.saturating_sub(layout.size());
+        dbg!(pos);
         pos &= !(layout.align().wrapping_sub(1));
+        dbg!(pos);
         if pos < self.start + size_of::<*mut u8>() {
+            dbg!("No space", pos, self.start);
             return null_mut();
         }
         *pos_ptr = pos;
@@ -513,19 +522,16 @@ mod test {
     fn test_bump_allocator() {
         // alloc the entire
         {
-            let heap = [0u8; 128];
+            let mut heap = [0u8; 128];
             let allocator = BumpAllocator {
-                start: heap.as_ptr() as *const _ as usize,
+                start: heap.as_mut_ptr() as usize,
                 len: heap.len(),
             };
             for i in 0..128 - size_of::<*mut u8>() {
                 let ptr = unsafe {
                     allocator.alloc(Layout::from_size_align(1, size_of::<u8>()).unwrap())
                 };
-                assert_eq!(
-                    ptr as *const _ as usize,
-                    heap.as_ptr() as *const _ as usize + heap.len() - 1 - i
-                );
+                assert_eq!(ptr as usize, heap.as_ptr() as usize + heap.len() - 1 - i);
             }
             assert_eq!(null_mut(), unsafe {
                 allocator.alloc(Layout::from_size_align(1, 1).unwrap())
@@ -533,9 +539,9 @@ mod test {
         }
         // check alignment
         {
-            let heap = [0u8; 128];
+            let mut heap = [0u8; 128];
             let allocator = BumpAllocator {
-                start: heap.as_ptr() as *const _ as usize,
+                start: heap.as_mut_ptr() as usize,
                 len: heap.len(),
             };
             let ptr =
@@ -558,9 +564,9 @@ mod test {
         }
         // alloc entire block (minus the pos ptr)
         {
-            let heap = [0u8; 128];
+            let mut heap = [0u8; 128];
             let allocator = BumpAllocator {
-                start: heap.as_ptr() as *const _ as usize,
+                start: heap.as_mut_ptr() as usize,
                 len: heap.len(),
             };
             let ptr =
