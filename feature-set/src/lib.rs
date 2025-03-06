@@ -23,9 +23,7 @@ use {
     ahash::{AHashMap, AHashSet},
     lazy_static::lazy_static,
     solana_epoch_schedule::EpochSchedule,
-    solana_hash::Hash,
     solana_pubkey::Pubkey,
-    solana_sha256_hasher::Hasher,
 };
 
 pub mod deprecate_rewards_sysvar {
@@ -1190,10 +1188,13 @@ lazy_static! {
     .iter()
     .cloned()
     .collect();
+}
 
+#[cfg(not(target_os = "solana"))]
+lazy_static! {
     /// Unique identifier of the current software's feature set
-    pub static ref ID: Hash = {
-        let mut hasher = Hasher::default();
+    pub static ref ID: solana_hash::Hash = {
+        let mut hasher = solana_sha256_hasher::Hasher::default();
         let mut feature_ids = FEATURE_NAMES.keys().collect::<Vec<_>>();
         feature_ids.sort();
         for feature in feature_ids {
