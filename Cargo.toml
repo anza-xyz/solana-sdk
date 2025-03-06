@@ -120,6 +120,11 @@ check-cfg = [
     'cfg(feature, values("frozen-abi", "no-entrypoint"))',
 ]
 
+[workspace.metadata.release]
+pre-release-commit-message = "Publish {{crate_name}} v{{version}}"
+tag-message = "Publish {{crate_name}} v{{version}}"
+consolidate-commits = false
+
 [workspace.dependencies]
 ahash = "0.8.11"
 anyhow = "1.0.96"
