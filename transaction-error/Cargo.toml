@@ -17,6 +17,7 @@ solana-frozen-abi-macro = { workspace = true, optional = true }
 solana-instruction = { workspace = true, default-features = false, features = [
     "std",
 ] }
+solana-pubkey = { workspace = true }
 solana-sanitize = { workspace = true }
 
 [features]
