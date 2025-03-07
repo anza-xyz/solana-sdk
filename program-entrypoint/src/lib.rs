@@ -298,7 +298,7 @@ impl BumpAllocator {
     /// This will not initialize the provided memory, except for the first
     /// bytes where the pointer is stored.
     ///
-    /// SAFETY:
+    /// # Safety
     /// As long as BumpAllocator or any of its allocations are alive,
     /// writing into or deallocating the arena will cause UB.
     #[inline]
