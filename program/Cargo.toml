@@ -64,7 +64,7 @@ solana-msg = { workspace = true }
 solana-native-token = { workspace = true }
 solana-nonce = { workspace = true, features = ["serde"] }
 solana-program-entrypoint = { workspace = true }
-solana-program-error = { workspace = true, features = ["serde"] }
+solana-program-error = { workspace = true, features = ["serde", "solana-msg", "std"] }
 solana-program-memory = { workspace = true }
 solana-program-option = { workspace = true }
 solana-program-pack = { workspace = true }
