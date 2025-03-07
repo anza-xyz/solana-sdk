@@ -301,7 +301,12 @@ impl BumpAllocator {
     /// # Safety
     /// As long as BumpAllocator or any of its allocations are alive,
     /// writing into or deallocating the arena will cause UB.
+    ///
+    /// Integer arithmetic in this global allocator implementation is safe when
+    /// operating on the prescribed `HEAP_START_ADDRESS` and `HEAP_LENGTH`. Any
+    /// other use may overflow and is thus unsupported and at one's own risk.
     #[inline]
+    #[allow(clippy::arithmetic_side_effects)]
     pub unsafe fn new(arena: &mut [u8]) -> Self {
         debug_assert!(
             arena.len() > size_of::<usize>(),
