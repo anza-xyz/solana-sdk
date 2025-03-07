@@ -281,35 +281,64 @@ macro_rules! custom_panic_default {
 
 /// The bump allocator used as the default rust heap when running programs.
 pub struct BumpAllocator {
+    #[deprecated(
+        since = "2.2.2",
+        note = "This field should not be accessed directly. It will become private in future versions"
+    )]
     pub start: usize,
+    #[deprecated(
+        since = "2.2.2",
+        note = "This field should not be accessed directly. It will become private in future versions"
+    )]
     pub len: usize,
 }
+
+impl BumpAllocator {
+    /// Creates the allocator tied to a provided slice.
+    /// This will not initialize the provided memory, except for the first
+    /// bytes where the pointer is stored.
+    ///
+    /// SAFETY:
+    /// As long as BumpAllocator or any of its allocations are alive,
+    /// writing into or deallocating the arena will cause UB.
+    #[inline]
+    pub unsafe fn new(arena: &mut [u8]) -> Self {
+        debug_assert!(
+            arena.len() > size_of::<usize>(),
+            "Arena should be larger than usize"
+        );
+
+        // create a pointer to the start of the arena
+        // that will hold an address of the byte following free space
+        let pos_ptr = arena.as_mut_ptr() as *mut usize;
+        // initialize the data there
+        *pos_ptr = pos_ptr as usize + arena.len();
+
+        #[allow(deprecated)] //we get to use deprecated pub fields
+        Self {
+            start: pos_ptr as usize,
+            len: arena.len(),
+        }
+    }
+}
+
 /// Integer arithmetic in this global allocator implementation is safe when
 /// operating on the prescribed `HEAP_START_ADDRESS` and `HEAP_LENGTH`. Any
 /// other use may overflow and is thus unsupported and at one's own risk.
 #[allow(clippy::arithmetic_side_effects)]
 unsafe impl std::alloc::GlobalAlloc for BumpAllocator {
     #[inline]
+    #[allow(deprecated)] //we get to use deprecated pub fields
     unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
-        dbg!("Start");
-        dbg!(&layout);
-        dbg!(self.start);
         let pos_ptr = self.start as *mut usize;
-
         let mut pos = *pos_ptr;
-        dbg!(pos);
         if pos == 0 {
-            dbg!("first time");
             // First time, set starting position
             pos = self.start + self.len;
         }
-        dbg!(pos);
         pos = pos.saturating_sub(layout.size());
-        dbg!(pos);
         pos &= !(layout.align().wrapping_sub(1));
-        dbg!(pos);
         if pos < self.start + size_of::<*mut u8>() {
-            dbg!("No space", pos, self.start);
             return null_mut();
         }
         *pos_ptr = pos;
@@ -523,10 +552,7 @@ mod test {
         // alloc the entire
         {
             let mut heap = [0u8; 128];
-            let allocator = BumpAllocator {
-                start: heap.as_mut_ptr() as usize,
-                len: heap.len(),
-            };
+            let allocator = unsafe { BumpAllocator::new(&mut heap) };
             for i in 0..128 - size_of::<*mut u8>() {
                 let ptr = unsafe {
                     allocator.alloc(Layout::from_size_align(1, size_of::<u8>()).unwrap())
@@ -540,10 +566,7 @@ mod test {
         // check alignment
         {
             let mut heap = [0u8; 128];
-            let allocator = BumpAllocator {
-                start: heap.as_mut_ptr() as usize,
-                len: heap.len(),
-            };
+            let allocator = unsafe { BumpAllocator::new(&mut heap) };
             let ptr =
                 unsafe { allocator.alloc(Layout::from_size_align(1, size_of::<u8>()).unwrap()) };
             assert_eq!(0, ptr.align_offset(size_of::<u8>()));
@@ -565,12 +588,13 @@ mod test {
         // alloc entire block (minus the pos ptr)
         {
             let mut heap = [0u8; 128];
-            let allocator = BumpAllocator {
-                start: heap.as_mut_ptr() as usize,
-                len: heap.len(),
+            let allocator = unsafe { BumpAllocator::new(&mut heap) };
+            let ptr = unsafe {
+                allocator.alloc(
+                    Layout::from_size_align(heap.len() - size_of::<usize>(), size_of::<u8>())
+                        .unwrap(),
+                )
             };
-            let ptr =
-                unsafe { allocator.alloc(Layout::from_size_align(120, size_of::<u8>()).unwrap()) };
             assert_ne!(ptr, null_mut());
             assert_eq!(0, ptr.align_offset(size_of::<u64>()));
         }
