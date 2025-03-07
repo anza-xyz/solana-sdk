@@ -3426,7 +3426,7 @@ dependencies = [
 
 [[package]]
 name = "solana-program-entrypoint"
-version = "2.2.2"
+version = "2.2.1"
 dependencies = [
  "solana-account-info",
  "solana-msg",
