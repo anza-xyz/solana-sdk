@@ -4,6 +4,9 @@
 #![cfg_attr(feature = "frozen-abi", feature(min_specialization))]
 #![allow(clippy::arithmetic_side_effects)]
 
+#[cfg(all(feature = "serde", not(feature = "std")))]
+extern crate alloc;
+
 #[cfg(any(feature = "std", target_arch = "wasm32"))]
 extern crate std;
 #[cfg(feature = "dev-context-only-utils")]
@@ -156,11 +159,27 @@ impl From<u64> for PubkeyError {
     borsh(crate = "borsh")
 )]
 #[cfg_attr(all(feature = "borsh", feature = "std"), derive(BorshSchema))]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[cfg_attr(feature = "bytemuck", derive(Pod, Zeroable))]
 #[derive(Clone, Copy, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
 #[cfg_attr(feature = "dev-context-only-utils", derive(Arbitrary))]
-pub struct Pubkey(pub(crate) [u8; 32]);
+#[cfg_attr(feature = "serde", serde(transparent))]
+pub struct Pubkey(
+    #[cfg_attr(
+        feature = "serde",
+        serde(serialize_with = "serialize", deserialize_with = "deserialize")
+    )]
+    #[cfg_attr(
+        feature = "schemars",
+        schemars(
+            with = "std::string::String",
+            title = "SolanaPubkey",
+            range(min = 32, max = 44)
+        )
+    )]
+    pub(crate) [u8; 32],
+);
 
 impl solana_sanitize::Sanitize for Pubkey {}
 
@@ -894,6 +913,35 @@ macro_rules! impl_borsh_serialize {
 #[cfg(feature = "borsh")]
 impl_borsh_serialize!(borsh0_10);
 
+#[cfg(feature = "serde")]
+fn serialize<S>(bytes: &[u8; 32], serializer: S) -> Result<S::Ok, S::Error>
+where
+    S: serde::Serializer,
+{
+    let encoded = bs58::encode(bytes).into_string();
+    serializer.serialize_str(&encoded)
+}
+
+#[cfg(feature = "serde")]
+fn deserialize<'de, D>(deserializer: D) -> Result<[u8; 32], D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    #[cfg(feature = "std")]
+    use std::{format, string::String};
+
+    #[cfg(not(feature = "std"))]
+    use alloc::{format, string::String};
+
+    let s: String = serde::Deserialize::deserialize(deserializer)
+        .map_err(|_| serde::de::Error::custom("Failed to read String"))?;
+    let b = bs58::decode(s)
+        .into_vec()
+        .map_err(|x| serde::de::Error::custom(format!("Failed to decode base58 {x}")))?;
+    b.try_into()
+        .map_err(|_| serde::de::Error::custom("Invalid length"))
+}
+
 #[cfg(all(target_arch = "wasm32", feature = "curve25519"))]
 fn js_value_to_seeds_vec(array_of_uint8_arrays: &[JsValue]) -> Result<Vec<Vec<u8>>, JsValue> {
     let vec_vec_u8 = array_of_uint8_arrays
@@ -1415,5 +1463,31 @@ mod tests {
         assert_eq!(key.as_array(), &key.to_bytes());
         // Sanity check: ensure the pointer is the same.
         assert_eq!(key.as_array().as_ptr(), key.0.as_ptr());
+    }
+
+    #[test]
+    #[cfg(feature = "serde")]
+    fn json() {
+        let pubkey = Pubkey::new_unique();
+        let json = serde_json::to_string(&pubkey).unwrap();
+        let display = pubkey.to_string();
+        let back = serde_json::from_str::<Pubkey>(&json).unwrap();
+
+        assert_eq!(json, std::format!("\"{display}\""));
+        assert_eq!(pubkey, back);
+    }
+
+    #[test]
+    #[cfg(feature = "schemars")]
+    fn schemars() {
+        use schemars::{
+            schema::{InstanceType, SingleOrVec},
+            schema_for,
+        };
+        let schema = schema_for!(Pubkey);
+        assert_eq!(
+            schema.schema.instance_type.unwrap(),
+            SingleOrVec::Single(std::boxed::Box::new(InstanceType::String))
+        );
     }
 }
