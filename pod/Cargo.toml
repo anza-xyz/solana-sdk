@@ -17,7 +17,7 @@ bytemuck = { version = "1.22.0" }
 bytemuck_derive = { version = "1.8.1" }
 num-derive = "0.4"
 num-traits = "0.2"
-serde = { version = "1.0.218", optional = true }
+serde = { version = "1.0.219", optional = true }
 solana-decode-error = "2.2.1"
 solana-msg = "2.2.1"
 solana-program-error = "2.2.1"
