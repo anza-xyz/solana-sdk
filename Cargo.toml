@@ -106,7 +106,6 @@ members = [
     "sysvar-id",
     "time-utils",
     "transaction",
-    "transaction-context",
     "transaction-error",
     "validator-exit",
     "vote-interface",
@@ -306,7 +305,6 @@ solana-sysvar = { path = "sysvar", version = "2.2.1" }
 solana-sysvar-id = { path = "sysvar-id", version = "2.2.1" }
 solana-transaction = { path = "transaction", version = "2.2.1" }
 solana-transaction-error = { path = "transaction-error", version = "2.2.1" }
-solana-transaction-context = { path = "transaction-context", version = "2.2.1" }
 solana-validator-exit = { path = "validator-exit", version = "2.2.1" }
 solana-vote-interface = { path = "vote-interface", version = "2.2.2" }
 static_assertions = "1.1.0"

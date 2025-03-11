@@ -24,7 +24,6 @@ default = [
 full = [
     "serde_json",
     "solana-signature",
-    "solana-transaction-context/debug-signature",
     "solana-pubkey/rand",
     "dep:solana-client-traits",
     "dep:solana-cluster-type",
@@ -59,7 +58,6 @@ dev-context-only-utils = [
     "solana-compute-budget-interface/dev-context-only-utils",
     "solana-rent-debits/dev-context-only-utils",
     "solana-transaction/dev-context-only-utils",
-    "solana-transaction-context/dev-context-only-utils",
 ]
 frozen-abi = [
     "solana-feature-set/frozen-abi",
@@ -167,7 +165,6 @@ solana-transaction = { workspace = true, features = [
     "serde",
     "verify"
 ], optional = true }
-solana-transaction-context = { workspace = true, features = ["bincode"] }
 solana-transaction-error = { workspace = true, features = [
     "serde",
 ], optional = true }
