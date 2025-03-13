@@ -16,9 +16,9 @@ rustdoc-args = ["--cfg=docsrs"]
 
 [dependencies]
 borsh = { workspace = true, optional = true }
-bs58 = { workspace = true, default-features = false }
 bytemuck = { workspace = true, optional = true }
 bytemuck_derive = { workspace = true, optional = true }
+five8 = { workspace = true }
 serde = { workspace = true, optional = true }
 serde_derive = { workspace = true, optional = true }
 solana-atomic-u64 = { workspace = true }
@@ -31,6 +31,7 @@ solana-frozen-abi-macro = { workspace = true, optional = true, features = [
 solana-sanitize = { workspace = true }
 
 [dev-dependencies]
+bs58 = { workspace = true, default-features = false }
 solana-hash = { path = ".", features = ["dev-context-only-utils"] }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
