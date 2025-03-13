@@ -48,6 +48,7 @@ members = [
     "hash",
     "inflation",
     "instruction",
+    "instruction-error",
     "instructions-sysvar",
     "keccak-hasher",
     "keypair",
@@ -75,6 +76,7 @@ members = [
     "program-option",
     "program-pack",
     "pubkey",
+    "pubkey-error",
     "quic-definitions",
     "rent",
     "rent-collector",
@@ -244,6 +246,7 @@ solana-hard-forks = { path = "hard-forks", version = "2.2.1", default-features =
 solana-hash = { path = "hash", version = "2.2.1", default-features = false }
 solana-inflation = { path = "inflation", version = "2.2.1" }
 solana-instruction = { path = "instruction", version = "2.2.1", default-features = false }
+solana-instruction-error = { path = "instruction-error", version = "1.0.0" }
 solana-instructions-sysvar = { path = "instructions-sysvar", version = "2.2.1" }
 solana-keccak-hasher = { path = "keccak-hasher", version = "2.2.1" }
 solana-keypair = { path = "keypair", version = "2.2.1" }
@@ -271,6 +274,7 @@ solana-program-memory = { path = "program-memory", version = "2.2.1" }
 solana-program-option = { path = "program-option", version = "2.2.1" }
 solana-program-pack = { path = "program-pack", version = "2.2.1" }
 solana-pubkey = { path = "pubkey", version = "2.2.1", default-features = false }
+solana-pubkey-error = { path = "pubkey-error", version = "1.0.0", default-features = false }
 solana-quic-definitions = { path = "quic-definitions", version = "2.2.1" }
 solana-rent = { path = "rent", version = "2.2.1", default-features = false }
 solana-rent-collector = { path = "rent-collector", version = "2.2.1" }
