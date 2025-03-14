@@ -68,10 +68,15 @@ impl Keypair {
     }
 
     /// Recovers a `Keypair` from a base58-encoded string
-    pub fn from_base58_string(s: &str) -> Self {
+    pub fn try_from_base58_string(s: &str) -> Result<Self, Box<dyn error::Error>> {
         let mut buf = [0u8; ed25519_dalek::KEYPAIR_LENGTH];
-        bs58::decode(s).onto(&mut buf).unwrap();
-        Self::from_bytes(&buf).unwrap()
+        let written = bs58::decode(s).onto(&mut buf)?;
+        Ok(Self::from_bytes(&buf[..written])?)
+    }
+
+    /// Recovers a `Keypair` from a base58-encoded string. Panic on errors.
+    pub fn from_base58_string(s: &str) -> Self {
+        Self::try_from_base58_string(s).unwrap()
     }
 
     /// Returns this `Keypair` as a base58-encoded string
