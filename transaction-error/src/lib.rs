@@ -4,7 +4,10 @@
 use serde_derive::{Deserialize, Serialize};
 #[cfg(feature = "frozen-abi")]
 use solana_frozen_abi_macro::{AbiEnumVisitor, AbiExample};
-use {core::fmt, solana_instruction::error::InstructionError, solana_sanitize::SanitizeError};
+use {
+    core::fmt, solana_instruction::error::InstructionError, solana_pubkey::Pubkey,
+    solana_sanitize::SanitizeError,
+};
 
 pub type TransactionResult<T> = Result<T, TransactionError>;
 
@@ -43,8 +46,11 @@ pub enum TransactionError {
     BlockhashNotFound,
 
     /// An error occurred while processing an instruction. The first element of the tuple
-    /// indicates the instruction index in which the error occurred.
-    InstructionError(u8, InstructionError),
+    /// indicates the instruction index in which the error occurred. For avoidance of doubt, the
+    /// third element indicates the address of the program that raised the error, if applicable; the
+    /// error could after all have been raised during a cross-program invocation (ie. in an inner
+    /// instruction).
+    InstructionError(u8, InstructionError, Option<Pubkey>),
 
     /// Loader call chain is too deep
     CallChainTooDeep,
@@ -163,7 +169,10 @@ impl fmt::Display for TransactionError {
              => f.write_str("This transaction has already been processed"),
             Self::BlockhashNotFound
              => f.write_str("Blockhash not found"),
-            Self::InstructionError(idx, err) =>  write!(f, "Error processing Instruction {idx}: {err}"),
+            Self::InstructionError(idx, err, None)
+             => write!(f, "Error processing Instruction {idx}: {err}"),
+            Self::InstructionError(idx, err, Some(program_address))
+             => write!(f, "Error processing Instruction {idx}: {err} (from program {program_address})"),
             Self::CallChainTooDeep
              => f.write_str("Loader call chain is too deep"),
             Self::MissingSignatureForFee

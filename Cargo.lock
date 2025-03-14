@@ -4026,6 +4026,7 @@ dependencies = [
  "solana-frozen-abi",
  "solana-frozen-abi-macro",
  "solana-instruction",
+ "solana-pubkey",
  "solana-sanitize",
 ]
 
