@@ -806,4 +806,15 @@ mod tests {
             assert_eq!(result.unwrap(), expected);
         });
     }
+
+    #[test]
+    fn alt_bn128_pairing_invalid_length() {
+        use ark_ff::{BigInteger, BigInteger256};
+
+        let input = [0; 193];
+        let result = alt_bn128_pairing(&input);
+        assert!(result.is_ok());
+        let expected = BigInteger256::from(1u64).to_bytes_be();
+        assert_eq!(result.unwrap(), expected);
+    }
 }
