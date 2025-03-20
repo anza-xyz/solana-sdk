@@ -14,14 +14,12 @@ borsh = { workspace = true, optional = true }
 serde = { workspace = true, optional = true }
 serde_derive = { workspace = true, optional = true }
 solana-msg = { workspace = true, optional = true }
-solana-pubkey-error = { workspace = true, default-features = false, optional = true }
 
 [features]
 borsh = ["dep:borsh"]
-pubkey-error = ["dep:solana-pubkey-error"]
 solana-msg = ["dep:solana-msg"]
 serde = ["dep:serde", "dep:serde_derive"]
-std = ["solana-pubkey-error?/std"]
+std = []
 
 [package.metadata.docs.rs]
 targets = ["x86_64-unknown-linux-gnu"]

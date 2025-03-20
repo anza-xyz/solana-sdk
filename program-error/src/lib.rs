@@ -12,8 +12,6 @@ use core::{convert::TryFrom, fmt};
 use serde_derive::{Deserialize, Serialize};
 #[cfg(feature = "solana-msg")]
 use solana_msg::msg;
-#[cfg(feature = "pubkey-error")]
-use solana_pubkey_error::PubkeyError;
 
 pub type ProgramResult = core::result::Result<(), ProgramError>;
 
@@ -284,17 +282,6 @@ impl From<u64> for ProgramError {
             IMMUTABLE => Self::Immutable,
             INCORRECT_AUTHORITY => Self::IncorrectAuthority,
             _ => Self::Custom(error as u32),
-        }
-    }
-}
-
-#[cfg(feature = "pubkey-error")]
-impl From<PubkeyError> for ProgramError {
-    fn from(error: PubkeyError) -> Self {
-        match error {
-            PubkeyError::MaxSeedLengthExceeded => Self::MaxSeedLengthExceeded,
-            PubkeyError::InvalidSeeds => Self::InvalidSeeds,
-            PubkeyError::IllegalOwner => Self::IllegalOwner,
         }
     }
 }

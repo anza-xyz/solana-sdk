@@ -3432,7 +3432,6 @@ dependencies = [
  "serde",
  "serde_derive",
  "solana-msg",
- "solana-pubkey-error",
 ]
 
 [[package]]
@@ -3479,26 +3478,13 @@ dependencies = [
  "solana-frozen-abi",
  "solana-frozen-abi-macro",
  "solana-program",
+ "solana-program-error",
  "solana-pubkey",
- "solana-pubkey-error",
  "solana-sanitize",
  "solana-sha256-hasher",
  "strum",
  "strum_macros",
  "wasm-bindgen",
-]
-
-[[package]]
-name = "solana-pubkey-error"
-version = "1.0.0"
-dependencies = [
- "num-traits",
- "serde",
- "serde_derive",
- "solana-decode-error",
- "solana-pubkey-error",
- "strum",
- "strum_macros",
 ]
 
 [[package]]
