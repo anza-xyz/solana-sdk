@@ -38,6 +38,7 @@ members = [
     "example-mocks",
     "feature-gate-interface",
     "feature-set",
+    "feature-set-interface",
     "fee-calculator",
     "fee-structure",
     "file-download",
@@ -234,6 +235,7 @@ solana-epoch-schedule = { path = "epoch-schedule", version = "2.2.1" }
 solana-example-mocks = { path = "example-mocks", version = "2.2.1" }
 solana-feature-gate-interface = { path = "feature-gate-interface", version = "2.2.1" }
 solana-feature-set = { path = "feature-set", version = "2.2.4" }
+solana-feature-set-interface = { path = "feature-set-interface", version = "2.2.4" }
 solana-fee-calculator = { path = "fee-calculator", version = "2.2.1" }
 solana-fee-structure = { path = "fee-structure", version = "2.2.1" }
 solana-frozen-abi = { path = "frozen-abi", version = "2.2.1" }
