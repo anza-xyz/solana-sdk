@@ -1,0 +1,37 @@
+[package]
+name = "solana-instruction-error"
+description = "Solana InstructionError type."
+documentation = "https://docs.rs/solana-instruction-error"
+version = "1.0.0"
+authors = { workspace = true }
+repository = { workspace = true }
+homepage = { workspace = true }
+license = { workspace = true }
+edition = { workspace = true }
+
+[dependencies]
+num-traits = { workspace = true, optional = true }
+serde = { workspace = true, optional = true }
+serde_derive = { workspace = true, optional = true }
+solana-frozen-abi = { workspace = true, optional = true }
+solana-frozen-abi-macro = { workspace = true, optional = true }
+solana-program-error = { workspace = true }
+
+[features]
+frozen-abi = [
+    "dep:solana-frozen-abi",
+    "dep:solana-frozen-abi-macro",
+    "serde",
+    "std"
+]
+num-traits = ["dep:num-traits"]
+serde = ["dep:serde", "dep:serde_derive"]
+std = []
+
+[package.metadata.docs.rs]
+targets = ["x86_64-unknown-linux-gnu"]
+all-features = true
+rustdoc-args = ["--cfg=docsrs"]
+
+[lints]
+workspace = true
