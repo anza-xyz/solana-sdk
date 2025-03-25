@@ -184,6 +184,7 @@ openssl = { workspace = true }
 rand0-7 = { workspace = true }
 serde_derive = { workspace = true }
 serde_with = { workspace = true, features = ["macros"] }
+solana-feature-set-interface = { workspace = true }
 solana-instructions-sysvar = { workspace = true, features = ["dev-context-only-utils"] }
 solana-program = { workspace = true, features = ["dev-context-only-utils"] }
 solana-sdk = { path = ".", features = ["dev-context-only-utils"] }

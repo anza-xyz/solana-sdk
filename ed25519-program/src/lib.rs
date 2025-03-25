@@ -6,7 +6,7 @@ use {
     bytemuck::bytes_of,
     bytemuck_derive::{Pod, Zeroable},
     ed25519_dalek::{ed25519::signature::Signature, Signer, Verifier},
-    solana_feature_set::{ed25519_precompile_verify_strict, FeatureSet},
+    solana_feature_set_interface::PrecompileFeatureSet,
     solana_instruction::Instruction,
     solana_precompile_error::PrecompileError,
 };
@@ -115,7 +115,7 @@ pub fn new_ed25519_instruction(keypair: &ed25519_dalek::Keypair, message: &[u8])
 pub fn verify(
     data: &[u8],
     instruction_datas: &[&[u8]],
-    feature_set: &FeatureSet,
+    feature_set: &PrecompileFeatureSet,
 ) -> Result<(), PrecompileError> {
     if data.len() < SIGNATURE_OFFSETS_START {
         return Err(PrecompileError::InvalidInstructionDataSize);
@@ -174,7 +174,7 @@ pub fn verify(
             offsets.message_data_size as usize,
         )?;
 
-        if feature_set.is_active(&ed25519_precompile_verify_strict::id()) {
+        if feature_set.ed25519_precompile_verify_strict_feature_enabled {
             publickey
                 .verify_strict(message, &signature)
                 .map_err(|_| PrecompileError::InvalidSignature)?;
@@ -220,7 +220,7 @@ pub mod test {
         ed25519_dalek::Signer as EdSigner,
         hex,
         rand0_7::{thread_rng, Rng},
-        solana_feature_set::FeatureSet,
+        solana_feature_set_interface::PrecompileFeatureSet,
         solana_hash::Hash,
         solana_keypair::Keypair,
         solana_sdk::transaction::Transaction,
@@ -297,7 +297,7 @@ pub mod test {
         verify(
             &instruction_data,
             &[&[0u8; 100]],
-            &FeatureSet::all_enabled(),
+            &PrecompileFeatureSet::all_enabled(),
         )
     }
 
@@ -315,7 +315,7 @@ pub mod test {
             verify(
                 &instruction_data,
                 &[&[0u8; 100]],
-                &FeatureSet::all_enabled(),
+                &PrecompileFeatureSet::all_enabled(),
             ),
             Err(PrecompileError::InvalidInstructionDataSize)
         );
@@ -441,7 +441,7 @@ pub mod test {
         let message_arr = b"hello";
         let mut instruction = new_ed25519_instruction(&privkey, message_arr);
         let mint_keypair = Keypair::new();
-        let feature_set = FeatureSet::all_enabled();
+        let feature_set = PrecompileFeatureSet::all_enabled();
 
         let tx = Transaction::new_signed_with_payer(
             &[instruction.clone()],
@@ -512,7 +512,7 @@ pub mod test {
         }
 
         let mint_keypair = Keypair::new();
-        let feature_set = FeatureSet::all_enabled();
+        let feature_set = PrecompileFeatureSet::all_enabled();
 
         let tx = Transaction::new_signed_with_payer(
             &[instruction.clone()],
@@ -557,10 +557,10 @@ pub mod test {
             Hash::default(),
         );
 
-        let feature_set = FeatureSet::default();
+        let feature_set = PrecompileFeatureSet::default();
         assert!(tx.verify_precompiles(&feature_set).is_ok());
 
-        let feature_set = FeatureSet::all_enabled();
+        let feature_set = PrecompileFeatureSet::all_enabled();
         assert!(tx.verify_precompiles(&feature_set).is_ok());
 
         // malleable sig: verify_strict does NOT pass
@@ -580,10 +580,10 @@ pub mod test {
             Hash::default(),
         );
 
-        let feature_set = FeatureSet::default();
+        let feature_set = PrecompileFeatureSet::default();
         assert!(tx.verify_precompiles(&feature_set).is_ok());
 
-        let feature_set = FeatureSet::all_enabled();
+        let feature_set = PrecompileFeatureSet::all_enabled();
         assert!(tx.verify_precompiles(&feature_set).is_err()); // verify_strict does NOT pass
     }
 }

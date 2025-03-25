@@ -1059,7 +1059,10 @@ impl Transaction {
 
     #[cfg(feature = "precompiles")]
     /// Verify the precompiled programs in this transaction.
-    pub fn verify_precompiles(&self, feature_set: &solana_feature_set::FeatureSet) -> Result<()> {
+    pub fn verify_precompiles(
+        &self,
+        feature_set: &solana_feature_set_interface::PrecompileFeatureSet,
+    ) -> Result<()> {
         for instruction in &self.message().instructions {
             // The Transaction may not be sanitized at this point
             if instruction.program_id_index as usize >= self.message().account_keys.len() {

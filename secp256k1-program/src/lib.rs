@@ -913,7 +913,7 @@ pub fn construct_eth_pubkey(
 pub fn verify(
     data: &[u8],
     instruction_datas: &[&[u8]],
-    _feature_set: &solana_feature_set::FeatureSet,
+    _feature_set: &solana_feature_set_interface::PrecompileFeatureSet,
 ) -> Result<(), PrecompileError> {
     if data.is_empty() {
         return Err(PrecompileError::InvalidInstructionDataSize);
@@ -1021,7 +1021,7 @@ pub mod test {
     use {
         super::*,
         rand0_7::{thread_rng, Rng},
-        solana_feature_set::FeatureSet,
+        solana_feature_set_interface::PrecompileFeatureSet,
         solana_hash::Hash,
         solana_keccak_hasher as keccak,
         solana_keypair::Keypair,
@@ -1037,7 +1037,7 @@ pub mod test {
         instruction_data[0] = num_signatures;
         let writer = std::io::Cursor::new(&mut instruction_data[1..]);
         bincode::serialize_into(writer, &offsets).unwrap();
-        let feature_set = FeatureSet::all_enabled();
+        let feature_set = PrecompileFeatureSet::all_enabled();
         verify(&instruction_data, &[&[0u8; 100]], &feature_set)
     }
 
@@ -1051,7 +1051,7 @@ pub mod test {
         let writer = std::io::Cursor::new(&mut instruction_data[1..]);
         bincode::serialize_into(writer, &offsets).unwrap();
         instruction_data.truncate(instruction_data.len() - 1);
-        let feature_set = FeatureSet::all_enabled();
+        let feature_set = PrecompileFeatureSet::all_enabled();
 
         assert_eq!(
             verify(&instruction_data, &[&[0u8; 100]], &feature_set),
@@ -1180,7 +1180,7 @@ pub mod test {
         instruction_data[0] = 0;
         let writer = std::io::Cursor::new(&mut instruction_data[1..]);
         bincode::serialize_into(writer, &offsets).unwrap();
-        let feature_set = FeatureSet::all_enabled();
+        let feature_set = PrecompileFeatureSet::all_enabled();
 
         assert_eq!(
             verify(&instruction_data, &[&[0u8; 100]], &feature_set),
@@ -1201,7 +1201,7 @@ pub mod test {
         let message_arr = b"hello";
         let mut secp_instruction = new_secp256k1_instruction(&secp_privkey, message_arr);
         let mint_keypair = Keypair::new();
-        let feature_set = solana_feature_set::FeatureSet::all_enabled();
+        let feature_set = PrecompileFeatureSet::all_enabled();
 
         let tx = Transaction::new_signed_with_payer(
             &[secp_instruction.clone()],
@@ -1288,7 +1288,7 @@ pub mod test {
         verify(
             &instruction_data,
             &[&instruction_data],
-            &FeatureSet::all_enabled(),
+            &PrecompileFeatureSet::all_enabled(),
         )
         .unwrap();
     }

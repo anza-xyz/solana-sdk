@@ -35,6 +35,22 @@ impl FeatureSet {
     }
 }
 
+#[doc(hidden)]
+#[derive(Default)]
+pub struct PrecompileFeatureSet {
+    pub secp256r1_precompile_enabled: bool,
+    pub ed25519_precompile_verify_strict_feature_enabled: bool,
+}
+
+impl PrecompileFeatureSet {
+    pub fn all_enabled() -> Self {
+        Self {
+            secp256r1_precompile_enabled: true,
+            ed25519_precompile_verify_strict_feature_enabled: true,
+        }
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;

@@ -11,7 +11,7 @@ edition = { workspace = true }
 
 [dependencies]
 bytemuck = { workspace = true, features = ["derive"] }
-solana-feature-set = { workspace = true }
+solana-feature-set-interface = { workspace = true }
 solana-precompile-error = { workspace = true }
 solana-sdk-ids = { workspace = true }
 

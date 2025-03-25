@@ -288,7 +288,10 @@ impl SanitizedTransaction {
 
     #[cfg(feature = "precompiles")]
     /// Verify the precompiled programs in this transaction
-    pub fn verify_precompiles(&self, feature_set: &solana_feature_set::FeatureSet) -> Result<()> {
+    pub fn verify_precompiles(
+        &self,
+        feature_set: &solana_feature_set_interface::PrecompileFeatureSet,
+    ) -> Result<()> {
         for (index, (program_id, instruction)) in
             self.message.program_instructions_iter().enumerate()
         {

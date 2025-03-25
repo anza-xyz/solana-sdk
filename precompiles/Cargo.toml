@@ -12,7 +12,7 @@ edition = { workspace = true }
 [dependencies]
 lazy_static = { workspace = true }
 solana-ed25519-program = { workspace = true }
-solana-feature-set = { workspace = true }
+solana-feature-set-interface = { workspace = true }
 solana-message = { workspace = true }
 solana-precompile-error = { workspace = true }
 solana-pubkey = { workspace = true }

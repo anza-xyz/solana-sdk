@@ -14,7 +14,7 @@ bincode = { workspace = true, optional = true }
 serde = { workspace = true, optional = true }
 serde_derive = { workspace = true, optional = true }
 solana-bincode = { workspace = true, optional = true }
-solana-feature-set = { workspace = true, optional = true }
+solana-feature-set-interface = { workspace = true, optional = true }
 solana-frozen-abi = { workspace = true, optional = true }
 solana-frozen-abi-macro = { workspace = true, optional = true }
 solana-hash = { workspace = true }
@@ -73,7 +73,7 @@ frozen-abi = [
     "dep:solana-frozen-abi-macro",
     "dep:solana-logger",
 ]
-precompiles = ["dep:solana-feature-set", "dep:solana-precompiles"]
+precompiles = ["dep:solana-feature-set-interface", "dep:solana-precompiles"]
 serde = [
     "dep:serde",
     "dep:serde_derive",
