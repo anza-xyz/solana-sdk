@@ -23,7 +23,6 @@ solana-logger = { workspace = true, optional = true }
 solana-message = { workspace = true }
 solana-precompiles = { workspace = true, optional = true }
 solana-pubkey = { workspace = true }
-solana-reserved-account-keys = { workspace = true, optional = true }
 solana-sanitize = { workspace = true }
 solana-sdk-ids = { workspace = true }
 solana-short-vec = { workspace = true, optional = true }
@@ -63,7 +62,6 @@ bincode = [
     "solana-message/bincode",
 ]
 blake3 = [
-    "dep:solana-reserved-account-keys",
     "bincode",
     "solana-message/blake3",
 ]

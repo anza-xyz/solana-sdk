@@ -13,10 +13,7 @@ use {
     std::collections::HashSet,
 };
 #[cfg(feature = "blake3")]
-use {
-    crate::Transaction, solana_reserved_account_keys::ReservedAccountKeys,
-    solana_sanitize::Sanitize,
-};
+use {crate::Transaction, solana_sanitize::Sanitize};
 
 /// Maximum number of accounts that a transaction may lock.
 /// 128 was chosen because it is the minimum number of accounts
@@ -142,7 +139,8 @@ impl SanitizedTransaction {
     /// Create a sanitized transaction from a legacy transaction. Used for tests only.
     #[cfg(feature = "blake3")]
     pub fn from_transaction_for_tests(tx: Transaction) -> Self {
-        Self::try_from_legacy_transaction(tx, &ReservedAccountKeys::empty_key_set()).unwrap()
+        let empty_key_set = HashSet::default();
+        Self::try_from_legacy_transaction(tx, &empty_key_set).unwrap()
     }
 
     /// Create a sanitized transaction from fields.
@@ -345,7 +343,6 @@ mod tests {
         solana_keypair::Keypair,
         solana_message::{MessageHeader, SimpleAddressLoader},
         solana_program::vote::{self, state::Vote},
-        solana_reserved_account_keys::ReservedAccountKeys,
         solana_signer::Signer,
     };
 
@@ -353,6 +350,7 @@ mod tests {
     fn test_try_create_simple_vote_tx() {
         let bank_hash = Hash::default();
         let block_hash = Hash::default();
+        let empty_key_set = HashSet::default();
         let vote_keypair = Keypair::new();
         let node_keypair = Keypair::new();
         let auth_keypair = Keypair::new();
@@ -370,7 +368,7 @@ mod tests {
                 MessageHash::Compute,
                 None,
                 SimpleAddressLoader::Disabled,
-                &ReservedAccountKeys::empty_key_set(),
+                &empty_key_set,
             )
             .unwrap();
             assert!(vote_transaction.is_simple_vote_transaction());
@@ -383,7 +381,7 @@ mod tests {
                 MessageHash::Compute,
                 Some(false),
                 SimpleAddressLoader::Disabled,
-                &ReservedAccountKeys::empty_key_set(),
+                &empty_key_set,
             )
             .unwrap();
             assert!(!vote_transaction.is_simple_vote_transaction());
@@ -398,7 +396,7 @@ mod tests {
                 MessageHash::Compute,
                 None,
                 SimpleAddressLoader::Disabled,
-                &ReservedAccountKeys::empty_key_set(),
+                &empty_key_set,
             )
             .unwrap();
             assert!(!vote_transaction.is_simple_vote_transaction());
@@ -411,7 +409,7 @@ mod tests {
                 MessageHash::Compute,
                 Some(true),
                 SimpleAddressLoader::Disabled,
-                &ReservedAccountKeys::empty_key_set(),
+                &empty_key_set,
             )
             .unwrap();
             assert!(vote_transaction.is_simple_vote_transaction());

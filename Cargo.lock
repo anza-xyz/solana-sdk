@@ -4012,7 +4012,6 @@ dependencies = [
  "solana-presigner",
  "solana-program",
  "solana-pubkey",
- "solana-reserved-account-keys",
  "solana-sanitize",
  "solana-sdk",
  "solana-sdk-ids",
