@@ -226,7 +226,7 @@ solana-cpi = { path = "cpi", version = "2.2.1" }
 solana-decode-error = { path = "decode-error", version = "2.2.1" }
 solana-define-syscall = { path = "define-syscall", version = "2.2.1" }
 solana-derivation-path = { path = "derivation-path", version = "2.2.1" }
-solana-ed25519-program = { path = "ed25519-program", version = "2.2.1" }
+solana-ed25519-program = { path = "ed25519-program", version = "2.2.2" }
 solana-program-entrypoint = { path = "program-entrypoint", version = "2.2.1" }
 solana-epoch-info = { path = "epoch-info", version = "2.2.1" }
 solana-epoch-rewards = { path = "epoch-rewards", version = "2.2.1" }

@@ -2780,7 +2780,7 @@ dependencies = [
 
 [[package]]
 name = "solana-ed25519-program"
-version = "2.2.1"
+version = "2.2.2"
 dependencies = [
  "bytemuck",
  "bytemuck_derive",
