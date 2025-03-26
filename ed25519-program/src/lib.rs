@@ -21,13 +21,13 @@ pub const DATA_START: usize = SIGNATURE_OFFSETS_SERIALIZED_SIZE + SIGNATURE_OFFS
 #[derive(Default, Debug, Copy, Clone, Zeroable, Pod, Eq, PartialEq)]
 #[repr(C)]
 pub struct Ed25519SignatureOffsets {
-    signature_offset: u16,             // offset to ed25519 signature of 64 bytes
-    signature_instruction_index: u16,  // instruction index to find signature
-    public_key_offset: u16,            // offset to public key of 32 bytes
-    public_key_instruction_index: u16, // instruction index to find public key
-    message_data_offset: u16,          // offset to start of message data
-    message_data_size: u16,            // size of message data
-    message_instruction_index: u16,    // index of instruction data to get message data
+    pub signature_offset: u16, // offset to ed25519 signature of 64 bytes
+    pub signature_instruction_index: u16, // instruction index to find signature
+    pub public_key_offset: u16, // offset to public key of 32 bytes
+    pub public_key_instruction_index: u16, // instruction index to find public key
+    pub message_data_offset: u16, // offset to start of message data
+    pub message_data_size: u16, // size of message data
+    pub message_instruction_index: u16, // index of instruction data to get message data
 }
 
 /// Encode just the signature offsets in a single ed25519 instruction.
