@@ -9,7 +9,7 @@ use {
 pub type Verify =
     fn(&[u8], &[&[u8]], &PrecompileFeatureSet) -> std::result::Result<(), PrecompileError>;
 
-/// All precompiled programs must implement the `Verify` function
+/// All precompiled programs must implement the `Enabled` function
 pub type Enabled = fn(&PrecompileFeatureSet) -> bool;
 
 /// Information on a precompiled program
