@@ -10,6 +10,7 @@ extern crate std;
 use arbitrary::Arbitrary;
 #[cfg(feature = "bytemuck")]
 use bytemuck_derive::{Pod, Zeroable};
+use core::hash::Hasher;
 #[cfg(feature = "serde")]
 use serde_derive::{Deserialize, Serialize};
 #[cfg(any(feature = "std", target_arch = "wasm32"))]
@@ -162,6 +163,110 @@ impl From<u64> for PubkeyError {
 #[cfg_attr(feature = "dev-context-only-utils", derive(Arbitrary))]
 pub struct Pubkey(pub(crate) [u8; 32]);
 
+#[cfg(all(feature = "rand", not(target_os = "solana")))]
+mod hasher {
+    use rand::Rng;
+
+    /// A special Hasher specifically for Pubkeys. Uses random 8 bytes as
+    /// input. Since pubkeys are effectively random, hashing them is pure overhead.
+    /// Use with care, this may be abusable.
+    #[derive(Default)]
+    pub struct PubkeyHasher {
+        offset: usize,
+        state: u64,
+    }
+
+    impl std::hash::Hasher for PubkeyHasher {
+        #[inline]
+        fn finish(&self) -> u64 {
+            self.state
+        }
+        #[inline]
+        fn write(&mut self, bytes: &[u8]) {
+            let chunk: &[u8; 8] = bytes[self.offset..self.offset + 8].try_into().unwrap();
+            self.state = u64::from_ne_bytes(*chunk);
+        }
+    }
+
+    /// A special HasherBuilder specifically for Pubkeys. Uses random 8 byte slice as
+    /// input. Since pubkeys are effectively random, hashing them is pure overhead.
+    /// Use with care, this is not a secure hasher!
+    #[derive(Clone)]
+    pub struct PubkeyHasherBuilder {
+        offset: usize,
+    }
+
+    impl Default for PubkeyHasherBuilder {
+        fn default() -> Self {
+            let mut rng = rand::prelude::thread_rng();
+            PubkeyHasherBuilder {
+                offset: rng.gen_range(0..32 - 8),
+            }
+        }
+    }
+
+    impl std::hash::BuildHasher for PubkeyHasherBuilder {
+        type Hasher = PubkeyHasher;
+        #[inline]
+        fn build_hasher(&self) -> Self::Hasher {
+            PubkeyHasher {
+                offset: self.offset,
+                state: 0,
+            }
+        }
+    }
+
+    #[cfg(test)]
+    mod tests {
+        use core::hash::{BuildHasher, Hasher};
+
+        use crate::Pubkey;
+
+        use super::PubkeyHasherBuilder;
+
+        #[test]
+        fn test_pubkey_hasher_builder() {
+            let key = Pubkey::new_unique();
+            let builder = PubkeyHasherBuilder::default();
+            let mut hasher1 = builder.build_hasher();
+            let mut hasher2 = builder.build_hasher();
+            hasher1.write(&key.0);
+            hasher2.write(&key.0);
+            assert_eq!(
+                hasher1.finish(),
+                hasher2.finish(),
+                "Hashers made with same builder should be identical"
+            );
+
+            // Make sure that when we make new builders we get different slices
+            // chosen for hashing
+            let builder2 = PubkeyHasherBuilder::default();
+            for _ in 0..64 {
+                let mut hasher3 = builder2.build_hasher();
+                hasher3.write(&key.0);
+                std::dbg!(hasher1.finish());
+                std::dbg!(hasher3.finish());
+                if hasher1.finish() != hasher3.finish() {
+                    return;
+                }
+            }
+            panic!("Hashers built with different builder should be different due to random offset");
+        }
+
+        #[test]
+        fn test_pubkey_hasher() {
+            let key1 = Pubkey::new_unique();
+            let key2 = Pubkey::new_unique();
+            let builder = PubkeyHasherBuilder::default();
+            let mut hasher1 = builder.build_hasher();
+            let mut hasher2 = builder.build_hasher();
+            hasher1.write(&key1.0);
+            hasher2.write(&key2.0);
+            assert_ne!(hasher1.finish(), hasher2.finish());
+        }
+    }
+}
+pub use hasher::PubkeyHasherBuilder;
 impl solana_sanitize::Sanitize for Pubkey {}
 
 // Use strum when testing to ensure our FromPrimitive
@@ -321,6 +426,15 @@ impl Pubkey {
         // use big endian representation to ensure that recent unique pubkeys
         // are always greater than less recent unique pubkeys
         b[0..8].copy_from_slice(&i.to_be_bytes());
+        // fill the rest of the pubkey with pseudorandom numbers to make
+        // data statistically similar to real pubkeys
+        let mut hasher = std::hash::DefaultHasher::new();
+        hasher.write_u64(i);
+        b[8..16].copy_from_slice(&hasher.finish().to_ne_bytes());
+        hasher.write_u64(1);
+        b[16..24].copy_from_slice(&hasher.finish().to_ne_bytes());
+        hasher.write_u64(2);
+        b[24..].copy_from_slice(&hasher.finish().to_ne_bytes());
         Self::from(b)
     }
 
