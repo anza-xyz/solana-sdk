@@ -3657,6 +3657,7 @@ dependencies = [
  "solana-system-transaction",
  "solana-time-utils",
  "solana-transaction",
+ "solana-transaction-context",
  "solana-transaction-error",
  "solana-validator-exit",
  "thiserror 2.0.11",
@@ -4024,6 +4025,24 @@ dependencies = [
  "solana-transaction-error",
  "static_assertions",
  "wasm-bindgen",
+]
+
+[[package]]
+name = "solana-transaction-context"
+version = "2.2.1"
+dependencies = [
+ "bincode",
+ "serde",
+ "serde_derive",
+ "solana-account",
+ "solana-account-info",
+ "solana-instruction",
+ "solana-pubkey",
+ "solana-rent",
+ "solana-signature",
+ "solana-system-interface",
+ "solana-transaction-context",
+ "static_assertions",
 ]
 
 [[package]]
