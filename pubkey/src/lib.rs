@@ -23,9 +23,7 @@ use {
     core::{
         array,
         convert::{Infallible, TryFrom},
-        fmt,
-        hash::Hasher,
-        mem,
+        fmt, mem,
         str::{from_utf8, FromStr},
     },
     num_traits::{FromPrimitive, ToPrimitive},
@@ -423,19 +421,19 @@ impl Pubkey {
         static I: AtomicU64 = AtomicU64::new(1);
 
         let mut b = [0u8; 32];
-        let i = I.fetch_add(1);
+        let mut i = I.fetch_add(1);
         // use big endian representation to ensure that recent unique pubkeys
         // are always greater than less recent unique pubkeys
         b[0..8].copy_from_slice(&i.to_be_bytes());
         // fill the rest of the pubkey with pseudorandom numbers to make
         // data statistically similar to real pubkeys
-        let mut hasher = std::hash::DefaultHasher::new();
-        hasher.write_u64(i);
-        b[8..16].copy_from_slice(&hasher.finish().to_ne_bytes());
-        hasher.write_u64(1);
-        b[16..24].copy_from_slice(&hasher.finish().to_ne_bytes());
-        hasher.write_u64(2);
-        b[24..].copy_from_slice(&hasher.finish().to_ne_bytes());
+        let mut hash: u64 = 0xcbf29ce484222325; // FNV offset basis
+        for slice in b[8..].chunks_mut(8) {
+            hash ^= i;
+            i += 1;
+            hash = hash.wrapping_mul(0x00000100000001b3); // FNV prime
+            slice.copy_from_slice(&hash.to_ne_bytes());
+        }
         Self::from(b)
     }
 
