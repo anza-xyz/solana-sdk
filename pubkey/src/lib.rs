@@ -10,7 +10,6 @@ extern crate std;
 use arbitrary::Arbitrary;
 #[cfg(feature = "bytemuck")]
 use bytemuck_derive::{Pod, Zeroable};
-use core::hash::Hasher;
 #[cfg(feature = "serde")]
 use serde_derive::{Deserialize, Serialize};
 #[cfg(any(feature = "std", target_arch = "wasm32"))]
@@ -24,7 +23,9 @@ use {
     core::{
         array,
         convert::{Infallible, TryFrom},
-        fmt, mem,
+        fmt,
+        hash::Hasher,
+        mem,
         str::{from_utf8, FromStr},
     },
     num_traits::{FromPrimitive, ToPrimitive},
@@ -218,12 +219,11 @@ mod hasher {
 
     #[cfg(test)]
     mod tests {
-        use core::hash::{BuildHasher, Hasher};
-
-        use crate::Pubkey;
-
-        use super::PubkeyHasherBuilder;
-
+        use {
+            super::PubkeyHasherBuilder,
+            crate::Pubkey,
+            core::hash::{BuildHasher, Hasher},
+        };
         #[test]
         fn test_pubkey_hasher_builder() {
             let key = Pubkey::new_unique();
@@ -237,7 +237,6 @@ mod hasher {
                 hasher2.finish(),
                 "Hashers made with same builder should be identical"
             );
-
             // Make sure that when we make new builders we get different slices
             // chosen for hashing
             let builder2 = PubkeyHasherBuilder::default();
@@ -266,7 +265,9 @@ mod hasher {
         }
     }
 }
+#[cfg(all(feature = "rand", not(target_os = "solana")))]
 pub use hasher::PubkeyHasherBuilder;
+
 impl solana_sanitize::Sanitize for Pubkey {}
 
 // Use strum when testing to ensure our FromPrimitive
