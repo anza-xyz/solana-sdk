@@ -74,6 +74,7 @@ pub mod hash;
 pub mod log;
 pub mod native_loader;
 pub mod net;
+#[deprecated(since = "2.2.2", note = "Use `agave-precompiles` crate instead")]
 pub mod precompiles;
 pub mod program_utils;
 pub mod pubkey;
@@ -130,8 +131,10 @@ pub use solana_epoch_info as epoch_info;
     note = "Use `solana-epoch-rewards-hasher` crate instead"
 )]
 pub use solana_epoch_rewards_hasher as epoch_rewards_hasher;
-#[deprecated(since = "2.1.0", note = "Use `solana-feature-set` crate instead")]
-pub use solana_feature_set as feature_set;
+#[deprecated(since = "2.2.2", note = "Use `agave-feature-set` crate instead")]
+pub mod feature_set {
+    pub use solana_feature_set::*;
+}
 #[deprecated(since = "2.2.0", note = "Use `solana-fee-structure` crate instead")]
 pub use solana_fee_structure as fee;
 #[deprecated(since = "2.1.0", note = "Use `solana-inflation` crate instead")]
@@ -176,10 +179,12 @@ pub use solana_quic_definitions as quic;
 pub use solana_rent_debits as rent_debits;
 #[cfg(feature = "full")]
 #[deprecated(
-    since = "2.2.0",
-    note = "Use `solana-reserved-account-keys` crate instead"
+    since = "2.2.2",
+    note = "Use `agave-reserved-account-keys` crate instead"
 )]
-pub use solana_reserved_account_keys as reserved_account_keys;
+pub mod reserved_account_keys {
+    pub use solana_reserved_account_keys::*;
+}
 #[deprecated(since = "2.1.0", note = "Use `solana-sanitize` crate instead")]
 pub use solana_sanitize as sanitize;
 /// Same as `declare_id` except report that this id has been deprecated.
