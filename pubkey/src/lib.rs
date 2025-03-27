@@ -23,7 +23,9 @@ use {
     core::{
         array,
         convert::{Infallible, TryFrom},
-        fmt, mem,
+        fmt,
+        hash::Hash,
+        mem,
         str::{from_utf8, FromStr},
     },
     num_traits::{FromPrimitive, ToPrimitive},
@@ -158,9 +160,18 @@ impl From<u64> for PubkeyError {
 #[cfg_attr(all(feature = "borsh", feature = "std"), derive(BorshSchema))]
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[cfg_attr(feature = "bytemuck", derive(Pod, Zeroable))]
-#[derive(Clone, Copy, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
+#[derive(Clone, Copy, Default, Eq, Ord, PartialEq, PartialOrd)]
 #[cfg_attr(feature = "dev-context-only-utils", derive(Arbitrary))]
 pub struct Pubkey(pub(crate) [u8; 32]);
+
+/// Custom impl of Hash for Pubkey
+/// allows us to skip hashing the length of the pubkey
+/// which is always the same anyway
+impl Hash for Pubkey {
+    fn hash<H: core::hash::Hasher>(&self, state: &mut H) {
+        state.write(self.as_array());
+    }
+}
 
 #[cfg(all(feature = "rand", not(target_os = "solana")))]
 mod hasher {
@@ -197,10 +208,20 @@ mod hasher {
 
     impl Default for PubkeyHasherBuilder {
         fn default() -> Self {
-            let mut rng = rand::prelude::thread_rng();
-            PubkeyHasherBuilder {
-                offset: rng.gen_range(0..32 - 8),
-            }
+            std::thread_local!(static OFFSET: core::cell::Cell<usize>  = {
+                let mut rng = rand::prelude::thread_rng();
+                core::cell::Cell::new(rng.gen_range(0..32 - 8))
+            });
+
+            let offset = OFFSET.with(|offset| {
+                let mut next_offset = offset.get() + 1;
+                if next_offset > 24 {
+                    next_offset = 0;
+                }
+                offset.set(next_offset);
+                next_offset
+            });
+            PubkeyHasherBuilder { offset }
         }
     }
 
@@ -228,8 +249,8 @@ mod hasher {
             let builder = PubkeyHasherBuilder::default();
             let mut hasher1 = builder.build_hasher();
             let mut hasher2 = builder.build_hasher();
-            hasher1.write(&key.0);
-            hasher2.write(&key.0);
+            hasher1.write(key.as_array());
+            hasher2.write(key.as_array());
             assert_eq!(
                 hasher1.finish(),
                 hasher2.finish(),
@@ -240,7 +261,7 @@ mod hasher {
             let builder2 = PubkeyHasherBuilder::default();
             for _ in 0..64 {
                 let mut hasher3 = builder2.build_hasher();
-                hasher3.write(&key.0);
+                hasher3.write(key.as_array());
                 std::dbg!(hasher1.finish());
                 std::dbg!(hasher3.finish());
                 if hasher1.finish() != hasher3.finish() {
@@ -257,8 +278,8 @@ mod hasher {
             let builder = PubkeyHasherBuilder::default();
             let mut hasher1 = builder.build_hasher();
             let mut hasher2 = builder.build_hasher();
-            hasher1.write(&key1.0);
-            hasher2.write(&key2.0);
+            hasher1.write(key1.as_array());
+            hasher2.write(key2.as_array());
             assert_ne!(hasher1.finish(), hasher2.finish());
         }
     }
