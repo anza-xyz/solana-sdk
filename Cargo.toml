@@ -107,7 +107,6 @@ members = [
     "sysvar-id",
     "time-utils",
     "transaction",
-    "transaction-context",
     "transaction-error",
     "validator-exit",
     "vote-interface",
@@ -308,7 +307,7 @@ solana-sysvar = { path = "sysvar", version = "2.2.1" }
 solana-sysvar-id = { path = "sysvar-id", version = "2.2.1" }
 solana-transaction = { path = "transaction", version = "2.2.2" }
 solana-transaction-error = { path = "transaction-error", version = "2.2.1" }
-solana-transaction-context = { path = "transaction-context", version = "2.2.1" }
+solana-transaction-context = { version = "2.2.1" }
 solana-validator-exit = { path = "validator-exit", version = "2.2.1" }
 solana-vote-interface = { path = "vote-interface", version = "2.2.2" }
 static_assertions = "1.1.0"
@@ -345,6 +344,7 @@ wasm-bindgen = "0.2"
 # in your Cargo.toml. If you still hit duplicate-type errors with the patch
 # statements in place, run `cargo update -p solana-program` to remove extraneous
 # versions from your Cargo.lock file.
+solana-account = { path = "account" }
 solana-clock = { path = "clock" }
 solana-cpi = { path = "cpi" }
 solana-decode-error = { path = "decode-error" }
@@ -353,4 +353,6 @@ solana-frozen-abi-macro = { path = "frozen-abi-macro" }
 solana-instruction = { path = "instruction" }
 solana-program-error = { path = "program-error" }
 solana-pubkey = { path = "pubkey" }
+solana-rent = { path = "rent" }
+solana-signature = { path = "signature" }
 solana-sysvar-id = { path = "sysvar-id" }

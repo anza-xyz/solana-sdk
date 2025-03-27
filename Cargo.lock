@@ -4030,19 +4030,17 @@ dependencies = [
 [[package]]
 name = "solana-transaction-context"
 version = "2.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5022de04cbba05377f68bf848c8c1322ead733f88a657bf792bb40f3257b8218"
 dependencies = [
  "bincode",
  "serde",
  "serde_derive",
  "solana-account",
- "solana-account-info",
  "solana-instruction",
  "solana-pubkey",
  "solana-rent",
  "solana-signature",
- "solana-system-interface",
- "solana-transaction-context",
- "static_assertions",
 ]
 
 [[package]]
