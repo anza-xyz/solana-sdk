@@ -1,3 +1,5 @@
+#[allow(deprecated)]
+pub use solana_program_error::PrintProgramError;
 pub use {
     solana_instruction::error::{
         ACCOUNT_ALREADY_INITIALIZED, ACCOUNT_BORROW_FAILED, ACCOUNT_DATA_TOO_SMALL,
@@ -10,5 +12,5 @@ pub use {
         MISSING_REQUIRED_SIGNATURES, NOT_ENOUGH_ACCOUNT_KEYS, UNINITIALIZED_ACCOUNT,
         UNSUPPORTED_SYSVAR,
     },
-    solana_program_error::{PrintProgramError, ProgramError},
+    solana_program_error::ProgramError,
 };
