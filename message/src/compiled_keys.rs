@@ -50,24 +50,6 @@ struct CompiledKeyMeta {
     is_nonce: bool,
 }
 
-// inlined to avoid solana_nonce dep
-const NONCED_TX_MARKER_IX_INDEX: usize = 0;
-// inlined to avoid solana_system_interface and bincode deps
-const ADVANCE_NONCE_PREFIX: [u8; 4] = [4, 0, 0, 0];
-
-fn get_nonce_pubkey(instructions: &[Instruction]) -> Option<&Pubkey> {
-    let ix = instructions.get(NONCED_TX_MARKER_IX_INDEX)?;
-    if !system_program::check_id(&ix.program_id) {
-        return None;
-    }
-
-    if ix.data.get(0..4) != Some(&ADVANCE_NONCE_PREFIX[..]) {
-        return None;
-    }
-
-    ix.accounts.first().map(|meta| &meta.pubkey)
-}
-
 impl CompiledKeys {
     /// Compiles the pubkeys referenced by a list of instructions and organizes by
     /// signer/non-signer and writable/readonly.
@@ -218,6 +200,24 @@ impl CompiledKeys {
 
         Ok((lookup_table_indexes, drained_keys))
     }
+}
+
+// inlined to avoid solana_nonce dep
+const NONCED_TX_MARKER_IX_INDEX: usize = 0;
+// inlined to avoid solana_system_interface and bincode deps
+const ADVANCE_NONCE_PREFIX: [u8; 4] = [4, 0, 0, 0];
+
+fn get_nonce_pubkey(instructions: &[Instruction]) -> Option<&Pubkey> {
+    let ix = instructions.get(NONCED_TX_MARKER_IX_INDEX)?;
+    if !system_program::check_id(&ix.program_id) {
+        return None;
+    }
+
+    if ix.data.get(0..4) != Some(&ADVANCE_NONCE_PREFIX[..]) {
+        return None;
+    }
+
+    ix.accounts.first().map(|meta| &meta.pubkey)
 }
 
 #[cfg(test)]
