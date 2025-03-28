@@ -175,11 +175,19 @@ impl Hash for Pubkey {
 
 #[cfg(all(feature = "rand", not(target_os = "solana")))]
 mod hasher {
-    use rand::Rng;
+    use {
+        crate::PUBKEY_BYTES,
+        core::cell::Cell,
+        rand::{thread_rng, Rng},
+    };
 
-    /// A special Hasher specifically for Pubkeys. Uses random 8 bytes as
-    /// input. Since pubkeys are effectively random, hashing them is pure overhead.
-    /// Use with care, this may be abusable.
+    /// A faster, but less collision resistant hasher for pubkeys.
+    ///
+    /// Specialized hasher that uses a random 8 bytes subslice of the
+    /// pubkey as the hash value. Should not be used when collisions
+    /// might be used to mount DOS attacks.
+    ///
+    /// Using this results in about 4x faster lookups in a typical hashmap.
     #[derive(Default)]
     pub struct PubkeyHasher {
         offset: usize,
@@ -193,29 +201,48 @@ mod hasher {
         }
         #[inline]
         fn write(&mut self, bytes: &[u8]) {
-            let chunk: &[u8; 8] = bytes[self.offset..self.offset + 8].try_into().unwrap();
+            debug_assert_eq!(
+                bytes.len(),
+                PUBKEY_BYTES,
+                "This hasher is intended to be used with pubkeys and nothing else"
+            );
+            // This slice/unwrap can never panic since offset is < PUBKEY_BYTES - size_of::<u64>()
+            let chunk: &[u8; size_of::<u64>()] = bytes[self.offset..self.offset + size_of::<u64>()]
+                .try_into()
+                .unwrap();
             self.state = u64::from_ne_bytes(*chunk);
         }
     }
 
-    /// A special HasherBuilder specifically for Pubkeys. Uses random 8 byte slice as
-    /// input. Since pubkeys are effectively random, hashing them is pure overhead.
-    /// Use with care, this is not a secure hasher!
+    /// A builder for faster, but less collision resistant hasher for pubkeys.
+    ///
+    /// Initializes `PubkeyHasher` instances that use an 8-byte
+    /// slice of the pubkey as the hash value. Should not be used when
+    /// collisions might be used to mount DOS attacks.
+    ///
+    /// Using this results in about 4x faster lookups in a typical hashmap.
     #[derive(Clone)]
     pub struct PubkeyHasherBuilder {
         offset: usize,
     }
 
     impl Default for PubkeyHasherBuilder {
+        /// Default construct the PubkeyHasherBuilder.
+        ///
+        /// The position of the slice is determined initially
+        /// through random draw and then by incrementing a thread-local
+        /// This way each hashmap can be expected to use a slightly different
+        /// slice. This is essentially the same mechanism as what is used by
+        /// `RandomState`
         fn default() -> Self {
-            std::thread_local!(static OFFSET: core::cell::Cell<usize>  = {
-                let mut rng = rand::prelude::thread_rng();
-                core::cell::Cell::new(rng.gen_range(0..32 - 8))
+            std::thread_local!(static OFFSET: Cell<usize>  = {
+                let mut rng = thread_rng();
+                Cell::new(rng.gen_range(0..PUBKEY_BYTES - size_of::<u64>()))
             });
 
             let offset = OFFSET.with(|offset| {
                 let mut next_offset = offset.get() + 1;
-                if next_offset > 24 {
+                if next_offset > PUBKEY_BYTES - size_of::<u64>() {
                     next_offset = 0;
                 }
                 offset.set(next_offset);
@@ -440,29 +467,30 @@ impl Pubkey {
     pub fn new_unique() -> Self {
         use solana_atomic_u64::AtomicU64;
         static I: AtomicU64 = AtomicU64::new(1);
-
-        let mut b = [0u8; 32];
-        let mut i = I.fetch_add(1) as u32;
+        type T = u32;
+        const COUNTER_BYTES: usize = size_of::<T>();
+        let mut b = [0u8; PUBKEY_BYTES];
+        let mut i = I.fetch_add(1) as T;
         // use big endian representation to ensure that recent unique pubkeys
         // are always greater than less recent unique pubkeys.
-        b[0..4].copy_from_slice(&i.to_be_bytes());
+        b[0..COUNTER_BYTES].copy_from_slice(&i.to_be_bytes());
         // fill the rest of the pubkey with pseudorandom numbers to make
         // data statistically similar to real pubkeys.
         #[cfg(any(feature = "std", target_arch = "wasm32"))]
         {
             extern crate std;
             let mut hash = std::hash::DefaultHasher::new();
-            for slice in b[4..].chunks_mut(4) {
+            for slice in b[COUNTER_BYTES..].chunks_mut(COUNTER_BYTES) {
                 hash.write_u32(i);
                 i += 1;
-                slice.copy_from_slice(&hash.finish().to_ne_bytes()[0..4]);
+                slice.copy_from_slice(&hash.finish().to_ne_bytes()[0..COUNTER_BYTES]);
             }
         }
         // if std is not available, just replicate last byte of the counter.
         // this is not as good as a proper hash, but at least it is uniform
         #[cfg(not(any(feature = "std", target_arch = "wasm32")))]
         {
-            for b in b[4..].iter_mut() {
+            for b in b[COUNTER_BYTES..].iter_mut() {
                 *b = (i & 0xFF) as u8;
             }
         }
