@@ -18,6 +18,7 @@
 //!
 //! For more information on how features are picked up, see comments for `Feature`.
 #![cfg_attr(feature = "frozen-abi", feature(min_specialization))]
+#![deprecated(since = "2.2.5", note = "Use agave-feature-set instead")]
 
 use {
     ahash::{AHashMap, AHashSet},

@@ -50,7 +50,6 @@ mod target_arch {
             pkey::{PKey, Private},
             sign::{Signer, Verifier},
         },
-        solana_feature_set::FeatureSet,
         solana_instruction::Instruction,
         solana_precompile_error::PrecompileError,
     };
@@ -176,10 +175,15 @@ mod target_arch {
         })
     }
 
+    #[deprecated(
+        since = "2.2.3",
+        note = "Use agave_precompiles::secp256r1::verify instead"
+    )]
+    #[allow(deprecated)]
     pub fn verify(
         data: &[u8],
         instruction_datas: &[&[u8]],
-        _feature_set: &FeatureSet,
+        _feature_set: &solana_feature_set::FeatureSet,
     ) -> Result<(), PrecompileError> {
         if data.len() < SIGNATURE_OFFSETS_START {
             return Err(PrecompileError::InvalidInstructionDataSize);
@@ -326,6 +330,7 @@ mod target_arch {
     }
 
     #[cfg(test)]
+    #[allow(deprecated)]
     mod test {
         use {
             super::*,

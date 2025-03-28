@@ -3,6 +3,9 @@
 //! gate that transitions the key into read-only at an epoch boundary.
 #![cfg_attr(feature = "frozen-abi", feature(min_specialization))]
 #![cfg_attr(docsrs, feature(doc_auto_cfg))]
+#![deprecated(since = "2.2.2", note = "Use agave-reserved-account-keys instead")]
+#![allow(deprecated)]
+
 use {
     lazy_static::lazy_static,
     solana_feature_set::{self as feature_set, FeatureSet},

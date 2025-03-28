@@ -1058,6 +1058,8 @@ impl Transaction {
     }
 
     #[cfg(feature = "precompiles")]
+    #[deprecated(since = "2.2.3", note = "Use agave-precompiles instead")]
+    #[allow(deprecated)]
     /// Verify the precompiled programs in this transaction.
     pub fn verify_precompiles(&self, feature_set: &solana_feature_set::FeatureSet) -> Result<()> {
         for instruction in &self.message().instructions {
