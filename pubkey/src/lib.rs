@@ -24,7 +24,7 @@ use {
         array,
         convert::{Infallible, TryFrom},
         fmt,
-        hash::Hash,
+        hash::{Hash, Hasher},
         mem,
         str::{from_utf8, FromStr},
     },
@@ -168,7 +168,7 @@ pub struct Pubkey(pub(crate) [u8; 32]);
 /// allows us to skip hashing the length of the pubkey
 /// which is always the same anyway
 impl Hash for Pubkey {
-    fn hash<H: core::hash::Hasher>(&self, state: &mut H) {
+    fn hash<H: Hasher>(&self, state: &mut H) {
         state.write(self.as_array());
     }
 }
@@ -442,19 +442,15 @@ impl Pubkey {
         static I: AtomicU64 = AtomicU64::new(1);
 
         let mut b = [0u8; 32];
-        let mut i = I.fetch_add(1);
+        let i = I.fetch_add(1) as u32;
         // use big endian representation to ensure that recent unique pubkeys
         // are always greater than less recent unique pubkeys
-        b[0..8].copy_from_slice(&i.to_be_bytes());
+        b[0..4].copy_from_slice(&i.to_be_bytes());
+
         // fill the rest of the pubkey with pseudorandom numbers to make
         // data statistically similar to real pubkeys
-        let mut hash: u64 = 0xcbf29ce484222325; // FNV offset basis
-        for slice in b[8..].chunks_mut(8) {
-            hash ^= i;
-            i += 1;
-            hash = hash.wrapping_mul(0x00000100000001b3); // FNV prime
-            slice.copy_from_slice(&hash.to_ne_bytes());
-        }
+        let hash = solana_sha256_hasher::hash(&i.to_ne_bytes());
+        b[4..].copy_from_slice(&hash.to_bytes()[0..32 - 4]);
         Self::from(b)
     }
 
