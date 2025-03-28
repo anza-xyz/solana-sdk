@@ -255,7 +255,6 @@ mod tests {
     }
 
     #[test]
-    #[cfg(feature = "bincode")]
     fn test_advance_nonce_ix_prefix() {
         use solana_system_interface::instruction::SystemInstruction;
 
