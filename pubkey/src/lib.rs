@@ -442,15 +442,30 @@ impl Pubkey {
         static I: AtomicU64 = AtomicU64::new(1);
 
         let mut b = [0u8; 32];
-        let i = I.fetch_add(1) as u32;
+        let mut i = I.fetch_add(1) as u32;
         // use big endian representation to ensure that recent unique pubkeys
-        // are always greater than less recent unique pubkeys
+        // are always greater than less recent unique pubkeys.
         b[0..4].copy_from_slice(&i.to_be_bytes());
-
         // fill the rest of the pubkey with pseudorandom numbers to make
-        // data statistically similar to real pubkeys
-        let hash = solana_sha256_hasher::hash(&i.to_ne_bytes());
-        b[4..].copy_from_slice(&hash.to_bytes()[0..32 - 4]);
+        // data statistically similar to real pubkeys.
+        #[cfg(any(feature = "std", target_arch = "wasm32"))]
+        {
+            extern crate std;
+            let mut hash = std::hash::DefaultHasher::new();
+            for slice in b[4..].chunks_mut(4) {
+                hash.write_u32(i);
+                i += 1;
+                slice.copy_from_slice(&hash.finish().to_ne_bytes()[0..4]);
+            }
+        }
+        // if std is not available, just replicate last byte of the counter.
+        // this is not as good as a proper hash, but at least it is uniform
+        #[cfg(not(any(feature = "std", target_arch = "wasm32")))]
+        {
+            for b in b[4..].iter_mut() {
+                *b = (i & 0xFF) as u8;
+            }
+        }
         Self::from(b)
     }
 
