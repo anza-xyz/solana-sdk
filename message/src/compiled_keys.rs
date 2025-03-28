@@ -5,7 +5,7 @@ use crate::{
 };
 use {
     crate::MessageHeader, core::fmt, solana_instruction::Instruction, solana_pubkey::Pubkey,
-    std::collections::BTreeMap,
+    solana_sdk_ids::system_program, std::collections::BTreeMap,
 };
 
 /// A helper struct to collect pubkeys compiled for a set of instructions
@@ -47,6 +47,34 @@ struct CompiledKeyMeta {
     is_signer: bool,
     is_writable: bool,
     is_invoked: bool,
+    is_nonce: bool,
+}
+
+// inlined to avoid solana_nonce dep
+#[cfg(feature = "bincode")]
+const NONCED_TX_MARKER_IX_INDEX: usize = 0;
+#[cfg(test)]
+static_assertions::const_assert_eq!(
+    NONCED_TX_MARKER_IX_INDEX,
+    solana_nonce::NONCED_TX_MARKER_IX_INDEX as usize
+);
+
+fn get_nonce_pubkey(instructions: &[Instruction]) -> Option<&Pubkey> {
+    let ix = instructions.get(NONCED_TX_MARKER_IX_INDEX)?;
+    if !system_program::check_id(&ix.program_id) {
+        return None;
+    }
+
+    if !matches!(
+        solana_bincode::limited_deserialize(
+            &ix.data, 4 /* serialized size of AdvanceNonceAccount */
+        ),
+        Ok(solana_system_interface::instruction::SystemInstruction::AdvanceNonceAccount { .. })
+    ) {
+        return None;
+    }
+
+    ix.accounts.first().map(|meta| &meta.pubkey)
 }
 
 impl CompiledKeys {
@@ -62,6 +90,10 @@ impl CompiledKeys {
                 meta.is_signer |= account_meta.is_signer;
                 meta.is_writable |= account_meta.is_writable;
             }
+        }
+        if let Some(nonce_pubkey) = get_nonce_pubkey(instructions) {
+            let meta = key_meta_map.entry(*nonce_pubkey).or_default();
+            meta.is_nonce = true;
         }
         if let Some(payer) = &payer {
             let meta = key_meta_map.entry(*payer).or_default();
@@ -138,11 +170,11 @@ impl CompiledKeys {
     ) -> Result<Option<(MessageAddressTableLookup, LoadedAddresses)>, CompileError> {
         let (writable_indexes, drained_writable_keys) = self
             .try_drain_keys_found_in_lookup_table(&lookup_table_account.addresses, |meta| {
-                !meta.is_signer && !meta.is_invoked && meta.is_writable
+                !meta.is_signer && !meta.is_invoked && !meta.is_nonce && meta.is_writable
             })?;
         let (readonly_indexes, drained_readonly_keys) = self
             .try_drain_keys_found_in_lookup_table(&lookup_table_account.addresses, |meta| {
-                !meta.is_signer && !meta.is_invoked && !meta.is_writable
+                !meta.is_signer && !meta.is_invoked && !meta.is_nonce && !meta.is_writable
             })?;
 
         // Don't extract lookup if no keys were found
@@ -199,7 +231,11 @@ impl CompiledKeys {
 
 #[cfg(test)]
 mod tests {
-    use {super::*, bitflags::bitflags, solana_instruction::AccountMeta};
+    use {
+        super::*, bitflags::bitflags, solana_instruction::AccountMeta,
+        solana_sdk_ids::sysvar::recent_blockhashes,
+        solana_system_interface::instruction::advance_nonce_account,
+    };
 
     bitflags! {
         #[derive(Clone, Copy)]
@@ -207,6 +243,7 @@ mod tests {
             const SIGNER   = 0b00000001;
             const WRITABLE = 0b00000010;
             const INVOKED  = 0b00000100;
+            const NONCE  = 0b00001000;
         }
     }
 
@@ -216,6 +253,7 @@ mod tests {
                 is_signer: flags.contains(KeyFlags::SIGNER),
                 is_writable: flags.contains(KeyFlags::WRITABLE),
                 is_invoked: flags.contains(KeyFlags::INVOKED),
+                is_nonce: flags.contains(KeyFlags::NONCE),
             }
         }
     }
@@ -271,7 +309,10 @@ mod tests {
                     (program_id0, KeyFlags::INVOKED.into()),
                     (program_id1, (KeyFlags::INVOKED | KeyFlags::SIGNER).into()),
                     (program_id2, (KeyFlags::INVOKED | KeyFlags::WRITABLE).into()),
-                    (program_id3, KeyFlags::all().into()),
+                    (
+                        program_id3,
+                        (KeyFlags::INVOKED | KeyFlags::WRITABLE | KeyFlags::SIGNER).into()
+                    ),
                 ]),
             }
         );
@@ -383,6 +424,32 @@ mod tests {
                 key_meta_map: BTreeMap::from([
                     (id0, KeyFlags::WRITABLE.into()),
                     (program_id, KeyFlags::INVOKED.into()),
+                ]),
+            }
+        );
+    }
+
+    #[test]
+    fn test_compile_with_nonce_instruction() {
+        let nonce_pubkey = Pubkey::new_unique();
+        let nonce_authority = Pubkey::new_unique();
+        let compiled_keys = CompiledKeys::compile(
+            &[advance_nonce_account(&nonce_pubkey, &nonce_authority)],
+            Some(nonce_authority),
+        );
+
+        assert_eq!(
+            compiled_keys,
+            CompiledKeys {
+                payer: Some(nonce_authority),
+                key_meta_map: BTreeMap::from([
+                    (nonce_pubkey, (KeyFlags::NONCE | KeyFlags::WRITABLE).into()),
+                    (
+                        nonce_authority,
+                        (KeyFlags::SIGNER | KeyFlags::WRITABLE).into()
+                    ),
+                    (system_program::id(), KeyFlags::INVOKED.into()),
+                    (recent_blockhashes::id(), CompiledKeyMeta::default())
                 ]),
             }
         );
