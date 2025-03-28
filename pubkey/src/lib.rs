@@ -177,7 +177,10 @@ impl Hash for Pubkey {
 mod hasher {
     use {
         crate::PUBKEY_BYTES,
-        core::cell::Cell,
+        core::{
+            cell::Cell,
+            hash::{BuildHasher, Hasher},
+        },
         rand::{thread_rng, Rng},
     };
 
@@ -194,7 +197,7 @@ mod hasher {
         state: u64,
     }
 
-    impl std::hash::Hasher for PubkeyHasher {
+    impl Hasher for PubkeyHasher {
         #[inline]
         fn finish(&self) -> u64 {
             self.state
@@ -252,7 +255,7 @@ mod hasher {
         }
     }
 
-    impl std::hash::BuildHasher for PubkeyHasherBuilder {
+    impl BuildHasher for PubkeyHasherBuilder {
         type Hasher = PubkeyHasher;
         #[inline]
         fn build_hasher(&self) -> Self::Hasher {
@@ -312,7 +315,7 @@ mod hasher {
     }
 }
 #[cfg(all(feature = "rand", not(target_os = "solana")))]
-pub use hasher::PubkeyHasherBuilder;
+pub use hasher::{PubkeyHasher, PubkeyHasherBuilder};
 
 impl solana_sanitize::Sanitize for Pubkey {}
 
