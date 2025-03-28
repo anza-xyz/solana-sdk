@@ -1,4 +1,8 @@
 #![cfg_attr(feature = "frozen-abi", feature(min_specialization))]
+#![deprecated(
+    since = "4.0.1",
+    note = "DO NOT USE. crates that need to break consesus should expose their own minimal configuration type"
+)]
 
 use {
     ahash::{AHashMap, AHashSet},
