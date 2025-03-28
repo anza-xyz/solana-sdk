@@ -223,9 +223,11 @@ impl CompiledKeys {
 #[cfg(test)]
 mod tests {
     use {
-        super::*, bitflags::bitflags, solana_instruction::AccountMeta,
+        super::*,
+        bitflags::bitflags,
+        solana_instruction::AccountMeta,
         solana_sdk_ids::sysvar::recent_blockhashes,
-        solana_system_interface::instruction::advance_nonce_account,
+        solana_system_interface::instruction::{advance_nonce_account, SystemInstruction},
     };
 
     static_assertions::const_assert_eq!(
@@ -256,8 +258,6 @@ mod tests {
 
     #[test]
     fn test_advance_nonce_ix_prefix() {
-        use solana_system_interface::instruction::SystemInstruction;
-
         let advance_nonce_ix: SystemInstruction = solana_bincode::limited_deserialize(
             &ADVANCE_NONCE_PREFIX[..],
             4, /* serialized size of AdvanceNonceAccount */
