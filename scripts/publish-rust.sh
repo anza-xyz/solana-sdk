@@ -31,7 +31,7 @@ tag_name="${package_name//solana-/}"
 if [[ -n ${DRY_RUN} ]]; then
   cargo release "${LEVEL}"
 else
-  cargo release "${LEVEL}" --tag-name "${tag_name}@v{{version}}" --no-confirm --execute
+  cargo release "${LEVEL}" --tag-name "${tag_name}@v{{version}}" --no-confirm --execute --dependent-version fix
 fi
 
 # Stop here if this is a dry run.

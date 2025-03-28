@@ -226,7 +226,7 @@ solana-cpi = { path = "cpi", version = "2.2.1" }
 solana-decode-error = { path = "decode-error", version = "2.2.1" }
 solana-define-syscall = { path = "define-syscall", version = "2.2.1" }
 solana-derivation-path = { path = "derivation-path", version = "2.2.1" }
-solana-ed25519-program = { path = "ed25519-program", version = "2.2.2" }
+solana-ed25519-program = { path = "ed25519-program", version = "2.2.1" }
 solana-program-entrypoint = { path = "program-entrypoint", version = "2.2.1" }
 solana-epoch-info = { path = "epoch-info", version = "2.2.1" }
 solana-epoch-rewards = { path = "epoch-rewards", version = "2.2.1" }
@@ -234,7 +234,7 @@ solana-epoch-rewards-hasher = { path = "epoch-rewards-hasher", version = "2.2.1"
 solana-epoch-schedule = { path = "epoch-schedule", version = "2.2.1" }
 solana-example-mocks = { path = "example-mocks", version = "2.2.1" }
 solana-feature-gate-interface = { path = "feature-gate-interface", version = "2.2.1" }
-solana-feature-set = { path = "feature-set", version = "2.2.4" }
+solana-feature-set = { path = "feature-set", version = "2.2.1" }
 solana-feature-set-interface = { path = "feature-set-interface", version = "4.0.1" }
 solana-fee-calculator = { path = "fee-calculator", version = "2.2.1" }
 solana-fee-structure = { path = "fee-structure", version = "2.2.1" }
@@ -253,7 +253,7 @@ solana-last-restart-slot = { path = "last-restart-slot", version = "2.2.1" }
 solana-loader-v2-interface = { path = "loader-v2-interface", version = "2.2.1" }
 solana-loader-v3-interface = { path = "loader-v3-interface", version = "3.0.0" }
 solana-loader-v4-interface = { path = "loader-v4-interface", version = "2.2.1" }
-solana-logger = { path = "logger", version = "2.3.1" }
+solana-logger = { path = "logger", version = "2.2.1" }
 solana-message = { path = "message", version = "2.2.1" }
 solana-msg = { path = "msg", version = "2.2.1" }
 solana-native-token = { path = "native-token", version = "2.2.1" }
@@ -280,7 +280,7 @@ solana-rent-debits = { path = "rent-debits", version = "2.2.1" }
 solana-reserved-account-keys = { path = "reserved-account-keys", version = "2.2.1", default-features = false }
 solana-reward-info = { path = "reward-info", version = "2.2.1" }
 solana-sanitize = { path = "sanitize", version = "2.2.1" }
-solana-secp256r1-program = { path = "secp256r1-program", version = "2.2.2", default-features = false }
+solana-secp256r1-program = { path = "secp256r1-program", version = "2.2.1", default-features = false }
 solana-seed-derivable = { path = "seed-derivable", version = "2.2.1" }
 solana-seed-phrase = { path = "seed-phrase", version = "2.2.1" }
 solana-serde = { path = "serde", version = "2.2.1" }
@@ -292,7 +292,7 @@ solana-signer = { path = "signer", version = "2.2.1" }
 solana-slot-hashes = { path = "slot-hashes", version = "2.2.1" }
 solana-slot-history = { path = "slot-history", version = "2.2.1" }
 solana-time-utils = { path = "time-utils", version = "2.2.1" }
-solana-sdk = { path = "sdk", version = "2.2.2" }
+solana-sdk = { path = "sdk", version = "2.2.1" }
 solana-sdk-ids = { path = "sdk-ids", version = "2.2.1" }
 solana-sdk-macro = { path = "sdk-macro", version = "2.2.1" }
 solana-secp256k1-program = { path = "secp256k1-program", version = "2.2.1" }
@@ -305,11 +305,11 @@ solana-system-interface = "1.0"
 solana-system-transaction = { path = "system-transaction", version = "2.2.1" }
 solana-sysvar = { path = "sysvar", version = "2.2.1" }
 solana-sysvar-id = { path = "sysvar-id", version = "2.2.1" }
-solana-transaction = { path = "transaction", version = "2.2.2" }
+solana-transaction = { path = "transaction", version = "2.2.1" }
 solana-transaction-error = { path = "transaction-error", version = "2.2.1" }
 solana-transaction-context = { version = "2.2.1" }
 solana-validator-exit = { path = "validator-exit", version = "2.2.1" }
-solana-vote-interface = { path = "vote-interface", version = "2.2.2" }
+solana-vote-interface = { path = "vote-interface", version = "2.2.1" }
 static_assertions = "1.1.0"
 strum = "0.24"
 strum_macros = "0.24"
