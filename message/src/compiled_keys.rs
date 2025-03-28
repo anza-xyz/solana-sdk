@@ -51,13 +51,9 @@ struct CompiledKeyMeta {
 }
 
 // inlined to avoid solana_nonce dep
-#[cfg(feature = "bincode")]
 const NONCED_TX_MARKER_IX_INDEX: usize = 0;
-#[cfg(test)]
-static_assertions::const_assert_eq!(
-    NONCED_TX_MARKER_IX_INDEX,
-    solana_nonce::NONCED_TX_MARKER_IX_INDEX as usize
-);
+// inlined to avoid solana_system_interface and bincode deps
+const ADVANCE_NONCE_PREFIX: [u8; 4] = [4, 0, 0, 0];
 
 fn get_nonce_pubkey(instructions: &[Instruction]) -> Option<&Pubkey> {
     let ix = instructions.get(NONCED_TX_MARKER_IX_INDEX)?;
@@ -65,12 +61,7 @@ fn get_nonce_pubkey(instructions: &[Instruction]) -> Option<&Pubkey> {
         return None;
     }
 
-    if !matches!(
-        solana_bincode::limited_deserialize(
-            &ix.data, 4 /* serialized size of AdvanceNonceAccount */
-        ),
-        Ok(solana_system_interface::instruction::SystemInstruction::AdvanceNonceAccount { .. })
-    ) {
+    if ix.data.get(0..4) != Some(&ADVANCE_NONCE_PREFIX[..]) {
         return None;
     }
 
@@ -237,6 +228,11 @@ mod tests {
         solana_system_interface::instruction::advance_nonce_account,
     };
 
+    static_assertions::const_assert_eq!(
+        NONCED_TX_MARKER_IX_INDEX,
+        solana_nonce::NONCED_TX_MARKER_IX_INDEX as usize
+    );
+
     bitflags! {
         #[derive(Clone, Copy)]
         pub struct KeyFlags: u8 {
@@ -256,6 +252,19 @@ mod tests {
                 is_nonce: flags.contains(KeyFlags::NONCE),
             }
         }
+    }
+
+    #[test]
+    #[cfg(feature = "bincode")]
+    fn test_advance_nonce_ix_prefix() {
+        use solana_system_interface::instruction::SystemInstruction;
+
+        let advance_nonce_ix: SystemInstruction = solana_bincode::limited_deserialize(
+            &ADVANCE_NONCE_PREFIX[..],
+            4, /* serialized size of AdvanceNonceAccount */
+        )
+        .unwrap();
+        assert_eq!(advance_nonce_ix, SystemInstruction::AdvanceNonceAccount);
     }
 
     #[test]
