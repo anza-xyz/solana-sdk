@@ -1,4 +1,6 @@
 #![cfg_attr(docsrs, feature(doc_auto_cfg))]
+#![deprecated(since = "2.2.2", note = "Use agave-precompiles instead")]
+#![allow(deprecated)]
 use {
     lazy_static::lazy_static, solana_feature_set::FeatureSet,
     solana_message::compiled_instruction::CompiledInstruction,

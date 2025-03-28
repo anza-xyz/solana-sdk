@@ -6,7 +6,6 @@ use {
     bytemuck::bytes_of,
     bytemuck_derive::{Pod, Zeroable},
     ed25519_dalek::{ed25519::signature::Signature, Signer, Verifier},
-    solana_feature_set::{ed25519_precompile_verify_strict, FeatureSet},
     solana_instruction::Instruction,
     solana_precompile_error::PrecompileError,
 };
@@ -112,10 +111,15 @@ pub fn new_ed25519_instruction(keypair: &ed25519_dalek::Keypair, message: &[u8])
     }
 }
 
+#[deprecated(
+    since = "2.2.3",
+    note = "Use agave_precompiles::ed25519::verify instead"
+)]
+#[allow(deprecated)]
 pub fn verify(
     data: &[u8],
     instruction_datas: &[&[u8]],
-    feature_set: &FeatureSet,
+    feature_set: &solana_feature_set::FeatureSet,
 ) -> Result<(), PrecompileError> {
     if data.len() < SIGNATURE_OFFSETS_START {
         return Err(PrecompileError::InvalidInstructionDataSize);
@@ -174,7 +178,7 @@ pub fn verify(
             offsets.message_data_size as usize,
         )?;
 
-        if feature_set.is_active(&ed25519_precompile_verify_strict::id()) {
+        if feature_set.is_active(&solana_feature_set::ed25519_precompile_verify_strict::id()) {
             publickey
                 .verify_strict(message, &signature)
                 .map_err(|_| PrecompileError::InvalidSignature)?;
@@ -214,6 +218,7 @@ fn get_data_slice<'a>(
 }
 
 #[cfg(test)]
+#[allow(deprecated)]
 pub mod test {
     use {
         super::*,

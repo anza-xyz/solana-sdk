@@ -133,6 +133,7 @@ pub use solana_epoch_info as epoch_info;
 pub use solana_epoch_rewards_hasher as epoch_rewards_hasher;
 #[deprecated(since = "2.2.2", note = "Use `agave-feature-set` crate instead")]
 pub mod feature_set {
+    #[allow(deprecated)]
     pub use solana_feature_set::*;
 }
 #[deprecated(since = "2.2.0", note = "Use `solana-fee-structure` crate instead")]
@@ -183,6 +184,7 @@ pub use solana_rent_debits as rent_debits;
     note = "Use `agave-reserved-account-keys` crate instead"
 )]
 pub mod reserved_account_keys {
+    #[allow(deprecated)]
     pub use solana_reserved_account_keys::*;
 }
 #[deprecated(since = "2.1.0", note = "Use `solana-sanitize` crate instead")]

@@ -910,6 +910,11 @@ pub fn construct_eth_pubkey(
 /// subsequent to the addition of the secp256k1 native program. For many
 /// purposes passing `FeatureSet::all_enabled()` is reasonable.
 #[cfg(feature = "bincode")]
+#[deprecated(
+    since = "2.2.2",
+    note = "Use agave_precompiles::secp256k1::verify instead"
+)]
+#[allow(deprecated)]
 pub fn verify(
     data: &[u8],
     instruction_datas: &[&[u8]],
@@ -1017,6 +1022,7 @@ fn get_data_slice<'a>(
 }
 
 #[cfg(test)]
+#[allow(deprecated)]
 pub mod test {
     use {
         super::*,
