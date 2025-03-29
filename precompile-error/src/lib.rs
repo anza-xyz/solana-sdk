@@ -1,5 +1,5 @@
 /// Precompile errors
-use {core::fmt, solana_decode_error::DecodeError};
+use core::fmt;
 
 /// Precompile errors
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -66,11 +66,5 @@ impl fmt::Display for PrecompileError {
                 f.write_str("instruction is incorrect size")
             }
         }
-    }
-}
-
-impl<T> DecodeError<T> for PrecompileError {
-    fn type_of() -> &'static str {
-        "PrecompileError"
     }
 }

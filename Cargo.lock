@@ -3320,7 +3320,6 @@ name = "solana-precompile-error"
 version = "2.2.1"
 dependencies = [
  "num-traits",
- "solana-decode-error",
 ]
 
 [[package]]
@@ -3452,7 +3451,6 @@ dependencies = [
  "num-traits",
  "serde",
  "serde_derive",
- "solana-decode-error",
  "solana-instruction",
  "solana-msg",
  "solana-pubkey",
@@ -3496,7 +3494,6 @@ dependencies = [
  "serde",
  "serde_derive",
  "solana-atomic-u64",
- "solana-decode-error",
  "solana-define-syscall",
  "solana-frozen-abi",
  "solana-frozen-abi-macro",
@@ -4072,7 +4069,6 @@ dependencies = [
  "serde",
  "serde_derive",
  "solana-clock",
- "solana-decode-error",
  "solana-epoch-schedule",
  "solana-frozen-abi",
  "solana-frozen-abi-macro",

@@ -9,7 +9,6 @@ use serde_derive::{Deserialize, Serialize};
 use {
     core::fmt,
     num_traits::FromPrimitive,
-    solana_decode_error::DecodeError,
     solana_instruction::error::{
         InstructionError, ACCOUNT_ALREADY_INITIALIZED, ACCOUNT_BORROW_FAILED,
         ACCOUNT_DATA_TOO_SMALL, ACCOUNT_NOT_RENT_EXEMPT, ARITHMETIC_OVERFLOW, BORSH_IO_ERROR,
@@ -129,18 +128,18 @@ impl fmt::Display for ProgramError {
 pub trait PrintProgramError {
     fn print<E>(&self)
     where
-        E: 'static + std::error::Error + DecodeError<E> + PrintProgramError + FromPrimitive;
+        E: 'static + std::error::Error + PrintProgramError + FromPrimitive;
 }
 
 #[allow(deprecated)]
 impl PrintProgramError for ProgramError {
     fn print<E>(&self)
     where
-        E: 'static + std::error::Error + DecodeError<E> + PrintProgramError + FromPrimitive,
+        E: 'static + std::error::Error + PrintProgramError + FromPrimitive,
     {
         match self {
             Self::Custom(error) => {
-                if let Some(custom_error) = E::decode_custom_error_to_enum(*error) {
+                if let Some(custom_error) = E::from_u32(*error) {
                     custom_error.print::<E>();
                 } else {
                     msg!("Error: Unknown");
