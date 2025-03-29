@@ -45,14 +45,13 @@
 //! #
 //! # Ok::<(), anyhow::Error>(())
 //! ```
-
 #[cfg(feature = "bytemuck")]
 use bytemuck_derive::{Pod, Zeroable};
 #[cfg(feature = "bincode")]
 use {crate::Sysvar, solana_account_info::AccountInfo};
-use {solana_clock::Slot, solana_hash::Hash};
+use {crate::SysvarGet, solana_clock::Slot, solana_hash::Hash};
 
-#[cfg(all(feature = "bincode", feature = "bytemuck"))]
+#[cfg(feature = "bytemuck")]
 const U64_SIZE: usize = std::mem::size_of::<u64>();
 
 pub use {
@@ -61,12 +60,17 @@ pub use {
     solana_sysvar_id::SysvarId,
 };
 
+// hard-coded so that we don't have to construct an empty.
+// golden, update if MAX_ENTRIES changes
+#[cfg(any(feature = "bincode", feature = "bytemuck"))]
+const SLOT_HASHES_SIZE: usize = 20_488;
+
+impl SysvarGet for SlotHashes {}
 #[cfg(feature = "bincode")]
 impl Sysvar for SlotHashes {
     // override
     fn size_of() -> usize {
-        // hard-coded so that we don't have to construct an empty
-        20_488 // golden, update if MAX_ENTRIES changes
+        SLOT_HASHES_SIZE
     }
     fn from_account_info(
         _account_info: &AccountInfo,
@@ -102,7 +106,7 @@ impl PodSlotHashes {
     /// Fetch all of the raw sysvar data using the `sol_get_sysvar` syscall.
     pub fn fetch() -> Result<Self, solana_program_error::ProgramError> {
         // Allocate an uninitialized buffer for the raw sysvar data.
-        let sysvar_len = SlotHashes::size_of();
+        let sysvar_len = SLOT_HASHES_SIZE;
         let mut data = vec![0; sysvar_len];
 
         // Ensure the created buffer is aligned to 8.
@@ -206,7 +210,7 @@ impl SlotHashesSysvar {
     }
 }
 
-#[cfg(feature = "bytemuck")]
+#[cfg(all(feature = "bincode", feature = "bytemuck"))]
 fn get_pod_slot_hashes() -> Result<Vec<PodSlotHash>, solana_program_error::ProgramError> {
     let mut pod_hashes = vec![PodSlotHash::default(); solana_slot_hashes::MAX_ENTRIES];
     {
@@ -219,7 +223,7 @@ fn get_pod_slot_hashes() -> Result<Vec<PodSlotHash>, solana_program_error::Progr
         }
 
         let offset = 8; // Vector length as `u64`.
-        let length = (SlotHashes::size_of() as u64).saturating_sub(offset);
+        let length = (SLOT_HASHES_SIZE as u64).saturating_sub(offset);
         crate::get_sysvar(data, &SlotHashes::id(), offset, length)?;
     }
     Ok(pod_hashes)

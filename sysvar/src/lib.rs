@@ -83,7 +83,6 @@ pub mod __private {
     pub use solana_define_syscall::definitions;
     pub use {solana_program_entrypoint::SUCCESS, solana_program_error::ProgramError};
 }
-use solana_pubkey::Pubkey;
 #[allow(deprecated)]
 #[doc(inline)]
 #[deprecated(
@@ -92,10 +91,8 @@ use solana_pubkey::Pubkey;
 )]
 pub use sysvar_ids::ALL_IDS;
 #[cfg(feature = "bincode")]
-use {
-    solana_account_info::AccountInfo, solana_program_error::ProgramError,
-    solana_sysvar_id::SysvarId,
-};
+use {solana_account_info::AccountInfo, solana_sysvar_id::SysvarId};
+use {solana_program_error::ProgramError, solana_pubkey::Pubkey};
 
 pub mod clock;
 pub mod epoch_rewards;
@@ -145,10 +142,25 @@ pub fn is_sysvar_id(id: &Pubkey) -> bool {
     ALL_IDS.iter().any(|key| key == id)
 }
 
+/// Interface for loading a sysvar.
+pub trait SysvarGet: Sized {
+    /// Load the sysvar directly from the runtime.
+    ///
+    /// This is the preferred way to load a sysvar. Calling this method does not
+    /// incur any deserialization overhead, and does not require the sysvar
+    /// account to be passed to the program.
+    ///
+    /// Not all sysvars support this method. If not, it returns
+    /// [`ProgramError::UnsupportedSysvar`].
+    fn get() -> Result<Self, ProgramError> {
+        Err(ProgramError::UnsupportedSysvar)
+    }
+}
+
 #[cfg(feature = "bincode")]
 /// A type that holds sysvar data.
 pub trait Sysvar:
-    SysvarId + Default + Sized + serde::Serialize + serde::de::DeserializeOwned
+    SysvarGet + SysvarId + Default + serde::Serialize + serde::de::DeserializeOwned
 {
     /// The size in bytes of the sysvar as serialized account data.
     fn size_of() -> usize {
@@ -177,16 +189,9 @@ pub trait Sysvar:
         bincode::serialize_into(&mut account_info.data.borrow_mut()[..], self).ok()
     }
 
-    /// Load the sysvar directly from the runtime.
-    ///
-    /// This is the preferred way to load a sysvar. Calling this method does not
-    /// incur any deserialization overhead, and does not require the sysvar
-    /// account to be passed to the program.
-    ///
-    /// Not all sysvars support this method. If not, it returns
-    /// [`ProgramError::UnsupportedSysvar`].
+    /// Calls [`SysvarGet::get`].
     fn get() -> Result<Self, ProgramError> {
-        Err(ProgramError::UnsupportedSysvar)
+        <Self as SysvarGet>::get()
     }
 }
 
@@ -271,6 +276,7 @@ mod tests {
             check_id(pubkey)
         }
     }
+    impl SysvarGet for TestSysvar {}
     impl Sysvar for TestSysvar {}
 
     // NOTE tests that use this mock MUST carry the #[serial] attribute
