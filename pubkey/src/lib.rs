@@ -12,6 +12,7 @@ use arbitrary::Arbitrary;
 use bytemuck_derive::{Pod, Zeroable};
 #[cfg(feature = "serde")]
 use serde_derive::{Deserialize, Serialize};
+pub use solana_address::{MAX_SEEDS, MAX_SEED_LEN, PUBKEY_BYTES};
 #[cfg(any(feature = "std", target_arch = "wasm32"))]
 use std::vec::Vec;
 #[cfg(feature = "borsh")]
@@ -29,6 +30,7 @@ use {
         str::{from_utf8, FromStr},
     },
     num_traits::{FromPrimitive, ToPrimitive},
+    solana_address::Address,
     solana_decode_error::DecodeError,
 };
 #[cfg(target_arch = "wasm32")]
@@ -36,15 +38,10 @@ use {
     js_sys::{Array, Uint8Array},
     wasm_bindgen::{prelude::wasm_bindgen, JsCast, JsValue},
 };
+
 #[cfg(target_os = "solana")]
 pub mod syscalls;
 
-/// Number of bytes in a pubkey
-pub const PUBKEY_BYTES: usize = 32;
-/// maximum length of derived `Pubkey` seed
-pub const MAX_SEED_LEN: usize = 32;
-/// Maximum number of seeds
-pub const MAX_SEEDS: usize = 16;
 /// Maximum string length of a base58 encoded pubkey
 const MAX_BASE58_LEN: usize = 44;
 
@@ -162,7 +159,7 @@ impl From<u64> for PubkeyError {
 #[cfg_attr(feature = "bytemuck", derive(Pod, Zeroable))]
 #[derive(Clone, Copy, Default, Eq, Ord, PartialEq, PartialOrd)]
 #[cfg_attr(feature = "dev-context-only-utils", derive(Arbitrary))]
-pub struct Pubkey(pub(crate) [u8; 32]);
+pub struct Pubkey(pub(crate) Address);
 
 /// Custom impl of Hash for Pubkey
 /// allows us to skip hashing the length of the pubkey
@@ -410,9 +407,9 @@ impl From<&Pubkey> for Pubkey {
     }
 }
 
-impl From<[u8; 32]> for Pubkey {
+impl From<Address> for Pubkey {
     #[inline]
-    fn from(from: [u8; 32]) -> Self {
+    fn from(from: Address) -> Self {
         Self(from)
     }
 }
@@ -422,7 +419,7 @@ impl TryFrom<&[u8]> for Pubkey {
 
     #[inline]
     fn try_from(pubkey: &[u8]) -> Result<Self, Self::Error> {
-        <[u8; 32]>::try_from(pubkey).map(Self::from)
+        <Address>::try_from(pubkey).map(Self::from)
     }
 }
 
@@ -432,7 +429,7 @@ impl TryFrom<Vec<u8>> for Pubkey {
 
     #[inline]
     fn try_from(pubkey: Vec<u8>) -> Result<Self, Self::Error> {
-        <[u8; 32]>::try_from(pubkey).map(Self::from)
+        <Address>::try_from(pubkey).map(Self::from)
     }
 }
 
@@ -463,7 +460,7 @@ pub fn bytes_are_curve_point<T: AsRef<[u8]>>(_bytes: T) -> bool {
 }
 
 impl Pubkey {
-    pub const fn new_from_array(pubkey_array: [u8; 32]) -> Self {
+    pub const fn new_from_array(pubkey_array: Address) -> Self {
         Self(pubkey_array)
     }
 
@@ -950,13 +947,13 @@ impl Pubkey {
         }
     }
 
-    pub const fn to_bytes(self) -> [u8; 32] {
+    pub const fn to_bytes(self) -> Address {
         self.0
     }
 
     /// Return a reference to the `Pubkey`'s byte array.
     #[inline(always)]
-    pub const fn as_array(&self) -> &[u8; 32] {
+    pub const fn as_array(&self) -> &Address {
         &self.0
     }
 
@@ -1030,7 +1027,7 @@ macro_rules! impl_borsh_schema {
     ($borsh:ident) => {
         impl $borsh::BorshSchema for Pubkey
         where
-            [u8; 32]: $borsh::BorshSchema,
+            Address: $borsh::BorshSchema,
         {
             fn declaration() -> $borsh::schema::Declaration {
                 std::string::String::from("Pubkey")
@@ -1043,7 +1040,7 @@ macro_rules! impl_borsh_schema {
             ) {
                 let fields = $borsh::schema::Fields::UnnamedFields(<[_]>::into_vec(
                     $borsh::maybestd::boxed::Box::new([
-                        <[u8; 32] as $borsh::BorshSchema>::declaration(),
+                        <Address as $borsh::BorshSchema>::declaration(),
                     ]),
                 ));
                 let definition = $borsh::schema::Definition::Struct { fields };
@@ -1052,7 +1049,7 @@ macro_rules! impl_borsh_schema {
                     definition,
                     definitions,
                 );
-                <[u8; 32] as $borsh::BorshSchema>::add_definitions_recursively(definitions);
+                <Address as $borsh::BorshSchema>::add_definitions_recursively(definitions);
             }
         }
     };
@@ -1510,7 +1507,7 @@ mod tests {
         for _ in 0..1_000 {
             let program_id = Pubkey::new_unique();
             let bytes1 = rand::random::<[u8; 10]>();
-            let bytes2 = rand::random::<[u8; 32]>();
+            let bytes2 = rand::random::<Address>();
             if let Ok(program_address) =
                 Pubkey::create_program_address(&[&bytes1, &bytes2], &program_id)
             {
