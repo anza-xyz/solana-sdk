@@ -237,6 +237,29 @@ jobs:
       - name: Check crates for publishing
         run: ./scripts/order-crates-for-publishing.py
 
+  doc:
+    name: Cargo hack doc
+    runs-on: ubuntu-latest
+    needs: [sanity]
+    steps:
+      - name: Git Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Environment
+        uses: ./.github/actions/setup
+        with:
+          nightly-toolchain: true
+          cargo-cache-key: cargo-nightly-doc
+          cargo-cache-fallback-key: cargo-nightly
+
+      - name: Install cargo-hack
+        uses: taiki-e/cache-cargo-install-action@v2
+        with:
+          tool: cargo-hack
+
+      - name: Run doc check
+        run: ./scripts/check-doc.sh
+
   sort:
     name: Check sorting of crate dependencies
     runs-on: ubuntu-latest

@@ -141,7 +141,7 @@ borsh = [
     "solana-pubkey/borsh",
     "solana-stake-interface/borsh",
 ]
-dev-context-only-utils = []
+dev-context-only-utils = ["solana-instructions-sysvar/dev-context-only-utils"]
 frozen-abi = [
     "dep:solana-frozen-abi",
     "dep:solana-frozen-abi-macro",
