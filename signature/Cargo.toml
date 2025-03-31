@@ -36,7 +36,8 @@ solana-short-vec = { workspace = true }
 solana-signature = { path = ".", features = ["serde"] }
 
 [features]
-default = ["std"]
+default = ["std", "alloc"]
+alloc = []
 frozen-abi = [
     "dep:solana-frozen-abi",
     "dep:solana-frozen-abi-macro",
@@ -44,7 +45,7 @@ frozen-abi = [
 ]
 rand = ["dep:rand"]
 serde = ["dep:serde", "dep:serde_derive", "dep:serde-big-array"]
-std = []
+std = ["alloc"]
 verify = ["dep:ed25519-dalek"]
 
 [package.metadata.docs.rs]

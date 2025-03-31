@@ -8,6 +8,8 @@ use core::{
     fmt,
     str::{from_utf8, FromStr},
 };
+#[cfg(feature = "alloc")]
+extern crate alloc;
 #[cfg(feature = "std")]
 extern crate std;
 #[cfg(feature = "std")]
@@ -17,6 +19,8 @@ use {
     serde_big_array::BigArray,
     serde_derive::{Deserialize, Serialize},
 };
+
+pub mod error;
 
 /// Number of bytes in a signature
 pub const SIGNATURE_BYTES: usize = 64;
