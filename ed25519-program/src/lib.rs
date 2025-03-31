@@ -37,7 +37,7 @@ pub struct Ed25519SignatureOffsets {
 /// buffer.
 ///
 /// Note: If the signer for these messages are the same, it is cheaper to concatenate the messages
-/// and have the signer sign the single buffer and use [`new_ed25519_instruction`].
+/// and have the signer sign the single buffer and use [`new_ed25519_instruction_with_signature`].
 pub fn offsets_to_ed25519_instruction(offsets: &[Ed25519SignatureOffsets]) -> Instruction {
     let mut instruction_data = Vec::with_capacity(
         SIGNATURE_OFFSETS_START
@@ -58,13 +58,18 @@ pub fn offsets_to_ed25519_instruction(offsets: &[Ed25519SignatureOffsets]) -> In
     }
 }
 
+#[deprecated(since = "2.2.3", note = "Use new_ed25519_instruction_with_signature")]
 pub fn new_ed25519_instruction(keypair: &ed25519_dalek::Keypair, message: &[u8]) -> Instruction {
     let signature = keypair.sign(message).to_bytes();
     let pubkey = keypair.public.to_bytes();
+    new_ed25519_instruction_with_signature(message, &signature, &pubkey)
+}
 
-    assert_eq!(pubkey.len(), PUBKEY_SERIALIZED_SIZE);
-    assert_eq!(signature.len(), SIGNATURE_SERIALIZED_SIZE);
-
+pub fn new_ed25519_instruction_with_signature(
+    message: &[u8],
+    signature: &[u8; SIGNATURE_SERIALIZED_SIZE],
+    pubkey: &[u8; PUBKEY_SERIALIZED_SIZE],
+) -> Instruction {
     let mut instruction_data = Vec::with_capacity(
         DATA_START
             .saturating_add(SIGNATURE_SERIALIZED_SIZE)
@@ -94,11 +99,11 @@ pub fn new_ed25519_instruction(keypair: &ed25519_dalek::Keypair, message: &[u8])
 
     debug_assert_eq!(instruction_data.len(), public_key_offset);
 
-    instruction_data.extend_from_slice(&pubkey);
+    instruction_data.extend_from_slice(pubkey);
 
     debug_assert_eq!(instruction_data.len(), signature_offset);
 
-    instruction_data.extend_from_slice(&signature);
+    instruction_data.extend_from_slice(signature);
 
     debug_assert_eq!(instruction_data.len(), message_data_offset);
 
@@ -444,7 +449,10 @@ pub mod test {
 
         let privkey = ed25519_dalek::Keypair::generate(&mut thread_rng());
         let message_arr = b"hello";
-        let mut instruction = new_ed25519_instruction(&privkey, message_arr);
+        let signature = privkey.sign(message_arr).to_bytes();
+        let pubkey = privkey.public.to_bytes();
+        let mut instruction =
+            new_ed25519_instruction_with_signature(message_arr, &signature, &pubkey);
         let mint_keypair = Keypair::new();
         let feature_set = FeatureSet::all_enabled();
 
