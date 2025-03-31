@@ -241,10 +241,15 @@ jobs:
           cargo-cache-key: cargo-nightly-minimal-versions
           cargo-cache-fallback-key: cargo-nightly
 
-      - name: Install cargo-hack and cargo-minimal-versions
+      - name: Install cargo-hack
         uses: taiki-e/cache-cargo-install-action@v2
         with:
-          tool: cargo-hack,cargo-minimal-versions
+          tool: cargo-hack
+
+      - name: Install cargo-minimal-versions
+        uses: taiki-e/cache-cargo-install-action@v2
+        with:
+          tool: cargo-minimal-versions
 
       - name: Run minimal-versions check
         run: ./scripts/check-minimal-versions.sh
