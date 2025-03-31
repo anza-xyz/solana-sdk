@@ -480,7 +480,10 @@ impl Pubkey {
         type T = u32;
         const COUNTER_BYTES: usize = size_of::<T>();
         let mut b = [0u8; PUBKEY_BYTES];
+        #[cfg(any(feature = "std", target_arch = "wasm32"))]
         let mut i = I.fetch_add(1) as T;
+        #[cfg(not(any(feature = "std", target_arch = "wasm32")))]
+        let i = I.fetch_add(1) as T;
         // use big endian representation to ensure that recent unique pubkeys
         // are always greater than less recent unique pubkeys.
         b[0..COUNTER_BYTES].copy_from_slice(&i.to_be_bytes());
@@ -488,7 +491,6 @@ impl Pubkey {
         // data statistically similar to real pubkeys.
         #[cfg(any(feature = "std", target_arch = "wasm32"))]
         {
-            extern crate std;
             let mut hash = std::hash::DefaultHasher::new();
             for slice in b[COUNTER_BYTES..].chunks_mut(COUNTER_BYTES) {
                 hash.write_u32(i);
