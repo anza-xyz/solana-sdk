@@ -184,16 +184,16 @@ memmap2 = "0.5.10"
 memoffset = "0.9"
 num-bigint = "0.4.6"
 num-derive = "0.4"
-num-traits = "0.2"
+num-traits = "0.2.18"
 num_enum = "0.7.3"
-openssl = "0.10"
+openssl = "0.10.39"
 parking_lot = "0.12"
 pbkdf2 = { version = "0.11.0", default-features = false }
 proc-macro2 = "1.0.93"
 proptest = "1.6"
 qstring = "0.7.2"
 qualifier_attr = { version = "0.2.2", default-features = false }
-quote = "1.0"
+quote = "1.0.35"
 rand = "0.8.5"
 rand0-7 = { package = "rand", version = "0.7" }
 reqwest = { version = "0.11.27", default-features = false }
@@ -313,13 +313,13 @@ solana-vote-interface = { path = "vote-interface", version = "2.2.1" }
 static_assertions = "1.1.0"
 strum = "0.24"
 strum_macros = "0.24"
-syn = "2.0"
+syn = "2.0.87"
 test-case = "3.3.1"
 thiserror = "2.0.11"
 tiny-bip39 = "0.8.2"
 toml = "0.8.20"
 uriparse = "0.6.4"
-wasm-bindgen = "0.2"
+wasm-bindgen = "0.2.100"
 
 [patch.crates-io]
 # We include the following crates as our dependencies above from crates.io:

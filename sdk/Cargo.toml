@@ -175,7 +175,7 @@ solana-validator-exit = { workspace = true }
 thiserror = { workspace = true }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
-getrandom = { version = "0.1", features = ["wasm-bindgen"] }
+getrandom = { version = "0.1.1", features = ["wasm-bindgen"] }
 js-sys = { workspace = true }
 wasm-bindgen = { workspace = true }
 
