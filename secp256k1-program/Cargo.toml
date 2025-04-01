@@ -20,6 +20,7 @@ solana-feature-set = { workspace = true, optional = true }
 solana-instruction = { workspace = true, features = ["std"], optional = true }
 solana-precompile-error = { workspace = true, optional = true }
 solana-sdk-ids = { workspace = true, optional = true }
+solana-signature = { workspace = true, features = ["std"] }
 
 [dev-dependencies]
 anyhow = { workspace = true }

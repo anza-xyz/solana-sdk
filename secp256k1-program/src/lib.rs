@@ -19,7 +19,7 @@
 //! for other purposes. It operates on Ethereum addresses, which are [`keccak`]
 //! hashes of secp256k1 public keys, and internally is implemented using the
 //! secp256k1 key recovery algorithm. Ethereum address can be created for
-//! secp256k1 public keys with the [`construct_eth_pubkey`] function.
+//! secp256k1 public keys with the [`eth_address_from_pubkey`] function.
 //!
 //! [`keccak`]: https://docs.rs/solana-sdk/latest/solana_sdk/keccak/index.html
 //!
@@ -41,10 +41,10 @@
 //!
 //! [EIP-712]: https://eips.ethereum.org/EIPS/eip-712
 //!
-//! The [`new_secp256k1_instruction`] function is suitable for building a
-//! secp256k1 program instruction for basic use cases where a single message must
-//! be signed by a known secret key. For other uses cases, including many
-//! Ethereum-integration use cases, construction of the secp256k1 instruction
+//! The [`new_secp256k1_instruction_with_signature`] function is suitable for
+//! building a secp256k1 program instruction for basic use cases where a single
+//! message must be signed by a known secret key. For other uses cases, including
+//! many Ethereum-integration use cases, construction of the secp256k1 instruction
 //! must be done manually.
 //!
 //! # How to use this program
@@ -92,11 +92,11 @@
 //! instruction data itself as additional data, their bytes following the bytes
 //! of the protocol required by the secp256k1 instruction to locate the
 //! signature, message, and Ethereum address data. This is the technique used by
-//! `new_secp256k1_instruction` for simple signature verification.
+//! `new_secp256k1_instruction_with_signature` for simple signature verification.
 //!
-//! The `solana_sdk` crate provides few APIs for building the instructions and
-//! transactions necessary for properly using the secp256k1 native program.
-//! Many steps must be done manually.
+//! The `solana_secp256k1_program` crate provides few APIs for building the
+//! instructions and transactions necessary for properly using the secp256k1
+//! native program. Many steps must be done manually.
 //!
 //! The `solana_program` crate provides no APIs to assist in interpreting
 //! the secp256k1 instruction data. It must be done manually.
@@ -258,11 +258,11 @@
 //! }
 //! ```
 //!
-//! ## Example: Signing and verifying with `new_secp256k1_instruction`
+//! ## Example: Signing and verifying with `new_secp256k1_instruction_with_signature`
 //!
 //! This example demonstrates the simplest way to use the secp256k1 program, by
-//! calling [`new_secp256k1_instruction`] to sign a single message and build the
-//! corresponding secp256k1 instruction.
+//! calling [`new_secp256k1_instruction_with_signature`] to sign a single message
+//! and build the corresponding secp256k1 instruction.
 //!
 //! This example has two components: a Solana program, and an RPC client that
 //! sends a transaction to call it. The RPC client will sign a single message,
@@ -352,7 +352,8 @@
 //!     ));
 //!
 //!     // Load the secp256k1 instruction.
-//!     // `new_secp256k1_instruction` generates an instruction that must be at index 0.
+//!     // `new_secp256k1_instruction_with_signature` generates an instruction
+//!     // that must be at index 0.
 //!     let secp256k1_instr =
 //!         solana_instructions_sysvar::load_instruction_at_checked(0, instructions_sysvar_account)?;
 //!
@@ -365,7 +366,8 @@
 //!     assert!(secp256k1_instr.data.len() > 1);
 //!
 //!     let num_signatures = secp256k1_instr.data[0];
-//!     // `new_secp256k1_instruction` generates an instruction that contains one signature.
+//!     // `new_secp256k1_instruction_with_signature` generates an instruction
+//!     // that contains one signature.
 //!     assert_eq!(1, num_signatures);
 //!
 //!     // Load the first and only set of signature offsets.
@@ -374,7 +376,8 @@
 //!             .next()
 //!             .ok_or(ProgramError::InvalidArgument)?;
 //!
-//!     // `new_secp256k1_instruction` generates an instruction that only uses instruction index 0.
+//!     // `new_secp256k1_instruction_with_signature` generates an instruction
+//!     // that only uses instruction index 0.
 //!     assert_eq!(0, offsets.signature_instruction_index);
 //!     assert_eq!(0, offsets.eth_address_instruction_index);
 //!     assert_eq!(0, offsets.message_instruction_index);
@@ -422,6 +425,10 @@
 //! use solana_rpc_client::rpc_client::RpcClient;
 //! use solana_signer::Signer;
 //! use solana_sdk::transaction::Transaction;
+//! use solana_secp256k1_program::{
+//!     eth_address_from_pubkey, new_secp256k1_instruction_with_signature,
+//!     sign_message,
+//! };
 //!
 //! fn demo_secp256k1_verify_basic(
 //!     payer_keypair: &Keypair,
@@ -429,11 +436,13 @@
 //!     client: &RpcClient,
 //!     program_keypair: &Keypair,
 //! ) -> Result<()> {
-//!     // Internally to `new_secp256k1_instruction` and
-//!     // `secp256k_instruction::verify` (the secp256k1 program), this message is
-//!     // keccak-hashed before signing.
+//!     // Internally to `sign_message` and `secp256k_instruction::verify`
+//!     // (the secp256k1 program), this message is keccak-hashed before signing.
 //!     let msg = b"hello world";
-//!     let secp256k1_instr = solana_secp256k1_program::new_secp256k1_instruction(&secp256k1_secret_key, msg);
+//!     let secp_pubkey = libsecp256k1::PublicKey::from_secret_key(secp256k1_secret_key);
+//!     let eth_address = eth_address_from_pubkey(&secp_pubkey.serialize()[1..].try_into().unwrap());
+//!     let (signature, recovery_id) = sign_message(&secp256k1_secret_key.serialize(), msg).unwrap();
+//!    let secp256k1_instr = new_secp256k1_instruction_with_signature(msg, &signature, recovery_id, &eth_address);
 //!
 //!     let program_instr = Instruction::new_with_bytes(
 //!         program_keypair.pubkey(),
@@ -630,7 +639,7 @@
 //! use solana_instruction::{AccountMeta, Instruction};
 //! use solana_rpc_client::rpc_client::RpcClient;
 //! use solana_secp256k1_program::{
-//!     construct_eth_pubkey, SecpSignatureOffsets, HASHED_PUBKEY_SERIALIZED_SIZE,
+//!     eth_address_from_pubkey, SecpSignatureOffsets, HASHED_PUBKEY_SERIALIZED_SIZE,
 //!     SIGNATURE_OFFSETS_SERIALIZED_SIZE, SIGNATURE_SERIALIZED_SIZE,
 //! };
 //! use solana_signer::Signer;
@@ -735,7 +744,8 @@
 //!         let recovery_id = recovery_id.serialize();
 //!
 //!         let public_key = libsecp256k1::PublicKey::from_secret_key(&secret_key);
-//!         let eth_address = construct_eth_pubkey(&public_key);
+//!         let eth_address =
+//!             eth_address_from_pubkey(&public_key.serialize()[1..].try_into().unwrap());
 //!
 //!         signatures.push(SecpSignature {
 //!             signature,
@@ -774,13 +784,16 @@
 //! }
 //! ```
 
-use digest::Digest;
 #[cfg(feature = "serde")]
 use serde_derive::{Deserialize, Serialize};
+use {digest::Digest, solana_signature::error::Error};
 #[cfg(feature = "bincode")]
 use {solana_instruction::Instruction, solana_precompile_error::PrecompileError};
 
+pub const SECP256K1_PUBKEY_SIZE: usize = 64;
+pub const SECP256K1_PRIVATE_KEY_SIZE: usize = 32;
 pub const HASHED_PUBKEY_SERIALIZED_SIZE: usize = 20;
+
 pub const SIGNATURE_SERIALIZED_SIZE: usize = 64;
 pub const SIGNATURE_OFFSETS_SERIALIZED_SIZE: usize = 11;
 pub const DATA_START: usize = SIGNATURE_OFFSETS_SERIALIZED_SIZE + 1;
@@ -826,42 +839,65 @@ pub struct SecpSignatureOffsets {
 ///
 /// [`keccak`]: https://docs.rs/solana-sdk/latest/solana_sdk/keccak/index.html
 #[cfg(feature = "bincode")]
+#[deprecated(
+    since = "2.2.2",
+    note = "Use `new_secp256k1_instruction_with_signature` instead"
+)]
 pub fn new_secp256k1_instruction(
     priv_key: &libsecp256k1::SecretKey,
     message_arr: &[u8],
 ) -> Instruction {
     let secp_pubkey = libsecp256k1::PublicKey::from_secret_key(priv_key);
-    let eth_pubkey = construct_eth_pubkey(&secp_pubkey);
+    let eth_address = eth_address_from_pubkey(&secp_pubkey.serialize()[1..].try_into().unwrap());
+    // unwrap is safe because priv_key is already valid
+    let (signature, recovery_id) = sign_message(&priv_key.serialize(), message_arr).unwrap();
+    new_secp256k1_instruction_with_signature(message_arr, &signature, recovery_id, &eth_address)
+}
+
+/// Signs a message from the given private key bytes
+pub fn sign_message(
+    priv_key_bytes: &[u8; SECP256K1_PRIVATE_KEY_SIZE],
+    message: &[u8],
+) -> Result<([u8; SIGNATURE_SERIALIZED_SIZE], u8), Error> {
+    let priv_key = libsecp256k1::SecretKey::parse(priv_key_bytes)
+        .map_err(|e| Error::from_source(format!("{e}")))?;
     let mut hasher = sha3::Keccak256::new();
-    hasher.update(message_arr);
+    hasher.update(message);
     let message_hash = hasher.finalize();
     let mut message_hash_arr = [0u8; 32];
     message_hash_arr.copy_from_slice(message_hash.as_slice());
     let message = libsecp256k1::Message::parse(&message_hash_arr);
-    let (signature, recovery_id) = libsecp256k1::sign(&message, priv_key);
+    let (signature, recovery_id) = libsecp256k1::sign(&message, &priv_key);
     let signature_arr = signature.serialize();
-    assert_eq!(signature_arr.len(), SIGNATURE_SERIALIZED_SIZE);
+    Ok((signature_arr, recovery_id.serialize()))
+}
 
+#[cfg(feature = "bincode")]
+pub fn new_secp256k1_instruction_with_signature(
+    message_arr: &[u8],
+    signature: &[u8; SIGNATURE_SERIALIZED_SIZE],
+    recovery_id: u8,
+    eth_address: &[u8; HASHED_PUBKEY_SERIALIZED_SIZE],
+) -> Instruction {
     let instruction_data_len = DATA_START
-        .saturating_add(eth_pubkey.len())
-        .saturating_add(signature_arr.len())
+        .saturating_add(eth_address.len())
+        .saturating_add(signature.len())
         .saturating_add(message_arr.len())
         .saturating_add(1);
     let mut instruction_data = vec![0; instruction_data_len];
 
     let eth_address_offset = DATA_START;
-    instruction_data[eth_address_offset..eth_address_offset.saturating_add(eth_pubkey.len())]
-        .copy_from_slice(&eth_pubkey);
+    instruction_data[eth_address_offset..eth_address_offset.saturating_add(eth_address.len())]
+        .copy_from_slice(eth_address);
 
-    let signature_offset = DATA_START.saturating_add(eth_pubkey.len());
-    instruction_data[signature_offset..signature_offset.saturating_add(signature_arr.len())]
-        .copy_from_slice(&signature_arr);
+    let signature_offset = DATA_START.saturating_add(eth_address.len());
+    instruction_data[signature_offset..signature_offset.saturating_add(signature.len())]
+        .copy_from_slice(signature);
 
-    instruction_data[signature_offset.saturating_add(signature_arr.len())] =
-        recovery_id.serialize();
+    instruction_data[signature_offset.saturating_add(signature.len())] = recovery_id;
 
     let message_data_offset = signature_offset
-        .saturating_add(signature_arr.len())
+        .saturating_add(signature.len())
         .saturating_add(1);
     instruction_data[message_data_offset..].copy_from_slice(message_arr);
 
@@ -887,11 +923,22 @@ pub fn new_secp256k1_instruction(
 }
 
 /// Creates an Ethereum address from a secp256k1 public key.
+#[deprecated(since = "2.2.2", note = "Use `eth_address_from_pubkey` instead")]
 pub fn construct_eth_pubkey(
     pubkey: &libsecp256k1::PublicKey,
 ) -> [u8; HASHED_PUBKEY_SERIALIZED_SIZE] {
     let mut addr = [0u8; HASHED_PUBKEY_SERIALIZED_SIZE];
     addr.copy_from_slice(&sha3::Keccak256::digest(&pubkey.serialize()[1..])[12..]);
+    assert_eq!(addr.len(), HASHED_PUBKEY_SERIALIZED_SIZE);
+    addr
+}
+
+/// Creates an Ethereum address from a secp256k1 public key.
+pub fn eth_address_from_pubkey(
+    pubkey: &[u8; SECP256K1_PUBKEY_SIZE],
+) -> [u8; HASHED_PUBKEY_SERIALIZED_SIZE] {
+    let mut addr = [0u8; HASHED_PUBKEY_SERIALIZED_SIZE];
+    addr.copy_from_slice(&sha3::Keccak256::digest(pubkey)[12..]);
     assert_eq!(addr.len(), HASHED_PUBKEY_SERIALIZED_SIZE);
     addr
 }
@@ -991,7 +1038,7 @@ pub fn verify(
             &recovery_id,
         )
         .map_err(|_| PrecompileError::InvalidSignature)?;
-        let eth_address = construct_eth_pubkey(&pubkey);
+        let eth_address = eth_address_from_pubkey(&pubkey.serialize()[1..].try_into().unwrap());
 
         if eth_address_slice != eth_address {
             return Err(PrecompileError::InvalidSignature);
@@ -1205,7 +1252,18 @@ pub mod test {
 
         let secp_privkey = libsecp256k1::SecretKey::random(&mut thread_rng());
         let message_arr = b"hello";
-        let mut secp_instruction = new_secp256k1_instruction(&secp_privkey, message_arr);
+        let secp_pubkey = libsecp256k1::PublicKey::from_secret_key(&secp_privkey);
+        let eth_address =
+            eth_address_from_pubkey(&secp_pubkey.serialize()[1..].try_into().unwrap());
+        // unwrap is safe because priv_key is already valid
+        let (signature, recovery_id) =
+            sign_message(&secp_privkey.serialize(), message_arr).unwrap();
+        let mut secp_instruction = new_secp256k1_instruction_with_signature(
+            message_arr,
+            &signature,
+            recovery_id,
+            &eth_address,
+        );
         let mint_keypair = Keypair::new();
         let feature_set = solana_feature_set::FeatureSet::all_enabled();
 
@@ -1236,7 +1294,7 @@ pub mod test {
 
         let secret_key = libsecp256k1::SecretKey::random(&mut thread_rng());
         let public_key = libsecp256k1::PublicKey::from_secret_key(&secret_key);
-        let eth_address = construct_eth_pubkey(&public_key);
+        let eth_address = eth_address_from_pubkey(&public_key.serialize()[1..].try_into().unwrap());
 
         let message = b"hello";
         let message_hash = {

@@ -3708,6 +3708,7 @@ dependencies = [
  "solana-sdk",
  "solana-sdk-ids",
  "solana-secp256k1-program",
+ "solana-signature",
  "solana-signer",
 ]
 
