@@ -38,7 +38,7 @@ pub fn log(address: &Address) {
 /// program associated with this address is the caller and thus authorized
 /// to be the signer.
 ///
-/// [`invoke_signed`]: crate::program::invoke_signed
+/// [`invoke_signed`]: https://docs.rs/solana-cpi/latest/solana_cpi/fn.invoke_signed.html
 ///
 /// The `seeds` are application-specific, and must be carefully selected to
 /// uniquely derive accounts per application requirements. It is common to
@@ -67,10 +67,8 @@ pub fn log(address: &Address) {
 /// generating the address on-chain. The address may or may not then be
 /// verified by re-deriving it on-chain, depending on the requirements of
 /// the program. This verification may be performed without the overhead of
-/// re-searching for the bump key by using the [`create_program_address`]
+/// re-searching for the bump key by using the [`try_create_program_address`]
 /// function.
-///
-/// [`create_program_address`]: crate::pubkey::create_program_address
 ///
 /// **Warning**: Because of the way the seeds are hashed there is a potential
 /// for program address collisions for the same program id. The seeds are
@@ -87,8 +85,6 @@ pub fn log(address: &Address) {
 /// Panics in the statistically improbable event that a bump seed could not be
 /// found. Use [`try_find_program_address`] to handle this case.
 ///
-/// [`try_find_program_address`]: #try_find_program_address
-///
 /// Panics if any of the following are true:
 ///
 /// - the number of provided seeds is greater than, _or equal to_, [`MAX_SEEDS`],
@@ -104,13 +100,11 @@ pub fn find_program_address(seeds: &[&[u8]], program_id: &Address) -> (Address, 
 /// [pda]: https://solana.com/docs/core/cpi#program-derived-addresses
 ///
 /// The only difference between this method and [`find_program_address`]
-/// is that this one returns `PubkeyError::InvalidSeeds` in the statistically
+/// is that this one returns `ProgramError::InvalidSeeds` in the statistically
 /// improbable event that a bump seed cannot be found; or if any of
-/// `find_program_address`'s preconditions are violated.
+/// [`find_program_address`]'s preconditions are violated.
 ///
 /// See the documentation for [`find_program_address`] for a full description.
-///
-/// [`find_program_address`]: #find_program_address
 #[inline]
 pub fn try_find_program_address(
     seeds: &[&[u8]],
@@ -162,8 +156,6 @@ pub fn try_find_program_address(
 /// Note that this function does *not* validate whether the given `seeds` are within
 /// the valid length or not. It will return an error in case of invalid seeds length,
 /// incurring the cost of the syscall.
-///
-/// [`find_program_address`]: #find_program_address
 #[inline]
 pub fn try_create_program_address(
     seeds: &[&[u8]],
@@ -214,8 +206,6 @@ pub fn try_create_program_address(
 ///
 /// Note that this function validates whether the given `seeds` are within the valid
 /// length or not, returning an error without incurring the cost of the syscall.
-///
-/// [`find_program_address`]: #find_program_address
 #[inline(always)]
 pub fn checked_try_create_program_address(
     seeds: &[&[u8]],
