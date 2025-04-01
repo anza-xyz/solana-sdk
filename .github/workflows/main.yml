@@ -185,7 +185,7 @@ jobs:
       - name: Run semver checks
         run: ./scripts/check-semver.sh
 
-  hack:
+  check:
     name: Cargo hack check
     runs-on: ubuntu-latest
     needs: [sanity]
