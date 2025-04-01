@@ -33,7 +33,6 @@ solana-frozen-abi-macro = { workspace = true, optional = true, features = [
 solana-sanitize = { workspace = true }
 
 [target.'cfg(target_os = "solana")'.dependencies]
-solana-define-syscall = { workspace = true }
 solana-sha256-hasher = { workspace = true }
 
 [target.'cfg(not(target_os = "solana"))'.dependencies]
