@@ -52,8 +52,11 @@ use bytemuck_derive::{Pod, Zeroable};
 use {crate::Sysvar, solana_account_info::AccountInfo};
 use {solana_clock::Slot, solana_hash::Hash};
 
-#[cfg(all(feature = "bincode", feature = "bytemuck"))]
+#[cfg(feature = "bytemuck")]
 const U64_SIZE: usize = std::mem::size_of::<u64>();
+
+#[cfg(any(feature = "bytemuck", feature = "bincode"))]
+const SYSVAR_LEN: usize = 20_488; // golden, update if MAX_ENTRIES changes
 
 pub use {
     solana_sdk_ids::sysvar::slot_hashes::{check_id, id, ID},
@@ -66,7 +69,7 @@ impl Sysvar for SlotHashes {
     // override
     fn size_of() -> usize {
         // hard-coded so that we don't have to construct an empty
-        20_488 // golden, update if MAX_ENTRIES changes
+        SYSVAR_LEN
     }
     fn from_account_info(
         _account_info: &AccountInfo,
@@ -102,7 +105,7 @@ impl PodSlotHashes {
     /// Fetch all of the raw sysvar data using the `sol_get_sysvar` syscall.
     pub fn fetch() -> Result<Self, solana_program_error::ProgramError> {
         // Allocate an uninitialized buffer for the raw sysvar data.
-        let sysvar_len = SlotHashes::size_of();
+        let sysvar_len = SYSVAR_LEN;
         let mut data = vec![0; sysvar_len];
 
         // Ensure the created buffer is aligned to 8.
@@ -206,7 +209,7 @@ impl SlotHashesSysvar {
     }
 }
 
-#[cfg(feature = "bytemuck")]
+#[cfg(all(feature = "bincode", feature = "bytemuck"))]
 fn get_pod_slot_hashes() -> Result<Vec<PodSlotHash>, solana_program_error::ProgramError> {
     let mut pod_hashes = vec![PodSlotHash::default(); solana_slot_hashes::MAX_ENTRIES];
     {
@@ -219,7 +222,7 @@ fn get_pod_slot_hashes() -> Result<Vec<PodSlotHash>, solana_program_error::Progr
         }
 
         let offset = 8; // Vector length as `u64`.
-        let length = (SlotHashes::size_of() as u64).saturating_sub(offset);
+        let length = (SYSVAR_LEN as u64).saturating_sub(offset);
         crate::get_sysvar(data, &SlotHashes::id(), offset, length)?;
     }
     Ok(pod_hashes)

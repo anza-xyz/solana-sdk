@@ -61,6 +61,7 @@ frozen-abi = [
     "dep:solana-logger",
     "solana-hash/frozen-abi",
     "solana-pubkey/frozen-abi",
+    "serde",
 ]
 serde = [
     "dep:serde",
