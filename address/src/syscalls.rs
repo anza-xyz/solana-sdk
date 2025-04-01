@@ -1,9 +1,6 @@
 #[cfg(target_os = "solana")]
-use {
-    crate::PUBKEY_BYTES,
-    solana_define_syscall::definitions::{
-        sol_create_program_address, sol_log_pubkey, sol_try_find_program_address,
-    },
+pub use solana_define_syscall::definitions::{
+    sol_create_program_address, sol_log_pubkey, sol_try_find_program_address,
 };
 use {
     crate::{Address, MAX_SEEDS, MAX_SEED_LEN},
@@ -121,7 +118,7 @@ pub fn try_find_program_address(
 ) -> Result<(Address, u8), ProgramError> {
     #[cfg(target_os = "solana")]
     {
-        let mut bytes = core::mem::MaybeUninit::<[u8; PUBKEY_BYTES]>::uninit();
+        let mut bytes = core::mem::MaybeUninit::<[u8; crate::PUBKEY_BYTES]>::uninit();
         let mut bump_seed = u8::MAX;
 
         let result = unsafe {
@@ -175,7 +172,7 @@ pub fn try_create_program_address(
     // Call via a system call to perform the calculation
     #[cfg(target_os = "solana")]
     {
-        let mut bytes = core::mem::MaybeUninit::<[u8; PUBKEY_BYTES]>::uninit();
+        let mut bytes = core::mem::MaybeUninit::<[u8; crate::PUBKEY_BYTES]>::uninit();
 
         let result = unsafe {
             sol_create_program_address(
