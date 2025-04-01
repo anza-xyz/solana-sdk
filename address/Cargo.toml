@@ -17,4 +17,4 @@ syscalls = ["dep:solana-define-syscall", "dep:solana-program-error"]
 
 [dependencies]
 solana-define-syscall = { workspace = true, optional = true }
-solana-program-error = { workspace = true, optional = true }
+solana-program-error = { version = "2.2.1", git = "https://github.com/kevinheavey/solana-sdk.git", branch = "program-error-pinocchio-compat", optional = true }
