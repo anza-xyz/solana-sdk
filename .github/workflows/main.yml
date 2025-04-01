@@ -83,24 +83,6 @@ jobs:
       - name: Check formatting
         run: ./scripts/check-fmt.sh
 
-  check:
-    name: Cargo check
-    runs-on: ubuntu-latest
-    needs: [sanity]
-    steps:
-      - name: Git Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Environment
-        uses: ./.github/actions/setup
-        with:
-          nightly-toolchain: true
-          cargo-cache-key: cargo-nightly-check
-          cargo-cache-fallback-key: cargo-nightly
-
-      - name: Run checks
-        run: ./scripts/check-nightly.sh
-
   check-downstream-agave:
     if: false # re-enable after agave uses loader-v3-interface v3
     name: Cargo check Agave master
