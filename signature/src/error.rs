@@ -1,7 +1,7 @@
 //! Signature error copied directly from RustCrypto's opaque signature error at
 //! https://github.com/RustCrypto/traits/tree/master/signature
 
-#[cfg(feature = "alloc")]
+#[cfg(all(feature = "std", feature = "alloc"))]
 use alloc::boxed::Box;
 use core::fmt::{self, Debug, Display};
 
@@ -22,7 +22,7 @@ use core::fmt::{self, Debug, Display};
 #[non_exhaustive]
 pub struct Error {
     /// Source of the error (if applicable).
-    #[cfg(feature = "std")]
+    #[cfg(all(feature = "std", feature = "alloc"))]
     source: Option<Box<dyn std::error::Error + Send + Sync + 'static>>,
 }
 
@@ -33,7 +33,7 @@ impl Error {
     /// errors e.g. signature parsing or verification errors. The intended use
     /// cases are for propagating errors related to external signers, e.g.
     /// communication/authentication errors with HSMs, KMS, etc.
-    #[cfg(feature = "std")]
+    #[cfg(all(feature = "std", feature = "alloc"))]
     pub fn from_source(
         source: impl Into<Box<dyn std::error::Error + Send + Sync + 'static>>,
     ) -> Self {
@@ -44,12 +44,12 @@ impl Error {
 }
 
 impl Debug for Error {
-    #[cfg(not(feature = "std"))]
+    #[cfg(not(all(feature = "std", feature = "alloc")))]
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.write_str("signature::Error {}")
     }
 
-    #[cfg(feature = "std")]
+    #[cfg(all(feature = "std", feature = "alloc"))]
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.write_str("signature::Error { source: ")?;
 
@@ -69,7 +69,7 @@ impl Display for Error {
     }
 }
 
-#[cfg(feature = "std")]
+#[cfg(all(feature = "std", feature = "alloc"))]
 impl From<Box<dyn std::error::Error + Send + Sync + 'static>> for Error {
     fn from(source: Box<dyn std::error::Error + Send + Sync + 'static>) -> Error {
         Self::from_source(source)
