@@ -21,6 +21,7 @@ num-traits = { workspace = true }
 rand = { workspace = true, optional = true }
 serde = { workspace = true, optional = true }
 serde_derive = { workspace = true, optional = true }
+solana-address = { workspace = true, features = ["syscalls"] }
 solana-atomic-u64 = { workspace = true }
 solana-decode-error = { workspace = true }
 solana-frozen-abi = { workspace = true, optional = true, features = [
@@ -32,7 +33,6 @@ solana-frozen-abi-macro = { workspace = true, optional = true, features = [
 solana-sanitize = { workspace = true }
 
 [target.'cfg(target_os = "solana")'.dependencies]
-solana-define-syscall = { workspace = true }
 solana-sha256-hasher = { workspace = true }
 
 [target.'cfg(not(target_os = "solana"))'.dependencies]

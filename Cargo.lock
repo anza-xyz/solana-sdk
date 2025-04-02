@@ -2579,9 +2579,17 @@ version = "2.2.1"
 dependencies = [
  "bincode",
  "serde",
- "solana-program-error",
+ "solana-program-error 2.2.1",
  "solana-program-memory",
  "solana-pubkey",
+]
+
+[[package]]
+name = "solana-address"
+version = "0.0.0"
+dependencies = [
+ "solana-define-syscall",
+ "solana-program-error 2.2.1 (git+https://github.com/kevinheavey/solana-sdk.git?branch=program-error-pinocchio-compat)",
 ]
 
 [[package]]
@@ -2748,7 +2756,7 @@ dependencies = [
  "solana-define-syscall",
  "solana-instruction",
  "solana-program-entrypoint",
- "solana-program-error",
+ "solana-program-error 2.2.1",
  "solana-pubkey",
  "solana-sdk-ids",
  "solana-stable-layout",
@@ -2876,7 +2884,7 @@ dependencies = [
  "solana-account-info",
  "solana-feature-gate-interface",
  "solana-instruction",
- "solana-program-error",
+ "solana-program-error 2.2.1",
  "solana-pubkey",
  "solana-rent",
  "solana-sdk-ids",
@@ -3069,7 +3077,7 @@ dependencies = [
  "qualifier_attr",
  "solana-account-info",
  "solana-instruction",
- "solana-program-error",
+ "solana-program-error 2.2.1",
  "solana-pubkey",
  "solana-sanitize",
  "solana-sdk-ids",
@@ -3408,7 +3416,7 @@ dependencies = [
  "solana-native-token",
  "solana-nonce",
  "solana-program-entrypoint",
- "solana-program-error",
+ "solana-program-error 2.2.1",
  "solana-program-memory",
  "solana-program-option",
  "solana-program-pack",
@@ -3440,7 +3448,7 @@ version = "2.2.1"
 dependencies = [
  "solana-account-info",
  "solana-msg",
- "solana-program-error",
+ "solana-program-error 2.2.1",
  "solana-pubkey",
 ]
 
@@ -3459,6 +3467,11 @@ dependencies = [
 ]
 
 [[package]]
+name = "solana-program-error"
+version = "2.2.1"
+source = "git+https://github.com/kevinheavey/solana-sdk.git?branch=program-error-pinocchio-compat#d5cd36e744d2df090b2bc8bb32182a136f4eb24f"
+
+[[package]]
 name = "solana-program-memory"
 version = "2.2.1"
 dependencies = [
@@ -3473,7 +3486,7 @@ version = "2.2.1"
 name = "solana-program-pack"
 version = "2.2.1"
 dependencies = [
- "solana-program-error",
+ "solana-program-error 2.2.1",
 ]
 
 [[package]]
@@ -3495,9 +3508,9 @@ dependencies = [
  "rand 0.8.5",
  "serde",
  "serde_derive",
+ "solana-address",
  "solana-atomic-u64",
  "solana-decode-error",
- "solana-define-syscall",
  "solana-frozen-abi",
  "solana-frozen-abi-macro",
  "solana-program",
@@ -3704,7 +3717,7 @@ dependencies = [
  "solana-logger",
  "solana-msg",
  "solana-precompile-error",
- "solana-program-error",
+ "solana-program-error 2.2.1",
  "solana-sdk",
  "solana-sdk-ids",
  "solana-secp256k1-program",
@@ -3897,7 +3910,7 @@ dependencies = [
  "solana-frozen-abi",
  "solana-frozen-abi-macro",
  "solana-instruction",
- "solana-program-error",
+ "solana-program-error 2.2.1",
  "solana-pubkey",
  "solana-system-interface",
  "solana-sysvar-id",
@@ -3960,7 +3973,7 @@ dependencies = [
  "solana-msg",
  "solana-program",
  "solana-program-entrypoint",
- "solana-program-error",
+ "solana-program-error 2.2.1",
  "solana-program-memory",
  "solana-pubkey",
  "solana-rent",

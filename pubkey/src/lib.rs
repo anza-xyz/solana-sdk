@@ -12,6 +12,7 @@ use arbitrary::Arbitrary;
 use bytemuck_derive::{Pod, Zeroable};
 #[cfg(feature = "serde")]
 use serde_derive::{Deserialize, Serialize};
+pub use solana_address::{MAX_SEEDS, MAX_SEED_LEN, PUBKEY_BYTES};
 #[cfg(any(feature = "std", target_arch = "wasm32"))]
 use std::vec::Vec;
 #[cfg(feature = "borsh")]
@@ -25,10 +26,11 @@ use {
         convert::{Infallible, TryFrom},
         fmt,
         hash::{Hash, Hasher},
-        mem,
+        mem::size_of,
         str::{from_utf8, FromStr},
     },
     num_traits::{FromPrimitive, ToPrimitive},
+    solana_address::Address,
     solana_decode_error::DecodeError,
 };
 #[cfg(target_arch = "wasm32")]
@@ -36,25 +38,15 @@ use {
     js_sys::{Array, Uint8Array},
     wasm_bindgen::{prelude::wasm_bindgen, JsCast, JsValue},
 };
+
 #[cfg(target_os = "solana")]
 pub mod syscalls;
 
-/// Number of bytes in a pubkey
-pub const PUBKEY_BYTES: usize = 32;
-/// maximum length of derived `Pubkey` seed
-pub const MAX_SEED_LEN: usize = 32;
-/// Maximum number of seeds
-pub const MAX_SEEDS: usize = 16;
 /// Maximum string length of a base58 encoded pubkey
 const MAX_BASE58_LEN: usize = 44;
 
 #[cfg(any(target_os = "solana", feature = "sha2", feature = "curve25519"))]
 const PDA_MARKER: &[u8; 21] = b"ProgramDerivedAddress";
-
-/// Copied from `solana_program::entrypoint::SUCCESS`
-/// to avoid a `solana_program` dependency
-#[cfg(target_os = "solana")]
-const SUCCESS: u64 = 0;
 
 // Use strum when testing to ensure our FromPrimitive
 // impl is exhaustive
@@ -137,18 +129,8 @@ impl From<u64> for PubkeyError {
 
 /// The address of a [Solana account][acc].
 ///
-/// Some account addresses are [ed25519] public keys, with corresponding secret
-/// keys that are managed off-chain. Often, though, account addresses do not
-/// have corresponding secret keys &mdash; as with [_program derived
-/// addresses_][pdas] &mdash; or the secret key is not relevant to the operation
-/// of a program, and may have even been disposed of. As running Solana programs
-/// can not safely create or manage secret keys, the full [`Keypair`] is not
-/// defined in `solana-program` but in `solana-sdk`.
-///
-/// [acc]: https://solana.com/docs/core/accounts
-/// [ed25519]: https://ed25519.cr.yp.to/
-/// [pdas]: https://solana.com/docs/core/cpi#program-derived-addresses
-/// [`Keypair`]: https://docs.rs/solana-sdk/latest/solana_sdk/signer/keypair/struct.Keypair.html
+/// This is a wrapper around the [`Address`] type from the `solana_address`
+/// crate.
 #[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
 #[repr(transparent)]
 #[cfg_attr(feature = "frozen-abi", derive(solana_frozen_abi_macro::AbiExample))]
@@ -162,7 +144,7 @@ impl From<u64> for PubkeyError {
 #[cfg_attr(feature = "bytemuck", derive(Pod, Zeroable))]
 #[derive(Clone, Copy, Default, Eq, Ord, PartialEq, PartialOrd)]
 #[cfg_attr(feature = "dev-context-only-utils", derive(Arbitrary))]
-pub struct Pubkey(pub(crate) [u8; 32]);
+pub struct Pubkey(pub(crate) Address);
 
 /// Custom impl of Hash for Pubkey
 /// allows us to skip hashing the length of the pubkey
@@ -395,7 +377,7 @@ impl FromStr for Pubkey {
         let decoded_size = bs58::decode(s)
             .onto(&mut bytes)
             .map_err(|_| ParsePubkeyError::Invalid)?;
-        if decoded_size != mem::size_of::<Pubkey>() {
+        if decoded_size != size_of::<Pubkey>() {
             Err(ParsePubkeyError::WrongSize)
         } else {
             Ok(Pubkey(bytes))
@@ -410,9 +392,9 @@ impl From<&Pubkey> for Pubkey {
     }
 }
 
-impl From<[u8; 32]> for Pubkey {
+impl From<Address> for Pubkey {
     #[inline]
-    fn from(from: [u8; 32]) -> Self {
+    fn from(from: Address) -> Self {
         Self(from)
     }
 }
@@ -422,7 +404,7 @@ impl TryFrom<&[u8]> for Pubkey {
 
     #[inline]
     fn try_from(pubkey: &[u8]) -> Result<Self, Self::Error> {
-        <[u8; 32]>::try_from(pubkey).map(Self::from)
+        <Address>::try_from(pubkey).map(Self::from)
     }
 }
 
@@ -432,7 +414,7 @@ impl TryFrom<Vec<u8>> for Pubkey {
 
     #[inline]
     fn try_from(pubkey: Vec<u8>) -> Result<Self, Self::Error> {
-        <[u8; 32]>::try_from(pubkey).map(Self::from)
+        <Address>::try_from(pubkey).map(Self::from)
     }
 }
 
@@ -463,7 +445,7 @@ pub fn bytes_are_curve_point<T: AsRef<[u8]>>(_bytes: T) -> bool {
 }
 
 impl Pubkey {
-    pub const fn new_from_array(pubkey_array: [u8; 32]) -> Self {
+    pub const fn new_from_array(pubkey_array: Address) -> Self {
         Self(pubkey_array)
     }
 
@@ -536,74 +518,9 @@ impl Pubkey {
 
     /// Find a valid [program derived address][pda] and its corresponding bump seed.
     ///
-    /// [pda]: https://solana.com/docs/core/cpi#program-derived-addresses
-    ///
-    /// Program derived addresses (PDAs) are account keys that only the program,
-    /// `program_id`, has the authority to sign. The address is of the same form
-    /// as a Solana `Pubkey`, except they are ensured to not be on the ed25519
-    /// curve and thus have no associated private key. When performing
-    /// cross-program invocations the program can "sign" for the key by calling
-    /// [`invoke_signed`] and passing the same seeds used to generate the
-    /// address, along with the calculated _bump seed_, which this function
-    /// returns as the second tuple element. The runtime will verify that the
-    /// program associated with this address is the caller and thus authorized
-    /// to be the signer.
-    ///
-    /// [`invoke_signed`]: https://docs.rs/solana-program/latest/solana_program/program/fn.invoke_signed.html
-    ///
-    /// The `seeds` are application-specific, and must be carefully selected to
-    /// uniquely derive accounts per application requirements. It is common to
-    /// use static strings and other pubkeys as seeds.
-    ///
-    /// Because the program address must not lie on the ed25519 curve, there may
-    /// be seed and program id combinations that are invalid. For this reason,
-    /// an extra seed (the bump seed) is calculated that results in a
-    /// point off the curve. The bump seed must be passed as an additional seed
-    /// when calling `invoke_signed`.
-    ///
-    /// The processes of finding a valid program address is by trial and error,
-    /// and even though it is deterministic given a set of inputs it can take a
-    /// variable amount of time to succeed across different inputs.  This means
-    /// that when called from an on-chain program it may incur a variable amount
-    /// of the program's compute budget.  Programs that are meant to be very
-    /// performant may not want to use this function because it could take a
-    /// considerable amount of time. Programs that are already at risk
-    /// of exceeding their compute budget should call this with care since
-    /// there is a chance that the program's budget may be occasionally
-    /// and unpredictably exceeded.
-    ///
-    /// As all account addresses accessed by an on-chain Solana program must be
-    /// explicitly passed to the program, it is typical for the PDAs to be
-    /// derived in off-chain client programs, avoiding the compute cost of
-    /// generating the address on-chain. The address may or may not then be
-    /// verified by re-deriving it on-chain, depending on the requirements of
-    /// the program. This verification may be performed without the overhead of
-    /// re-searching for the bump key by using the [`create_program_address`]
-    /// function.
-    ///
-    /// [`create_program_address`]: Pubkey::create_program_address
-    ///
-    /// **Warning**: Because of the way the seeds are hashed there is a potential
-    /// for program address collisions for the same program id.  The seeds are
-    /// hashed sequentially which means that seeds {"abcdef"}, {"abc", "def"},
-    /// and {"ab", "cd", "ef"} will all result in the same program address given
-    /// the same program id. Since the chance of collision is local to a given
-    /// program id, the developer of that program must take care to choose seeds
-    /// that do not collide with each other. For seed schemes that are susceptible
-    /// to this type of hash collision, a common remedy is to insert separators
-    /// between seeds, e.g. transforming {"abc", "def"} into {"abc", "-", "def"}.
-    ///
-    /// # Panics
-    ///
-    /// Panics in the statistically improbable event that a bump seed could not be
-    /// found. Use [`try_find_program_address`] to handle this case.
-    ///
-    /// [`try_find_program_address`]: Pubkey::try_find_program_address
-    ///
-    /// Panics if any of the following are true:
-    ///
-    /// - the number of provided seeds is greater than, _or equal to_,  [`MAX_SEEDS`],
-    /// - any individual seed's length is greater than [`MAX_SEED_LEN`].
+    /// This behaves like [`solana_address::find_program_address`] when `target_os = "solana"`,
+    /// but adds support for `target_os != "solana"` – it requires the `curve25519` feature to
+    /// be enabled in this case.
     ///
     /// # Examples
     ///
@@ -787,10 +704,6 @@ impl Pubkey {
     /// #
     /// # Ok::<(), anyhow::Error>(())
     /// ```
-    // If target_os = "solana", then the function will use
-    // syscalls which bring no dependencies.
-    // When target_os != "solana", this should be opt-in so users
-    // don't need the curve25519 dependency.
     #[cfg(any(target_os = "solana", feature = "curve25519"))]
     pub fn find_program_address(seeds: &[&[u8]], program_id: &Pubkey) -> (Pubkey, u8) {
         Self::try_find_program_address(seeds, program_id)
@@ -799,20 +712,9 @@ impl Pubkey {
 
     /// Find a valid [program derived address][pda] and its corresponding bump seed.
     ///
-    /// [pda]: https://solana.com/docs/core/cpi#program-derived-addresses
-    ///
-    /// The only difference between this method and [`find_program_address`]
-    /// is that this one returns `None` in the statistically improbable event
-    /// that a bump seed cannot be found; or if any of `find_program_address`'s
-    /// preconditions are violated.
-    ///
-    /// See the documentation for [`find_program_address`] for a full description.
-    ///
-    /// [`find_program_address`]: Pubkey::find_program_address
-    // If target_os = "solana", then the function will use
-    // syscalls which bring no dependencies.
-    // When target_os != "solana", this should be opt-in so users
-    // don't need the curve25519 dependency.
+    /// This behaves like [`solana_address::try_find_program_address`] when `target_os = "solana"`,
+    /// but adds support for `target_os != "solana"` – it requires the `curve25519` feature to
+    /// be enabled in this case.
     #[cfg(any(target_os = "solana", feature = "curve25519"))]
     #[allow(clippy::same_item_push)]
     pub fn try_find_program_address(seeds: &[&[u8]], program_id: &Pubkey) -> Option<(Pubkey, u8)> {
@@ -837,41 +739,17 @@ impl Pubkey {
         }
         // Call via a system call to perform the calculation
         #[cfg(target_os = "solana")]
-        {
-            let mut bytes = [0; 32];
-            let mut bump_seed = u8::MAX;
-            let result = unsafe {
-                crate::syscalls::sol_try_find_program_address(
-                    seeds as *const _ as *const u8,
-                    seeds.len() as u64,
-                    program_id as *const _ as *const u8,
-                    &mut bytes as *mut _ as *mut u8,
-                    &mut bump_seed as *mut _ as *mut u8,
-                )
-            };
-            match result {
-                SUCCESS => Some((Pubkey::from(bytes), bump_seed)),
-                _ => None,
-            }
+        match solana_address::try_find_program_address(seeds, program_id.as_array()) {
+            Ok((address, bump)) => Some((Pubkey::from(address), bump)),
+            Err(_) => None,
         }
     }
 
     /// Create a valid [program derived address][pda] without searching for a bump seed.
     ///
-    /// [pda]: https://solana.com/docs/core/cpi#program-derived-addresses
-    ///
-    /// Because this function does not create a bump seed, it may unpredictably
-    /// return an error for any given set of seeds and is not generally suitable
-    /// for creating program derived addresses.
-    ///
-    /// However, it can be used for efficiently verifying that a set of seeds plus
-    /// bump seed generated by [`find_program_address`] derives a particular
-    /// address as expected. See the example for details.
-    ///
-    /// See the documentation for [`find_program_address`] for a full description
-    /// of program derived addresses and bump seeds.
-    ///
-    /// [`find_program_address`]: Pubkey::find_program_address
+    /// This behaves like [`solana_address::checked_try_create_program_address`] when
+    /// `target_os = "solana"`, but adds support for `target_os != "solana"` – it requires
+    /// the `curve25519` feature to be enabled in this case.
     ///
     /// # Examples
     ///
@@ -898,10 +776,6 @@ impl Pubkey {
     /// assert_eq!(expected_pda, actual_pda);
     /// # Ok::<(), anyhow::Error>(())
     /// ```
-    // If target_os = "solana", then the function will use
-    // syscalls which bring no dependencies.
-    // When target_os != "solana", this should be opt-in so users
-    // don't need the curve225519 dep.
     #[cfg(any(target_os = "solana", feature = "curve25519"))]
     pub fn create_program_address(
         seeds: &[&[u8]],
@@ -935,30 +809,19 @@ impl Pubkey {
         }
         // Call via a system call to perform the calculation
         #[cfg(target_os = "solana")]
-        {
-            let mut bytes = [0; 32];
-            let result = unsafe {
-                crate::syscalls::sol_create_program_address(
-                    seeds as *const _ as *const u8,
-                    seeds.len() as u64,
-                    program_id as *const _ as *const u8,
-                    &mut bytes as *mut _ as *mut u8,
-                )
-            };
-            match result {
-                SUCCESS => Ok(Pubkey::from(bytes)),
-                _ => Err(result.into()),
-            }
+        match solana_address::try_create_program_address(seeds, program_id.as_array()) {
+            Ok(address) => Ok(Pubkey::from(address)),
+            _ => Err(PubkeyError::InvalidSeeds),
         }
     }
 
-    pub const fn to_bytes(self) -> [u8; 32] {
+    pub const fn to_bytes(self) -> Address {
         self.0
     }
 
     /// Return a reference to the `Pubkey`'s byte array.
     #[inline(always)]
-    pub const fn as_array(&self) -> &[u8; 32] {
+    pub const fn as_array(&self) -> &Address {
         &self.0
     }
 
@@ -1032,7 +895,7 @@ macro_rules! impl_borsh_schema {
     ($borsh:ident) => {
         impl $borsh::BorshSchema for Pubkey
         where
-            [u8; 32]: $borsh::BorshSchema,
+            Address: $borsh::BorshSchema,
         {
             fn declaration() -> $borsh::schema::Declaration {
                 std::string::String::from("Pubkey")
@@ -1045,7 +908,7 @@ macro_rules! impl_borsh_schema {
             ) {
                 let fields = $borsh::schema::Fields::UnnamedFields(<[_]>::into_vec(
                     $borsh::maybestd::boxed::Box::new([
-                        <[u8; 32] as $borsh::BorshSchema>::declaration(),
+                        <Address as $borsh::BorshSchema>::declaration(),
                     ]),
                 ));
                 let definition = $borsh::schema::Definition::Struct { fields };
@@ -1054,7 +917,7 @@ macro_rules! impl_borsh_schema {
                     definition,
                     definitions,
                 );
-                <[u8; 32] as $borsh::BorshSchema>::add_definitions_recursively(definitions);
+                <Address as $borsh::BorshSchema>::add_definitions_recursively(definitions);
             }
         }
     };
@@ -1512,7 +1375,7 @@ mod tests {
         for _ in 0..1_000 {
             let program_id = Pubkey::new_unique();
             let bytes1 = rand::random::<[u8; 10]>();
-            let bytes2 = rand::random::<[u8; 32]>();
+            let bytes2 = rand::random::<Address>();
             if let Ok(program_address) =
                 Pubkey::create_program_address(&[&bytes1, &bytes2], &program_id)
             {
