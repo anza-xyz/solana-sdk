@@ -1,5 +1,6 @@
 use {
     crate::abi_digester::{AbiDigester, DigestError, DigestResult},
+    bytes::Bytes,
     log::*,
     serde::Serialize,
     std::any::type_name,
@@ -504,6 +505,12 @@ impl AbiExample for SocketAddr {
 impl AbiExample for IpAddr {
     fn example() -> Self {
         IpAddr::V4(Ipv4Addr::UNSPECIFIED)
+    }
+}
+
+impl AbiExample for Bytes {
+    fn example() -> Self {
+        Bytes::new()
     }
 }
 
