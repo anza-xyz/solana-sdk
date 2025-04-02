@@ -26,7 +26,7 @@ pub use account_meta::AccountMeta;
 pub mod error;
 #[cfg(target_os = "solana")]
 pub mod syscalls;
-#[cfg(all(feature = "std", target_arch = "wasm32"))]
+#[cfg(all(feature = "std", feature = "js"))]
 pub mod wasm;
 
 /// A directive for a single invocation of a Solana program.
@@ -88,7 +88,7 @@ pub mod wasm;
 /// Programs may require signatures from some accounts, in which case they
 /// should be specified as signers during `Instruction` construction. The
 /// program must still validate during execution that the account is a signer.
-#[cfg(all(feature = "std", not(target_arch = "wasm32")))]
+#[cfg(all(feature = "std", not(feature = "js")))]
 #[cfg_attr(
     feature = "serde",
     derive(serde_derive::Serialize, serde_derive::Deserialize)
@@ -106,7 +106,7 @@ pub struct Instruction {
 /// wasm-bindgen version of the Instruction struct.
 /// This duplication is required until https://github.com/rustwasm/wasm-bindgen/issues/3671
 /// is fixed. This must not diverge from the regular non-wasm Instruction struct.
-#[cfg(all(feature = "std", target_arch = "wasm32"))]
+#[cfg(all(feature = "std", feature = "js"))]
 #[wasm_bindgen::prelude::wasm_bindgen]
 #[cfg_attr(
     feature = "serde",

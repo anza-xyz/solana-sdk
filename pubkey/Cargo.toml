@@ -18,6 +18,8 @@ bytemuck = { workspace = true, optional = true }
 bytemuck_derive = { workspace = true, optional = true }
 five8_const = { workspace = true }
 num-traits = { workspace = true }
+getrandom = { workspace = true, optional = true, features = ["js", "wasm-bindgen"] }
+js-sys = { workspace = true, optional = true }
 rand = { workspace = true, optional = true }
 serde = { workspace = true, optional = true }
 serde_derive = { workspace = true, optional = true }
@@ -30,6 +32,7 @@ solana-frozen-abi-macro = { workspace = true, optional = true, features = [
     "frozen-abi",
 ] }
 solana-sanitize = { workspace = true }
+wasm-bindgen = { workspace = true, optional = true }
 
 [target.'cfg(target_os = "solana")'.dependencies]
 solana-define-syscall = { workspace = true }
@@ -38,11 +41,6 @@ solana-sha256-hasher = { workspace = true }
 [target.'cfg(not(target_os = "solana"))'.dependencies]
 curve25519-dalek = { workspace = true, optional = true }
 solana-sha256-hasher = { workspace = true, optional = true }
-
-[target.'cfg(target_arch = "wasm32")'.dependencies]
-getrandom = { workspace = true, features = ["js", "wasm-bindgen"] }
-js-sys = { workspace = true }
-wasm-bindgen = { workspace = true }
 
 [dev-dependencies]
 anyhow = { workspace = true }
@@ -71,6 +69,7 @@ frozen-abi = [
     "dep:solana-frozen-abi-macro",
     "std",
 ]
+js = ["dep:getrandom", "dep:wasm-bindgen", "dep:js-sys"]
 rand = ["dep:rand", "std"]
 serde = ["dep:serde", "dep:serde_derive"]
 sha2 = ["dep:solana-sha256-hasher", "solana-sha256-hasher/sha2"]

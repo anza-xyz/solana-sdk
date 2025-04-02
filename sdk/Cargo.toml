@@ -19,7 +19,7 @@ program = []
 
 default = [
     "borsh",
-    "full",  # functionality that is not compatible or needed for on-chain programs
+    "full", # functionality that is not compatible or needed for on-chain programs
 ]
 full = [
     "serde_json",
@@ -85,6 +85,8 @@ openssl-vendored = ["solana-precompiles/openssl-vendored"]
 [dependencies]
 bincode = { workspace = true }
 bs58 = { workspace = true }
+getrandom = { version = "0.1.1", optional = true, features = ["wasm-bindgen"] }
+js-sys = { workspace = true, optional = true }
 serde = { workspace = true }
 serde_json = { workspace = true, optional = true }
 solana-account = { workspace = true, features = ["bincode"] }
@@ -173,11 +175,7 @@ solana-transaction-error = { workspace = true, features = [
 ], optional = true }
 solana-validator-exit = { workspace = true }
 thiserror = { workspace = true }
-
-[target.'cfg(target_arch = "wasm32")'.dependencies]
-getrandom = { version = "0.1.1", features = ["wasm-bindgen"] }
-js-sys = { workspace = true }
-wasm-bindgen = { workspace = true }
+wasm-bindgen = { workspace = true, optional = true }
 
 [dev-dependencies]
 curve25519-dalek = { workspace = true }
@@ -190,6 +188,9 @@ serde_with = { workspace = true, features = ["macros"] }
 solana-instructions-sysvar = { workspace = true, features = ["dev-context-only-utils"] }
 solana-program = { workspace = true, features = ["dev-context-only-utils"] }
 solana-sdk = { path = ".", features = ["dev-context-only-utils"] }
+
+[feature]
+js = ["dep:getrandom", "dep:wasm-bindgen", "dep:js-sys"]
 
 [package.metadata.docs.rs]
 targets = ["x86_64-unknown-linux-gnu", "wasm32-unknown-unknown"]

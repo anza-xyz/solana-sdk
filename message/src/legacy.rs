@@ -17,7 +17,7 @@ pub use builtins::{BUILTIN_PROGRAMS_KEYS, MAYBE_BUILTIN_KEY_OR_SYSVAR};
 use serde_derive::{Deserialize, Serialize};
 #[cfg(feature = "frozen-abi")]
 use solana_frozen_abi_macro::{frozen_abi, AbiExample};
-#[cfg(target_arch = "wasm32")]
+#[cfg(feature = "js")]
 use wasm_bindgen::prelude::wasm_bindgen;
 use {
     crate::{
@@ -146,7 +146,7 @@ fn compile_instructions(ixs: &[Instruction], keys: &[Pubkey]) -> Vec<CompiledIns
 /// redundantly specifying the fee-payer is not strictly required.
 // NOTE: Serialization-related changes must be paired with the custom serialization
 // for versioned messages in the `RemainingLegacyMessage` struct.
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(not(feature = "js"))]
 #[cfg_attr(
     feature = "frozen-abi",
     frozen_abi(digest = "2THeaWnXSGDTsiadKytJTcbjrk4KjfMww9arRLZcwGnw"),
@@ -179,7 +179,7 @@ pub struct Message {
 /// wasm-bindgen version of the Message struct.
 /// This duplication is required until https://github.com/rustwasm/wasm-bindgen/issues/3671
 /// is fixed. This must not diverge from the regular non-wasm Message struct.
-#[cfg(target_arch = "wasm32")]
+#[cfg(feature = "js")]
 #[wasm_bindgen]
 #[cfg_attr(
     feature = "frozen-abi",

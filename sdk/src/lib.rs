@@ -42,7 +42,7 @@ pub use solana_program::program_stubs;
 // confusing duplication in the docs due to a rustdoc bug. #26211
 #[allow(deprecated)]
 pub use solana_program::sdk_ids;
-#[cfg(target_arch = "wasm32")]
+#[cfg(feature = "js")]
 pub use solana_program::wasm_bindgen;
 pub use solana_program::{
     account_info, address_lookup_table, big_mod_exp, blake3, bpf_loader, bpf_loader_deprecated,

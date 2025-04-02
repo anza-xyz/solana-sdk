@@ -31,7 +31,7 @@ use {
     num_traits::{FromPrimitive, ToPrimitive},
     solana_decode_error::DecodeError,
 };
-#[cfg(target_arch = "wasm32")]
+#[cfg(feature = "js")]
 use {
     js_sys::{Array, Uint8Array},
     wasm_bindgen::{prelude::wasm_bindgen, JsCast, JsValue},
@@ -149,7 +149,7 @@ impl From<u64> for PubkeyError {
 /// [ed25519]: https://ed25519.cr.yp.to/
 /// [pdas]: https://solana.com/docs/core/cpi#program-derived-addresses
 /// [`Keypair`]: https://docs.rs/solana-sdk/latest/solana_sdk/signer/keypair/struct.Keypair.html
-#[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
+#[cfg_attr(feature = "js", wasm_bindgen)]
 #[repr(transparent)]
 #[cfg_attr(feature = "frozen-abi", derive(solana_frozen_abi_macro::AbiExample))]
 #[cfg_attr(
@@ -1079,7 +1079,7 @@ macro_rules! impl_borsh_serialize {
 #[cfg(feature = "borsh")]
 impl_borsh_serialize!(borsh0_10);
 
-#[cfg(all(target_arch = "wasm32", feature = "curve25519"))]
+#[cfg(all(feature = "js", feature = "curve25519"))]
 fn js_value_to_seeds_vec(array_of_uint8_arrays: &[JsValue]) -> Result<Vec<Vec<u8>>, JsValue> {
     let vec_vec_u8 = array_of_uint8_arrays
         .iter()
@@ -1097,12 +1097,12 @@ fn js_value_to_seeds_vec(array_of_uint8_arrays: &[JsValue]) -> Result<Vec<Vec<u8
     }
 }
 
-#[cfg(target_arch = "wasm32")]
+#[cfg(feature = "js")]
 fn display_to_jsvalue<T: fmt::Display>(display: T) -> JsValue {
     std::string::ToString::to_string(&display).into()
 }
 
-#[allow(non_snake_case)]
+#[cfg(feature = "js")]
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen]
 impl Pubkey {

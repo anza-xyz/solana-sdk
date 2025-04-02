@@ -19,6 +19,7 @@ borsh = { workspace = true, optional = true }
 borsh0-10 = { workspace = true, optional = true }
 bs58 = { workspace = true, features = ["alloc"] }
 bytemuck = { workspace = true }
+getrandom = { workspace = true, optional = true, features = ["js", "wasm-bindgen"] }
 lazy_static = { workspace = true }
 log = { workspace = true }
 memoffset = { workspace = true }
@@ -87,6 +88,7 @@ solana-sysvar = { workspace = true, features = ["bincode", "bytemuck"] }
 solana-sysvar-id = { workspace = true }
 solana-vote-interface = { workspace = true, features = ["bincode"] }
 thiserror = { workspace = true }
+wasm-bindgen = { workspace = true, optional = true }
 
 # This is currently needed to build on-chain programs reliably.
 # Borsh 0.10 may pull in hashbrown 0.13, which uses ahash 0.8, which uses
@@ -157,6 +159,7 @@ frozen-abi = [
     "solana-stake-interface/frozen-abi",
     "solana-sysvar/frozen-abi"
 ]
+js = ["dep:getrandom", "dep:wasm-bindgen"]
 
 [lints]
 workspace = true
