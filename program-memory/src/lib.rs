@@ -1,3 +1,5 @@
+#![no_std]
+
 //! Basic low-level memory operations.
 //!
 //! Within the SBF environment, these are implemented as syscalls and executed by
@@ -10,6 +12,7 @@ pub mod syscalls {
     };
 }
 
+#[cfg(not(target_os = "solana"))]
 /// Check that two regions do not overlap.
 #[cfg(any(test, not(target_os = "solana")))]
 fn is_nonoverlapping(src: usize, src_len: usize, dst: usize, dst_len: usize) -> bool {
@@ -33,11 +36,11 @@ pub mod stubs {
             is_nonoverlapping(src as usize, n, dst as usize, n),
             "memcpy does not support overlapping regions"
         );
-        std::ptr::copy_nonoverlapping(src, dst, n);
+        core::ptr::copy_nonoverlapping(src, dst, n);
     }
     /// # Safety
     pub unsafe fn sol_memmove(dst: *mut u8, src: *const u8, n: usize) {
-        std::ptr::copy(src, dst, n);
+        core::ptr::copy(src, dst, n);
     }
     /// # Safety
     pub unsafe fn sol_memcmp(s1: *const u8, s2: *const u8, n: usize, result: *mut i32) {
@@ -55,7 +58,7 @@ pub mod stubs {
     }
     /// # Safety
     pub unsafe fn sol_memset(s: *mut u8, c: u8, n: usize) {
-        let s = std::slice::from_raw_parts_mut(s, n);
+        let s = core::slice::from_raw_parts_mut(s, n);
         for val in s.iter_mut().take(n) {
             *val = c;
         }
@@ -121,7 +124,7 @@ pub fn sol_memcpy(dst: &mut [u8], src: &[u8], n: usize) {
 ///
 /// The same safety rules apply as in [`ptr::copy`].
 ///
-/// [`ptr::copy`]: https://doc.rust-lang.org/std/ptr/fn.copy.html
+/// [`ptr::copy`]: https://doc.rust-lang.org/core/ptr/fn.copy.html
 #[inline]
 pub unsafe fn sol_memmove(dst: *mut u8, src: *const u8, n: usize) {
     #[cfg(target_os = "solana")]
