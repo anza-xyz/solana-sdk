@@ -176,7 +176,7 @@ impl<'a> AccountInfo<'a> {
         if zero_init {
             let len_increase = new_len.saturating_sub(old_len);
             if len_increase > 0 {
-                sol_memset(&mut data[old_len..], 0, len_increase);
+                unsafe { sol_memset(&mut data[old_len..], 0, len_increase) };
             }
         }
 
