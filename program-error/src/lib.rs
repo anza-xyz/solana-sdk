@@ -63,7 +63,7 @@ pub enum ProgramError {
     IncorrectAuthority,
 }
 
-impl std::error::Error for ProgramError {}
+impl core::error::Error for ProgramError {}
 
 impl fmt::Display for ProgramError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -129,14 +129,14 @@ impl fmt::Display for ProgramError {
 pub trait PrintProgramError {
     fn print<E>(&self)
     where
-        E: 'static + std::error::Error + DecodeError<E> + PrintProgramError + FromPrimitive;
+        E: 'static + core::error::Error + DecodeError<E> + PrintProgramError + FromPrimitive;
 }
 
 #[allow(deprecated)]
 impl PrintProgramError for ProgramError {
     fn print<E>(&self)
     where
-        E: 'static + std::error::Error + DecodeError<E> + PrintProgramError + FromPrimitive,
+        E: 'static + core::error::Error + DecodeError<E> + PrintProgramError + FromPrimitive,
     {
         match self {
             Self::Custom(error) => {

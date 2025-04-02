@@ -243,7 +243,7 @@ pub enum InstructionError {
 }
 
 #[cfg(feature = "std")]
-impl std::error::Error for InstructionError {}
+impl core::error::Error for InstructionError {}
 
 #[cfg(feature = "std")]
 impl fmt::Display for InstructionError {
@@ -442,7 +442,7 @@ pub enum LamportsError {
 }
 
 #[cfg(feature = "std")]
-impl std::error::Error for LamportsError {}
+impl core::error::Error for LamportsError {}
 
 impl fmt::Display for LamportsError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {

@@ -86,7 +86,7 @@ mod target_arch {
     pub fn new_secp256r1_instruction(
         message: &[u8],
         signing_key: EcKey<Private>,
-    ) -> Result<Instruction, Box<dyn std::error::Error>> {
+    ) -> Result<Instruction, Box<dyn core::error::Error>> {
         let group = EcGroup::from_curve_name(Nid::X9_62_PRIME256V1)?;
         if signing_key.group().curve_name() != Some(Nid::X9_62_PRIME256V1) {
             return Err(("Signing key must be on the secp256r1 curve".to_string()).into());

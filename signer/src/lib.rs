@@ -22,7 +22,7 @@ pub enum PresignerError {
     VerificationFailure,
 }
 
-impl std::error::Error for PresignerError {}
+impl core::error::Error for PresignerError {}
 
 impl fmt::Display for PresignerError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -49,8 +49,8 @@ pub enum SignerError {
     TooManySigners,
 }
 
-impl std::error::Error for SignerError {
-    fn source(&self) -> ::core::option::Option<&(dyn std::error::Error + 'static)> {
+impl core::error::Error for SignerError {
+    fn source(&self) -> ::core::option::Option<&(dyn core::error::Error + 'static)> {
         match self {
             Self::KeypairPubkeyMismatch => None,
             Self::NotEnoughSigners => None,

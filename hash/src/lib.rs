@@ -95,7 +95,7 @@ pub enum ParseHashError {
 }
 
 #[cfg(feature = "std")]
-impl std::error::Error for ParseHashError {}
+impl core::error::Error for ParseHashError {}
 
 impl fmt::Display for ParseHashError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {

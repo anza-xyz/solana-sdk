@@ -33,7 +33,7 @@ pub enum VoteError {
     AssertionFailed,
 }
 
-impl std::error::Error for VoteError {}
+impl core::error::Error for VoteError {}
 
 impl fmt::Display for VoteError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -88,7 +88,7 @@ mod tests {
         use num_traits::FromPrimitive;
         fn pretty_err<T>(err: InstructionError) -> String
         where
-            T: 'static + std::error::Error + DecodeError<T> + FromPrimitive,
+            T: 'static + core::error::Error + DecodeError<T> + FromPrimitive,
         {
             if let InstructionError::Custom(code) = err {
                 let specific_error: T = T::decode_custom_error_to_enum(code).unwrap();

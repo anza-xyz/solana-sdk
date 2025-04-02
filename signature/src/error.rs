@@ -11,10 +11,10 @@ use core::fmt::{self, Debug, Display};
 /// could potentially be used recover signing private keys or forge signatures
 /// (e.g. [BB'06]).
 ///
-/// When the `std` feature is enabled, it impls [`std::error::Error`].
+/// When the `std` feature is enabled, it impls [`core::error::Error`].
 ///
 /// When the `alloc` feature is enabled, it supports an optional
-/// [`std::error::Error::source`], which can be used by things like remote
+/// [`core::error::Error::source`], which can be used by things like remote
 /// signers (e.g. HSM, KMS) to report I/O or auth errors.
 ///
 /// [BB'06]: https://en.wikipedia.org/wiki/Daniel_Bleichenbacher
@@ -23,7 +23,7 @@ use core::fmt::{self, Debug, Display};
 pub struct Error {
     /// Source of the error (if applicable).
     #[cfg(feature = "std")]
-    source: Option<Box<dyn std::error::Error + Send + Sync + 'static>>,
+    source: Option<Box<dyn core::error::Error + Send + Sync + 'static>>,
 }
 
 impl Error {
@@ -35,7 +35,7 @@ impl Error {
     /// communication/authentication errors with HSMs, KMS, etc.
     #[cfg(feature = "std")]
     pub fn from_source(
-        source: impl Into<Box<dyn std::error::Error + Send + Sync + 'static>>,
+        source: impl Into<Box<dyn core::error::Error + Send + Sync + 'static>>,
     ) -> Self {
         Self {
             source: Some(source.into()),
@@ -70,14 +70,14 @@ impl Display for Error {
 }
 
 #[cfg(feature = "std")]
-impl From<Box<dyn std::error::Error + Send + Sync + 'static>> for Error {
-    fn from(source: Box<dyn std::error::Error + Send + Sync + 'static>) -> Error {
+impl From<Box<dyn core::error::Error + Send + Sync + 'static>> for Error {
+    fn from(source: Box<dyn core::error::Error + Send + Sync + 'static>) -> Error {
         Self::from_source(source)
     }
 }
 
 #[cfg(feature = "std")]
-impl std::error::Error for Error {
+impl core::error::Error for Error {
     fn source(&self) -> Option<&(dyn core::error::Error + 'static)> {
         self.source
             .as_ref()
