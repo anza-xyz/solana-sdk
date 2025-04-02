@@ -245,8 +245,7 @@ pub fn read_keypair<R: Read>(reader: &mut R) -> Result<Keypair, Box<dyn error::E
         let parsed: u8 = element.parse()?;
         out[idx] = parsed;
     }
-    Keypair::try_from(&out[..])
-        .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e.to_string()).into())
+    Keypair::try_from(&out[..]).map_err(|e| std::io::Error::other(e.to_string()).into())
 }
 
 /// Reads a `Keypair` from a file

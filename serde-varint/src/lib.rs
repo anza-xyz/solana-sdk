@@ -56,7 +56,7 @@ where
     T: VarInt,
 {
     deserializer.deserialize_tuple(
-        (std::mem::size_of::<T>() * 8 + 6) / 7,
+        (std::mem::size_of::<T>() * 8).div_ceil(7),
         VarIntVisitor {
             phantom: PhantomData,
         },
@@ -100,7 +100,7 @@ macro_rules! impl_var_int {
                 S: Serializer,
             {
                 let bits = <$type>::BITS - self.leading_zeros();
-                let num_bytes = ((bits + 6) / 7).max(1) as usize;
+                let num_bytes = bits.div_ceil(7).max(1) as usize;
                 let mut seq = serializer.serialize_tuple(num_bytes)?;
                 while self >= 0x80 {
                     let byte = ((self & 0x7F) | 0x80) as u8;
@@ -138,8 +138,8 @@ mod tests {
 
     #[test]
     fn test_serde_varint() {
-        assert_eq!((std::mem::size_of::<u32>() * 8 + 6) / 7, 5);
-        assert_eq!((std::mem::size_of::<u64>() * 8 + 6) / 7, 10);
+        assert_eq!((std::mem::size_of::<u32>() * 8).div_ceil(7), 5);
+        assert_eq!((std::mem::size_of::<u64>() * 8).div_ceil(7), 10);
         let dummy = Dummy {
             a: 698,
             b: 370,

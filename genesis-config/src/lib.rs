@@ -161,37 +161,23 @@ impl GenesisConfig {
             .read(true)
             .open(&filename)
             .map_err(|err| {
-                std::io::Error::new(
-                    std::io::ErrorKind::Other,
-                    format!("Unable to open {filename:?}: {err:?}"),
-                )
+                std::io::Error::other(format!("Unable to open {filename:?}: {err:?}"))
             })?;
 
         //UNSAFE: Required to create a Mmap
-        let mem = unsafe { Mmap::map(&file) }.map_err(|err| {
-            std::io::Error::new(
-                std::io::ErrorKind::Other,
-                format!("Unable to map {filename:?}: {err:?}"),
-            )
-        })?;
+        let mem = unsafe { Mmap::map(&file) }
+            .map_err(|err| std::io::Error::other(format!("Unable to map {filename:?}: {err:?}")))?;
 
         let genesis_config = deserialize(&mem).map_err(|err| {
-            std::io::Error::new(
-                std::io::ErrorKind::Other,
-                format!("Unable to deserialize {filename:?}: {err:?}"),
-            )
+            std::io::Error::other(format!("Unable to deserialize {filename:?}: {err:?}"))
         })?;
         Ok(genesis_config)
     }
 
     #[cfg(feature = "serde")]
     pub fn write(&self, ledger_path: &Path) -> Result<(), std::io::Error> {
-        let serialized = serialize(&self).map_err(|err| {
-            std::io::Error::new(
-                std::io::ErrorKind::Other,
-                format!("Unable to serialize: {err:?}"),
-            )
-        })?;
+        let serialized = serialize(&self)
+            .map_err(|err| std::io::Error::other(format!("Unable to serialize: {err:?}")))?;
 
         std::fs::create_dir_all(ledger_path)?;
 

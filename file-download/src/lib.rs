@@ -179,10 +179,7 @@ pub fn download_file<'a, 'b>(
             if let Some(callback) = self.callback {
                 if to_update_progress && !callback(&progress_record) {
                     info!("Download is aborted by the caller");
-                    return Err(io::Error::new(
-                        io::ErrorKind::Other,
-                        "Download is aborted by the caller",
-                    ));
+                    return Err(io::Error::other("Download is aborted by the caller"));
                 }
             }
 

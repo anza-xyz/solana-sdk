@@ -153,7 +153,7 @@ pub enum UpgradeableLoaderInstruction {
     ///   2. `[]` System program (`solana_sdk::system_program::id()`), optional, used to transfer
     ///      lamports from the payer to the ProgramData account.
     ///   3. `[writable, signer]` The payer account, optional, that will pay
-    ///       necessary rent exemption costs for the increased storage size.
+    ///      necessary rent exemption costs for the increased storage size.
     ExtendProgram {
         /// Number of bytes to extend the program data.
         additional_bytes: u32,
