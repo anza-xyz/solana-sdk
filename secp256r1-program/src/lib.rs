@@ -83,21 +83,40 @@ mod target_arch {
     // Field size in bytes
     pub const FIELD_SIZE: usize = 32;
 
+    #[deprecated(
+        since = "2.2.3",
+        note = "Use `new_secp256r1_instruction_with_signature` and `sign_message` instead"
+    )]
     pub fn new_secp256r1_instruction(
         message: &[u8],
         signing_key: EcKey<Private>,
     ) -> Result<Instruction, Box<dyn std::error::Error>> {
-        let group = EcGroup::from_curve_name(Nid::X9_62_PRIME256V1)?;
-        if signing_key.group().curve_name() != Some(Nid::X9_62_PRIME256V1) {
-            return Err(("Signing key must be on the secp256r1 curve".to_string()).into());
-        }
+        let signature = sign_message(message, &signing_key.private_key_to_der()?)?;
 
         let mut ctx = BigNumContext::new()?;
+        let group = EcGroup::from_curve_name(Nid::X9_62_PRIME256V1)?;
         let pubkey = signing_key.public_key().to_bytes(
             &group,
             openssl::ec::PointConversionForm::COMPRESSED,
             &mut ctx,
         )?;
+        assert_eq!(pubkey.len(), COMPRESSED_PUBKEY_SERIALIZED_SIZE);
+
+        Ok(new_secp256r1_instruction_with_signature(
+            message,
+            &signature,
+            &pubkey.try_into().unwrap(), // len was just checked, this is safe
+        ))
+    }
+
+    pub fn sign_message(
+        message: &[u8],
+        der: &[u8],
+    ) -> Result<[u8; SIGNATURE_SERIALIZED_SIZE], Box<dyn std::error::Error>> {
+        let signing_key = EcKey::private_key_from_der(der)?;
+        if signing_key.group().curve_name() != Some(Nid::X9_62_PRIME256V1) {
+            return Err(("Signing key must be on the secp256r1 curve".to_string()).into());
+        }
 
         let signing_key_pkey = PKey::from_ec_key(signing_key)?;
 
@@ -108,11 +127,11 @@ mod target_arch {
         let ecdsa_sig = EcdsaSig::from_der(&signature)?;
         let r = ecdsa_sig.r().to_vec();
         let s = ecdsa_sig.s().to_vec();
-        let mut signature = vec![0u8; SIGNATURE_SERIALIZED_SIZE];
+        let mut signature = [0u8; SIGNATURE_SERIALIZED_SIZE];
 
         // Incase of an r or s value of 31 bytes we need to pad it to 32 bytes
-        let mut padded_r = vec![0u8; FIELD_SIZE];
-        let mut padded_s = vec![0u8; FIELD_SIZE];
+        let mut padded_r = [0u8; FIELD_SIZE];
+        let mut padded_s = [0u8; FIELD_SIZE];
         padded_r[FIELD_SIZE.saturating_sub(r.len())..].copy_from_slice(&r);
         padded_s[FIELD_SIZE.saturating_sub(s.len())..].copy_from_slice(&s);
 
@@ -129,16 +148,20 @@ mod target_arch {
             let new_s_bytes = new_s.to_vec();
 
             // Incase the new s value is 31 bytes we need to pad it to 32 bytes
-            let mut new_padded_s = vec![0u8; FIELD_SIZE];
+            let mut new_padded_s = [0u8; FIELD_SIZE];
             new_padded_s[FIELD_SIZE.saturating_sub(new_s_bytes.len())..]
                 .copy_from_slice(&new_s_bytes);
 
             signature[FIELD_SIZE..].copy_from_slice(&new_padded_s);
         }
+        Ok(signature)
+    }
 
-        assert_eq!(pubkey.len(), COMPRESSED_PUBKEY_SERIALIZED_SIZE);
-        assert_eq!(signature.len(), SIGNATURE_SERIALIZED_SIZE);
-
+    pub fn new_secp256r1_instruction_with_signature(
+        message: &[u8],
+        signature: &[u8; SIGNATURE_SERIALIZED_SIZE],
+        pubkey: &[u8; COMPRESSED_PUBKEY_SERIALIZED_SIZE],
+    ) -> Instruction {
         let mut instruction_data = Vec::with_capacity(
             DATA_START
                 .saturating_add(SIGNATURE_SERIALIZED_SIZE)
@@ -164,15 +187,15 @@ mod target_arch {
         };
 
         instruction_data.extend_from_slice(bytes_of(&offsets));
-        instruction_data.extend_from_slice(&pubkey);
-        instruction_data.extend_from_slice(&signature);
+        instruction_data.extend_from_slice(pubkey);
+        instruction_data.extend_from_slice(signature);
         instruction_data.extend_from_slice(message);
 
-        Ok(Instruction {
+        Instruction {
             program_id: crate::id(),
             accounts: vec![],
             data: instruction_data,
-        })
+        }
     }
 
     #[deprecated(
@@ -528,7 +551,25 @@ mod target_arch {
             let message_arr = b"hello";
             let group = EcGroup::from_curve_name(Nid::X9_62_PRIME256V1).unwrap();
             let signing_key = EcKey::generate(&group).unwrap();
-            let mut instruction = new_secp256r1_instruction(message_arr, signing_key).unwrap();
+
+            let signature =
+                sign_message(message_arr, &signing_key.private_key_to_der().unwrap()).unwrap();
+            let mut ctx = BigNumContext::new().unwrap();
+            let group = EcGroup::from_curve_name(Nid::X9_62_PRIME256V1).unwrap();
+            let pubkey = signing_key
+                .public_key()
+                .to_bytes(
+                    &group,
+                    openssl::ec::PointConversionForm::COMPRESSED,
+                    &mut ctx,
+                )
+                .unwrap();
+            assert_eq!(pubkey.len(), COMPRESSED_PUBKEY_SERIALIZED_SIZE);
+            let mut instruction = new_secp256r1_instruction_with_signature(
+                message_arr,
+                &signature,
+                &pubkey.try_into().unwrap(),
+            );
             let mint_keypair = Keypair::new();
             let feature_set = FeatureSet::all_enabled();
 
@@ -562,7 +603,24 @@ mod target_arch {
             let message_arr = b"hello";
             let group = EcGroup::from_curve_name(Nid::X9_62_PRIME256V1).unwrap();
             let signing_key = EcKey::generate(&group).unwrap();
-            let mut instruction = new_secp256r1_instruction(message_arr, signing_key).unwrap();
+            let signature =
+                sign_message(message_arr, &signing_key.private_key_to_der().unwrap()).unwrap();
+            let mut ctx = BigNumContext::new().unwrap();
+            let group = EcGroup::from_curve_name(Nid::X9_62_PRIME256V1).unwrap();
+            let pubkey = signing_key
+                .public_key()
+                .to_bytes(
+                    &group,
+                    openssl::ec::PointConversionForm::COMPRESSED,
+                    &mut ctx,
+                )
+                .unwrap();
+            assert_eq!(pubkey.len(), COMPRESSED_PUBKEY_SERIALIZED_SIZE);
+            let mut instruction = new_secp256r1_instruction_with_signature(
+                message_arr,
+                &signature,
+                &pubkey.try_into().unwrap(),
+            );
 
             // To double check that the untampered low-S value signature passes
             let feature_set = FeatureSet::all_enabled();
@@ -608,8 +666,24 @@ mod target_arch {
 
             // Keep generating signatures until we get one with a 31-byte component
             loop {
-                let instruction =
-                    new_secp256r1_instruction(message_arr, signing_key.clone()).unwrap();
+                let signature =
+                    sign_message(message_arr, &signing_key.private_key_to_der().unwrap()).unwrap();
+                let mut ctx = BigNumContext::new().unwrap();
+                let group = EcGroup::from_curve_name(Nid::X9_62_PRIME256V1).unwrap();
+                let pubkey = signing_key
+                    .public_key()
+                    .to_bytes(
+                        &group,
+                        openssl::ec::PointConversionForm::COMPRESSED,
+                        &mut ctx,
+                    )
+                    .unwrap();
+                assert_eq!(pubkey.len(), COMPRESSED_PUBKEY_SERIALIZED_SIZE);
+                let instruction = new_secp256r1_instruction_with_signature(
+                    message_arr,
+                    &signature,
+                    &pubkey.try_into().unwrap(),
+                );
 
                 // Extract r and s from the signature
                 let signature_offset = DATA_START + COMPRESSED_PUBKEY_SERIALIZED_SIZE;
@@ -646,11 +720,25 @@ mod target_arch {
             let message_arr = b"hello";
             let group = EcGroup::from_curve_name(Nid::X9_62_PRIME256V1).unwrap();
             let signing_key = EcKey::generate(&group).unwrap();
-            assert!(new_secp256r1_instruction(message_arr, signing_key).is_ok());
+
+            let _ = sign_message(message_arr, &signing_key.private_key_to_der().unwrap()).unwrap();
+            let mut ctx = BigNumContext::new().unwrap();
+            let group = EcGroup::from_curve_name(Nid::X9_62_PRIME256V1).unwrap();
+            let pubkey = signing_key
+                .public_key()
+                .to_bytes(
+                    &group,
+                    openssl::ec::PointConversionForm::COMPRESSED,
+                    &mut ctx,
+                )
+                .unwrap();
+            assert_eq!(pubkey.len(), COMPRESSED_PUBKEY_SERIALIZED_SIZE);
 
             let incorrect_group = EcGroup::from_curve_name(Nid::X9_62_PRIME192V1).unwrap();
             let incorrect_key = EcKey::generate(&incorrect_group).unwrap();
-            assert!(new_secp256r1_instruction(message_arr, incorrect_key).is_err());
+            assert!(
+                sign_message(message_arr, &incorrect_key.private_key_to_der().unwrap()).is_err()
+            );
         }
         #[test]
         fn test_secp256r1_order() {
