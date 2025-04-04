@@ -25,7 +25,7 @@ use {
         convert::{Infallible, TryFrom},
         fmt,
         hash::{Hash, Hasher},
-        mem,
+        mem::{self, size_of},
         str::{from_utf8, FromStr},
     },
     num_traits::{FromPrimitive, ToPrimitive},
@@ -36,6 +36,7 @@ use {
     js_sys::{Array, Uint8Array},
     wasm_bindgen::{prelude::wasm_bindgen, JsCast, JsValue},
 };
+
 #[cfg(target_os = "solana")]
 pub mod syscalls;
 
