@@ -3,7 +3,6 @@
 use {
     core::fmt,
     num_derive::{FromPrimitive, ToPrimitive},
-    solana_decode_error::DecodeError,
 };
 
 /// Reasons the vote might have had an error
@@ -70,42 +69,5 @@ impl fmt::Display for VoteError {
             Self::CommissionUpdateTooLate => "Cannot update commission at this point in the epoch",
             Self::AssertionFailed => "Assertion failed",
         })
-    }
-}
-
-impl<E> DecodeError<E> for VoteError {
-    fn type_of() -> &'static str {
-        "VoteError"
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use {super::*, solana_instruction::error::InstructionError};
-
-    #[test]
-    fn test_custom_error_decode() {
-        use num_traits::FromPrimitive;
-        fn pretty_err<T>(err: InstructionError) -> String
-        where
-            T: 'static + std::error::Error + DecodeError<T> + FromPrimitive,
-        {
-            if let InstructionError::Custom(code) = err {
-                let specific_error: T = T::decode_custom_error_to_enum(code).unwrap();
-                format!(
-                    "{:?}: {}::{:?} - {}",
-                    err,
-                    T::type_of(),
-                    specific_error,
-                    specific_error,
-                )
-            } else {
-                "".to_string()
-            }
-        }
-        assert_eq!(
-            "Custom(0): VoteError::VoteTooOld - vote already recorded or not in slot hashes history",
-            pretty_err::<VoteError>(VoteError::VoteTooOld.into())
-        )
     }
 }
