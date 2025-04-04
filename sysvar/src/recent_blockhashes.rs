@@ -24,6 +24,7 @@ use crate::Sysvar;
 use serde_derive::{Deserialize, Serialize};
 pub use solana_sdk_ids::sysvar::recent_blockhashes::{check_id, id, ID};
 use {
+    crate::SysvarGet,
     solana_fee_calculator::FeeCalculator,
     solana_hash::Hash,
     solana_sysvar_id::impl_sysvar_id,
@@ -149,6 +150,8 @@ impl<T: Ord> Iterator for IntoIterSorted<T> {
         (exact, Some(exact))
     }
 }
+
+impl SysvarGet for RecentBlockhashes {}
 
 #[cfg(feature = "bincode")]
 impl Sysvar for RecentBlockhashes {
