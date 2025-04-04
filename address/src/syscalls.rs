@@ -112,7 +112,7 @@ pub fn try_find_program_address(
 ) -> Result<(Address, u8), ProgramError> {
     #[cfg(target_os = "solana")]
     {
-        let mut bytes = core::mem::MaybeUninit::<[u8; crate::PUBKEY_BYTES]>::uninit();
+        let mut bytes = core::mem::MaybeUninit::<[u8; crate::ADDRESS_BYTES]>::uninit();
         let mut bump_seed = u8::MAX;
 
         let result = unsafe {
@@ -164,7 +164,7 @@ pub fn try_create_program_address(
     // Call via a system call to perform the calculation
     #[cfg(target_os = "solana")]
     {
-        let mut bytes = core::mem::MaybeUninit::<[u8; crate::PUBKEY_BYTES]>::uninit();
+        let mut bytes = core::mem::MaybeUninit::<[u8; crate::ADDRESS_BYTES]>::uninit();
 
         let result = unsafe {
             sol_create_program_address(

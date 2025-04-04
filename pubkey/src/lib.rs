@@ -12,7 +12,7 @@ use arbitrary::Arbitrary;
 use bytemuck_derive::{Pod, Zeroable};
 #[cfg(feature = "serde")]
 use serde_derive::{Deserialize, Serialize};
-pub use solana_address::{MAX_SEEDS, MAX_SEED_LEN, PUBKEY_BYTES};
+pub use solana_address::{ADDRESS_BYTES as PUBKEY_BYTES, MAX_SEEDS, MAX_SEED_LEN};
 #[cfg(any(feature = "std", target_arch = "wasm32"))]
 use std::vec::Vec;
 #[cfg(feature = "borsh")]

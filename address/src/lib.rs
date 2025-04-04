@@ -8,7 +8,7 @@ mod syscalls;
 pub use syscalls::*;
 
 /// Number of bytes in an address.
-pub const PUBKEY_BYTES: usize = 32;
+pub const ADDRESS_BYTES: usize = 32;
 
 /// Maximum length of derived `Address` seed.
 pub const MAX_SEED_LEN: usize = 32;
@@ -27,4 +27,4 @@ pub const MAX_SEEDS: usize = 16;
 /// [account]: https://solana.com/docs/core/accounts
 /// [ed25519]: https://ed25519.cr.yp.to/
 /// [pdas]: https://solana.com/docs/core/cpi#program-derived-addresses
-pub type Address = [u8; PUBKEY_BYTES];
+pub type Address = [u8; ADDRESS_BYTES];
