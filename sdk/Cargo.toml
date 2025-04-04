@@ -15,6 +15,7 @@ include = ["src/**/*", "README.md"]
 # "program" feature is a legacy feature retained to support v1.3 and older
 # programs.  New development should not use this feature.  Instead use the
 # solana-program crate
+js = ["dep:getrandom", "dep:wasm-bindgen", "dep:js-sys"]
 program = []
 
 default = [
@@ -188,9 +189,6 @@ serde_with = { workspace = true, features = ["macros"] }
 solana-instructions-sysvar = { workspace = true, features = ["dev-context-only-utils"] }
 solana-program = { workspace = true, features = ["dev-context-only-utils"] }
 solana-sdk = { path = ".", features = ["dev-context-only-utils"] }
-
-[feature]
-js = ["dep:getrandom", "dep:wasm-bindgen", "dep:js-sys"]
 
 [package.metadata.docs.rs]
 targets = ["x86_64-unknown-linux-gnu", "wasm32-unknown-unknown"]
