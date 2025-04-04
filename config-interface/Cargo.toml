@@ -1,0 +1,50 @@
+[package]
+name = "solana-config-interface"
+description = "Solana config program interface."
+documentation = "https://docs.rs/solana-config-interface"
+version = "1.0.0"
+authors = { workspace = true }
+repository = { workspace = true }
+homepage = { workspace = true }
+license = { workspace = true }
+edition = { workspace = true }
+
+[dependencies]
+bincode = { workspace = true, optional = true }
+serde = { workspace = true, optional = true }
+serde_derive = { workspace = true, optional = true }
+solana-account = { workspace = true, optional = true }
+solana-instruction = { workspace = true, optional = true }
+solana-pubkey = { workspace = true }
+solana-sdk-ids = { workspace = true }
+solana-short-vec = { workspace = true, optional = true }
+solana-stake-interface = { workspace = true, optional = true, features = [
+    "bincode",
+] }
+solana-system-interface = { workspace = true, optional = true, features = [
+    "bincode",
+] }
+
+[features]
+bincode = [
+    "dep:bincode",
+    "dep:solana-account",
+    "dep:solana-instruction",
+    "dep:solana-stake-interface",
+    "dep:solana-system-interface",
+    "serde",
+]
+serde = [
+    "dep:serde",
+    "dep:serde_derive",
+    "dep:solana-short-vec",
+    "solana-pubkey/serde",
+]
+
+[package.metadata.docs.rs]
+targets = ["x86_64-unknown-linux-gnu"]
+all-features = true
+rustdoc-args = ["--cfg=docsrs"]
+
+[lints]
+workspace = true

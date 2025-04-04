@@ -26,6 +26,7 @@ members = [
     "cluster-type",
     "commitment-config",
     "compute-budget-interface",
+    "config-interface",
     "cpi",
     "decode-error",
     "define-syscall",
@@ -222,6 +223,7 @@ solana-clock = { path = "clock", version = "2.2.1" }
 solana-cluster-type = { path = "cluster-type", version = "2.2.1" }
 solana-commitment-config = { path = "commitment-config", version = "2.2.1" }
 solana-compute-budget-interface = { path = "compute-budget-interface", version = "2.2.1" }
+solana-config-interface = { path = "config-interface", version = "1.0.0" }
 solana-cpi = { path = "cpi", version = "2.2.1" }
 solana-decode-error = { path = "decode-error", version = "2.2.1" }
 solana-define-syscall = { path = "define-syscall", version = "2.2.1" }
