@@ -110,8 +110,8 @@ solana-logger = { workspace = true }
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 console_error_panic_hook = { workspace = true }
 console_log = { workspace = true }
-getrandom = { workspace = true, features = ["js", "wasm-bindgen"] }
-wasm-bindgen = { workspace = true }
+getrandom = { workspace = true, optional = true, features = ["js", "wasm-bindgen"] }
+wasm-bindgen = { workspace = true, optional = true }
 
 [dev-dependencies]
 array-bytes = { workspace = true }
@@ -157,6 +157,7 @@ frozen-abi = [
     "solana-stake-interface/frozen-abi",
     "solana-sysvar/frozen-abi"
 ]
+js = ["dep:getrandom", "dep:wasm-bindgen"]
 
 [lints]
 workspace = true

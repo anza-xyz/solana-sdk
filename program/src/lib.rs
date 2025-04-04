@@ -567,7 +567,7 @@ pub use solana_stable_layout as stable_layout;
 pub use solana_sysvar::program_stubs;
 #[deprecated(since = "2.2.0", note = "Use `solana-vote-interface` crate instead")]
 pub use solana_vote_interface as vote;
-#[cfg(target_arch = "wasm32")]
+#[cfg(feature = "js")]
 pub use wasm_bindgen::prelude::wasm_bindgen;
 pub use {
     solana_account_info::{self as account_info, debug_account_data},

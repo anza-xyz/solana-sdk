@@ -32,8 +32,8 @@ solana-system-interface = { workspace = true, optional = true, features = ["binc
 solana-transaction-error = { workspace = true }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
-solana-keypair = { workspace = true }
-wasm-bindgen = { workspace = true }
+solana-keypair = { workspace = true, optional = true }
+wasm-bindgen = { workspace = true, optional = true }
 
 [dev-dependencies]
 anyhow = { workspace = true }
@@ -71,6 +71,7 @@ frozen-abi = [
     "dep:solana-frozen-abi-macro",
     "dep:solana-logger",
 ]
+js = ["dep:wasm-bindgen", "dep:solana-keypair"]
 precompiles = ["dep:solana-feature-set", "dep:solana-precompiles"]
 serde = [
     "dep:serde",

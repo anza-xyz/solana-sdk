@@ -34,8 +34,8 @@ solana-sanitize = { workspace = true }
 solana-hash = { path = ".", features = ["dev-context-only-utils"] }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
-js-sys = { workspace = true }
-wasm-bindgen = { workspace = true }
+js-sys = { workspace = true, optional = true }
+wasm-bindgen = { workspace = true, optional = true }
 
 [features]
 borsh = ["dep:borsh", "std"]
@@ -47,6 +47,7 @@ frozen-abi = [
     "dep:solana-frozen-abi-macro",
     "std"
 ]
+js = ["dep:wasm-bindgen", "dep:js-sys"]
 serde = ["dep:serde", "dep:serde_derive"]
 std = []
 
