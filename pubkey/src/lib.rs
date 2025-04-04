@@ -1103,7 +1103,7 @@ fn display_to_jsvalue<T: fmt::Display>(display: T) -> JsValue {
 }
 
 #[cfg(feature = "js")]
-#[cfg(target_arch = "wasm32")]
+#[allow(non_snake_case)]
 #[wasm_bindgen]
 impl Pubkey {
     /// Create a new Pubkey object
