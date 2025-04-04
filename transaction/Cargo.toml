@@ -19,7 +19,6 @@ solana-frozen-abi = { workspace = true, optional = true }
 solana-frozen-abi-macro = { workspace = true, optional = true }
 solana-hash = { workspace = true }
 solana-instruction = { workspace = true }
-solana-keypair = { workspace = true, optional = true }
 solana-logger = { workspace = true, optional = true }
 solana-message = { workspace = true }
 solana-precompiles = { workspace = true, optional = true }
@@ -31,6 +30,9 @@ solana-signature = { workspace = true }
 solana-signer = { workspace = true, optional = true }
 solana-system-interface = { workspace = true, optional = true, features = ["bincode"] }
 solana-transaction-error = { workspace = true }
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+solana-keypair = { workspace = true, optional = true }
 wasm-bindgen = { workspace = true, optional = true }
 
 [dev-dependencies]

@@ -20,6 +20,8 @@ solana-seed-derivable = { workspace = true, optional = true }
 solana-seed-phrase = { workspace = true }
 solana-signature = { workspace = true, features = ["std", "verify"] }
 solana-signer = { workspace = true }
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
 wasm-bindgen = { workspace = true, optional = true }
 
 [dev-dependencies]
