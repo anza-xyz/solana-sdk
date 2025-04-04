@@ -3,13 +3,13 @@
 #![cfg_attr(feature = "frozen-abi", feature(min_specialization))]
 #[cfg(feature = "borsh")]
 use borsh::{BorshDeserialize, BorshSchema, BorshSerialize};
-#[cfg(any(feature = "std", target_arch = "wasm32"))]
+#[cfg(any(feature = "std"))]
 extern crate std;
 #[cfg(feature = "bytemuck")]
 use bytemuck_derive::{Pod, Zeroable};
 #[cfg(feature = "serde")]
 use serde_derive::{Deserialize, Serialize};
-#[cfg(any(all(feature = "borsh", feature = "std"), target_arch = "wasm32"))]
+#[cfg(any(all(feature = "borsh", feature = "std", feature = "js")))]
 use std::string::ToString;
 use {
     core::{
