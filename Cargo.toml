@@ -186,7 +186,7 @@ num-bigint = "0.4.6"
 num-derive = "0.4"
 num-traits = "0.2.18"
 num_enum = "0.7.3"
-openssl = "0.10.39"
+openssl = "0.10.72"
 parking_lot = "0.12"
 pbkdf2 = { version = "0.11.0", default-features = false }
 proc-macro2 = "1.0.93"
