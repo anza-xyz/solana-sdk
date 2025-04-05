@@ -195,6 +195,8 @@ example_impls! { String, String::new() }
 example_impls! { std::time::Duration, std::time::Duration::from_secs(0) }
 example_impls! { std::sync::Once, std::sync::Once::new() }
 
+example_impls! { bytes::Bytes, bytes::Bytes::new() }
+
 use std::sync::atomic::*;
 
 // Source: https://github.com/rust-lang/rust/blob/ba18875557aabffe386a2534a1aa6118efb6ab88/src/libcore/sync/atomic.rs#L1199
