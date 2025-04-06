@@ -353,6 +353,34 @@ jobs:
       - name: Check dev-context-only-utils declarations
         run: ./scripts/check-dev-context-only-utils.sh
 
+  build-sbf:
+    name: Check build-sbf
+    runs-on: ubuntu-latest
+    needs: [sanity]
+    steps:
+      - name: Git Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Environment
+        uses: ./.github/actions/setup
+        with:
+          stable-toolchain: true
+
+      - name: Determine Solana CLI version
+        run: |
+          source "./scripts/read-cargo-variable.sh"
+          solana_version=$(readCargoVariable solana "./Cargo.toml")
+          echo "SOLANA_VERSION=$solana_version" >> $GITHUB_ENV
+
+      - name: Install Solana CLI
+        uses: solana-program/actions/install-solana@v1
+        with:
+          version: ${{ env.SOLANA_VERSION }}
+          cache: true
+
+      - name: Run cargo-build-sbf
+        run: ./scripts/check-build-sbf.sh
+
   miri:
     name: Test miri
     runs-on: ubuntu-latest

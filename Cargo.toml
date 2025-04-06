@@ -133,6 +133,9 @@ pre-release-commit-message = "Publish {{crate_name}} v{{version}}"
 tag-message = "Publish {{crate_name}} v{{version}}"
 consolidate-commits = false
 
+[workspace.metadata.cli]
+solana = "2.2.0"
+
 [workspace.dependencies]
 ahash = "0.8.11"
 anyhow = "1.0.96"
