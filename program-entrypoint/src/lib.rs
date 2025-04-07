@@ -3,20 +3,23 @@
 //! For more information see the [`bpf_loader`] module.
 //!
 //! [`bpf_loader`]: crate::bpf_loader
+#![no_std]
 
 extern crate alloc;
 use {
-    alloc::vec::Vec,
-    solana_account_info::AccountInfo,
-    solana_pubkey::Pubkey,
-    std::{
+    alloc::{
+        rc::Rc,
+        slice::{from_raw_parts, from_raw_parts_mut},
+        vec::Vec,
+    },
+    core::{
         alloc::Layout,
         cell::RefCell,
         mem::{size_of, MaybeUninit},
         ptr::null_mut,
-        rc::Rc,
-        slice::{from_raw_parts, from_raw_parts_mut},
     },
+    solana_account_info::AccountInfo,
+    solana_pubkey::Pubkey,
 };
 // need to re-export msg for custom_heap_default macro
 pub use {
@@ -331,7 +334,7 @@ impl BumpAllocator {
 /// operating on the prescribed `HEAP_START_ADDRESS` and `HEAP_LENGTH`. Any
 /// other use may overflow and is thus unsupported and at one's own risk.
 #[allow(clippy::arithmetic_side_effects)]
-unsafe impl std::alloc::GlobalAlloc for BumpAllocator {
+unsafe impl core::alloc::GlobalAlloc for BumpAllocator {
     #[inline]
     #[allow(deprecated)] //we get to use deprecated pub fields
     unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
@@ -550,7 +553,7 @@ pub unsafe fn deserialize_into<'a>(
 
 #[cfg(test)]
 mod test {
-    use {super::*, std::alloc::GlobalAlloc};
+    use {super::*, core::alloc::GlobalAlloc};
 
     #[test]
     fn test_bump_allocator() {
