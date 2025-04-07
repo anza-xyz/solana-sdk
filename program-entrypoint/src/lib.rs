@@ -162,7 +162,7 @@ macro_rules! entrypoint_no_alloc {
         /// # Safety
         #[no_mangle]
         pub unsafe extern "C" fn entrypoint(input: *mut u8) -> u64 {
-            use std::mem::MaybeUninit;
+            use core::mem::MaybeUninit;
             // Clippy complains about this because a `const` with interior
             // mutability `RefCell` should use `static` instead to make it
             // clear that it can change.
@@ -358,7 +358,7 @@ unsafe impl core::alloc::GlobalAlloc for BumpAllocator {
     }
 }
 
-/// `assert_eq(std::mem::align_of::<u128>(), 8)` is true for BPF but not for some host machines
+/// `assert_eq(core::mem::align_of::<u128>(), 8)` is true for BPF but not for some host machines
 pub const BPF_ALIGN_OF_U128: usize = 8;
 
 #[allow(clippy::arithmetic_side_effects)]
