@@ -4,7 +4,7 @@
 #![cfg_attr(feature = "frozen-abi", feature(min_specialization))]
 #![allow(clippy::arithmetic_side_effects)]
 
-#[cfg(any(feature = "std"))]
+#[cfg(feature = "std")]
 extern crate std;
 #[cfg(feature = "dev-context-only-utils")]
 use arbitrary::Arbitrary;
@@ -12,7 +12,7 @@ use arbitrary::Arbitrary;
 use bytemuck_derive::{Pod, Zeroable};
 #[cfg(feature = "serde")]
 use serde_derive::{Deserialize, Serialize};
-#[cfg(any(feature = "std"))]
+#[cfg(feature = "std")]
 use std::vec::Vec;
 #[cfg(feature = "borsh")]
 use {
@@ -426,7 +426,7 @@ impl TryFrom<&[u8]> for Pubkey {
     }
 }
 
-#[cfg(any(feature = "std"))]
+#[cfg(feature = "std")]
 impl TryFrom<Vec<u8>> for Pubkey {
     type Error = Vec<u8>;
 
@@ -480,7 +480,7 @@ impl Pubkey {
         type T = u32;
         const COUNTER_BYTES: usize = size_of::<T>();
         let mut b = [0u8; PUBKEY_BYTES];
-        #[cfg(any(feature = "std"))]
+        #[cfg(feature = "std")]
         let mut i = I.fetch_add(1) as T;
         #[cfg(not(any(feature = "std")))]
         let i = I.fetch_add(1) as T;
@@ -489,7 +489,7 @@ impl Pubkey {
         b[0..COUNTER_BYTES].copy_from_slice(&i.to_be_bytes());
         // fill the rest of the pubkey with pseudorandom numbers to make
         // data statistically similar to real pubkeys.
-        #[cfg(any(feature = "std"))]
+        #[cfg(feature = "std")]
         {
             let mut hash = std::hash::DefaultHasher::new();
             for slice in b[COUNTER_BYTES..].chunks_mut(COUNTER_BYTES) {
