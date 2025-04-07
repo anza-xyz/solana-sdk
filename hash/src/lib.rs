@@ -9,7 +9,7 @@ extern crate std;
 use bytemuck_derive::{Pod, Zeroable};
 #[cfg(feature = "serde")]
 use serde_derive::{Deserialize, Serialize};
-#[cfg(all(feature = "borsh", feature = "std", feature = "js"))]
+#[cfg(any(feature = "borsh", feature = "std", feature = "js"))]
 use std::string::ToString;
 use {
     core::{
