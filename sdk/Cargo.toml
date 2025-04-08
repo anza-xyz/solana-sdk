@@ -12,14 +12,25 @@ edition = { workspace = true }
 include = ["src/**/*", "README.md"]
 
 [features]
+js = [
+    "dep:getrandom",
+    "dep:wasm-bindgen",
+    "dep:js-sys",
+    "solana-instruction/js",
+    "solana-keypair/js",
+    "solana-message/js",
+    "solana-program/js",
+    "solana-pubkey/js",
+    "solana-transaction/js",
+]
 # "program" feature is a legacy feature retained to support v1.3 and older
 # programs.  New development should not use this feature.  Instead use the
 # solana-program crate
-js = ["dep:getrandom", "dep:wasm-bindgen", "dep:js-sys"]
 program = []
 
 default = [
     "borsh",
+    "js",
     "full", # functionality that is not compatible or needed for on-chain programs
 ]
 full = [

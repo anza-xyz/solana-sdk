@@ -33,14 +33,20 @@ solana-instruction = { path = ".", features = ["borsh"] }
 [features]
 bincode = ["dep:bincode", "dep:serde"]
 borsh = ["dep:borsh"]
-default = ["std"]
+default = ["std", "js"]
 frozen-abi = [
     "dep:solana-frozen-abi",
     "dep:solana-frozen-abi-macro",
     "serde",
     "std",
 ]
-js = ["dep:getrandom", "dep:wasm-bindgen", "dep:js-sys"]
+js = [
+    "dep:getrandom",
+    "dep:wasm-bindgen",
+    "dep:js-sys",
+    "solana-instruction/js",
+    "solana-pubkey/js",
+]
 serde = [
     "dep:serde",
     "dep:serde_derive",

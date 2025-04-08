@@ -130,7 +130,7 @@ rustdoc-args = ["--cfg=docsrs"]
 crate-type = ["cdylib", "rlib"]
 
 [features]
-default = ["borsh"]
+default = ["borsh", "js"]
 borsh = [
     "dep:borsh",
     "dep:borsh0-10",
@@ -157,7 +157,13 @@ frozen-abi = [
     "solana-stake-interface/frozen-abi",
     "solana-sysvar/frozen-abi"
 ]
-js = ["dep:getrandom", "dep:wasm-bindgen"]
+js = [
+    "dep:getrandom",
+    "dep:wasm-bindgen",
+    "solana-instruction/js",
+    "solana-message/js",
+    "solana-pubkey/js",
+]
 
 [lints]
 workspace = true

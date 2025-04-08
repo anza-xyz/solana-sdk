@@ -65,13 +65,24 @@ blake3 = [
     "bincode",
     "solana-message/blake3",
 ]
+default = ["js"]
 dev-context-only-utils = ["blake3", "precompiles", "serde", "verify"]
 frozen-abi = [
     "dep:solana-frozen-abi",
     "dep:solana-frozen-abi-macro",
     "dep:solana-logger",
 ]
-js = ["dep:wasm-bindgen", "dep:solana-keypair"]
+js = [
+    "dep:wasm-bindgen",
+    "dep:solana-keypair",
+    "solana-hash/js",
+    "solana-instruction/js",
+    "solana-keypair/js",
+    "solana-message/js",
+    "solana-program/js",
+    "solana-pubkey/js",
+    "solana-sdk/js"
+]
 precompiles = ["dep:solana-feature-set", "dep:solana-precompiles"]
 serde = [
     "dep:serde",

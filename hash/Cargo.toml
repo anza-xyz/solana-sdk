@@ -40,7 +40,7 @@ wasm-bindgen = { workspace = true, optional = true }
 [features]
 borsh = ["dep:borsh", "std"]
 bytemuck = ["dep:bytemuck", "dep:bytemuck_derive"]
-default = ["std"]
+default = ["std", "js"]
 dev-context-only-utils = ["bs58/alloc"]
 frozen-abi = [
     "dep:solana-frozen-abi",

@@ -30,7 +30,7 @@ static_assertions = { workspace = true }
 tiny-bip39 = { workspace = true }
 
 [features]
-js = ["dep:wasm-bindgen"]
+js = ["dep:wasm-bindgen", "solana-pubkey/js"]
 seed-derivable = ["dep:solana-derivation-path", "dep:solana-seed-derivable", "dep:ed25519-dalek-bip32"]
 
 [package.metadata.docs.rs]
