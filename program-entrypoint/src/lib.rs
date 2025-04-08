@@ -7,16 +7,13 @@
 
 extern crate alloc;
 use {
-    alloc::{
-        rc::Rc,
-        slice::{from_raw_parts, from_raw_parts_mut},
-        vec::Vec,
-    },
+    alloc::{rc::Rc, vec::Vec},
     core::{
         alloc::Layout,
         cell::RefCell,
         mem::{size_of, MaybeUninit},
         ptr::null_mut,
+        slice::{from_raw_parts, from_raw_parts_mut},
     },
     solana_account_info::AccountInfo,
     solana_pubkey::Pubkey,
