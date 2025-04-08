@@ -103,7 +103,6 @@ crate_dirs=(
   target
   time-utils
   transaction
-  transaction-context
   transaction-error
   validator-exit
   vote-interface
