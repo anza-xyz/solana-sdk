@@ -212,7 +212,8 @@ mod hasher {
                 "This hasher is intended to be used with pubkeys and nothing else"
             );
             // This slice/unwrap can never panic since offset is < PUBKEY_BYTES - mem::size_of::<u64>()
-            let chunk: &[u8; mem::size_of::<u64>()] = bytes[self.offset..self.offset + mem::size_of::<u64>()]
+            let chunk: &[u8; mem::size_of::<u64>()] = bytes
+                [self.offset..self.offset + mem::size_of::<u64>()]
                 .try_into()
                 .unwrap();
             self.state = u64::from_ne_bytes(*chunk);
