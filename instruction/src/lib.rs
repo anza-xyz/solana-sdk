@@ -24,7 +24,7 @@ pub mod account_meta;
 #[cfg(feature = "std")]
 pub use account_meta::AccountMeta;
 pub mod error;
-#[cfg(target_os = "solana")]
+#[cfg(feature = "syscalls")]
 pub mod syscalls;
 #[cfg(all(feature = "std", target_arch = "wasm32"))]
 pub mod wasm;

@@ -46,6 +46,7 @@ serde = [
     "solana-pubkey/serde",
 ]
 std = []
+syscalls = ["std"]
 
 [package.metadata.docs.rs]
 targets = ["x86_64-unknown-linux-gnu", "wasm32-unknown-unknown"]
