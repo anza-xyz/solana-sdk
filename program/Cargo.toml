@@ -52,6 +52,7 @@ solana-instruction = { workspace = true, default-features = false, features = [
     "bincode",
     "serde",
     "std",
+    "syscalls",
 ] }
 solana-instructions-sysvar = { workspace = true }
 solana-keccak-hasher = { workspace = true, features = ["sha3"] }
