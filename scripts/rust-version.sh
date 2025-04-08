@@ -24,6 +24,17 @@ else
   stable_version=$(readCargoVariable channel "$base/../rust-toolchain.toml")
 fi
 
+if [[ -n $RUST_MINIMUM_VERSION ]]; then
+  minimum_version="$RUST_MINIMUM_VERSION"
+else
+  # read MSRV from program/Cargo.toml file
+  base="$(dirname "${BASH_SOURCE[0]}")"
+  # pacify shellcheck: cannot follow dynamic path
+  # shellcheck disable=SC1090,SC1091
+  source "$base/read-cargo-variable.sh"
+  minimum_version=$(readCargoVariable rust-version "$base/../program/Cargo.toml")
+fi
+
 if [[ -n $RUST_NIGHTLY_VERSION ]]; then
   nightly_version="$RUST_NIGHTLY_VERSION"
 else
@@ -31,6 +42,7 @@ else
 fi
 
 export rust_stable="$stable_version"
+export rust_minimum="$minimum_version"
 export rust_nightly=nightly-"$nightly_version"
 
 [[ -z $1 ]] || (
@@ -49,11 +61,15 @@ export rust_nightly=nightly-"$nightly_version"
   stable)
      rustup_install "$rust_stable"
      ;;
+  minimum)
+     rustup_install "$rust_minimum"
+    ;;
   nightly)
      rustup_install "$rust_nightly"
     ;;
   all)
      rustup_install "$rust_stable"
+     rustup_install "$rust_minimum"
      rustup_install "$rust_nightly"
     ;;
   *)

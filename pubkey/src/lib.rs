@@ -25,7 +25,7 @@ use {
         convert::{Infallible, TryFrom},
         fmt,
         hash::{Hash, Hasher},
-        mem::{self, size_of},
+        mem,
         str::{from_utf8, FromStr},
     },
     num_traits::{FromPrimitive, ToPrimitive},
@@ -181,6 +181,7 @@ mod hasher {
         core::{
             cell::Cell,
             hash::{BuildHasher, Hasher},
+            mem,
         },
         rand::{thread_rng, Rng},
     };
@@ -210,8 +211,8 @@ mod hasher {
                 PUBKEY_BYTES,
                 "This hasher is intended to be used with pubkeys and nothing else"
             );
-            // This slice/unwrap can never panic since offset is < PUBKEY_BYTES - size_of::<u64>()
-            let chunk: &[u8; size_of::<u64>()] = bytes[self.offset..self.offset + size_of::<u64>()]
+            // This slice/unwrap can never panic since offset is < PUBKEY_BYTES - mem::size_of::<u64>()
+            let chunk: &[u8; mem::size_of::<u64>()] = bytes[self.offset..self.offset + mem::size_of::<u64>()]
                 .try_into()
                 .unwrap();
             self.state = u64::from_ne_bytes(*chunk);
@@ -241,12 +242,12 @@ mod hasher {
         fn default() -> Self {
             std::thread_local!(static OFFSET: Cell<usize>  = {
                 let mut rng = thread_rng();
-                Cell::new(rng.gen_range(0..PUBKEY_BYTES - size_of::<u64>()))
+                Cell::new(rng.gen_range(0..PUBKEY_BYTES - mem::size_of::<u64>()))
             });
 
             let offset = OFFSET.with(|offset| {
                 let mut next_offset = offset.get() + 1;
-                if next_offset > PUBKEY_BYTES - size_of::<u64>() {
+                if next_offset > PUBKEY_BYTES - mem::size_of::<u64>() {
                     next_offset = 0;
                 }
                 offset.set(next_offset);
@@ -479,7 +480,7 @@ impl Pubkey {
         use solana_atomic_u64::AtomicU64;
         static I: AtomicU64 = AtomicU64::new(1);
         type T = u32;
-        const COUNTER_BYTES: usize = size_of::<T>();
+        const COUNTER_BYTES: usize = mem::size_of::<T>();
         let mut b = [0u8; PUBKEY_BYTES];
         #[cfg(any(feature = "std", target_arch = "wasm32"))]
         let mut i = I.fetch_add(1) as T;

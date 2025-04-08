@@ -16,6 +16,9 @@ inputs:
   nightly-toolchain:
     description: Install nightly toolchain if `true`. Defaults to `false`.
     required: false
+  minimum-toolchain:
+    description: Install minimum toolchain if `true`. Defaults to `false`.
+    required: false
   clippy:
     description: Install Clippy if `true`. Defaults to `false`.
     required: false
@@ -66,6 +69,7 @@ runs:
       run: |
         source ./scripts/rust-version.sh
         echo "RUST_STABLE=${rust_stable}" >> $GITHUB_ENV
+        echo "RUST_MINIMUM=${rust_minimum}" >> $GITHUB_ENV
         echo "RUST_NIGHTLY=${rust_nightly}" >> $GITHUB_ENV
 
     - name: Install stable toolchain
@@ -73,6 +77,12 @@ runs:
       uses: dtolnay/rust-toolchain@master
       with:
         toolchain: ${{ env.RUST_STABLE }}
+
+    - name: Install minimum toolchain
+      if: ${{ inputs.minimum-toolchain == 'true' }}
+      uses: dtolnay/rust-toolchain@master
+      with:
+        toolchain: ${{ env.RUST_MINIMUM }}
 
     - name: Install nightly toolchain
       if: ${{ inputs.nightly-toolchain == 'true' }}
