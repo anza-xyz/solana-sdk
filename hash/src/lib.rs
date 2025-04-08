@@ -9,7 +9,7 @@ extern crate std;
 use bytemuck_derive::{Pod, Zeroable};
 #[cfg(feature = "serde")]
 use serde_derive::{Deserialize, Serialize};
-#[cfg(any(feature = "borsh", feature = "std", feature = "js"))]
+#[cfg(any(feature = "borsh", feature = "std", all(feature = "js", target_arch = "wasm32")))]
 use std::string::ToString;
 use {
     core::{
@@ -19,7 +19,7 @@ use {
     },
     solana_sanitize::Sanitize,
 };
-#[cfg(feature = "js")]
+#[cfg(all(feature = "js", target_arch = "wasm32"))]
 use {
     js_sys::{Array, Uint8Array},
     std::{boxed::Box, format, string::String, vec},
@@ -38,7 +38,7 @@ pub const MAX_BASE58_LEN: usize = 44;
 ///
 /// [SHA-256]: https://en.wikipedia.org/wiki/SHA-2
 /// [blake3]: https://github.com/BLAKE3-team/BLAKE3
-#[cfg_attr(feature = "js", wasm_bindgen)]
+#[cfg_attr(all(feature = "js", target_arch = "wasm32"), wasm_bindgen)]
 #[cfg_attr(feature = "frozen-abi", derive(solana_frozen_abi_macro::AbiExample))]
 #[cfg_attr(
     feature = "borsh",
@@ -151,7 +151,7 @@ impl Hash {
     }
 }
 
-#[cfg(feature = "js")]
+#[cfg(all(feature = "js", target_arch = "wasm32"))]
 #[allow(non_snake_case)]
 #[wasm_bindgen]
 impl Hash {

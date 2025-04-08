@@ -110,7 +110,7 @@
 //! # Ok::<(), anyhow::Error>(())
 //! ```
 
-#[cfg(feature = "js")]
+#[cfg(all(feature = "js", target_arch = "wasm32"))]
 use wasm_bindgen::prelude::wasm_bindgen;
 #[cfg(feature = "serde")]
 use {
@@ -182,7 +182,7 @@ const PACKET_DATA_SIZE: usize = 1280 - 40 - 8;
 /// if the caller has knowledge that the first account of the constructed
 /// transaction's `Message` is both a signer and the expected fee-payer, then
 /// redundantly specifying the fee-payer is not strictly required.
-#[cfg(not(feature = "js"))]
+#[cfg(not(all(feature = "js", target_arch = "wasm32")))]
 #[cfg_attr(
     feature = "frozen-abi",
     derive(solana_frozen_abi_macro::AbiExample),
@@ -210,7 +210,7 @@ pub struct Transaction {
 /// wasm-bindgen version of the Transaction struct.
 /// This duplication is required until https://github.com/rustwasm/wasm-bindgen/issues/3671
 /// is fixed. This must not diverge from the regular non-wasm Transaction struct.
-#[cfg(feature = "js")]
+#[cfg(all(feature = "js", target_arch = "wasm32"))]
 #[wasm_bindgen]
 #[cfg_attr(
     feature = "frozen-abi",

@@ -1,6 +1,6 @@
 //! Concrete implementation of a Solana `Signer` from raw bytes
 #![cfg_attr(docsrs, feature(doc_auto_cfg))]
-#[cfg(feature = "js")]
+#[cfg(all(feature = "js", target_arch = "wasm32"))]
 use wasm_bindgen::prelude::*;
 use {
     ed25519_dalek::Signer as DalekSigner,
@@ -21,7 +21,7 @@ pub mod seed_derivable;
 pub mod signable;
 
 /// A vanilla Ed25519 key pair
-#[cfg_attr(feature = "js", wasm_bindgen)]
+#[cfg_attr(all(feature = "js", target_arch = "wasm32"), wasm_bindgen)]
 #[derive(Debug)]
 pub struct Keypair(ed25519_dalek::Keypair);
 
@@ -119,7 +119,7 @@ impl TryFrom<&[u8]> for Keypair {
     }
 }
 
-#[cfg(feature = "js")]
+#[cfg(all(feature = "js", target_arch = "wasm32"))]
 #[allow(non_snake_case)]
 #[wasm_bindgen]
 impl Keypair {
