@@ -379,7 +379,7 @@ jobs:
           cache: true
 
       - name: Run cargo-build-sbf
-        run: ./scripts/check-build-sbf.sh
+        run: ./scripts/build-sbf.sh
 
   miri:
     name: Test miri
