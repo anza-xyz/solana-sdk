@@ -197,7 +197,7 @@ all-features = true
 rustdoc-args = ["--cfg=docsrs"]
 
 [lib]
-crate-type = ["cdylib", "rlib"]
+crate-type = ["rlib"]
 
 [lints]
 workspace = true
