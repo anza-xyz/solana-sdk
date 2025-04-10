@@ -21,41 +21,13 @@ pub use {
 pub fn get_processed_sibling_instruction(index: usize) -> Option<Instruction> {
     #[cfg(target_os = "solana")]
     {
-        let mut meta = ProcessedSiblingInstruction::default();
-        let mut program_id = solana_pubkey::Pubkey::default();
-
-        if 1 == unsafe {
-            solana_instruction::syscalls::sol_get_processed_sibling_instruction(
-                index as u64,
-                &mut meta,
-                &mut program_id,
-                &mut u8::default(),
-                &mut AccountMeta::default(),
-            )
-        } {
-            let mut data = Vec::new();
-            let mut accounts = Vec::new();
-            data.resize_with(meta.data_len as usize, u8::default);
-            accounts.resize_with(meta.accounts_len as usize, AccountMeta::default);
-
-            let _ = unsafe {
-                solana_instruction::syscalls::sol_get_processed_sibling_instruction(
-                    index as u64,
-                    &mut meta,
-                    &mut program_id,
-                    data.as_mut_ptr(),
-                    accounts.as_mut_ptr(),
-                )
-            };
-
-            Some(Instruction::new_with_bytes(program_id, &data, accounts))
-        } else {
-            None
-        }
+        solana_instruction::syscalls::get_processed_sibling_instruction(index)
     }
 
     #[cfg(not(target_os = "solana"))]
-    crate::program_stubs::sol_get_processed_sibling_instruction(index)
+    {
+        crate::program_stubs::sol_get_processed_sibling_instruction(index)
+    }
 }
 
 /// Get the current stack height, transaction-level instructions are height
@@ -64,7 +36,7 @@ pub fn get_processed_sibling_instruction(index: usize) -> Option<Instruction> {
 pub fn get_stack_height() -> usize {
     #[cfg(target_os = "solana")]
     unsafe {
-        solana_instruction::syscalls::sol_get_stack_height() as usize
+        solana_instruction::syscalls::get_stack_height()
     }
 
     #[cfg(not(target_os = "solana"))]
