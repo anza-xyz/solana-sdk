@@ -1,5 +1,5 @@
 //! `Transaction` Javascript interface
-#![cfg(target_arch = "wasm32")]
+#![cfg(all(feature = "js", target_arch = "wasm32"))]
 #![allow(non_snake_case)]
 use {
     crate::Transaction, solana_hash::Hash, solana_instruction::wasm::Instructions,
