@@ -174,6 +174,9 @@ solana-transaction-error = { workspace = true, features = [
 solana-validator-exit = { workspace = true }
 thiserror = { workspace = true }
 
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+getrandom = { version = "0.1.1", features = ["wasm-bindgen"] }
+
 [dev-dependencies]
 curve25519-dalek = { workspace = true }
 ed25519-dalek = { workspace = true }
@@ -187,12 +190,12 @@ solana-program = { workspace = true, features = ["dev-context-only-utils"] }
 solana-sdk = { path = ".", features = ["dev-context-only-utils"] }
 
 [package.metadata.docs.rs]
-targets = ["x86_64-unknown-linux-gnu", "wasm32-unknown-unknown"]
+targets = ["x86_64-unknown-linux-gnu"]
 all-features = true
 rustdoc-args = ["--cfg=docsrs"]
 
 [lib]
-crate-type = ["cdylib", "rlib"]
+crate-type = ["rlib"]
 
 [lints]
 workspace = true
