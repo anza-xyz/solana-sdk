@@ -3722,6 +3722,7 @@ version = "2.3.0"
 dependencies = [
  "bincode",
  "bs58",
+ "getrandom 0.1.16",
  "serde",
  "solana-account",
  "solana-derivation-path",
@@ -3780,7 +3781,6 @@ version = "2.2.2"
 dependencies = [
  "console_error_panic_hook",
  "console_log",
- "getrandom 0.2.15",
  "js-sys",
  "log",
  "solana-instruction",

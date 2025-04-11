@@ -2,15 +2,22 @@
 #![cfg(target_arch = "wasm32")]
 #[deprecated(since = "2.2.0", note = "Use solana_instruction::wasm instead.")]
 pub use solana_instruction::wasm as instructions;
-// These imports exist in both solana_sdk and solana_program, so we use
-// direct imports to suppress ambiguous re-export warnings.
-pub use solana_sdk::entrypoint_deprecated;
 use {::log::Level, wasm_bindgen::prelude::*};
 pub use {
     solana_program::*,
     solana_sdk::{
-        declare_deprecated_id, declare_id, entrypoint, example_mocks, feature, hash, program_utils,
-        pubkey, *,
+        // These imports exist in both solana_sdk and solana_program, so we use
+        // direct imports to suppress ambiguous re-export warnings.
+        declare_deprecated_id,
+        declare_id,
+        entrypoint,
+        entrypoint_deprecated,
+        example_mocks,
+        feature,
+        hash,
+        program_utils,
+        pubkey,
+        *,
     },
 };
 

@@ -108,6 +108,9 @@ solana-transaction-error = { workspace = true, features = [
 ], optional = true }
 thiserror = { workspace = true }
 
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+getrandom = { version = "0.1.1", features = ["wasm-bindgen"] }
+
 [dev-dependencies]
 solana-instructions-sysvar = { workspace = true, features = ["dev-context-only-utils"] }
 solana-program = { workspace = true, features = ["dev-context-only-utils"] }
