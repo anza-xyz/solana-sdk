@@ -2,8 +2,9 @@ name: Sysvar Auto-Comment
 
 on:
   pull_request_target:
-    #types:
-    #  - opened
+    types:
+      - opened
+      - reopened
     paths:
       - 'clock/src/**'
       - 'epoch-rewards/src/**'
