@@ -1,6 +1,6 @@
 [package]
-name = "solana-program-wasm"
-description = "Solana Program Wasm"
+name = "solana-sdk-wasm"
+description = "Solana SDK Wasm"
 documentation = "https://docs.rs/solana-sdk"
 version = "2.2.2"
 authors = { workspace = true }

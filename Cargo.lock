@@ -3620,21 +3620,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "solana-program-wasm"
-version = "2.2.2"
-dependencies = [
- "console_error_panic_hook",
- "console_log",
- "getrandom 0.2.15",
- "js-sys",
- "log",
- "solana-instruction",
- "solana-program",
- "solana-sdk",
- "wasm-bindgen",
-]
-
-[[package]]
 name = "solana-pubkey"
 version = "2.4.0"
 dependencies = [
@@ -3787,6 +3772,21 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 2.0.98",
+]
+
+[[package]]
+name = "solana-sdk-wasm"
+version = "2.2.2"
+dependencies = [
+ "console_error_panic_hook",
+ "console_log",
+ "getrandom 0.2.15",
+ "js-sys",
+ "log",
+ "solana-instruction",
+ "solana-program",
+ "solana-sdk",
+ "wasm-bindgen",
 ]
 
 [[package]]
