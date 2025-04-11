@@ -1,0 +1,38 @@
+name: Sysvar Auto-Comment
+
+on:
+  pull_request:
+    types:
+      - opened
+    paths:
+      - 'clock/src/**'
+      - 'epoch-rewards/src/**'
+      - 'epoch-schedule/src/**'
+      - 'fee-calculator/src/**'
+      - 'last-restart-slot/src/**'
+      - 'rent/src/**'
+      - 'slot-hashes/src/**'
+      - 'slot-history/src/**'
+      - 'sysvar/src/**'
+      - 'sysvar-id/src/**'
+
+jobs:
+  comment:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Git Checkout
+        uses: actions/checkout@v4
+
+      - name: PR Comment
+        run:
+          gh pr comment $PRNUM --body $COMMENT
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          PRNUM: ${{ github.event.pull_request.number }}
+          COMMENT: "If this PR represents a change to the sysvar layout, please
+            open a follow-up PR to update the JavaScript client `@solana/sysvars`
+            ([example](https://github.com/anza-xyz/kit/pull/375))
+
+            Thank you for keeping the JavaScript clients in sync with the Rust
+            clients."
