@@ -1,7 +1,7 @@
 name: Sysvar Auto-Comment
 
 on:
-  pull_request:
+  pull_request_target:
     #types:
     #  - opened
     paths:
@@ -20,8 +20,7 @@ jobs:
   comment:
     runs-on: ubuntu-latest
     permissions:
-      contents: write
-      issues: write
+      contents: read
       pull-requests: write
     steps:
       - name: Git Checkout
