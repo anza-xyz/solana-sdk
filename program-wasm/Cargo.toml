@@ -12,6 +12,7 @@ edition = { workspace = true }
 [dependencies]
 solana-instruction = { workspace = true, features = ["std"] }
 solana-program = { workspace = true }
+solana-sdk = { workspace = true }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 console_error_panic_hook = { workspace = true }
@@ -19,7 +20,7 @@ console_log = { workspace = true }
 getrandom = { workspace = true, features = ["js", "wasm-bindgen"] }
 wasm-bindgen = { workspace = true }
 log = { workspace = true }
-
+js-sys = { workspace = true }
 
 [lib]
 crate-type = ["cdylib", "rlib"]
