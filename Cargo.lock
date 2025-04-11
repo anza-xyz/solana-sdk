@@ -3522,8 +3522,6 @@ dependencies = [
  "borsh 0.10.4",
  "borsh 1.5.5",
  "bytemuck",
- "console_error_panic_hook",
- "console_log",
  "getrandom 0.2.15",
  "lazy_static",
  "log",
@@ -3575,7 +3573,6 @@ dependencies = [
  "solana-sysvar",
  "solana-sysvar-id",
  "thiserror 2.0.12",
- "wasm-bindgen",
 ]
 
 [[package]]
@@ -3620,6 +3617,19 @@ name = "solana-program-pack"
 version = "2.2.1"
 dependencies = [
  "solana-program-error",
+]
+
+[[package]]
+name = "solana-program-wasm"
+version = "2.2.2"
+dependencies = [
+ "console_error_panic_hook",
+ "console_log",
+ "getrandom 0.2.15",
+ "log",
+ "solana-instruction",
+ "solana-program",
+ "wasm-bindgen",
 ]
 
 [[package]]

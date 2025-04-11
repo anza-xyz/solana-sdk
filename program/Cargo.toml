@@ -13,12 +13,12 @@ rust-version = "1.81.0"                          # solana platform-tools rust ve
 include = ["src/**/*", "README.md"]
 
 [package.metadata.docs.rs]
-targets = ["x86_64-unknown-linux-gnu", "wasm32-unknown-unknown"]
+targets = ["x86_64-unknown-linux-gnu"]
 all-features = true
 rustdoc-args = ["--cfg=docsrs"]
 
 [lib]
-crate-type = ["cdylib", "rlib"]
+crate-type = ["rlib"]
 
 [features]
 default = ["borsh"]
@@ -112,12 +112,6 @@ thiserror = { workspace = true }
 [target.'cfg(not(target_os = "solana"))'.dependencies]
 num-bigint = { workspace = true }
 solana-example-mocks = { workspace = true }
-
-[target.'cfg(target_arch = "wasm32")'.dependencies]
-console_error_panic_hook = { workspace = true }
-console_log = { workspace = true }
-getrandom = { workspace = true, features = ["js", "wasm-bindgen"] }
-wasm-bindgen = { workspace = true }
 
 # This is currently needed to build on-chain programs reliably.
 # Borsh 0.10 may pull in hashbrown 0.13, which uses ahash 0.8, which uses

@@ -3,6 +3,9 @@
 #[deprecated(since = "2.2.0", note = "Use solana_instruction::wasm instead.")]
 pub use solana_instruction::wasm as instructions;
 use wasm_bindgen::prelude::*;
+pub use solana_program::*;
+use ::log::Level;
+
 // This module is intentionally left empty. The wasm system instruction impl can be
 // found in the `solana-system-interface` crate.
 pub mod system_instruction {}
@@ -15,7 +18,7 @@ pub fn solana_program_init() {
 
     INIT.call_once(|| {
         std::panic::set_hook(Box::new(console_error_panic_hook::hook));
-        console_log::init_with_level(log::Level::Info).unwrap();
+        console_log::init_with_level(Level::Info).unwrap();
     });
 }
 
