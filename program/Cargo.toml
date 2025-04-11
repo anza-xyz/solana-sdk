@@ -108,6 +108,9 @@ solana-example-mocks = { workspace = true }
 arbitrary = { workspace = true, features = ["derive"] }
 solana-logger = { workspace = true }
 
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+getrandom = { workspace = true, features = ["js", "wasm-bindgen"] }
+
 [dev-dependencies]
 array-bytes = { workspace = true }
 assert_matches = { workspace = true }
