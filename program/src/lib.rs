@@ -566,7 +566,6 @@ pub use solana_stable_layout as stable_layout;
 pub use solana_sysvar::program_stubs;
 #[deprecated(since = "2.2.0", note = "Use `solana-vote-interface` crate instead")]
 pub use solana_vote_interface as vote;
-
 pub use {
     solana_account_info::{self as account_info, debug_account_data},
     solana_clock as clock,
