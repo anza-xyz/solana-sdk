@@ -107,12 +107,6 @@ solana-example-mocks = { workspace = true }
 arbitrary = { workspace = true, features = ["derive"] }
 solana-logger = { workspace = true }
 
-[target.'cfg(target_arch = "wasm32")'.dependencies]
-console_error_panic_hook = { workspace = true }
-console_log = { workspace = true }
-getrandom = { workspace = true, features = ["js", "wasm-bindgen"] }
-wasm-bindgen = { workspace = true }
-
 [dev-dependencies]
 array-bytes = { workspace = true }
 assert_matches = { workspace = true }
@@ -122,12 +116,12 @@ solana-pubkey = { workspace = true, features = ["dev-context-only-utils"] }
 solana-sysvar = { workspace = true, features = ["dev-context-only-utils"] }
 
 [package.metadata.docs.rs]
-targets = ["x86_64-unknown-linux-gnu", "wasm32-unknown-unknown"]
+targets = ["x86_64-unknown-linux-gnu"]
 all-features = true
 rustdoc-args = ["--cfg=docsrs"]
 
 [lib]
-crate-type = ["cdylib", "rlib"]
+crate-type = ["rlib"]
 
 [features]
 default = ["borsh"]

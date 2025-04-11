@@ -75,6 +75,7 @@ members = [
     "program-memory",
     "program-option",
     "program-pack",
+    "program-wasm",
     "pubkey",
     "quic-definitions",
     "rent",
