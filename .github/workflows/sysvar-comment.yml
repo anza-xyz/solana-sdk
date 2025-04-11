@@ -16,13 +16,14 @@ on:
       - 'sysvar/src/**'
       - 'sysvar-id/src/**'
 
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+
 jobs:
   comment:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      issues: write
-      pull-requests: write
     steps:
       - name: Git Checkout
         uses: actions/checkout@v4
