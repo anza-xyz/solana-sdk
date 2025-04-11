@@ -25,7 +25,7 @@ jobs:
 
       - name: PR Comment
         run:
-          gh pr comment $PRNUM --body $COMMENT
+          gh pr comment $PRNUM --body "$COMMENT"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_REPO: ${{ github.repository }}
