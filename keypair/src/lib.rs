@@ -5,15 +5,20 @@ use wasm_bindgen::prelude::*;
 use {
     ed25519_dalek::Signer as DalekSigner,
     rand0_7::{rngs::OsRng, CryptoRng, RngCore},
-    solana_pubkey::Pubkey,
     solana_seed_phrase::generate_seed_from_seed_phrase_and_passphrase,
-    solana_signature::{error::Error as SignatureError, Signature},
+    solana_signature::{error::Error as SignatureError},
     solana_signer::{EncodableKey, EncodableKeypair, Signer, SignerError},
     std::{
         error,
         io::{Read, Write},
         path::Path,
     },
+};
+
+#[cfg(feature = "signer")]
+pub use {
+    solana_pubkey::Pubkey,
+    solana_signature::Signature
 };
 
 #[cfg(feature = "seed-derivable")]
@@ -159,6 +164,7 @@ impl From<ed25519_dalek::Keypair> for Keypair {
 #[cfg(test)]
 static_assertions::const_assert_eq!(Keypair::SECRET_KEY_LENGTH, ed25519_dalek::SECRET_KEY_LENGTH);
 
+#[cfg(feature = "signer")]
 impl Signer for Keypair {
     #[inline]
     fn pubkey(&self) -> Pubkey {
