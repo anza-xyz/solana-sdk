@@ -2741,6 +2741,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "solana-config-interface"
+version = "1.0.0"
+dependencies = [
+ "bincode",
+ "serde",
+ "serde_derive",
+ "solana-account",
+ "solana-instruction",
+ "solana-pubkey",
+ "solana-sdk-ids",
+ "solana-short-vec",
+ "solana-stake-interface",
+ "solana-system-interface",
+]
+
+[[package]]
 name = "solana-cpi"
 version = "2.2.1"
 dependencies = [
