@@ -19,6 +19,7 @@ exclude_list=(
   "presigner"
   "quic-definitions"
   "rent-collector"
+  "sdk-wasm"
   "secp256k1-program"
   "secp256r1-program"
   "system-transaction"
