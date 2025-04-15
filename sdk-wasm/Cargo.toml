@@ -26,3 +26,8 @@ crate-type = ["cdylib", "rlib"]
 
 [lints]
 workspace = true
+
+[package.metadata.docs.rs]
+targets = ["wasm32-unknown-unknown"]
+all-features = true
+rustdoc-args = ["--cfg=docsrs"]
