@@ -2,7 +2,25 @@
 #![cfg(target_arch = "wasm32")]
 #[deprecated(since = "2.2.0", note = "Use solana_instruction::wasm instead.")]
 pub use solana_instruction::wasm as instructions;
-use wasm_bindgen::prelude::*;
+use {::log::Level, wasm_bindgen::prelude::*};
+pub use {
+    solana_program::*,
+    solana_sdk::{
+        // These imports exist in both solana_sdk and solana_program, so we use
+        // direct imports to suppress ambiguous re-export warnings.
+        declare_deprecated_id,
+        declare_id,
+        entrypoint,
+        entrypoint_deprecated,
+        example_mocks,
+        feature,
+        hash,
+        program_utils,
+        pubkey,
+        *,
+    },
+};
+
 // This module is intentionally left empty. The wasm system instruction impl can be
 // found in the `solana-system-interface` crate.
 pub mod system_instruction {}
@@ -15,7 +33,7 @@ pub fn solana_program_init() {
 
     INIT.call_once(|| {
         std::panic::set_hook(Box::new(console_error_panic_hook::hook));
-        console_log::init_with_level(log::Level::Info).unwrap();
+        console_log::init_with_level(Level::Info).unwrap();
     });
 }
 

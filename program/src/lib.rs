@@ -94,16 +94,21 @@
 //!
 //! ```toml
 //! [lib]
-//! crate-type = ["cdylib", "rlib"]
+//! crate-type = ["cdylib"]
 //!
 //! [features]
 //! no-entrypoint = []
 //! ```
 //!
-//! Note that a Solana program must specify its crate-type as "cdylib", and
-//! "cdylib" crates will automatically be discovered and built by the `cargo
-//! build-bpf` command. Solana programs also often have crate-type "rlib" so
-//! they can be linked to other Rust crates.
+//! Note that a Solana program must specify its crate-type as "cdylib", to
+//! be discovered and built by the `cargo-build-sbf` command as a deployable program.
+//! Solana programs also often have crate-type "rlib" so they can be linked to other Rust crates.
+//! Avoid using "rlib" and "cdylib" crates together, since their combined usage precludes
+//! compiler optimizations that may decrease program size and CU usage.
+//!
+//! Prefer writing a separate package if it is supposed to be used as a library for other Solana
+//! programs (i.e. a "rlib" only crate). When created a Rust project intended to be a program
+//! ready for deployment, ues only the "cdylib" crate type.
 //!
 //! # On-chain vs. off-chain compilation targets
 //!
@@ -512,7 +517,6 @@ pub mod syscalls;
 pub mod system_instruction;
 pub mod system_program;
 pub mod sysvar;
-pub mod wasm;
 
 #[deprecated(since = "2.2.0", note = "Use `solana-big-mod-exp` crate instead")]
 pub use solana_big_mod_exp as big_mod_exp;
@@ -567,8 +571,6 @@ pub use solana_stable_layout as stable_layout;
 pub use solana_sysvar::program_stubs;
 #[deprecated(since = "2.2.0", note = "Use `solana-vote-interface` crate instead")]
 pub use solana_vote_interface as vote;
-#[cfg(target_arch = "wasm32")]
-pub use wasm_bindgen::prelude::wasm_bindgen;
 pub use {
     solana_account_info::{self as account_info, debug_account_data},
     solana_clock as clock,
