@@ -40,9 +40,9 @@ curve25519-dalek = { workspace = true, optional = true }
 solana-sha256-hasher = { workspace = true, optional = true }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
-getrandom = { workspace = true, features = ["js", "wasm-bindgen"] }
-js-sys = { workspace = true }
-wasm-bindgen = { workspace = true }
+getrandom = { workspace = true, optional = true, features = ["js", "wasm-bindgen"] }
+js-sys = { workspace = true, optional = true }
+wasm-bindgen = { workspace = true, optional = true }
 
 [dev-dependencies]
 anyhow = { workspace = true }
@@ -64,12 +64,19 @@ strum_macros = { workspace = true }
 borsh = ["dep:borsh", "dep:borsh0-10", "std"]
 bytemuck = ["dep:bytemuck", "dep:bytemuck_derive"]
 curve25519 = ["dep:curve25519-dalek", "sha2"]
-default = ["std"]
+default = ["std", "js"]
 dev-context-only-utils = ["dep:arbitrary", "rand"]
 frozen-abi = [
     "dep:solana-frozen-abi",
     "dep:solana-frozen-abi-macro",
     "std",
+]
+js = [
+    "dep:getrandom",
+    "dep:wasm-bindgen",
+    "dep:js-sys",
+    "solana-program/js",
+    "solana-pubkey/js",
 ]
 rand = ["dep:rand", "std"]
 serde = ["dep:serde", "dep:serde_derive"]

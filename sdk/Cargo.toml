@@ -12,6 +12,17 @@ edition = { workspace = true }
 include = ["src/**/*", "README.md"]
 
 [features]
+js = [
+    "dep:getrandom",
+    "dep:wasm-bindgen",
+    "dep:js-sys",
+    "solana-instruction/js",
+    "solana-keypair/js",
+    "solana-message/js",
+    "solana-program/js",
+    "solana-pubkey/js",
+    "solana-transaction/js",
+]
 # "program" feature is a legacy feature retained to support v1.3 and older
 # programs.  New development should not use this feature.  Instead use the
 # solana-program crate
@@ -19,7 +30,8 @@ program = []
 
 default = [
     "borsh",
-    "full",  # functionality that is not compatible or needed for on-chain programs
+    "js",
+    "full", # functionality that is not compatible or needed for on-chain programs
 ]
 full = [
     "serde_json",
@@ -175,9 +187,9 @@ solana-validator-exit = { workspace = true }
 thiserror = { workspace = true }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
-getrandom = { version = "0.1.1", features = ["wasm-bindgen"] }
-js-sys = { workspace = true }
-wasm-bindgen = { workspace = true }
+getrandom = { version = "0.1.1", optional = true, features = ["wasm-bindgen"] }
+js-sys = { workspace = true, optional = true }
+wasm-bindgen = { workspace = true, optional = true }
 
 [dev-dependencies]
 curve25519-dalek = { workspace = true }
