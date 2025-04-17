@@ -5,6 +5,8 @@
 //! [`bpf_loader`]: crate::bpf_loader
 
 extern crate alloc;
+// Re-exporting for custom_panic
+pub use solana_define_syscall::definitions::{sol_log_ as __log, sol_panic_ as __panic};
 use {
     alloc::vec::Vec,
     solana_account_info::AccountInfo,
@@ -234,8 +236,8 @@ macro_rules! custom_heap_default {
 /// Define the default global panic handler.
 ///
 /// This must be used if the [`entrypoint`] macro is not used, and no other
-/// panic handler has been defined; otherwise compilation will fail with a
-/// missing `custom_panic` symbol.
+/// panic handler has been defined; otherwise a program will crash without an
+/// explicit panic message.
 ///
 /// The default global allocator is enabled only if the calling crate has not
 /// disabled it using [Cargo features] as described below. It is only defined
@@ -273,16 +275,28 @@ macro_rules! custom_heap_default {
 ///     $crate::msg!("{}", info);
 /// }
 /// ```
-///
-/// The above is how Solana defines the default panic handler.
 #[macro_export]
 macro_rules! custom_panic_default {
     () => {
         #[cfg(all(not(feature = "custom-panic"), target_os = "solana"))]
         #[no_mangle]
         fn custom_panic(info: &core::panic::PanicInfo<'_>) {
-            // Full panic reporting
-            $crate::__msg!("{}", info);
+            if let Some(mm) = info.message().as_str() {
+                unsafe {
+                    $crate::__log(mm.as_ptr(), mm.len() as u64);
+                }
+            }
+
+            if let Some(loc) = info.location() {
+                unsafe {
+                    $crate::__panic(
+                        loc.file().as_ptr(),
+                        loc.file().len() as u64,
+                        loc.line() as u64,
+                        loc.column() as u64,
+                    )
+                }
+            }
         }
     };
 }

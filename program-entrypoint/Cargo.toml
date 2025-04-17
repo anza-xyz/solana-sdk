@@ -14,6 +14,7 @@ targets = ["x86_64-unknown-linux-gnu"]
 
 [dependencies]
 solana-account-info = { workspace = true }
+solana-define-syscall = { workspace = true }
 solana-msg = { workspace = true }
 solana-program-error = { workspace = true }
 solana-pubkey = { workspace = true, default-features = false }

@@ -3457,6 +3457,7 @@ name = "solana-program-entrypoint"
 version = "2.3.0"
 dependencies = [
  "solana-account-info",
+ "solana-define-syscall",
  "solana-msg",
  "solana-program-error",
  "solana-pubkey",
