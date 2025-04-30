@@ -4013,7 +4013,6 @@ dependencies = [
  "solana-packet",
  "solana-precompiles",
  "solana-presigner",
- "solana-program",
  "solana-pubkey",
  "solana-sanitize",
  "solana-sdk",
@@ -4025,6 +4024,7 @@ dependencies = [
  "solana-system-interface",
  "solana-transaction",
  "solana-transaction-error",
+ "solana-vote-interface",
  "static_assertions",
  "wasm-bindgen",
 ]

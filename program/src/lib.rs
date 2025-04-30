@@ -483,19 +483,19 @@ pub mod hash;
 pub mod incinerator;
 pub mod instruction;
 pub mod lamports;
+#[deprecated(
+    since = "2.3.0",
+    note = "Use solana_loader_v3_interface::instruction instead"
+)]
 pub mod loader_upgradeable_instruction {
-    #[deprecated(
-        since = "2.2.0",
-        note = "Use solana_loader_v3_interface::instruction instead"
-    )]
     pub use solana_loader_v3_interface::instruction::UpgradeableLoaderInstruction;
 }
 pub mod loader_v4;
+#[deprecated(
+    since = "2.3.0",
+    note = "Use solana_loader_v4_interface::instruction instead"
+)]
 pub mod loader_v4_instruction {
-    #[deprecated(
-        since = "2.2.0",
-        note = "Use solana_loader_v4_interface::instruction instead"
-    )]
     pub use solana_loader_v4_interface::instruction::LoaderV4Instruction;
 }
 pub mod log;
@@ -530,10 +530,12 @@ pub use solana_borsh::v1 as borsh1;
 #[deprecated(since = "2.1.0", note = "Use `solana-epoch-rewards` crate instead")]
 pub use solana_epoch_rewards as epoch_rewards;
 #[deprecated(
-    since = "2.2.0",
+    since = "2.3.0",
     note = "Use `solana-feature-gate-interface` crate instead"
 )]
-pub use solana_feature_gate_interface as feature;
+pub mod feature {
+    pub use solana_feature_gate_interface::*;
+}
 #[deprecated(since = "2.1.0", note = "Use `solana-fee-calculator` crate instead")]
 pub use solana_fee_calculator as fee_calculator;
 #[deprecated(since = "2.2.0", note = "Use `solana-keccak-hasher` crate instead")]
@@ -541,18 +543,24 @@ pub use solana_keccak_hasher as keccak;
 #[deprecated(since = "2.1.0", note = "Use `solana-last-restart-slot` crate instead")]
 pub use solana_last_restart_slot as last_restart_slot;
 #[deprecated(
-    since = "2.2.0",
+    since = "2.3.0",
     note = "Use `solana-loader-v2-interface` crate instead"
 )]
-pub use solana_loader_v2_interface as loader_instruction;
-#[deprecated(since = "2.2.0", note = "Use `solana-message` crate instead")]
-pub use solana_message as message;
+pub mod loader_instruction {
+    pub use solana_loader_v2_interface::*;
+}
+#[deprecated(since = "2.3.0", note = "Use `solana-message` crate instead")]
+pub mod message {
+    pub use solana_message::*;
+}
 #[deprecated(since = "2.1.0", note = "Use `solana-program-memory` crate instead")]
 pub use solana_program_memory as program_memory;
 #[deprecated(since = "2.1.0", note = "Use `solana-program-pack` crate instead")]
 pub use solana_program_pack as program_pack;
-#[deprecated(since = "2.1.0", note = "Use `solana-sanitize` crate instead")]
-pub use solana_sanitize as sanitize;
+#[deprecated(since = "2.3.0", note = "Use `solana-sanitize` crate instead")]
+pub mod sanitize {
+    pub use solana_sanitize::*;
+}
 #[deprecated(since = "2.1.0", note = "Use `solana-secp256k1-recover` crate instead")]
 pub use solana_secp256k1_recover as secp256k1_recover;
 #[deprecated(since = "2.1.0", note = "Use `solana-serde-varint` crate instead")]
@@ -565,8 +573,10 @@ pub use solana_short_vec as short_vec;
 pub use solana_stable_layout as stable_layout;
 #[cfg(not(target_os = "solana"))]
 pub use solana_sysvar::program_stubs;
-#[deprecated(since = "2.2.0", note = "Use `solana-vote-interface` crate instead")]
-pub use solana_vote_interface as vote;
+#[deprecated(since = "2.3.0", note = "Use `solana-vote-interface` crate instead")]
+pub mod vote {
+    pub use solana_vote_interface::*;
+}
 #[cfg(target_arch = "wasm32")]
 pub use wasm_bindgen::prelude::wasm_bindgen;
 pub use {
@@ -632,8 +642,10 @@ pub mod sdk_ids {
     }
 }
 
-#[deprecated(since = "2.1.0", note = "Use `solana-decode-error` crate instead")]
-pub use solana_decode_error as decode_error;
+#[deprecated(since = "2.3.0", note = "Use `num_traits::FromPrimitive` instead")]
+pub mod decode_error {
+    pub use solana_decode_error::*;
+}
 pub use solana_pubkey::{declare_deprecated_id, declare_id, pubkey};
 #[deprecated(since = "2.1.0", note = "Use `solana-sysvar-id` crate instead")]
 pub use solana_sysvar_id::{declare_deprecated_sysvar_id, declare_sysvar_id};

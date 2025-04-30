@@ -344,8 +344,8 @@ mod tests {
         super::*,
         solana_keypair::Keypair,
         solana_message::{MessageHeader, SimpleAddressLoader},
-        solana_program::vote::{self, state::Vote},
         solana_signer::Signer,
+        solana_vote_interface::{instruction, state::Vote},
     };
 
     #[test]
@@ -357,8 +357,7 @@ mod tests {
         let node_keypair = Keypair::new();
         let auth_keypair = Keypair::new();
         let votes = Vote::new(vec![1, 2, 3], bank_hash);
-        let vote_ix =
-            vote::instruction::vote(&vote_keypair.pubkey(), &auth_keypair.pubkey(), votes);
+        let vote_ix = instruction::vote(&vote_keypair.pubkey(), &auth_keypair.pubkey(), votes);
         let mut vote_tx = Transaction::new_with_payer(&[vote_ix], Some(&node_keypair.pubkey()));
         vote_tx.partial_sign(&[&node_keypair], block_hash);
         vote_tx.partial_sign(&[&auth_keypair], block_hash);

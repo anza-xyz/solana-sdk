@@ -1,4 +1,5 @@
-#[deprecated(since = "2.2.0", note = "Use `solana_system_interface` crate instead")]
+#![deprecated(since = "2.3.0", note = "Use `solana_system_interface` crate instead")]
+
 pub use solana_system_interface::{
     error::SystemError,
     instruction::{

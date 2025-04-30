@@ -3,7 +3,6 @@
 use {
     core::fmt,
     num_derive::{FromPrimitive, ToPrimitive},
-    solana_decode_error::DecodeError,
 };
 
 /// Reasons the vote might have had an error
@@ -73,7 +72,8 @@ impl fmt::Display for VoteError {
     }
 }
 
-impl<E> DecodeError<E> for VoteError {
+#[allow(deprecated)]
+impl<E> solana_decode_error::DecodeError<E> for VoteError {
     fn type_of() -> &'static str {
         "VoteError"
     }
@@ -86,9 +86,10 @@ mod tests {
     #[test]
     fn test_custom_error_decode() {
         use num_traits::FromPrimitive;
+        #[allow(deprecated)]
         fn pretty_err<T>(err: InstructionError) -> String
         where
-            T: 'static + std::error::Error + DecodeError<T> + FromPrimitive,
+            T: 'static + std::error::Error + solana_decode_error::DecodeError<T> + FromPrimitive,
         {
             if let InstructionError::Custom(code) = err {
                 let specific_error: T = T::decode_custom_error_to_enum(code).unwrap();
