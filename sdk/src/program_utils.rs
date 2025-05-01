@@ -6,6 +6,10 @@ use crate::instruction::InstructionError;
 
 /// Deserialize with a limit based the maximum amount of data a program can expect to get.
 /// This function should be used in place of direct deserialization to help prevent OOM errors
+#[deprecated(
+    since = "2.3.0",
+    note = "Use `solana_bincode::limited_deserialize` instead"
+)]
 pub fn limited_deserialize<T>(instruction_data: &[u8]) -> Result<T, InstructionError>
 where
     T: serde::de::DeserializeOwned,
@@ -17,6 +21,7 @@ where
 }
 
 #[cfg(test)]
+#[allow(deprecated)]
 pub mod tests {
     use super::*;
 

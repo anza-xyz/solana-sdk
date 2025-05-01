@@ -126,7 +126,10 @@ pub mod system_instruction {
     #[allow(deprecated)]
     pub use solana_program::system_instruction::*;
 }
-#[deprecated(since = "2.3.0", note = "Use `solana_sdk_ids::system_program` instead")]
+#[deprecated(
+    since = "2.3.0",
+    note = "Use `solana_system_interface::program` instead"
+)]
 pub mod system_program {
     #[allow(deprecated)]
     pub use solana_program::system_program::*;
@@ -372,7 +375,7 @@ pub mod exit {
 }
 
 /// Convenience macro for `AddAssign` with saturating arithmetic.
-/// Replace by `std::num::Saturating` once stable
+#[deprecated(since = "2.3.0", note = "Use `std::num::Saturating` instead")]
 #[macro_export]
 macro_rules! saturating_add_assign {
     ($i:expr, $v:expr) => {{
@@ -383,6 +386,7 @@ macro_rules! saturating_add_assign {
 pub extern crate bs58;
 
 #[cfg(test)]
+#[allow(deprecated)]
 mod tests {
     #[test]
     fn test_saturating_add_assign() {

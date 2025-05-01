@@ -1,3 +1,4 @@
+#![deprecated(since = "2.3.0", note = "Use `solana_rpc_client_api::port` instead")]
 //! RPC default port numbers.
 
 /// Default port number for JSON RPC API

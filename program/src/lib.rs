@@ -502,6 +502,10 @@ pub mod log;
 pub mod nonce;
 pub mod program;
 pub mod program_error;
+#[deprecated(
+    since = "2.3.0",
+    note = "Use `solana_bincode::limited_deserialize` instead"
+)]
 pub mod program_utils;
 pub mod secp256k1_program;
 pub mod slot_hashes;
