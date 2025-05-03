@@ -4,7 +4,7 @@
 #![cfg_attr(feature = "frozen-abi", feature(min_specialization))]
 #![allow(clippy::arithmetic_side_effects)]
 
-#[cfg(any(feature = "std", target_arch = "wasm32"))]
+#[cfg(feature = "std")]
 extern crate std;
 #[cfg(feature = "dev-context-only-utils")]
 use arbitrary::Arbitrary;
@@ -12,7 +12,7 @@ use arbitrary::Arbitrary;
 use bytemuck_derive::{Pod, Zeroable};
 #[cfg(feature = "serde")]
 use serde_derive::{Deserialize, Serialize};
-#[cfg(any(feature = "std", target_arch = "wasm32"))]
+#[cfg(feature = "std")]
 use std::vec::Vec;
 #[cfg(feature = "borsh")]
 use {
@@ -31,7 +31,7 @@ use {
     num_traits::{FromPrimitive, ToPrimitive},
     solana_decode_error::DecodeError,
 };
-#[cfg(target_arch = "wasm32")]
+#[cfg(all(feature = "js", target_arch = "wasm32"))]
 use {
     js_sys::{Array, Uint8Array},
     wasm_bindgen::{prelude::wasm_bindgen, JsCast, JsValue},
@@ -150,7 +150,7 @@ impl From<u64> for PubkeyError {
 /// [ed25519]: https://ed25519.cr.yp.to/
 /// [pdas]: https://solana.com/docs/core/cpi#program-derived-addresses
 /// [`Keypair`]: https://docs.rs/solana-sdk/latest/solana_sdk/signer/keypair/struct.Keypair.html
-#[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
+#[cfg_attr(all(feature = "js", target_arch = "wasm32"), wasm_bindgen)]
 #[repr(transparent)]
 #[cfg_attr(feature = "frozen-abi", derive(solana_frozen_abi_macro::AbiExample))]
 #[cfg_attr(
@@ -429,7 +429,7 @@ impl TryFrom<&[u8]> for Pubkey {
     }
 }
 
-#[cfg(any(feature = "std", target_arch = "wasm32"))]
+#[cfg(feature = "std")]
 impl TryFrom<Vec<u8>> for Pubkey {
     type Error = Vec<u8>;
 
@@ -483,16 +483,16 @@ impl Pubkey {
         type T = u32;
         const COUNTER_BYTES: usize = mem::size_of::<T>();
         let mut b = [0u8; PUBKEY_BYTES];
-        #[cfg(any(feature = "std", target_arch = "wasm32"))]
+        #[cfg(feature = "std")]
         let mut i = I.fetch_add(1) as T;
-        #[cfg(not(any(feature = "std", target_arch = "wasm32")))]
+        #[cfg(not(any(feature = "std")))]
         let i = I.fetch_add(1) as T;
         // use big endian representation to ensure that recent unique pubkeys
         // are always greater than less recent unique pubkeys.
         b[0..COUNTER_BYTES].copy_from_slice(&i.to_be_bytes());
         // fill the rest of the pubkey with pseudorandom numbers to make
         // data statistically similar to real pubkeys.
-        #[cfg(any(feature = "std", target_arch = "wasm32"))]
+        #[cfg(feature = "std")]
         {
             let mut hash = std::hash::DefaultHasher::new();
             for slice in b[COUNTER_BYTES..].chunks_mut(COUNTER_BYTES) {
@@ -503,7 +503,7 @@ impl Pubkey {
         }
         // if std is not available, just replicate last byte of the counter.
         // this is not as good as a proper hash, but at least it is uniform
-        #[cfg(not(any(feature = "std", target_arch = "wasm32")))]
+        #[cfg(not(any(feature = "std")))]
         {
             for b in b[COUNTER_BYTES..].iter_mut() {
                 *b = (i & 0xFF) as u8;
@@ -1082,7 +1082,7 @@ macro_rules! impl_borsh_serialize {
 #[cfg(feature = "borsh")]
 impl_borsh_serialize!(borsh0_10);
 
-#[cfg(all(target_arch = "wasm32", feature = "curve25519"))]
+#[cfg(all(feature = "js", feature = "std", feature = "curve25519", target_arch = "wasm32"))]
 fn js_value_to_seeds_vec(array_of_uint8_arrays: &[JsValue]) -> Result<Vec<Vec<u8>>, JsValue> {
     let vec_vec_u8 = array_of_uint8_arrays
         .iter()
@@ -1100,13 +1100,13 @@ fn js_value_to_seeds_vec(array_of_uint8_arrays: &[JsValue]) -> Result<Vec<Vec<u8
     }
 }
 
-#[cfg(target_arch = "wasm32")]
+#[cfg(all(feature = "js", feature = "std", target_arch = "wasm32"))]
 fn display_to_jsvalue<T: fmt::Display>(display: T) -> JsValue {
     std::string::ToString::to_string(&display).into()
 }
 
+#[cfg(all(feature = "js", feature = "std", target_arch = "wasm32"))]
 #[allow(non_snake_case)]
-#[cfg(target_arch = "wasm32")]
 #[wasm_bindgen]
 impl Pubkey {
     /// Create a new Pubkey object
