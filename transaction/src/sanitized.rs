@@ -298,11 +298,11 @@ impl SanitizedTransaction {
                 self.message().instructions(),
                 feature_set,
             )
-            .map_err(|err| {
-                TransactionError::InstructionError(
-                    index as u8,
-                    solana_instruction::error::InstructionError::Custom(err as u32),
-                )
+            .map_err(|err| TransactionError::InstructionError {
+                err: solana_instruction::error::InstructionError::Custom(err as u32),
+                inner_instruction_index: None,
+                outer_instruction_index: index as u8,
+                responsible_program_address: Some(*program_id),
             })?;
         }
         Ok(())

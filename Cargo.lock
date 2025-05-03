@@ -4062,10 +4062,13 @@ version = "2.2.1"
 dependencies = [
  "serde",
  "serde_derive",
+ "serde_json",
  "solana-frozen-abi",
  "solana-frozen-abi-macro",
  "solana-instruction",
+ "solana-pubkey",
  "solana-sanitize",
+ "test-case",
 ]
 
 [[package]]
