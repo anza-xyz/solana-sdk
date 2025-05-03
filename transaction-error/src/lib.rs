@@ -42,9 +42,12 @@ pub enum TransactionError {
     /// the `recent_blockhash` has been discarded.
     BlockhashNotFound,
 
-    /// An error occurred while processing an instruction. The first element of the tuple
-    /// indicates the instruction index in which the error occurred.
-    InstructionError(u8, InstructionError),
+    /// An error occurred while processing an instruction. The first element of the tuple indicates
+    /// the index of the outer instruction in which the error occurred, and the third the account
+    /// index of the program responsible for the error (ie. the error may have originated from an
+    /// inner instruction). The account index of the responsible program may be `None` for
+    /// transactions created before it was introduced.
+    InstructionError(u8, InstructionError, Option<u8>),
 
     /// Loader call chain is too deep
     CallChainTooDeep,
@@ -163,7 +166,12 @@ impl fmt::Display for TransactionError {
              => f.write_str("This transaction has already been processed"),
             Self::BlockhashNotFound
              => f.write_str("Blockhash not found"),
-            Self::InstructionError(idx, err) =>  write!(f, "Error processing Instruction {idx}: {err}"),
+            Self::InstructionError(idx, err, _responsible_program_account_index)
+             // NOTE: We intentionally do not augment the error message in the event that the error
+             // carries the account index of the responsible program. While it would add value to
+             // the log, to do so at this point would also break any log parser that presumes a
+             // stable log format (eg. https://tinyurl.com/3uuczr68).
+             =>  write!(f, "Error processing Instruction {idx}: {err}"),
             Self::CallChainTooDeep
              => f.write_str("Loader call chain is too deep"),
             Self::MissingSignatureForFee
