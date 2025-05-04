@@ -11,19 +11,15 @@ edition = { workspace = true }
 
 [dependencies]
 borsh = { workspace = true, optional = true }
-num-traits = { workspace = true }
 serde = { workspace = true, optional = true }
 serde_derive = { workspace = true, optional = true }
-solana-decode-error = { workspace = true }
-solana-instruction = { workspace = true, default-features = false, features = [
-    "std",
-] }
-solana-msg = { workspace = true }
-solana-pubkey = { workspace = true, default-features = false }
+solana-msg = { workspace = true, optional = true }
 
 [features]
 borsh = ["dep:borsh"]
+solana-msg = ["dep:solana-msg", "std"]
 serde = ["dep:serde", "dep:serde_derive"]
+std = []
 
 [package.metadata.docs.rs]
 targets = ["x86_64-unknown-linux-gnu"]
