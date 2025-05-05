@@ -5,8 +5,6 @@
 //! [`bpf_loader`]: crate::bpf_loader
 
 extern crate alloc;
-// Re-exporting for custom_panic
-pub use solana_define_syscall::definitions::{sol_log_ as __log, sol_panic_ as __panic};
 use {
     alloc::vec::Vec,
     solana_account_info::AccountInfo,
@@ -24,8 +22,12 @@ use {
 // entrypoint_no_alloc macro
 pub use {
     solana_account_info::AccountInfo as __AccountInfo,
-    solana_account_info::MAX_PERMITTED_DATA_INCREASE, solana_msg::msg as __msg,
-    solana_program_error::ProgramResult, solana_pubkey::Pubkey as __Pubkey,
+    solana_account_info::MAX_PERMITTED_DATA_INCREASE,
+    // Re-exporting for custom_panic
+    solana_define_syscall::definitions::{sol_log_ as __log, sol_panic_ as __panic},
+    solana_msg::msg as __msg,
+    solana_program_error::ProgramResult,
+    solana_pubkey::Pubkey as __Pubkey,
 };
 
 /// User implemented function to process an instruction
