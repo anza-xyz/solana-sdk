@@ -43,11 +43,13 @@ pub enum TransactionError {
     BlockhashNotFound,
 
     /// An error occurred while processing an instruction. The first element of the tuple indicates
-    /// the index of the outer instruction in which the error occurred, and the third the account
-    /// index of the program responsible for the error (ie. the error may have originated from an
-    /// inner instruction). The account index of the responsible program may be `None` for
-    /// transactions created before it was introduced.
-    InstructionError(u8, InstructionError, Option<u8>),
+    /// the index of the outer instruction in which the error occurred, the third the index of the
+    /// inner instruction if the program responsible for the error was called by cross-program
+    /// invocation (CPI), and the fourth the account index of the program responsible for the error
+    /// (ie. the error may have originated from an inner instruction). The inner instruction index
+    /// may be `None` if the error originated from the top-level program call. The account index of
+    /// the  responsible program may be `None` for transactions created before it was introduced.
+    InstructionError(u8, InstructionError, Option<u8>, Option<u8>),
 
     /// Loader call chain is too deep
     CallChainTooDeep,
@@ -166,12 +168,18 @@ impl fmt::Display for TransactionError {
              => f.write_str("This transaction has already been processed"),
             Self::BlockhashNotFound
              => f.write_str("Blockhash not found"),
-            Self::InstructionError(idx, err, _responsible_program_account_index)
+            Self::InstructionError(
+                index,
+                err,
+                _inner_instruction_index,
+                _responsible_program_account_index,
+            )
              // NOTE: We intentionally do not augment the error message in the event that the error
-             // carries the account index of the responsible program. While it would add value to
-             // the log, to do so at this point would also break any log parser that presumes a
-             // stable log format (eg. https://tinyurl.com/3uuczr68).
-             =>  write!(f, "Error processing Instruction {idx}: {err}"),
+             // carries the index of the inner instruction or the account index of the responsible
+             // program. While it would add value to the log, to do so now would also break any log
+             // parser that presumed the log format to be immutable for all time (eg.
+             // https://tinyurl.com/3uuczr68).
+             =>  write!(f, "Error processing Instruction {index}: {err}"),
             Self::CallChainTooDeep
              => f.write_str("Loader call chain is too deep"),
             Self::MissingSignatureForFee
