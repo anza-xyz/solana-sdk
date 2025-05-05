@@ -13,16 +13,9 @@ pub fn lamports_to_sol(lamports: u64) -> f64 {
 
 /// Approximately convert native tokens (SOL) into fractional native tokens (lamports)
 pub fn sol_to_lamports(sol: f64) -> u64 {
-    const U64_MAX_PLUS_1: f64 = 18446744073709551616.; // 0x1p64
-    let lamports = (sol * LAMPORTS_PER_SOL_F64).round();
-    if lamports <= 0.0 {
-        0
-    } else if lamports >= U64_MAX_PLUS_1 {
-        u64::MAX
-    } else {
-        // NaNs fallthrough to here and cast to zero
-        lamports as u64
-    }
+    // NaNs return zero, negative values saturate to u64::MIN (i.e. zero), positive values saturate to u64::MAX
+    // https://doc.rust-lang.org/reference/expressions/operator-expr.html#r-expr.as.numeric.float-as-int
+    (sol * LAMPORTS_PER_SOL_F64).round() as u64
 }
 
 use std::fmt::{Debug, Display, Formatter, Result};
@@ -56,6 +49,7 @@ mod tests {
     use super::*;
 
     #[test]
+    #[allow(clippy::excessive_precision)]
     fn test_lamports_to_sol() {
         assert_eq!(0.0, lamports_to_sol(0));
         assert_eq!(0.000000001, lamports_to_sol(1));
@@ -91,6 +85,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(clippy::excessive_precision)]
     fn test_sol_to_lamports() {
         assert_eq!(0, sol_to_lamports(0.0));
         assert_eq!(1, sol_to_lamports(0.000000001));
