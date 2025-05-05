@@ -65,6 +65,7 @@ pub mod signature;
 pub mod signer;
 pub mod transaction;
 pub mod transport;
+pub mod wasm;
 
 #[deprecated(since = "2.1.0", note = "Use `solana-account` crate instead")]
 pub use solana_account as account;
