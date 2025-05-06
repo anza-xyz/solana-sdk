@@ -4,13 +4,14 @@
   </a>
 </p>
 
-# Solana SDK
+# Solana SDK WASM JS
 
-Use the Solana SDK Crate to be consumed by Javascript libraries. Sse the [Solana Program Crate](https://crates.io/crates/solana-program) instead for
-on-chain programs, and, the [Solana SDK Crate](https://crates.io/crates/solana-sdk) for client-side applications.
+Use the Solana SDK WASM JS crate to build a JS package with `wasm-pack` usable in Node or browser environments.
+See the [Solana Program Crate](https://crates.io/crates/solana-program) instead for on-chain programs, and, the [Solana SDK Crate](https://crates.io/crates/solana-sdk) for client-side
+applications.
 
 More information about Solana is available in the [Solana documentation](https://solana.com/docs).
 
-The [Solana Program Library](https://github.com/solana-labs/solana-program-library) provides examples of how to use this crate.
+The [Solana Program Organization](https://github.com/solana-program) provides examples of how to use this crate.
 
 Still have questions?  Ask us on [Stack Exchange](https://sola.na/sse)
