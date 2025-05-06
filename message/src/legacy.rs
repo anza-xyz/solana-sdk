@@ -1044,7 +1044,7 @@ mod tests {
         };
         assert!(!message1.is_writable_index(0));
 
-        // Matching issue #150 PoC 2 concept - num_readonly_unsigned_accounts > account_keys.len()
+        // Matching issue #150 PoC 2 - num_readonly_unsigned_accounts > account_keys.len()
         let key_for_poc2 = Pubkey::new_unique();
         let message2 = Message {
             header: MessageHeader {
