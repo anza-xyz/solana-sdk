@@ -646,11 +646,13 @@ impl Message {
     /// Returns true if the account at the specified index was requested to be
     /// writable. This method should not be used directly.
     pub(super) fn is_writable_index(&self, i: usize) -> bool {
-        i < (self.header.num_required_signatures - self.header.num_readonly_signed_accounts)
-            as usize
+        i < (self.header.num_required_signatures as usize)
+            .saturating_sub(self.header.num_readonly_signed_accounts as usize)
             || (i >= self.header.num_required_signatures as usize
-                && i < self.account_keys.len()
-                    - self.header.num_readonly_unsigned_accounts as usize)
+                && i < self
+                    .account_keys
+                    .len()
+                    .saturating_sub(self.header.num_readonly_unsigned_accounts as usize))
     }
 
     /// Returns true if the account at the specified index is writable by the
