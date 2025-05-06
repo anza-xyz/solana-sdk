@@ -108,6 +108,8 @@ arbitrary = { workspace = true, features = ["derive"] }
 solana-logger = { workspace = true }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
+console_error_panic_hook = { workspace = true }
+console_log = { workspace = true }
 getrandom = { workspace = true, features = ["js", "wasm-bindgen"] }
 wasm-bindgen = { workspace = true }
 
@@ -120,7 +122,7 @@ solana-pubkey = { workspace = true, features = ["dev-context-only-utils"] }
 solana-sysvar = { workspace = true, features = ["dev-context-only-utils"] }
 
 [package.metadata.docs.rs]
-targets = ["x86_64-unknown-linux-gnu"]
+targets = ["x86_64-unknown-linux-gnu", "wasm32-unknown-unknown"]
 all-features = true
 rustdoc-args = ["--cfg=docsrs"]
 
