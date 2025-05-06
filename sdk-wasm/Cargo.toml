@@ -14,7 +14,7 @@ solana-program = { workspace = true }
 solana-sdk = { workspace = true }
 
 [lib]
-crate-type = ["cdylib", "rlib"]
+crate-type = ["cdylib"]
 
 [lints]
 workspace = true
