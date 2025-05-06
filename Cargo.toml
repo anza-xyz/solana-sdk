@@ -71,7 +71,7 @@ members = [
     "sdk",
     "sdk-ids",
     "sdk-macro",
-    "sdk-wasm",
+    "sdk-wasm-js",
     "secp256k1-program",
     "secp256k1-recover",
     "secp256r1-program",
