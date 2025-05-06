@@ -140,7 +140,7 @@ pub enum UpgradeableLoaderInstruction {
     Close,
 
     /// Extend a program's ProgramData account by the specified number of bytes.
-    /// Only upgradeable program's can be extended.
+    /// Only upgradeable programs can be extended.
     ///
     /// The payer account must contain sufficient lamports to fund the
     /// ProgramData account to be rent-exempt. If the ProgramData account
@@ -179,6 +179,25 @@ pub enum UpgradeableLoaderInstruction {
     ///   1. `[writable]` The Program account.
     ///   2. `[signer]` The current authority.
     Migrate,
+
+    /// Extend a program's ProgramData account by the specified number of bytes.
+    /// Only upgradeable programs can be extended.
+    ///
+    /// This instruction differs from ExtendProgram in that the authority is a
+    /// required signer.
+    ///
+    /// # Account references
+    ///   0. `[writable]` The ProgramData account.
+    ///   1. `[writable]` The ProgramData account's associated Program account.
+    ///   2. `[signer]` The authority.
+    ///   3. `[]` System program (`solana_sdk::system_program::id()`), optional, used to transfer
+    ///      lamports from the payer to the ProgramData account.
+    ///   4. `[signer]` The payer account, optional, that will pay necessary rent exemption costs
+    ///      for the increased storage size.
+    ExtendProgramChecked {
+        /// Number of bytes to extend the program data.
+        additional_bytes: u32,
+    },
 }
 
 #[cfg(feature = "bincode")]
@@ -467,6 +486,35 @@ pub fn migrate_program(
     ];
 
     Instruction::new_with_bincode(id(), &UpgradeableLoaderInstruction::Migrate, accounts)
+}
+
+/// Returns the instruction required to extend the size of a program's
+/// executable data account
+#[cfg(feature = "bincode")]
+pub fn extend_program_checked(
+    program_address: &Pubkey,
+    authority_address: &Pubkey,
+    payer_address: Option<&Pubkey>,
+    additional_bytes: u32,
+) -> Instruction {
+    let program_data_address = get_program_data_address(program_address);
+    let mut metas = vec![
+        AccountMeta::new(program_data_address, false),
+        AccountMeta::new(*program_address, false),
+        AccountMeta::new(*authority_address, false),
+    ];
+    if let Some(payer_address) = payer_address {
+        metas.push(AccountMeta::new_readonly(
+            solana_sdk_ids::system_program::id(),
+            false,
+        ));
+        metas.push(AccountMeta::new(*payer_address, true));
+    }
+    Instruction::new_with_bincode(
+        id(),
+        &UpgradeableLoaderInstruction::ExtendProgramChecked { additional_bytes },
+        metas,
+    )
 }
 
 #[cfg(test)]
