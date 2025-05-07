@@ -501,7 +501,7 @@ pub fn extend_program_checked(
     let mut metas = vec![
         AccountMeta::new(program_data_address, false),
         AccountMeta::new(*program_address, false),
-        AccountMeta::new(*authority_address, false),
+        AccountMeta::new(*authority_address, true),
     ];
     if let Some(payer_address) = payer_address {
         metas.push(AccountMeta::new_readonly(
