@@ -1,0 +1,43 @@
+[package]
+name = "solana-bls"
+description = "Solana BLS"
+documentation = "https://docs.rs/solana-bls"
+version = "0.1.0"
+authors = { workspace = true }
+repository = { workspace = true }
+homepage = { workspace = true }
+license = { workspace = true }
+edition = { workspace = true }
+
+[dependencies]
+bytemuck = { workspace = true }
+serde = { workspace = true, features = ["derive"] }
+serde_with = { workspace = true, features = ["macros"] }
+
+[target.'cfg(not(target_os = "solana"))'.dependencies]
+blst = { workspace = true }
+blstrs = { workspace = true }
+ff = { workspace = true }
+group = { workspace = true }
+rand = { workspace = true }
+solana-signature = { workspace = true, optional = true }
+solana-signer = { workspace = true, optional = true }
+subtle = { workspace = true, optional = true }
+thiserror = { workspace = true }
+
+[dev-dependencies]
+bincode = { workspace = true }
+solana-keypair = { workspace = true }
+
+[features]
+solana-signer-derive = [
+    "dep:solana-signer",
+    "dep:solana-signature",
+    "dep:subtle",
+]
+
+[lib]
+crate-type = ["rlib"]
+
+[lints]
+workspace = true
