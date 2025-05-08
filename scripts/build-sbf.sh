@@ -23,6 +23,7 @@ exclude_list=(
   "quic-definitions"
   "rent-collector"
   "reserved-account-keys"
+  "sdk-wasm-js"
   "secp256k1-program"
   "secp256r1-program"
   "system-transaction"

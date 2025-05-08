@@ -1,0 +1,25 @@
+[package]
+name = "solana-sdk-wasm-js"
+description = "Solana SDK Wasm JS"
+documentation = "https://docs.rs/solana-sdk-wasm-js"
+version = "2.2.2"
+authors = { workspace = true }
+repository = { workspace = true }
+homepage = { workspace = true }
+license = { workspace = true }
+edition = { workspace = true }
+
+[dependencies]
+solana-program = { workspace = true }
+solana-sdk = { workspace = true }
+
+[lib]
+crate-type = ["cdylib"]
+
+[lints]
+workspace = true
+
+[package.metadata.docs.rs]
+targets = ["wasm32-unknown-unknown"]
+all-features = true
+rustdoc-args = ["--cfg=docsrs"]
