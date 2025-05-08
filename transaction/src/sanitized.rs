@@ -302,6 +302,8 @@ impl SanitizedTransaction {
                 TransactionError::InstructionError(
                     index as u8,
                     solana_instruction::error::InstructionError::Custom(err as u32),
+                    None,
+                    Some(instruction.program_id_index),
                 )
             })?;
         }
