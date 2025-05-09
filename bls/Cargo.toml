@@ -20,8 +20,8 @@ blstrs = { workspace = true }
 ff = { workspace = true }
 group = { workspace = true }
 rand = { workspace = true }
-solana-signature = { workspace = true, optional = true }
-solana-signer = { workspace = true, optional = true }
+solana-signature = { version = "2.2.1", optional = true }
+solana-signer = { version = "2.2.1", optional = true }
 subtle = { workspace = true, optional = true }
 thiserror = { workspace = true }
 
