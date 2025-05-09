@@ -1,3 +1,5 @@
+#[cfg(feature = "frozen-abi")]
+use solana_frozen_abi_macro::AbiExample;
 use {
     bytemuck::{Pod, PodInOption, Zeroable, ZeroableInOption},
     serde::{Deserialize, Serialize},
@@ -84,6 +86,7 @@ pub const BLS_PUBLIC_KEY_AFFINE_SIZE: usize = 96;
 #[serde_as]
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq, Deserialize, Serialize)]
 #[repr(transparent)]
+#[cfg_attr(feature = "frozen-abi", derive(AbiExample))]
 pub struct PubkeyCompressed(
     #[serde_as(as = "[_; BLS_PUBLIC_KEY_COMPRESSED_SIZE]")] pub [u8; BLS_PUBLIC_KEY_COMPRESSED_SIZE],
 );
@@ -98,6 +101,7 @@ impl Default for PubkeyCompressed {
 #[serde_as]
 #[derive(Clone, Copy, Debug, Hash, Eq, PartialEq, Deserialize, Serialize)]
 #[repr(transparent)]
+#[cfg_attr(feature = "frozen-abi", derive(AbiExample))]
 pub struct Pubkey(
     #[serde_as(as = "[_; BLS_PUBLIC_KEY_AFFINE_SIZE]")] pub [u8; BLS_PUBLIC_KEY_AFFINE_SIZE],
 );
