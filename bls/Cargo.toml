@@ -20,6 +20,8 @@ blstrs = { workspace = true }
 ff = { workspace = true }
 group = { workspace = true }
 rand = { workspace = true }
+solana-frozen-abi = { workspace = true, optional = true }
+solana-frozen-abi-macro = { workspace = true, optional = true }
 solana-signature = { workspace = true, optional = true }
 solana-signer = { workspace = true, optional = true }
 subtle = { workspace = true, optional = true }
@@ -30,6 +32,7 @@ bincode = { workspace = true }
 solana-keypair = { workspace = true }
 
 [features]
+frozen-abi = ["dep:solana-frozen-abi", "dep:solana-frozen-abi-macro"]
 solana-signer-derive = [
     "dep:solana-signer",
     "dep:solana-signature",
