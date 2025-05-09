@@ -162,8 +162,10 @@ pub fn load_current_index_checked(
 
 /// Store the current `Instruction`'s index in the instructions sysvar data.
 pub fn store_current_index(data: &mut [u8], instruction_index: u16) {
-    let last_index = data.len() - 2;
-    data[last_index..last_index + 2].copy_from_slice(&instruction_index.to_le_bytes());
+    if data.len() >= 2 {
+        let last_index = data.len() - 2;
+        data[last_index..last_index + 2].copy_from_slice(&instruction_index.to_le_bytes());
+    }
 }
 
 #[cfg_attr(feature = "dev-context-only-utils", qualifiers(pub))]
