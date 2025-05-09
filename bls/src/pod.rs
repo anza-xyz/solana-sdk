@@ -82,7 +82,7 @@ pub const BLS_PUBLIC_KEY_AFFINE_SIZE: usize = 96;
 
 /// A serialized BLS public key in a compressed point representation
 #[serde_as]
-#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq, Deserialize, Serialize)]
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq, Deserialize, Serialize, PartialOrd, Ord)]
 #[repr(transparent)]
 pub struct PubkeyCompressed(
     #[serde_as(as = "[_; BLS_PUBLIC_KEY_COMPRESSED_SIZE]")] pub [u8; BLS_PUBLIC_KEY_COMPRESSED_SIZE],
@@ -96,7 +96,7 @@ impl Default for PubkeyCompressed {
 
 /// A serialized BLS public key in an affine point representation
 #[serde_as]
-#[derive(Clone, Copy, Debug, Hash, Eq, PartialEq, Deserialize, Serialize)]
+#[derive(Clone, Copy, Debug, Hash, Eq, PartialEq, Deserialize, Serialize, PartialOrd, Ord)]
 #[repr(transparent)]
 pub struct Pubkey(
     #[serde_as(as = "[_; BLS_PUBLIC_KEY_AFFINE_SIZE]")] pub [u8; BLS_PUBLIC_KEY_AFFINE_SIZE],
