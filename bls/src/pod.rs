@@ -1,5 +1,7 @@
+#[cfg(feature = "bytemuck")]
+use bytemuck::{Pod, PodInOption, Zeroable, ZeroableInOption};
+#[cfg(feature = "serde")]
 use {
-    bytemuck::{Pod, PodInOption, Zeroable, ZeroableInOption},
     serde::{Deserialize, Serialize},
     serde_with::serde_as,
 };
@@ -11,11 +13,14 @@ pub const BLS_SIGNATURE_COMPRESSED_SIZE: usize = 96;
 pub const BLS_SIGNATURE_AFFINE_SIZE: usize = 192;
 
 /// A serialized BLS signature in a compressed point representation
-#[serde_with::serde_as]
-#[derive(Clone, Copy, Debug, Eq, PartialEq, Deserialize, Serialize)]
+#[cfg_attr(feature = "frozen-abi", derive(solana_frozen_abi_macro::AbiExample))]
+#[cfg_attr(feature = "serde", cfg_eval::cfg_eval, serde_as)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 #[repr(transparent)]
 pub struct SignatureCompressed(
-    #[serde_as(as = "[_; BLS_SIGNATURE_COMPRESSED_SIZE]")] pub [u8; BLS_SIGNATURE_COMPRESSED_SIZE],
+    #[cfg_attr(feature = "serde", serde_as(as = "[_; BLS_SIGNATURE_COMPRESSED_SIZE]"))]
+    pub  [u8; BLS_SIGNATURE_COMPRESSED_SIZE],
 );
 
 impl Default for SignatureCompressed {
@@ -25,11 +30,14 @@ impl Default for SignatureCompressed {
 }
 
 /// A serialized BLS signature in an affine point representation
-#[serde_with::serde_as]
-#[derive(Clone, Copy, Debug, Eq, PartialEq, Deserialize, Serialize)]
+#[cfg_attr(feature = "frozen-abi", derive(solana_frozen_abi_macro::AbiExample))]
+#[cfg_attr(feature = "serde", cfg_eval::cfg_eval, serde_as)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 #[repr(transparent)]
 pub struct Signature(
-    #[serde_as(as = "[_; BLS_SIGNATURE_AFFINE_SIZE]")] pub [u8; BLS_SIGNATURE_AFFINE_SIZE],
+    #[cfg_attr(feature = "serde", serde_as(as = "[_; BLS_SIGNATURE_AFFINE_SIZE]"))]
+    pub  [u8; BLS_SIGNATURE_AFFINE_SIZE],
 );
 
 impl Default for Signature {
@@ -45,12 +53,17 @@ pub const BLS_PROOF_OF_POSSESSION_COMPRESSED_SIZE: usize = 96;
 pub const BLS_PROOF_OF_POSSESSION_AFFINE_SIZE: usize = 192;
 
 /// A serialized BLS signature in a compressed point representation
-#[serde_as]
-#[derive(Clone, Copy, Debug, Eq, PartialEq, Deserialize, Serialize)]
+#[cfg_attr(feature = "frozen-abi", derive(solana_frozen_abi_macro::AbiExample))]
+#[cfg_attr(feature = "serde", cfg_eval::cfg_eval, serde_as)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 #[repr(transparent)]
 pub struct ProofOfPossessionCompressed(
-    #[serde_as(as = "[_; BLS_PROOF_OF_POSSESSION_COMPRESSED_SIZE]")]
-    pub  [u8; BLS_PROOF_OF_POSSESSION_COMPRESSED_SIZE],
+    #[cfg_attr(
+        feature = "serde",
+        serde_as(as = "[_; BLS_PROOF_OF_POSSESSION_COMPRESSED_SIZE]")
+    )]
+    pub [u8; BLS_PROOF_OF_POSSESSION_COMPRESSED_SIZE],
 );
 
 impl Default for ProofOfPossessionCompressed {
@@ -60,12 +73,17 @@ impl Default for ProofOfPossessionCompressed {
 }
 
 /// A serialized BLS signature in an affine point representation
-#[serde_as]
-#[derive(Clone, Copy, Debug, Eq, PartialEq, Deserialize, Serialize)]
+#[cfg_attr(feature = "frozen-abi", derive(solana_frozen_abi_macro::AbiExample))]
+#[cfg_attr(feature = "serde", cfg_eval::cfg_eval, serde_as)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 #[repr(transparent)]
 pub struct ProofOfPossession(
-    #[serde_as(as = "[_; BLS_PROOF_OF_POSSESSION_AFFINE_SIZE]")]
-    pub  [u8; BLS_PROOF_OF_POSSESSION_AFFINE_SIZE],
+    #[cfg_attr(
+        feature = "serde",
+        serde_as(as = "[_; BLS_PROOF_OF_POSSESSION_AFFINE_SIZE]")
+    )]
+    pub [u8; BLS_PROOF_OF_POSSESSION_AFFINE_SIZE],
 );
 
 impl Default for ProofOfPossession {
@@ -81,11 +99,17 @@ pub const BLS_PUBLIC_KEY_COMPRESSED_SIZE: usize = 48;
 pub const BLS_PUBLIC_KEY_AFFINE_SIZE: usize = 96;
 
 /// A serialized BLS public key in a compressed point representation
-#[serde_as]
-#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq, Deserialize, Serialize)]
+#[cfg_attr(feature = "frozen-abi", derive(solana_frozen_abi_macro::AbiExample))]
+#[cfg_attr(feature = "serde", cfg_eval::cfg_eval, serde_as)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 #[repr(transparent)]
 pub struct PubkeyCompressed(
-    #[serde_as(as = "[_; BLS_PUBLIC_KEY_COMPRESSED_SIZE]")] pub [u8; BLS_PUBLIC_KEY_COMPRESSED_SIZE],
+    #[cfg_attr(
+        feature = "serde",
+        serde_as(as = "[_; BLS_PUBLIC_KEY_COMPRESSED_SIZE]")
+    )]
+    pub [u8; BLS_PUBLIC_KEY_COMPRESSED_SIZE],
 );
 
 impl Default for PubkeyCompressed {
@@ -95,11 +119,14 @@ impl Default for PubkeyCompressed {
 }
 
 /// A serialized BLS public key in an affine point representation
-#[serde_as]
-#[derive(Clone, Copy, Debug, Hash, Eq, PartialEq, Deserialize, Serialize)]
+#[cfg_attr(feature = "frozen-abi", derive(solana_frozen_abi_macro::AbiExample))]
+#[cfg_attr(feature = "serde", cfg_eval::cfg_eval, serde_as)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Clone, Copy, Debug, Hash, Eq, Ord, PartialEq, PartialOrd)]
 #[repr(transparent)]
 pub struct Pubkey(
-    #[serde_as(as = "[_; BLS_PUBLIC_KEY_AFFINE_SIZE]")] pub [u8; BLS_PUBLIC_KEY_AFFINE_SIZE],
+    #[cfg_attr(feature = "serde", serde_as(as = "[_; BLS_PUBLIC_KEY_AFFINE_SIZE]"))]
+    pub  [u8; BLS_PUBLIC_KEY_AFFINE_SIZE],
 );
 
 impl Default for Pubkey {
@@ -112,40 +139,46 @@ impl Default for Pubkey {
 // `bytemuck::Zeroable` can only be derived for power-of-two length byte arrays.
 // Directly implement these traits for types that are simple wrappers around
 // byte arrays.
-unsafe impl Zeroable for PubkeyCompressed {}
-unsafe impl Pod for PubkeyCompressed {}
-unsafe impl ZeroableInOption for PubkeyCompressed {}
-unsafe impl PodInOption for PubkeyCompressed {}
+#[cfg(feature = "bytemuck")]
+mod bytemuck_impls {
+    use super::*;
+    unsafe impl Zeroable for PubkeyCompressed {}
+    unsafe impl Pod for PubkeyCompressed {}
+    unsafe impl ZeroableInOption for PubkeyCompressed {}
+    unsafe impl PodInOption for PubkeyCompressed {}
 
-unsafe impl Zeroable for Pubkey {}
-unsafe impl Pod for Pubkey {}
-unsafe impl ZeroableInOption for Pubkey {}
-unsafe impl PodInOption for Pubkey {}
+    unsafe impl Zeroable for Pubkey {}
+    unsafe impl Pod for Pubkey {}
+    unsafe impl ZeroableInOption for Pubkey {}
+    unsafe impl PodInOption for Pubkey {}
 
-unsafe impl Zeroable for Signature {}
-unsafe impl Pod for Signature {}
-unsafe impl ZeroableInOption for Signature {}
-unsafe impl PodInOption for Signature {}
+    unsafe impl Zeroable for Signature {}
+    unsafe impl Pod for Signature {}
+    unsafe impl ZeroableInOption for Signature {}
+    unsafe impl PodInOption for Signature {}
 
-unsafe impl Zeroable for SignatureCompressed {}
-unsafe impl Pod for SignatureCompressed {}
-unsafe impl ZeroableInOption for SignatureCompressed {}
-unsafe impl PodInOption for SignatureCompressed {}
+    unsafe impl Zeroable for SignatureCompressed {}
+    unsafe impl Pod for SignatureCompressed {}
+    unsafe impl ZeroableInOption for SignatureCompressed {}
+    unsafe impl PodInOption for SignatureCompressed {}
 
-unsafe impl Zeroable for ProofOfPossessionCompressed {}
-unsafe impl Pod for ProofOfPossessionCompressed {}
-unsafe impl ZeroableInOption for ProofOfPossessionCompressed {}
-unsafe impl PodInOption for ProofOfPossessionCompressed {}
+    unsafe impl Zeroable for ProofOfPossessionCompressed {}
+    unsafe impl Pod for ProofOfPossessionCompressed {}
+    unsafe impl ZeroableInOption for ProofOfPossessionCompressed {}
+    unsafe impl PodInOption for ProofOfPossessionCompressed {}
 
-unsafe impl Zeroable for ProofOfPossession {}
-unsafe impl Pod for ProofOfPossession {}
-unsafe impl ZeroableInOption for ProofOfPossession {}
-unsafe impl PodInOption for ProofOfPossession {}
+    unsafe impl Zeroable for ProofOfPossession {}
+    unsafe impl Pod for ProofOfPossession {}
+    unsafe impl ZeroableInOption for ProofOfPossession {}
+    unsafe impl PodInOption for ProofOfPossession {}
+}
 
 #[cfg(test)]
 mod tests {
+    #[cfg(feature = "serde")]
     use super::*;
 
+    #[cfg(feature = "serde")]
     #[test]
     fn serialize_and_deserialize_pubkey() {
         let original = Pubkey::default();
@@ -159,6 +192,7 @@ mod tests {
         assert_eq!(original, deserialized);
     }
 
+    #[cfg(feature = "serde")]
     #[test]
     fn serialize_and_deserialize_pubkey_compressed() {
         let original = PubkeyCompressed::default();
@@ -172,6 +206,7 @@ mod tests {
         assert_eq!(original, deserialized);
     }
 
+    #[cfg(feature = "serde")]
     #[test]
     fn serialize_and_deserialize_signature() {
         let original = Signature::default();
@@ -185,6 +220,7 @@ mod tests {
         assert_eq!(original, deserialized);
     }
 
+    #[cfg(feature = "serde")]
     #[test]
     fn serialize_and_deserialize_signature_compressed() {
         let original = SignatureCompressed::default();
@@ -198,6 +234,7 @@ mod tests {
         assert_eq!(original, deserialized);
     }
 
+    #[cfg(feature = "serde")]
     #[test]
     fn serialize_and_deserialize_proof_of_possession() {
         let original = ProofOfPossession::default();
@@ -211,6 +248,7 @@ mod tests {
         assert_eq!(original, deserialized);
     }
 
+    #[cfg(feature = "serde")]
     #[test]
     fn serialize_and_deserialize_proof_of_possession_compressed() {
         let original = ProofOfPossessionCompressed::default();
