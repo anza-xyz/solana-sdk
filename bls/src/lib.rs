@@ -1,3 +1,5 @@
+#![cfg_attr(feature = "frozen-abi", feature(min_specialization))]
+
 pub use crate::pod::{
     ProofOfPossession, ProofOfPossessionCompressed, Pubkey, PubkeyCompressed, Signature,
     SignatureCompressed, BLS_PROOF_OF_POSSESSION_AFFINE_SIZE,
@@ -20,7 +22,6 @@ use {
 // TODO: add conversion between compressed and uncompressed representation of
 // signatures, pubkeys, and proof of possessions
 
-#[cfg(not(target_os = "solana"))]
 pub mod error;
 #[cfg(not(target_os = "solana"))]
 pub mod keypair;

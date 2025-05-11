@@ -10,4 +10,6 @@ pub enum BlsError {
     KeyDerivation,
     #[error("Point representation conversion failed")]
     PointConversion, // TODO: could be more specific here
+    #[error("Failed to parse from string")]
+    ParseFromString, // TODO: update after more precise error handling
 }
