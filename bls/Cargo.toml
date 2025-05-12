@@ -2,7 +2,7 @@
 name = "solana-bls"
 description = "Solana BLS"
 documentation = "https://docs.rs/solana-bls"
-version = "0.1.0"
+version = "0.1.1"
 authors = { workspace = true }
 repository = { workspace = true }
 homepage = { workspace = true }
