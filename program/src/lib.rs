@@ -107,8 +107,9 @@
 //! compiler optimizations that may decrease program size and CU usage.
 //!
 //! Prefer writing a separate package if it is supposed to be used as a library for other Solana
-//! programs (i.e. a "rlib" only crate). When created a Rust project intended to be a program
-//! ready for deployment, ues only the "cdylib" crate type.
+//! programs (i.e. a "rlib" only crate). This would be normally the case for defining account
+//! types and helpers that are used by both clients and program. When creating a Rust project
+//! intended to be a program ready for deployment, use only the "cdylib" crate type.
 //!
 //! # On-chain vs. off-chain compilation targets
 //!
