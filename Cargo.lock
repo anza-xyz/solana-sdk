@@ -3439,7 +3439,6 @@ dependencies = [
  "solana-sysvar-id",
  "solana-vote-interface",
  "thiserror 2.0.11",
- "wasm-bindgen",
 ]
 
 [[package]]

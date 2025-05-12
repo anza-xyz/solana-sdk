@@ -110,7 +110,6 @@ solana-logger = { workspace = true }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 getrandom = { workspace = true, features = ["js", "wasm-bindgen"] }
-wasm-bindgen = { workspace = true }
 
 [dev-dependencies]
 array-bytes = { workspace = true }
