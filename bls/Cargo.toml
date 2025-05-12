@@ -15,10 +15,10 @@ bytemuck = { workspace = true, optional = true }
 cfg_eval = { workspace = true, optional = true }
 serde = { workspace = true, features = ["derive"], optional = true }
 serde_with = { workspace = true, features = ["macros"], optional = true }
-solana-frozen-abi = { workspace = true, optional = true, features = [
+solana-frozen-abi = { version = "2.2.1", optional = true, features = [
     "frozen-abi",
 ] }
-solana-frozen-abi-macro = { workspace = true, optional = true, features = [
+solana-frozen-abi-macro = { version = "2.2.1", optional = true, features = [
     "frozen-abi",
 ] }
 thiserror = { workspace = true }
@@ -29,8 +29,8 @@ blstrs = { workspace = true }
 ff = { workspace = true }
 group = { workspace = true }
 rand = { workspace = true }
-solana-signature = { workspace = true, optional = true }
-solana-signer = { workspace = true, optional = true }
+solana-signature = { version = "2.2.1", optional = true }
+solana-signer = { version = "2.2.1", optional = true }
 subtle = { workspace = true, optional = true }
 
 [dev-dependencies]

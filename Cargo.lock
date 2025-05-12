@@ -519,9 +519,9 @@ checksum = "7575182f7272186991736b70173b0ea045398f984bf5ebbb3804736ce1330c9d"
 
 [[package]]
 name = "bytemuck"
-version = "1.21.0"
+version = "1.23.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ef657dfab802224e671f5818e9a4935f9b1957ed18e58292690cc39e7a4092a3"
+checksum = "9134a6ef01ce4b366b50689c94f82c14bc72bc5d0386829828a2e2752ef7958c"
 dependencies = [
  "bytemuck_derive",
 ]
@@ -1330,12 +1330,9 @@ dependencies = [
 
 [[package]]
 name = "hermit-abi"
-version = "0.1.19"
+version = "0.3.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "62b467343b94ba476dcb2500d242dadbb39557df889310ac77c5d99100aaac33"
-dependencies = [
- "libc",
-]
+checksum = "d231dfb89cfffdbc30e7fc41579ed6066ad03abda9e567ccafae602b97ec5024"
 
 [[package]]
 name = "hermit-abi"
@@ -2470,9 +2467,9 @@ checksum = "f79dfe2d285b0488816f30e700a7438c5a73d816b5b7d3ac72fbc48b0d185e03"
 
 [[package]]
 name = "serde"
-version = "1.0.217"
+version = "1.0.219"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "02fc4265df13d6fa1d00ecff087228cc0a2b5f3c0e87e258d8b94a156e984c70"
+checksum = "5f0e2c6ed6606019b4e29e69dbaba95b11854410e5347d525002456dbbb786b6"
 dependencies = [
  "serde_derive",
 ]
@@ -2497,9 +2494,9 @@ dependencies = [
 
 [[package]]
 name = "serde_derive"
-version = "1.0.217"
+version = "1.0.219"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5a9bf7cf98d04a2b28aead066b7496853d4779c9cc183c440dbac457641e19a0"
+checksum = "5b0276cf7f2c73365f7157c8123c21cd9a50fbbd844757af28ca1f5925fc2a00"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -2788,7 +2785,7 @@ dependencies = [
  "solana-frozen-abi",
  "solana-frozen-abi-macro",
  "solana-hash",
- "solana-sanitize",
+ "solana-sanitize 2.2.1",
 ]
 
 [[package]]
@@ -2810,9 +2807,9 @@ dependencies = [
  "solana-frozen-abi-macro",
  "solana-keypair",
  "solana-signature",
- "solana-signer",
+ "solana-signer 2.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "subtle",
- "thiserror 2.0.11",
+ "thiserror 2.0.12",
 ]
 
 [[package]]
@@ -2830,7 +2827,7 @@ dependencies = [
  "serde_derive",
  "serde_json",
  "solana-define-syscall",
- "thiserror 2.0.11",
+ "thiserror 2.0.12",
 ]
 
 [[package]]
@@ -2854,10 +2851,10 @@ dependencies = [
  "solana-message",
  "solana-pubkey",
  "solana-signature",
- "solana-signer",
+ "solana-signer 2.2.1",
  "solana-system-interface",
  "solana-transaction",
- "solana-transaction-error",
+ "solana-transaction-error 2.2.1",
 ]
 
 [[package]]
@@ -2960,7 +2957,7 @@ dependencies = [
  "solana-precompile-error",
  "solana-sdk",
  "solana-sdk-ids",
- "solana-signer",
+ "solana-signer 2.2.1",
 ]
 
 [[package]]
@@ -3027,7 +3024,7 @@ dependencies = [
  "solana-pubkey",
  "solana-sdk-ids",
  "solana-system-interface",
- "thiserror 2.0.11",
+ "thiserror 2.0.12",
 ]
 
 [[package]]
@@ -3127,7 +3124,7 @@ dependencies = [
  "sha2 0.10.8",
  "solana-frozen-abi-macro",
  "solana-logger",
- "thiserror 2.0.11",
+ "thiserror 2.0.12",
 ]
 
 [[package]]
@@ -3166,7 +3163,7 @@ dependencies = [
  "solana-sdk-ids",
  "solana-sha256-hasher",
  "solana-shred-version",
- "solana-signer",
+ "solana-signer 2.2.1",
  "solana-time-utils",
 ]
 
@@ -3195,7 +3192,7 @@ dependencies = [
  "solana-atomic-u64",
  "solana-frozen-abi",
  "solana-frozen-abi-macro",
- "solana-sanitize",
+ "solana-sanitize 2.2.1",
  "wasm-bindgen",
 ]
 
@@ -3238,7 +3235,7 @@ dependencies = [
  "solana-instruction",
  "solana-program-error",
  "solana-pubkey",
- "solana-sanitize",
+ "solana-sanitize 2.2.1",
  "solana-sdk-ids",
  "solana-serialize-utils",
  "solana-sysvar-id",
@@ -3256,7 +3253,7 @@ dependencies = [
  "solana-frozen-abi",
  "solana-frozen-abi-macro",
  "solana-hash",
- "solana-sanitize",
+ "solana-sanitize 2.2.1",
 ]
 
 [[package]]
@@ -3273,7 +3270,7 @@ dependencies = [
  "solana-seed-derivable",
  "solana-seed-phrase",
  "solana-signature",
- "solana-signer",
+ "solana-signer 2.2.1",
  "static_assertions",
  "tiny-bip39",
  "wasm-bindgen",
@@ -3371,13 +3368,13 @@ dependencies = [
  "solana-nonce",
  "solana-program",
  "solana-pubkey",
- "solana-sanitize",
+ "solana-sanitize 2.2.1",
  "solana-sdk-ids",
  "solana-sha256-hasher",
  "solana-short-vec",
  "solana-system-interface",
  "solana-sysvar",
- "solana-transaction-error",
+ "solana-transaction-error 2.2.1",
  "static_assertions",
  "wasm-bindgen",
 ]
@@ -3429,10 +3426,10 @@ dependencies = [
  "solana-offchain-message",
  "solana-packet",
  "solana-pubkey",
- "solana-sanitize",
+ "solana-sanitize 2.2.1",
  "solana-sha256-hasher",
  "solana-signature",
- "solana-signer",
+ "solana-signer 2.2.1",
  "static_assertions",
 ]
 
@@ -3512,7 +3509,7 @@ dependencies = [
  "solana-keypair",
  "solana-pubkey",
  "solana-signature",
- "solana-signer",
+ "solana-signer 2.2.1",
 ]
 
 [[package]]
@@ -3577,7 +3574,7 @@ dependencies = [
  "solana-stable-layout",
  "solana-sysvar",
  "solana-sysvar-id",
- "thiserror 2.0.11",
+ "thiserror 2.0.12",
  "wasm-bindgen",
 ]
 
@@ -3652,7 +3649,7 @@ dependencies = [
  "solana-frozen-abi-macro",
  "solana-program",
  "solana-pubkey",
- "solana-sanitize",
+ "solana-sanitize 2.2.1",
  "solana-sha256-hasher",
  "strum",
  "strum_macros",
@@ -3737,6 +3734,12 @@ name = "solana-sanitize"
 version = "2.2.1"
 
 [[package]]
+name = "solana-sanitize"
+version = "2.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "61f1bc1357b8188d9c4a3af3fc55276e56987265eb7ad073ae6f8180ee54cecf"
+
+[[package]]
 name = "solana-sdk"
 version = "2.3.0"
 dependencies = [
@@ -3762,7 +3765,7 @@ dependencies = [
  "solana-program",
  "solana-program-memory",
  "solana-pubkey",
- "solana-sanitize",
+ "solana-sanitize 2.2.1",
  "solana-sdk",
  "solana-sdk-ids",
  "solana-sdk-macro",
@@ -3773,11 +3776,11 @@ dependencies = [
  "solana-short-vec",
  "solana-shred-version",
  "solana-signature",
- "solana-signer",
+ "solana-signer 2.2.1",
  "solana-time-utils",
  "solana-transaction",
- "solana-transaction-error",
- "thiserror 2.0.11",
+ "solana-transaction-error 2.2.1",
+ "thiserror 2.0.12",
  "wasm-bindgen",
 ]
 
@@ -3826,7 +3829,7 @@ dependencies = [
  "solana-sdk-ids",
  "solana-secp256k1-program",
  "solana-signature",
- "solana-signer",
+ "solana-signer 2.2.1",
 ]
 
 [[package]]
@@ -3840,7 +3843,7 @@ dependencies = [
  "solana-frozen-abi",
  "solana-frozen-abi-macro",
  "solana-program",
- "thiserror 2.0.11",
+ "thiserror 2.0.12",
 ]
 
 [[package]]
@@ -3903,7 +3906,7 @@ dependencies = [
  "serde",
  "solana-instruction",
  "solana-pubkey",
- "solana-sanitize",
+ "solana-sanitize 2.2.1",
 ]
 
 [[package]]
@@ -3953,7 +3956,7 @@ dependencies = [
  "solana-frozen-abi",
  "solana-frozen-abi-macro",
  "solana-pubkey",
- "solana-sanitize",
+ "solana-sanitize 2.2.1",
  "solana-short-vec",
  "solana-signature",
 ]
@@ -3964,7 +3967,18 @@ version = "2.2.1"
 dependencies = [
  "solana-pubkey",
  "solana-signature",
- "solana-transaction-error",
+ "solana-transaction-error 2.2.1",
+]
+
+[[package]]
+name = "solana-signer"
+version = "2.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7c41991508a4b02f021c1342ba00bcfa098630b213726ceadc7cb032e051975b"
+dependencies = [
+ "solana-pubkey",
+ "solana-signature",
+ "solana-transaction-error 2.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -4044,7 +4058,7 @@ dependencies = [
  "solana-keypair",
  "solana-message",
  "solana-pubkey",
- "solana-signer",
+ "solana-signer 2.2.1",
  "solana-system-interface",
  "solana-transaction",
 ]
@@ -4081,7 +4095,7 @@ dependencies = [
  "solana-program-memory",
  "solana-pubkey",
  "solana-rent",
- "solana-sanitize",
+ "solana-sanitize 2.2.1",
  "solana-sdk",
  "solana-sdk-ids",
  "solana-sdk-macro",
@@ -4129,16 +4143,16 @@ dependencies = [
  "solana-precompiles",
  "solana-presigner",
  "solana-pubkey",
- "solana-sanitize",
+ "solana-sanitize 2.2.1",
  "solana-sdk",
  "solana-sdk-ids",
  "solana-sha256-hasher",
  "solana-short-vec",
  "solana-signature",
- "solana-signer",
+ "solana-signer 2.2.1",
  "solana-system-interface",
  "solana-transaction",
- "solana-transaction-error",
+ "solana-transaction-error 2.2.1",
  "solana-vote-interface",
  "static_assertions",
  "wasm-bindgen",
@@ -4153,7 +4167,17 @@ dependencies = [
  "solana-frozen-abi",
  "solana-frozen-abi-macro",
  "solana-instruction",
- "solana-sanitize",
+ "solana-sanitize 2.2.1",
+]
+
+[[package]]
+name = "solana-transaction-error"
+version = "2.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "222a9dc8fdb61c6088baab34fc3a8b8473a03a7a5fd404ed8dd502fa79b67cb1"
+dependencies = [
+ "solana-instruction",
+ "solana-sanitize 2.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -4352,11 +4376,11 @@ dependencies = [
 
 [[package]]
 name = "thiserror"
-version = "2.0.11"
+version = "2.0.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d452f284b73e6d76dd36758a0c8684b1d5be31f92b89d07fd5822175732206fc"
+checksum = "567b8a2dae586314f7be2a752ec7474332959c6460e02bde30d702a66d488708"
 dependencies = [
- "thiserror-impl 2.0.11",
+ "thiserror-impl 2.0.12",
 ]
 
 [[package]]
@@ -4372,9 +4396,9 @@ dependencies = [
 
 [[package]]
 name = "thiserror-impl"
-version = "2.0.11"
+version = "2.0.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "26afc1baea8a989337eeb52b6e72a039780ce45c3edfcc9c5b9d112feeb173c2"
+checksum = "7f7cf42b4507d8ea322120659672cf1b9dbb93f8f2d4ecfd6e51350ff5b17a1d"
 dependencies = [
  "proc-macro2",
  "quote",
