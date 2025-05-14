@@ -2,7 +2,7 @@
 use bytemuck::{Pod, PodInOption, Zeroable, ZeroableInOption};
 use {
     base64::{prelude::BASE64_STANDARD, Engine},
-    std::fmt,
+    core::fmt,
 };
 #[cfg(feature = "serde")]
 use {
@@ -269,7 +269,7 @@ mod bytemuck_impls {
 
 macro_rules! impl_from_str {
     (TYPE = $type:ident, BYTES_LEN = $bytes_len:expr, BASE64_LEN = $base64_len:expr) => {
-        impl std::str::FromStr for $type {
+        impl core::str::FromStr for $type {
             type Err = crate::error::BlsError;
 
             fn from_str(s: &str) -> Result<Self, Self::Err> {
@@ -295,7 +295,7 @@ use impl_from_str;
 
 #[cfg(test)]
 mod tests {
-    use {super::*, crate::keypair::Keypair, std::str::FromStr};
+    use {super::*, crate::keypair::Keypair, core::str::FromStr, std::string::ToString};
 
     #[test]
     fn pubkey_from_str() {
