@@ -330,6 +330,10 @@ pub fn is_migrate_instruction(instruction_data: &[u8]) -> bool {
     !instruction_data.is_empty() && 8 == instruction_data[0]
 }
 
+pub fn is_extend_program_checked_instruction(instruction_data: &[u8]) -> bool {
+    !instruction_data.is_empty() && 9 == instruction_data[0]
+}
+
 #[cfg(feature = "bincode")]
 /// Returns the instructions required to set a buffers's authority.
 pub fn set_buffer_authority(
@@ -617,6 +621,17 @@ mod tests {
         assert_is_instruction(
             is_migrate_instruction,
             UpgradeableLoaderInstruction::Migrate {},
+        );
+    }
+
+    #[test]
+    fn test_is_extend_program_checked_instruction() {
+        assert!(!is_extend_program_checked_instruction(&[]));
+        assert_is_instruction(
+            is_extend_program_checked_instruction,
+            UpgradeableLoaderInstruction::ExtendProgramChecked {
+                additional_bytes: 0,
+            },
         );
     }
 }
