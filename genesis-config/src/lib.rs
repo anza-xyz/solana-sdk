@@ -15,7 +15,7 @@ use {
     chrono::{TimeZone, Utc},
     memmap2::Mmap,
     solana_hash::Hash,
-    solana_native_token::lamports_to_sol,
+    solana_native_token::lamports_to_sol_str,
     solana_sha256_hasher::hash,
     solana_shred_version::compute_shred_version,
     std::{
@@ -259,7 +259,7 @@ impl fmt::Display for GenesisConfig {
             self.inflation,
             self.rent,
             self.fee_rate_governor,
-            lamports_to_sol(
+            lamports_to_sol_str(
                 self.accounts
                     .iter()
                     .map(|(pubkey, account)| {

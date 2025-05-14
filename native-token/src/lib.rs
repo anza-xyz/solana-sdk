@@ -5,17 +5,52 @@
 /// There are 10^9 lamports in one SOL
 pub const LAMPORTS_PER_SOL: u64 = 1_000_000_000;
 const LAMPORTS_PER_SOL_F64: f64 = LAMPORTS_PER_SOL as f64;
+const SOL_DECIMALS: usize = 9;
 
 /// Approximately convert fractional native tokens (lamports) into native tokens (SOL)
+#[deprecated(since = "2.3.0", note = "lamports_to_sol_str")]
 pub fn lamports_to_sol(lamports: u64) -> f64 {
     lamports as f64 / LAMPORTS_PER_SOL_F64
 }
 
 /// Approximately convert native tokens (SOL) into fractional native tokens (lamports)
+#[deprecated(since = "2.3.0", note = "sol_str_to_lamports")]
 pub fn sol_to_lamports(sol: f64) -> u64 {
     // NaNs return zero, negative values saturate to u64::MIN (i.e. zero), positive values saturate to u64::MAX
     // https://doc.rust-lang.org/reference/expressions/operator-expr.html#r-expr.as.numeric.float-as-int
     (sol * LAMPORTS_PER_SOL_F64).round() as u64
+}
+
+/// Convert fractional native tokens (lamports) into native tokens (SOL)
+pub fn lamports_to_sol_str(lamports: u64) -> String {
+    // Left-pad zeros to decimals + 1, so we at least have an integer zero
+    let mut s = format!("{:01$}", lamports, SOL_DECIMALS + 1);
+    // Add the decimal point (Sorry, "," locales!)
+    s.insert(s.len() - SOL_DECIMALS, '.');
+    let zeros_trimmed = s.trim_end_matches('0');
+    zeros_trimmed.trim_end_matches('.').to_string()
+}
+
+/// Convert native tokens (SOL) into fractional native tokens (lamports)
+pub fn sol_str_to_lamports(sol_str: &str) -> Option<u64> {
+    if sol_str == "." {
+        None
+    } else {
+        let (sol, lamports) = sol_str.split_once('.').unwrap_or((sol_str, ""));
+        let sol = if sol.is_empty() {
+            0
+        } else {
+            sol.parse::<u64>().ok()?
+        };
+        let lamports = if lamports.is_empty() {
+            0
+        } else {
+            format!("{:0<9}", lamports)[..SOL_DECIMALS].parse().ok()?
+        };
+        LAMPORTS_PER_SOL
+            .checked_mul(sol)
+            .and_then(|x| x.checked_add(lamports))
+    }
 }
 
 use std::fmt::{Debug, Display, Formatter, Result};
@@ -50,6 +85,7 @@ mod tests {
 
     #[test]
     #[allow(clippy::excessive_precision)]
+    #[allow(deprecated)]
     fn test_lamports_to_sol() {
         assert_eq!(0.0, lamports_to_sol(0));
         assert_eq!(0.000000001, lamports_to_sol(1));
@@ -86,6 +122,7 @@ mod tests {
 
     #[test]
     #[allow(clippy::excessive_precision)]
+    #[allow(deprecated)]
     fn test_sol_to_lamports() {
         assert_eq!(0, sol_to_lamports(0.0));
         assert_eq!(1, sol_to_lamports(0.000000001));
@@ -114,5 +151,53 @@ mod tests {
             u64::MAX - 6143,
             sol_to_lamports(18446744073.70954513549804687500)
         );
+    }
+
+    #[test]
+    fn test_lamports_to_sol_str() {
+        assert_eq!("0", lamports_to_sol_str(0));
+        assert_eq!("0.000000001", lamports_to_sol_str(1));
+        assert_eq!("0.00000001", lamports_to_sol_str(10));
+        assert_eq!("0.0000001", lamports_to_sol_str(100));
+        assert_eq!("0.000001", lamports_to_sol_str(1000));
+        assert_eq!("0.00001", lamports_to_sol_str(10000));
+        assert_eq!("0.0001", lamports_to_sol_str(100000));
+        assert_eq!("0.001", lamports_to_sol_str(1000000));
+        assert_eq!("0.01", lamports_to_sol_str(10000000));
+        assert_eq!("0.1", lamports_to_sol_str(100000000));
+        assert_eq!("1", lamports_to_sol_str(1000000000));
+        assert_eq!("4.1", lamports_to_sol_str(4_100_000_000));
+        assert_eq!("8.2", lamports_to_sol_str(8_200_000_000));
+        assert_eq!("8.50228288", lamports_to_sol_str(8_502_282_880));
+        assert_eq!("18446744073.709551615", lamports_to_sol_str(u64::MAX));
+    }
+
+    #[test]
+    fn test_sol_str_to_lamports() {
+        assert_eq!(0, sol_str_to_lamports("0.0").unwrap());
+        assert_eq!(1, sol_str_to_lamports("0.000000001").unwrap());
+        assert_eq!(10, sol_str_to_lamports("0.00000001").unwrap());
+        assert_eq!(100, sol_str_to_lamports("0.0000001").unwrap());
+        assert_eq!(1000, sol_str_to_lamports("0.000001").unwrap());
+        assert_eq!(10000, sol_str_to_lamports("0.00001").unwrap());
+        assert_eq!(100000, sol_str_to_lamports("0.0001").unwrap());
+        assert_eq!(1000000, sol_str_to_lamports("0.001").unwrap());
+        assert_eq!(10000000, sol_str_to_lamports("0.01").unwrap());
+        assert_eq!(100000000, sol_str_to_lamports("0.1").unwrap());
+        assert_eq!(1000000000, sol_str_to_lamports("1").unwrap());
+        assert_eq!(4_100_000_000, sol_str_to_lamports("4.1").unwrap());
+        assert_eq!(8_200_000_000, sol_str_to_lamports("8.2").unwrap());
+        assert_eq!(8_502_282_880, sol_str_to_lamports("8.50228288").unwrap());
+
+        assert_eq!(
+            u64::MAX,
+            sol_str_to_lamports("18446744073.709551615").unwrap()
+        );
+        // bigger than u64::MAX, error
+        assert_eq!(None, sol_str_to_lamports("18446744073.709551616"));
+        // Negative, error
+        assert_eq!(None, sol_str_to_lamports("-0.000000001"));
+        // i64::MIN as string, error
+        assert_eq!(None, sol_str_to_lamports("-9223372036.854775808"));
     }
 }
