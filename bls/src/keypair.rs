@@ -1,20 +1,36 @@
+#[cfg(feature = "std")]
+use std::{
+    boxed::Box,
+    error,
+    fs::{self, File, OpenOptions},
+    io::{Read, Write},
+    path::Path,
+    string::String,
+    vec::Vec,
+};
 use {
     crate::{
-        error::BlsError, pod::Pubkey, proof_of_possession::ProofOfPossessionProjective,
-        signature::SignatureProjective, Bls,
+        error::BlsError,
+        pod::{Pubkey, BLS_PUBLIC_KEY_AFFINE_SIZE},
+        proof_of_possession::ProofOfPossessionProjective,
+        signature::SignatureProjective,
+        Bls,
     },
     blst::{blst_keygen, blst_scalar},
     blstrs::{G1Affine, G1Projective, Scalar},
+    core::ptr,
     ff::Field,
     group::Group,
     rand::rngs::OsRng,
-    std::ptr,
 };
 #[cfg(feature = "solana-signer-derive")]
 use {solana_signature::Signature, solana_signer::Signer, subtle::ConstantTimeEq};
 
 /// Size of BLS secret key in bytes
 pub const BLS_SECRET_KEY_SIZE: usize = 32;
+
+/// Size of BLS keypair in bytes
+pub const BLS_KEYPAIR_SIZE: usize = BLS_SECRET_KEY_SIZE + BLS_PUBLIC_KEY_AFFINE_SIZE;
 
 /// A BLS secret key
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -72,6 +88,24 @@ impl SecretKey {
     /// Sign a message using the provided secret key
     pub fn sign(&self, message: &[u8]) -> SignatureProjective {
         Bls::sign(self, message)
+    }
+}
+
+impl TryFrom<&[u8]> for SecretKey {
+    type Error = BlsError;
+    fn try_from(bytes: &[u8]) -> Result<Self, Self::Error> {
+        if bytes.len() != BLS_SECRET_KEY_SIZE {
+            return Err(BlsError::ParseFromBytes);
+        }
+        // unwrap safe due to the length check above
+        let scalar: Option<Scalar> = Scalar::from_bytes_le(bytes.try_into().unwrap()).into();
+        scalar.ok_or(BlsError::FieldDecode).map(Self)
+    }
+}
+
+impl From<&SecretKey> for [u8; BLS_SECRET_KEY_SIZE] {
+    fn from(secret_key: &SecretKey) -> Self {
+        secret_key.0.to_bytes_le()
     }
 }
 
@@ -157,6 +191,26 @@ impl TryFrom<&Pubkey> for PubkeyProjective {
     }
 }
 
+impl TryFrom<&[u8]> for PubkeyProjective {
+    type Error = BlsError;
+    fn try_from(bytes: &[u8]) -> Result<Self, Self::Error> {
+        if bytes.len() != BLS_PUBLIC_KEY_AFFINE_SIZE {
+            return Err(BlsError::ParseFromBytes);
+        }
+        // unwrap safe due to the length check above
+        let public_affine = Pubkey(bytes.try_into().unwrap());
+
+        public_affine.try_into()
+    }
+}
+
+impl From<&PubkeyProjective> for [u8; BLS_PUBLIC_KEY_AFFINE_SIZE] {
+    fn from(pubkey: &PubkeyProjective) -> Self {
+        let pubkey_affine: Pubkey = (*pubkey).into();
+        pubkey_affine.0
+    }
+}
+
 /// A BLS keypair
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Keypair {
@@ -204,9 +258,84 @@ impl Keypair {
     }
 }
 
+impl TryFrom<&[u8]> for Keypair {
+    type Error = BlsError;
+    fn try_from(bytes: &[u8]) -> Result<Self, Self::Error> {
+        if bytes.len() != BLS_KEYPAIR_SIZE {
+            return Err(BlsError::ParseFromBytes);
+        }
+        Ok(Self {
+            secret: SecretKey::try_from(&bytes[..BLS_SECRET_KEY_SIZE])?,
+            public: PubkeyProjective::try_from(&bytes[BLS_SECRET_KEY_SIZE..])?,
+        })
+    }
+}
+
+impl From<&Keypair> for [u8; BLS_KEYPAIR_SIZE] {
+    fn from(keypair: &Keypair) -> Self {
+        let mut bytes = [0u8; BLS_KEYPAIR_SIZE];
+        bytes[..BLS_SECRET_KEY_SIZE]
+            .copy_from_slice(&Into::<[u8; BLS_SECRET_KEY_SIZE]>::into(&keypair.secret));
+        bytes[BLS_SECRET_KEY_SIZE..].copy_from_slice(
+            &Into::<[u8; BLS_PUBLIC_KEY_AFFINE_SIZE]>::into(&keypair.public),
+        );
+        bytes
+    }
+}
+
+#[cfg(feature = "std")]
+impl Keypair {
+    pub fn read_json<R: Read>(reader: &mut R) -> Result<Self, Box<dyn error::Error>> {
+        let bytes: Vec<u8> = serde_json::from_reader(reader)?;
+        Self::try_from(bytes.as_slice())
+            .ok()
+            .ok_or_else(|| std::io::Error::other("Invalid BLS keypair").into())
+    }
+
+    pub fn read_json_file<F: AsRef<Path>>(path: F) -> Result<Self, Box<dyn error::Error>> {
+        let mut file = File::open(path.as_ref())?;
+        Self::read_json(&mut file)
+    }
+
+    pub fn write_json<W: Write>(&self, writer: &mut W) -> Result<String, Box<dyn error::Error>> {
+        let json = serde_json::to_string(&Into::<[u8; BLS_KEYPAIR_SIZE]>::into(self).as_slice())?;
+        writer.write_all(&json.clone().into_bytes())?;
+        Ok(json)
+    }
+
+    pub fn write_json_file<F: AsRef<Path>>(
+        &self,
+        outfile: F,
+    ) -> Result<String, Box<dyn std::error::Error>> {
+        let outfile = outfile.as_ref();
+
+        if let Some(outdir) = outfile.parent() {
+            fs::create_dir_all(outdir)?;
+        }
+
+        let mut f = {
+            #[cfg(not(unix))]
+            {
+                OpenOptions::new()
+            }
+            #[cfg(unix)]
+            {
+                use std::os::unix::fs::OpenOptionsExt;
+                OpenOptions::new().mode(0o600)
+            }
+        }
+        .write(true)
+        .truncate(true)
+        .create(true)
+        .open(outfile)?;
+
+        self.write_json(&mut f)
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use {super::*, tempfile::NamedTempFile};
 
     #[test]
     fn test_keygen_derive() {
@@ -228,5 +357,17 @@ mod tests {
 
         assert_eq!(keypair.secret, secret);
         assert_eq!(keypair.public, public);
+    }
+
+    #[test]
+    #[cfg(feature = "std")]
+    fn test_keypair_file() {
+        let temp_keypair_file = NamedTempFile::new().unwrap();
+        let original_keypair = Keypair::new();
+        original_keypair
+            .write_json_file(&temp_keypair_file)
+            .unwrap();
+        let read_keypair = Keypair::read_json_file(&temp_keypair_file).unwrap();
+        assert_eq!(original_keypair, read_keypair);
     }
 }

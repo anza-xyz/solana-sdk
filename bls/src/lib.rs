@@ -1,5 +1,8 @@
+#![no_std]
 #![cfg_attr(feature = "frozen-abi", feature(min_specialization))]
 
+#[cfg(feature = "std")]
+extern crate std;
 pub use crate::pod::{
     ProofOfPossession, ProofOfPossessionCompressed, Pubkey, PubkeyCompressed, Signature,
     SignatureCompressed, BLS_PROOF_OF_POSSESSION_AFFINE_SIZE,
@@ -120,7 +123,7 @@ impl Bls {
 
 #[cfg(test)]
 mod tests {
-    use {super::*, crate::keypair::Keypair};
+    use {super::*, crate::keypair::Keypair, std::vec};
 
     #[test]
     fn test_verify() {

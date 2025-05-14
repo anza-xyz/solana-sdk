@@ -14,6 +14,7 @@ base64 = { workspace = true }
 bytemuck = { workspace = true, optional = true }
 cfg_eval = { workspace = true, optional = true }
 serde = { workspace = true, features = ["derive"], optional = true }
+serde_json = { workspace = true, optional = true }
 serde_with = { workspace = true, features = ["macros"], optional = true }
 solana-frozen-abi = { version = "2.2.1", optional = true, features = [
     "frozen-abi",
@@ -35,17 +36,21 @@ subtle = { workspace = true, optional = true }
 
 [dev-dependencies]
 bincode = { workspace = true }
+solana-bls = { path = ".", features = ["std"] }
 solana-keypair = { workspace = true }
+tempfile = { workspace = true }
 
 [features]
 bytemuck = ["dep:bytemuck"]
-frozen-abi = ["dep:solana-frozen-abi", "dep:solana-frozen-abi-macro"]
+default = ["std"]
+frozen-abi = ["dep:solana-frozen-abi", "dep:solana-frozen-abi-macro", "std"]
 serde = ["dep:cfg_eval", "dep:serde", "dep:serde_with"]
 solana-signer-derive = [
     "dep:solana-signer",
     "dep:solana-signature",
     "dep:subtle",
 ]
+std = ["dep:serde_json"]
 
 [lib]
 crate-type = ["rlib"]
