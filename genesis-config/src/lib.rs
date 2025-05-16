@@ -217,17 +217,6 @@ impl GenesisConfig {
 }
 
 #[cfg(feature = "serde")]
-fn lamports_to_sol_str(lamports: u64) -> String {
-    const SOL_DECIMALS: usize = 9;
-    // Left-pad zeros to decimals + 1, so we at least have an integer zero
-    let mut s = format!("{:01$}", lamports, SOL_DECIMALS + 1);
-    // Add the decimal point (Sorry, "," locales!)
-    s.insert(s.len().checked_sub(SOL_DECIMALS).unwrap(), '.');
-    let zeros_trimmed = s.trim_end_matches('0');
-    zeros_trimmed.trim_end_matches('.').to_string()
-}
-
-#[cfg(feature = "serde")]
 impl fmt::Display for GenesisConfig {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
@@ -246,7 +235,7 @@ impl fmt::Display for GenesisConfig {
              {:?}\n\
              {:?}\n\
              {:?}\n\
-             Capitalization: {} SOL in {} accounts\n\
+             Capitalization: {} lamports in {} accounts\n\
              Native instruction processors: {:#?}\n\
              Rewards pool: {:#?}\n\
              ",
@@ -269,15 +258,13 @@ impl fmt::Display for GenesisConfig {
             self.inflation,
             self.rent,
             self.fee_rate_governor,
-            lamports_to_sol_str(
-                self.accounts
-                    .iter()
-                    .map(|(pubkey, account)| {
-                        assert!(account.lamports > 0, "{:?}", (pubkey, account));
-                        account.lamports
-                    })
-                    .sum::<u64>()
-            ),
+            self.accounts
+                .iter()
+                .map(|(pubkey, account)| {
+                    assert!(account.lamports > 0, "{:?}", (pubkey, account));
+                    account.lamports
+                })
+                .sum::<u64>(),
             self.accounts.len(),
             self.native_instruction_processors,
             self.rewards_pools,
