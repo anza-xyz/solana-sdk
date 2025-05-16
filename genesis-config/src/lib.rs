@@ -15,7 +15,6 @@ use {
     chrono::{TimeZone, Utc},
     memmap2::Mmap,
     solana_hash::Hash,
-    solana_native_token::lamports_to_sol_str,
     solana_sha256_hasher::hash,
     solana_shred_version::compute_shred_version,
     std::{
@@ -215,6 +214,17 @@ impl GenesisConfig {
             self.ticks_per_slot(),
         )
     }
+}
+
+#[cfg(feature = "serde")]
+fn lamports_to_sol_str(lamports: u64) -> String {
+    const SOL_DECIMALS: usize = 9;
+    // Left-pad zeros to decimals + 1, so we at least have an integer zero
+    let mut s = format!("{:01$}", lamports, SOL_DECIMALS + 1);
+    // Add the decimal point (Sorry, "," locales!)
+    s.insert(s.len().checked_sub(SOL_DECIMALS).unwrap(), '.');
+    let zeros_trimmed = s.trim_end_matches('0');
+    zeros_trimmed.trim_end_matches('.').to_string()
 }
 
 #[cfg(feature = "serde")]

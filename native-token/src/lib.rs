@@ -8,7 +8,10 @@ const LAMPORTS_PER_SOL_F64: f64 = LAMPORTS_PER_SOL as f64;
 const SOL_DECIMALS: usize = 9;
 
 /// Approximately convert fractional native tokens (lamports) into native tokens (SOL)
-#[deprecated(since = "2.3.0", note = "lamports_to_sol_str")]
+#[deprecated(
+    since = "2.3.0",
+    note = "solana_cli_output::display::build_balance_message"
+)]
 pub fn lamports_to_sol(lamports: u64) -> f64 {
     lamports as f64 / LAMPORTS_PER_SOL_F64
 }
@@ -19,16 +22,6 @@ pub fn sol_to_lamports(sol: f64) -> u64 {
     // NaNs return zero, negative values saturate to u64::MIN (i.e. zero), positive values saturate to u64::MAX
     // https://doc.rust-lang.org/reference/expressions/operator-expr.html#r-expr.as.numeric.float-as-int
     (sol * LAMPORTS_PER_SOL_F64).round() as u64
-}
-
-/// Convert fractional native tokens (lamports) into native tokens (SOL)
-pub fn lamports_to_sol_str(lamports: u64) -> String {
-    // Left-pad zeros to decimals + 1, so we at least have an integer zero
-    let mut s = format!("{:01$}", lamports, SOL_DECIMALS + 1);
-    // Add the decimal point (Sorry, "," locales!)
-    s.insert(s.len() - SOL_DECIMALS, '.');
-    let zeros_trimmed = s.trim_end_matches('0');
-    zeros_trimmed.trim_end_matches('.').to_string()
 }
 
 /// Convert native tokens (SOL) into fractional native tokens (lamports)
@@ -151,25 +144,6 @@ mod tests {
             u64::MAX - 6143,
             sol_to_lamports(18446744073.70954513549804687500)
         );
-    }
-
-    #[test]
-    fn test_lamports_to_sol_str() {
-        assert_eq!("0", lamports_to_sol_str(0));
-        assert_eq!("0.000000001", lamports_to_sol_str(1));
-        assert_eq!("0.00000001", lamports_to_sol_str(10));
-        assert_eq!("0.0000001", lamports_to_sol_str(100));
-        assert_eq!("0.000001", lamports_to_sol_str(1000));
-        assert_eq!("0.00001", lamports_to_sol_str(10000));
-        assert_eq!("0.0001", lamports_to_sol_str(100000));
-        assert_eq!("0.001", lamports_to_sol_str(1000000));
-        assert_eq!("0.01", lamports_to_sol_str(10000000));
-        assert_eq!("0.1", lamports_to_sol_str(100000000));
-        assert_eq!("1", lamports_to_sol_str(1000000000));
-        assert_eq!("4.1", lamports_to_sol_str(4_100_000_000));
-        assert_eq!("8.2", lamports_to_sol_str(8_200_000_000));
-        assert_eq!("8.50228288", lamports_to_sol_str(8_502_282_880));
-        assert_eq!("18446744073.709551615", lamports_to_sol_str(u64::MAX));
     }
 
     #[test]
