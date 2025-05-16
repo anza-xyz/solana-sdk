@@ -15,7 +15,6 @@ use {
     chrono::{TimeZone, Utc},
     memmap2::Mmap,
     solana_hash::Hash,
-    solana_native_token::lamports_to_sol_str,
     solana_sha256_hasher::hash,
     solana_shred_version::compute_shred_version,
     std::{
@@ -236,7 +235,7 @@ impl fmt::Display for GenesisConfig {
              {:?}\n\
              {:?}\n\
              {:?}\n\
-             Capitalization: {} SOL in {} accounts\n\
+             Capitalization: {} lamports in {} accounts\n\
              Native instruction processors: {:#?}\n\
              Rewards pool: {:#?}\n\
              ",
@@ -259,15 +258,13 @@ impl fmt::Display for GenesisConfig {
             self.inflation,
             self.rent,
             self.fee_rate_governor,
-            lamports_to_sol_str(
-                self.accounts
-                    .iter()
-                    .map(|(pubkey, account)| {
-                        assert!(account.lamports > 0, "{:?}", (pubkey, account));
-                        account.lamports
-                    })
-                    .sum::<u64>()
-            ),
+            self.accounts
+                .iter()
+                .map(|(pubkey, account)| {
+                    assert!(account.lamports > 0, "{:?}", (pubkey, account));
+                    account.lamports
+                })
+                .sum::<u64>(),
             self.accounts.len(),
             self.native_instruction_processors,
             self.rewards_pools,

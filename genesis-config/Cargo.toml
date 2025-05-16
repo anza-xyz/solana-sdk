@@ -26,7 +26,6 @@ solana-hash = { workspace = true }
 solana-inflation = { workspace = true }
 solana-keypair = { workspace = true }
 solana-logger = { workspace = true }
-solana-native-token = { workspace = true }
 solana-poh-config = { workspace = true }
 solana-pubkey = { workspace = true }
 solana-rent = { workspace = true }
