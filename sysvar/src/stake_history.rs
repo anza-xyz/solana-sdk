@@ -56,8 +56,12 @@ pub use solana_sdk_ids::sysvar::stake_history::{check_id, id, ID};
 pub use solana_stake_interface::stake_history::{
     StakeHistory, StakeHistoryEntry, StakeHistoryGetEntry, MAX_ENTRIES,
 };
-use {crate::get_sysvar, solana_clock::Epoch};
+use {
+    crate::{get_sysvar, SysvarGet},
+    solana_clock::Epoch,
+};
 
+impl SysvarGet for StakeHistory {}
 #[cfg(feature = "bincode")]
 impl Sysvar for StakeHistory {
     // override
