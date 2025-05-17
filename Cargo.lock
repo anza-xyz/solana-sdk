@@ -3001,7 +3001,6 @@ dependencies = [
  "solana-hash",
  "solana-inflation",
  "solana-keypair",
- "solana-logger",
  "solana-native-token",
  "solana-poh-config",
  "solana-pubkey",
