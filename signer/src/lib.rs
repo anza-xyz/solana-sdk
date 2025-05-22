@@ -2,8 +2,6 @@
 #![cfg_attr(docsrs, feature(doc_auto_cfg))]
 use {
     core::fmt,
-    solana_pubkey::Pubkey,
-    solana_signature::Signature,
     solana_transaction_error::TransactionError,
     std::{
         error,
@@ -12,6 +10,11 @@ use {
         ops::Deref,
         path::Path,
     },
+};
+
+pub use {
+    solana_pubkey::Pubkey,
+    solana_signature::Signature,
 };
 
 pub mod null_signer;

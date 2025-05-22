@@ -23,6 +23,12 @@ use {
     solana_transaction_error::{TransactionResult, TransportResult as Result},
 };
 
+pub use {
+    solana_commitment_config::CommitmentConfig,
+    solana_pubkey::Pubkey,
+    solana_signature::Signature
+};
+
 pub trait Client: SyncClient + AsyncClient {
     fn tpu_addr(&self) -> String;
 }
