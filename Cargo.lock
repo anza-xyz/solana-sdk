@@ -4058,7 +4058,7 @@ dependencies = [
 
 [[package]]
 name = "solana-transaction-error"
-version = "2.2.1"
+version = "3.0.0-canary.7040146"
 dependencies = [
  "serde",
  "serde_derive",
