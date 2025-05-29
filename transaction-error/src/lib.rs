@@ -4,7 +4,10 @@
 use serde_derive::{Deserialize, Serialize};
 #[cfg(feature = "frozen-abi")]
 use solana_frozen_abi_macro::{AbiEnumVisitor, AbiExample};
-use {core::fmt, solana_instruction::error::InstructionError, solana_sanitize::SanitizeError};
+use {
+    core::fmt, solana_instruction::error::InstructionError, solana_pubkey::Pubkey,
+    solana_sanitize::SanitizeError,
+};
 
 pub type TransactionResult<T> = Result<T, TransactionError>;
 
@@ -42,9 +45,23 @@ pub enum TransactionError {
     /// the `recent_blockhash` has been discarded.
     BlockhashNotFound,
 
-    /// An error occurred while processing an instruction. The first element of the tuple
-    /// indicates the instruction index in which the error occurred.
-    InstructionError(u8, InstructionError),
+    /// An error occurred while processing an instruction.
+    InstructionError {
+        err: InstructionError,
+        /// The index of the inner instruction in which the error was thrown, starting from zero.
+        /// This value will be `None` when the error was thrown from the outer instruction's
+        /// program, and also for all errors stored using a version of this enum variant prior to
+        /// `solana-transaction-error` 3.0.0.
+        inner_instruction_index: Option<u8>,
+        /// The index of the outer instruction in which the error was thrown, starting from zero. Do
+        /// not infer the responsible program from the instruction at this index; the error might
+        /// have been thrown from one of its inner instructions. See `responsible_program_address`.
+        outer_instruction_index: u8,
+        /// The address of the program that threw the error. Use this to decode the error (eg. to
+        /// look up a custom error code in the program's IDL). This value will be `None` for errors
+        /// stored using a version of this enum variant prior to `solana-transaction-error` 3.0.0.
+        responsible_program_address: Option<Pubkey>,
+    },
 
     /// Loader call chain is too deep
     CallChainTooDeep,
@@ -163,7 +180,17 @@ impl fmt::Display for TransactionError {
              => f.write_str("This transaction has already been processed"),
             Self::BlockhashNotFound
              => f.write_str("Blockhash not found"),
-            Self::InstructionError(idx, err) =>  write!(f, "Error processing Instruction {idx}: {err}"),
+            Self::InstructionError {
+                err,
+                outer_instruction_index,
+                ..
+            }
+             // NOTE: We intentionally do not augment the error message in the event that the error
+             // carries the address of the responsible program or the index of the inner
+             // instruction. While it would add value to the log, to do so at this point would also
+             // break any log parser that presumes a stable log format
+             // (eg. https://tinyurl.com/3uuczr68).
+             =>  write!(f, "Error processing Instruction {outer_instruction_index}: {err}"),
             Self::CallChainTooDeep
              => f.write_str("Loader call chain is too deep"),
             Self::MissingSignatureForFee
@@ -415,3 +442,78 @@ impl TransportError {
 
 #[cfg(not(target_os = "solana"))]
 pub type TransportResult<T> = std::result::Result<T, TransportError>;
+
+#[cfg(feature = "serde")]
+#[cfg(test)]
+mod tests {
+    use {
+        crate::TransactionError,
+        serde_json::{from_value, json, to_value},
+        solana_instruction::error::InstructionError,
+        solana_pubkey::Pubkey,
+        test_case::test_case,
+    };
+
+    #[cfg(feature = "serde")]
+    #[test_case(InstructionError::Custom(42), 1, Some(Pubkey::new_unique()), None; "From top-level instruction")]
+    #[test_case(InstructionError::Custom(42), 1, Some(Pubkey::new_unique()), Some(41); "From inner instruction")]
+    #[test_case(InstructionError::Custom(42), 1, None, None; "Legacy instruction without inner/program")]
+    fn test_serialize_instruction_error(
+        err: InstructionError,
+        outer_instruction_index: u8,
+        responsible_program_address: Option<Pubkey>,
+        inner_instruction_index: Option<u8>,
+    ) {
+        let json = to_value(TransactionError::InstructionError {
+            err: err.clone(),
+            inner_instruction_index,
+            outer_instruction_index,
+            responsible_program_address,
+        })
+        .unwrap();
+
+        assert_eq!(
+            json,
+            json!({
+                "InstructionError": {
+                    "err": err,
+                    "inner_instruction_index": inner_instruction_index,
+                    "outer_instruction_index": outer_instruction_index,
+                    "responsible_program_address": responsible_program_address,
+                },
+            }),
+        )
+    }
+
+    #[cfg(feature = "serde")]
+    #[test_case(InstructionError::Custom(42), 1, Some(Pubkey::new_unique()), None; "From top-level instruction")]
+    #[test_case(InstructionError::Custom(42), 1, Some(Pubkey::new_unique()), Some(41); "From inner instruction")]
+    #[test_case(InstructionError::Custom(42), 1, None, None; "Legacy instruction without inner/program")]
+    #[test_case(InstructionError::Custom(42), 1, None, Some(41); "Mixed instruction with inner index but no program address")]
+    fn test_deserialize_instruction_error(
+        err: InstructionError,
+        outer_instruction_index: u8,
+        responsible_program_address: Option<Pubkey>,
+        inner_instruction_index: Option<u8>,
+    ) {
+        let decoded_err: TransactionError = from_value(json!({
+            "InstructionError": {
+                "err": err,
+                "inner_instruction_index": inner_instruction_index,
+                "outer_instruction_index": outer_instruction_index,
+                "responsible_program_address": responsible_program_address,
+            },
+        }))
+        .unwrap();
+
+        assert_eq!(
+            decoded_err,
+            TransactionError::InstructionError {
+                err,
+                inner_instruction_index,
+                outer_instruction_index,
+                responsible_program_address,
+            },
+        )
+    }
+}
