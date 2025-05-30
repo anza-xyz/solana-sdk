@@ -12,6 +12,43 @@ edition = { workspace = true }
 rust-version = "1.79.0"                          # solana platform-tools rust version
 include = ["src/**/*", "README.md"]
 
+[package.metadata.docs.rs]
+targets = ["x86_64-unknown-linux-gnu", "wasm32-unknown-unknown"]
+all-features = true
+rustdoc-args = ["--cfg=docsrs"]
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[features]
+default = ["borsh"]
+borsh = [
+    "dep:borsh",
+    "dep:borsh0-10",
+    "dep:solana-borsh",
+    "solana-hash/borsh",
+    "solana-instruction/borsh",
+    "solana-program-error/borsh",
+    "solana-pubkey/borsh",
+    "solana-stake-interface/borsh",
+]
+dev-context-only-utils = ["solana-instructions-sysvar/dev-context-only-utils"]
+frozen-abi = [
+    "dep:solana-frozen-abi",
+    "dep:solana-frozen-abi-macro",
+    "solana-epoch-rewards/frozen-abi",
+    "solana-epoch-schedule/frozen-abi",
+    "solana-fee-calculator/frozen-abi",
+    "solana-hash/frozen-abi",
+    "solana-instruction/frozen-abi",
+    "solana-message/frozen-abi",
+    "solana-pubkey/frozen-abi",
+    "solana-rent/frozen-abi",
+    "solana-short-vec/frozen-abi",
+    "solana-stake-interface/frozen-abi",
+    "solana-sysvar/frozen-abi",
+]
+
 [dependencies]
 bincode = { workspace = true }
 blake3 = { workspace = true, features = ["traits-preview"] }
@@ -89,6 +126,17 @@ solana-sysvar-id = { workspace = true }
 solana-vote-interface = { workspace = true, features = ["bincode"] }
 thiserror = { workspace = true }
 
+[target.'cfg(not(target_os = "solana"))'.dependencies]
+num-bigint = { workspace = true }
+rand = { workspace = true }
+solana-example-mocks = { workspace = true }
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+console_error_panic_hook = { workspace = true }
+console_log = { workspace = true }
+getrandom = { workspace = true, features = ["js", "wasm-bindgen"] }
+wasm-bindgen = { workspace = true }
+
 # This is currently needed to build on-chain programs reliably.
 # Borsh 0.10 may pull in hashbrown 0.13, which uses ahash 0.8, which uses
 # getrandom 0.2 underneath. This explicit dependency allows for no-std if cargo
@@ -99,21 +147,6 @@ thiserror = { workspace = true }
 getrandom = { workspace = true, features = ["custom"] }
 solana-define-syscall = { workspace = true }
 
-[target.'cfg(not(target_os = "solana"))'.dependencies]
-num-bigint = { workspace = true }
-rand = { workspace = true }
-solana-example-mocks = { workspace = true }
-
-[target.'cfg(not(target_os = "solana"))'.dev-dependencies]
-arbitrary = { workspace = true, features = ["derive"] }
-solana-logger = { workspace = true }
-
-[target.'cfg(target_arch = "wasm32")'.dependencies]
-console_error_panic_hook = { workspace = true }
-console_log = { workspace = true }
-getrandom = { workspace = true, features = ["js", "wasm-bindgen"] }
-wasm-bindgen = { workspace = true }
-
 [dev-dependencies]
 array-bytes = { workspace = true }
 assert_matches = { workspace = true }
@@ -122,42 +155,9 @@ serde_json = { workspace = true }
 solana-pubkey = { workspace = true, features = ["dev-context-only-utils"] }
 solana-sysvar = { workspace = true, features = ["dev-context-only-utils"] }
 
-[package.metadata.docs.rs]
-targets = ["x86_64-unknown-linux-gnu", "wasm32-unknown-unknown"]
-all-features = true
-rustdoc-args = ["--cfg=docsrs"]
-
-[lib]
-crate-type = ["cdylib", "rlib"]
-
-[features]
-default = ["borsh"]
-borsh = [
-    "dep:borsh",
-    "dep:borsh0-10",
-    "dep:solana-borsh",
-    "solana-hash/borsh",
-    "solana-instruction/borsh",
-    "solana-program-error/borsh",
-    "solana-pubkey/borsh",
-    "solana-stake-interface/borsh",
-]
-dev-context-only-utils = ["solana-instructions-sysvar/dev-context-only-utils"]
-frozen-abi = [
-    "dep:solana-frozen-abi",
-    "dep:solana-frozen-abi-macro",
-    "solana-epoch-rewards/frozen-abi",
-    "solana-epoch-schedule/frozen-abi",
-    "solana-fee-calculator/frozen-abi",
-    "solana-hash/frozen-abi",
-    "solana-instruction/frozen-abi",
-    "solana-message/frozen-abi",
-    "solana-pubkey/frozen-abi",
-    "solana-rent/frozen-abi",
-    "solana-short-vec/frozen-abi",
-    "solana-stake-interface/frozen-abi",
-    "solana-sysvar/frozen-abi"
-]
+[target.'cfg(not(target_os = "solana"))'.dev-dependencies]
+arbitrary = { workspace = true, features = ["derive"] }
+solana-logger = { workspace = true }
 
 [lints]
 workspace = true

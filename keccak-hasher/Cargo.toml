@@ -14,6 +14,13 @@ targets = ["x86_64-unknown-linux-gnu"]
 all-features = true
 rustdoc-args = ["--cfg=docsrs"]
 
+[features]
+borsh = ["dep:borsh", "std"]
+frozen-abi = ["dep:solana-frozen-abi", "dep:solana-frozen-abi-macro", "std"]
+serde = ["dep:serde", "dep:serde_derive"]
+sha3 = ["dep:sha3"]
+std = ["solana-hash/std"]
+
 [dependencies]
 borsh = { workspace = true, optional = true }
 serde = { workspace = true, optional = true }
@@ -36,13 +43,6 @@ sha3 = { workspace = true }
 # onchain
 sha3 = { workspace = true, optional = true }
 solana-define-syscall = { workspace = true }
-
-[features]
-borsh = ["dep:borsh", "std"]
-frozen-abi = ["dep:solana-frozen-abi", "dep:solana-frozen-abi-macro", "std"]
-serde = ["dep:serde", "dep:serde_derive"]
-sha3 = ["dep:sha3"]
-std = ["solana-hash/std"]
 
 [lints]
 workspace = true

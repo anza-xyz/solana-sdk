@@ -9,11 +9,11 @@ homepage = { workspace = true }
 license = { workspace = true }
 edition = { workspace = true }
 
-[dependencies]
-solana-pubkey = { workspace = true, default-features = false }
-
 [package.metadata.docs.rs]
 targets = ["x86_64-unknown-linux-gnu"]
+
+[dependencies]
+solana-pubkey = { workspace = true, default-features = false }
 
 [lints]
 workspace = true

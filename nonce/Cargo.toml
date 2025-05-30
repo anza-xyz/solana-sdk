@@ -9,17 +9,10 @@ homepage = { workspace = true }
 license = { workspace = true }
 edition = { workspace = true }
 
-[dependencies]
-serde = { workspace = true, optional = true }
-serde_derive = { workspace = true, optional = true }
-solana-fee-calculator = { workspace = true }
-solana-hash = { workspace = true, default-features = false }
-solana-pubkey = { workspace = true, default-features = false }
-solana-sha256-hasher = { workspace = true }
-
-[dev-dependencies]
-bincode = { workspace = true }
-solana-nonce = { path = ".", features = ["dev-context-only-utils"] }
+[package.metadata.docs.rs]
+targets = ["x86_64-unknown-linux-gnu"]
+all-features = true
+rustdoc-args = ["--cfg=docsrs"]
 
 [features]
 dev-context-only-utils = ["serde"]
@@ -31,7 +24,14 @@ serde = [
     "solana-pubkey/serde",
 ]
 
-[package.metadata.docs.rs]
-targets = ["x86_64-unknown-linux-gnu"]
-all-features = true
-rustdoc-args = ["--cfg=docsrs"]
+[dependencies]
+serde = { workspace = true, optional = true }
+serde_derive = { workspace = true, optional = true }
+solana-fee-calculator = { workspace = true }
+solana-hash = { workspace = true, default-features = false }
+solana-pubkey = { workspace = true, default-features = false }
+solana-sha256-hasher = { workspace = true }
+
+[dev-dependencies]
+bincode = { workspace = true }
+solana-nonce = { path = ".", features = ["dev-context-only-utils"] }

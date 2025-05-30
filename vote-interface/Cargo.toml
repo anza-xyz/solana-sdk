@@ -9,6 +9,40 @@ homepage = { workspace = true }
 license = { workspace = true }
 edition = { workspace = true }
 
+[package.metadata.docs.rs]
+targets = ["x86_64-unknown-linux-gnu"]
+all-features = true
+rustdoc-args = ["--cfg=docsrs"]
+
+[features]
+bincode = [
+    "dep:bincode",
+    "dep:solana-serialize-utils",
+    "dep:solana-system-interface",
+    "serde",
+]
+dev-context-only-utils = [
+    "bincode",
+    "dep:arbitrary",
+    "solana-pubkey/dev-context-only-utils",
+]
+frozen-abi = [
+    "dep:solana-frozen-abi",
+    "dep:solana-frozen-abi-macro",
+    "serde",
+    "solana-hash/frozen-abi",
+    "solana-pubkey/frozen-abi",
+    "solana-short-vec/frozen-abi",
+]
+serde = [
+    "dep:serde",
+    "dep:serde_derive",
+    "dep:solana-serde-varint",
+    "dep:solana-short-vec",
+    "solana-hash/serde",
+    "solana-pubkey/serde",
+]
+
 [dependencies]
 arbitrary = { workspace = true, features = ["derive"], optional = true }
 bincode = { workspace = true, optional = true }
@@ -44,40 +78,6 @@ solana-epoch-schedule = { workspace = true }
 solana-logger = { workspace = true }
 solana-pubkey = { workspace = true, features = ["dev-context-only-utils"] }
 solana-vote-interface = { path = ".", features = ["dev-context-only-utils"] }
-
-[features]
-bincode = [
-    "dep:bincode",
-    "dep:solana-serialize-utils",
-    "dep:solana-system-interface",
-    "serde"
-]
-dev-context-only-utils = [
-    "bincode",
-    "dep:arbitrary",
-    "solana-pubkey/dev-context-only-utils",
-]
-frozen-abi = [
-    "dep:solana-frozen-abi",
-    "dep:solana-frozen-abi-macro",
-    "serde",
-    "solana-hash/frozen-abi",
-    "solana-pubkey/frozen-abi",
-    "solana-short-vec/frozen-abi",
-]
-serde = [
-    "dep:serde",
-    "dep:serde_derive",
-    "dep:solana-serde-varint",
-    "dep:solana-short-vec",
-    "solana-hash/serde",
-    "solana-pubkey/serde"
-]
-
-[package.metadata.docs.rs]
-targets = ["x86_64-unknown-linux-gnu"]
-all-features = true
-rustdoc-args = ["--cfg=docsrs"]
 
 [lints]
 workspace = true

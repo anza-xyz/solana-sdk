@@ -9,6 +9,23 @@ homepage = { workspace = true }
 license = { workspace = true }
 edition = { workspace = true }
 
+[package.metadata.docs.rs]
+targets = ["x86_64-unknown-linux-gnu"]
+all-features = true
+rustdoc-args = ["--cfg=docsrs"]
+
+[features]
+bincode = ["dep:bincode", "serde"]
+dev-context-only-utils = ["bincode"]
+serde = [
+    "bitflags/serde",
+    "dep:cfg_eval",
+    "dep:serde",
+    "dep:serde_derive",
+    "dep:serde_with",
+]
+frozen-abi = ["dep:solana-frozen-abi", "dep:solana-frozen-abi-macro"]
+
 [dependencies]
 bincode = { workspace = true, optional = true }
 bitflags = { workspace = true }
@@ -22,23 +39,6 @@ solana-frozen-abi-macro = { workspace = true, optional = true, features = ["froz
 [dev-dependencies]
 solana-packet = { path = ".", features = ["dev-context-only-utils"] }
 static_assertions = { workspace = true }
-
-[features]
-bincode = ["dep:bincode", "serde"]
-dev-context-only-utils = ["bincode"]
-serde = [
-    "bitflags/serde",
-    "dep:cfg_eval",
-    "dep:serde",
-    "dep:serde_derive",
-    "dep:serde_with"
-]
-frozen-abi = ["dep:solana-frozen-abi", "dep:solana-frozen-abi-macro"]
-
-[package.metadata.docs.rs]
-targets = ["x86_64-unknown-linux-gnu"]
-all-features = true
-rustdoc-args = ["--cfg=docsrs"]
 
 [lints]
 workspace = true

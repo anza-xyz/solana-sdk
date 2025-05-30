@@ -9,6 +9,23 @@ homepage = { workspace = true }
 license = { workspace = true }
 edition = { workspace = true }
 
+[package.metadata.docs.rs]
+targets = ["x86_64-unknown-linux-gnu"]
+all-features = true
+rustdoc-args = ["--cfg=docsrs"]
+
+[features]
+bincode = [
+    "dep:bincode",
+    "dep:solana-feature-set",
+    "dep:solana-instruction",
+    "dep:solana-precompile-error",
+    "dep:solana-sdk-ids",
+    "serde",
+]
+dev-context-only-utils = ["bincode"]
+serde = ["dep:serde", "dep:serde_derive"]
+
 [dependencies]
 bincode = { workspace = true, optional = true }
 digest = { workspace = true }
@@ -37,20 +54,3 @@ solana-program-error = { workspace = true }
 solana-sdk = { path = "../sdk" }
 solana-secp256k1-program = { path = ".", features = ["dev-context-only-utils"] }
 solana-signer = { workspace = true }
-
-[features]
-bincode = [
-    "dep:bincode",
-    "dep:solana-feature-set",
-    "dep:solana-instruction",
-    "dep:solana-precompile-error",
-    "dep:solana-sdk-ids",
-    "serde",
-]
-dev-context-only-utils = ["bincode"]
-serde = ["dep:serde", "dep:serde_derive"]
-
-[package.metadata.docs.rs]
-targets = ["x86_64-unknown-linux-gnu"]
-all-features = true
-rustdoc-args = ["--cfg=docsrs"]

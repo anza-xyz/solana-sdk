@@ -9,6 +9,12 @@ homepage = { workspace = true }
 license = { workspace = true }
 edition = { workspace = true }
 
+[features]
+default = []
+# activate the frozen-abi feature when we actually want to do frozen-abi testing,
+# otherwise leave it off because it requires nightly Rust
+frozen-abi = []
+
 [dependencies]
 bs58 = { workspace = true, features = ["alloc"] }
 bv = { workspace = true, features = ["serde"] }
@@ -28,14 +34,8 @@ memmap2 = { workspace = true }
 [target.'cfg(not(target_os = "solana"))'.dev-dependencies]
 bitflags = { workspace = true, features = ["serde"] }
 serde_bytes = { workspace = true }
-solana-logger = { workspace = true }
 serde_with = { workspace = true, features = ["macros"] }
-
-[features]
-default = []
-# activate the frozen-abi feature when we actually want to do frozen-abi testing,
-# otherwise leave it off because it requires nightly Rust
-frozen-abi = []
+solana-logger = { workspace = true }
 
 [lints]
 workspace = true

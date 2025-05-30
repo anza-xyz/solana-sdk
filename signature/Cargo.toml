@@ -9,6 +9,20 @@ homepage = { workspace = true }
 license = { workspace = true }
 edition = { workspace = true }
 
+[package.metadata.docs.rs]
+targets = ["x86_64-unknown-linux-gnu"]
+all-features = true
+rustdoc-args = ["--cfg=docsrs"]
+
+[features]
+default = ["std", "alloc"]
+alloc = []
+frozen-abi = ["dep:solana-frozen-abi", "dep:solana-frozen-abi-macro", "std"]
+rand = ["dep:rand"]
+serde = ["dep:serde", "dep:serde_derive", "dep:serde-big-array"]
+std = ["alloc"]
+verify = ["dep:ed25519-dalek"]
+
 [dependencies]
 ed25519-dalek = { workspace = true, optional = true }
 five8 = { workspace = true }
@@ -34,24 +48,6 @@ serde_json = { workspace = true }
 solana-pubkey = { workspace = true, features = ["std"] }
 solana-short-vec = { workspace = true }
 solana-signature = { path = ".", features = ["serde"] }
-
-[features]
-default = ["std", "alloc"]
-alloc = []
-frozen-abi = [
-    "dep:solana-frozen-abi",
-    "dep:solana-frozen-abi-macro",
-    "std"
-]
-rand = ["dep:rand"]
-serde = ["dep:serde", "dep:serde_derive", "dep:serde-big-array"]
-std = ["alloc"]
-verify = ["dep:ed25519-dalek"]
-
-[package.metadata.docs.rs]
-targets = ["x86_64-unknown-linux-gnu"]
-all-features = true
-rustdoc-args = ["--cfg=docsrs"]
 
 [lints]
 workspace = true

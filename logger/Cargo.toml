@@ -9,6 +9,12 @@ homepage = { workspace = true }
 license = { workspace = true }
 edition = { workspace = true }
 
+[package.metadata.docs.rs]
+targets = ["x86_64-unknown-linux-gnu"]
+
+[lib]
+name = "solana_logger"
+
 [dependencies]
 env_logger = { workspace = true }
 lazy_static = { workspace = true }
@@ -17,9 +23,3 @@ log = { workspace = true }
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 libc = { workspace = true }
 signal-hook = { workspace = true }
-
-[lib]
-name = "solana_logger"
-
-[package.metadata.docs.rs]
-targets = ["x86_64-unknown-linux-gnu"]
