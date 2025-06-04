@@ -91,10 +91,43 @@ jobs:
       - name: Run clippy
         run: ./scripts/check-clippy.sh
 
+  detached-minimal-versions:
+    name: Check minimal-versions on detached crate
+    runs-on: ubuntu-latest
+    needs: [sanity]
+    steps:
+      - name: Git Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Environment
+        uses: ./.github/actions/setup
+        with:
+          nightly-toolchain: true
+          cargo-cache-key: cargo-nightly-minimal-versions
+          cargo-cache-fallback-key: cargo-nightly
+
+      - name: Install cargo-hack
+        uses: taiki-e/cache-cargo-install-action@v2
+        with:
+          tool: cargo-hack
+
+      - name: Install cargo-minimal-versions
+        uses: taiki-e/cache-cargo-install-action@v2
+        with:
+          tool: cargo-minimal-versions
+
+      - name: Install toml-cli
+        uses: taiki-e/cache-cargo-install-action@v2
+        with:
+          tool: toml-cli
+
+      - name: Run minimal-versions check
+        run: ./scripts/check-detached-minimal-versions.sh "${{ inputs.package_path }}"
+
   publish-crate:
     name: Publish crate
     runs-on: ubuntu-latest
-    needs: [format, clippy]
+    needs: [format, clippy, detached-minimal-versions]
     permissions:
       contents: write
     steps:
