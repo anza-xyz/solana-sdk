@@ -77,7 +77,6 @@ crate_dirs=(
   reserved-account-keys
   reward-info
   sanitize
-  scripts
   sdk
   sdk-ids
   sdk-macro
@@ -100,7 +99,6 @@ crate_dirs=(
   system-transaction
   sysvar
   sysvar-id
-  target
   time-utils
   transaction
   transaction-error
