@@ -237,7 +237,7 @@ solana-genesis-config = { path = "genesis-config", version = "2.2.1" }
 solana-hard-forks = { path = "hard-forks", version = "2.2.1", default-features = false }
 solana-hash = { path = "hash", version = "2.2.1", default-features = false }
 solana-inflation = { path = "inflation", version = "2.2.1" }
-solana-instruction = { path = "instruction", version = "2.2.1", default-features = false }
+solana-instruction = { path = "instruction", version = "2.3.0", default-features = false }
 solana-instructions-sysvar = { path = "instructions-sysvar", version = "2.2.1" }
 solana-keccak-hasher = { path = "keccak-hasher", version = "2.2.1" }
 solana-keypair = { path = "keypair", version = "2.2.1" }
@@ -287,7 +287,7 @@ solana-serialize-utils = { path = "serialize-utils", version = "2.2.1" }
 solana-sha256-hasher = { path = "sha256-hasher", version = "2.2.1" }
 solana-short-vec = { path = "short-vec", version = "2.2.1" }
 solana-shred-version = { path = "shred-version", version = "2.2.1" }
-solana-signature = { path = "signature", version = "2.2.1", default-features = false }
+solana-signature = { path = "signature", version = "2.3.0", default-features = false }
 solana-signer = { path = "signer", version = "2.2.1" }
 solana-slot-hashes = { path = "slot-hashes", version = "2.2.1" }
 solana-slot-history = { path = "slot-history", version = "2.2.1" }
