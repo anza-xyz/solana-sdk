@@ -831,12 +831,17 @@ mod target_arch {
 
 #[cfg(any(target_arch = "wasm32", target_os = "solana"))]
 mod target_arch {
-    use {solana_feature_set::FeatureSet, solana_precompile_error::PrecompileError};
+    use solana_precompile_error::PrecompileError;
 
+    #[deprecated(
+        since = "2.2.4",
+        note = "Use agave_precompiles::secp256r1::verify instead"
+    )]
+    #[allow(deprecated)]
     pub fn verify(
         _data: &[u8],
         _instruction_datas: &[&[u8]],
-        _feature_set: &FeatureSet,
+        _feature_set: &solana_feature_set::FeatureSet,
     ) -> Result<(), PrecompileError> {
         Err(PrecompileError::InvalidSignature)
     }

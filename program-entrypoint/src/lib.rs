@@ -223,6 +223,7 @@ macro_rules! custom_heap_default {
     () => {
         #[cfg(all(not(feature = "custom-heap"), target_os = "solana"))]
         #[global_allocator]
+        #[allow(deprecated)] //we get to use deprecated pub fields
         static A: $crate::BumpAllocator = $crate::BumpAllocator {
             start: $crate::HEAP_START_ADDRESS as usize,
             len: $crate::HEAP_LENGTH,

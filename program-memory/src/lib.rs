@@ -11,6 +11,7 @@ pub mod syscalls {
 }
 
 /// Check that two regions do not overlap.
+#[cfg(any(test, not(target_os = "solana")))]
 fn is_nonoverlapping(src: usize, src_len: usize, dst: usize, dst_len: usize) -> bool {
     // If the absolute distance between the ptrs is at least as big as the size of the other,
     // they do not overlap.

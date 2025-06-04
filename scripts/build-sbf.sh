@@ -31,6 +31,6 @@ exclude_list=(
 
 for dir in $(git ls-tree -d --name-only HEAD .); do
   if [[ ! " ${exclude_list[*]} " =~ [[:space:]]${dir}[[:space:]] ]]; then
-    (cd "$dir" && cargo build-sbf)
+    (cd "$dir" && RUSTFLAGS="-Dwarnings" cargo build-sbf)
   fi
 done

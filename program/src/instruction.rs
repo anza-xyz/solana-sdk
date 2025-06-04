@@ -35,7 +35,7 @@ pub fn get_processed_sibling_instruction(index: usize) -> Option<Instruction> {
 /// TRANSACTION_LEVEL_STACK_HEIGHT + 1, etc...
 pub fn get_stack_height() -> usize {
     #[cfg(target_os = "solana")]
-    unsafe {
+    {
         solana_instruction::syscalls::get_stack_height()
     }
 
