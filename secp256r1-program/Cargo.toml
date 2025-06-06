@@ -20,17 +20,11 @@ openssl-vendored = ["openssl/vendored"]
 
 [dependencies]
 bytemuck = { workspace = true, features = ["derive"] }
-solana-feature-set = { workspace = true }
-solana-precompile-error = { workspace = true }
 solana-sdk-ids = { workspace = true }
 
 [target.'cfg(all(not(target_arch = "wasm32"), not(target_os = "solana")))'.dependencies]
 openssl = { workspace = true }
 solana-instruction = { workspace = true, features = ["std"] }
-
-[dev-dependencies]
-solana-logger = { workspace = true }
-solana-sdk = { path = "../sdk" }
 
 [lints]
 workspace = true

@@ -1057,29 +1057,6 @@ impl Transaction {
             .collect()
     }
 
-    #[cfg(feature = "precompiles")]
-    #[deprecated(since = "2.2.3", note = "Use agave-precompiles instead")]
-    #[allow(deprecated)]
-    /// Verify the precompiled programs in this transaction.
-    pub fn verify_precompiles(&self, feature_set: &solana_feature_set::FeatureSet) -> Result<()> {
-        for instruction in &self.message().instructions {
-            // The Transaction may not be sanitized at this point
-            if instruction.program_id_index as usize >= self.message().account_keys.len() {
-                return Err(TransactionError::AccountNotFound);
-            }
-            let program_id = &self.message().account_keys[instruction.program_id_index as usize];
-
-            solana_precompiles::verify_if_precompile(
-                program_id,
-                instruction,
-                &self.message().instructions,
-                feature_set,
-            )
-            .map_err(|_| TransactionError::InvalidAccountIndex)?;
-        }
-        Ok(())
-    }
-
     /// Get the positions of the pubkeys in `account_keys` associated with signing keypairs.
     ///
     /// [`account_keys`]: Message::account_keys
