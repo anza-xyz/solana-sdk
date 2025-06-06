@@ -100,7 +100,7 @@ struct SdkPubkey(proc_macro2::TokenStream);
 
 impl Parse for SdkPubkey {
     fn parse(input: ParseStream) -> Result<Self> {
-        parse_id(input, quote! { ::solana_sdk::pubkey::Pubkey }).map(Self)
+        parse_id(input, quote! { ::solana_pubkey::Pubkey }).map(Self)
     }
 }
 
@@ -130,13 +130,13 @@ struct Id(proc_macro2::TokenStream);
 
 impl Parse for Id {
     fn parse(input: ParseStream) -> Result<Self> {
-        parse_id(input, quote! { ::solana_sdk::pubkey::Pubkey }).map(Self)
+        parse_id(input, quote! { ::solana_pubkey::Pubkey }).map(Self)
     }
 }
 
 impl ToTokens for Id {
     fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
-        id_to_tokens(&self.0, quote! { ::solana_sdk::pubkey::Pubkey }, tokens)
+        id_to_tokens(&self.0, quote! { ::solana_pubkey::Pubkey }, tokens)
     }
 }
 
@@ -144,13 +144,13 @@ struct IdDeprecated(proc_macro2::TokenStream);
 
 impl Parse for IdDeprecated {
     fn parse(input: ParseStream) -> Result<Self> {
-        parse_id(input, quote! { ::solana_sdk::pubkey::Pubkey }).map(Self)
+        parse_id(input, quote! { ::solana_pubkey::Pubkey }).map(Self)
     }
 }
 
 impl ToTokens for IdDeprecated {
     fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
-        deprecated_id_to_tokens(&self.0, quote! { ::solana_sdk::pubkey::Pubkey }, tokens)
+        deprecated_id_to_tokens(&self.0, quote! { ::solana_pubkey::Pubkey }, tokens)
     }
 }
 
@@ -249,10 +249,11 @@ struct Pubkeys {
     num: usize,
     pubkeys: proc_macro2::TokenStream,
 }
+
 impl Parse for Pubkeys {
     fn parse(input: ParseStream) -> Result<Self> {
         let pubkey_type = quote! {
-            ::solana_sdk::pubkey::Pubkey
+            ::solana_pubkey::Pubkey
         };
 
         let method = input.parse()?;
@@ -292,7 +293,7 @@ impl ToTokens for Pubkeys {
         } = self;
 
         let pubkey_type = quote! {
-            ::solana_sdk::pubkey::Pubkey
+            ::solana_pubkey::Pubkey
         };
         if *num == 1 {
             tokens.extend(quote! {
@@ -315,7 +316,6 @@ pub fn pubkeys(input: TokenStream) -> TokenStream {
     let pubkeys = parse_macro_input!(input as Pubkeys);
     TokenStream::from(quote! {#pubkeys})
 }
-
 // Sets padding in structures to zero explicitly.
 // Otherwise padding could be inconsistent across the network and lead to divergence / consensus failures.
 #[proc_macro_derive(CloneZeroed)]
