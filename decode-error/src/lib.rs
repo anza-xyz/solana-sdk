@@ -21,7 +21,10 @@ use num_traits::FromPrimitive;
 /// [`ProgramError`]: https://docs.rs/solana-program-error/latest/solana_program_error/enum.ProgramError.html
 /// [`ProgramError::Custom`]: https://docs.rs/solana-program-error/latest/solana_program_error/enum.ProgramError.html#variant.Custom
 /// [`ToPrimitive`]: num_traits::ToPrimitive
-#[deprecated(since = "2.3.0", note = "Use `num_traits::FromPrimitive` instead")]
+#[deprecated(
+    since = "2.3.0",
+    note = "Implement `solana_program_error::ToStr` and `TryFrom<u32>` by hand or with `num_enum::TryFromPrimitive` instead"
+)]
 pub trait DecodeError<E> {
     fn decode_custom_error_to_enum(custom: u32) -> Option<E>
     where
