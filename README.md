@@ -6,6 +6,54 @@
 Rust SDK for the Solana blockchain, used by on-chain programs and the Agave
 validator.
 
+## Upgrading from v2 to v3
+
+### solana-sdk
+
+The following modules have been removed, please use their component crates
+directly:
+
+* `address_lookup_table` -> `solana_address_lookup_table_interface`
+* `alt_bn128` -> `solana_bn254`
+* `bpf_loader_upgradeable` -> `solana_loader_v3_interface`
+* `client` -> `solana_client_traits`
+* `commitment_config` -> `solana_commitment_config`
+* `compute_budget` -> `solana_compute_budget_interface`
+* `decode_error` -> `solana_decode_error`
+* `derivation_path` -> `solana_derivation_path`
+* `ed25519_instruction` -> `solana_ed25519_program`
+* `exit` -> `solana_validator_exit`
+* `feature_set` -> `agave_feature_set`
+* `feature` -> `solana_feature_gate_interface`
+* `genesis_config` -> `solana_genesis_config`
+* `hard_forks` -> `solana_hard_forks`
+* `loader_instruction` -> `solana_loader_v2_interface`
+* `loader_upgradeble_instruction` -> `solana_loader_v3_interface::instruction`
+* `loader_v4` -> `solana_loader_v4_interface`
+* `loader_v4_instruction` -> `solana_loader_v4_interface::instruction`
+* `nonce` -> `solana_nonce`
+* `nonce_account` -> `solana_nonce_account`
+* `packet` -> `solana_packet`
+* `poh_config` -> `solana_poh_config`
+* `precompiles` -> `agave_precompiles`
+* `program_utils` -> `solana_bincode::limited_deserialize`
+* `quic` -> `solana_quic_definitions`
+* `rent_collector` -> `solana_rent_collector`
+* `rent_debits` -> `solana_rent_debits`
+* `reserved_account_keys` -> `agave_reserved_account_keys`
+* `reward_info` -> `solana_reward_info`
+* `reward_type` -> `solana_reward_info`
+* `sdk_ids` -> `solana_sdk_ids`
+* `secp256k1_instruction` -> `solana_secp256k1_program`
+* `secp256k1_recover` -> `solana_secp256k1_recover`
+* `stake` -> `solana_stake_interface`
+* `stake_history` -> `solana_stake_interface::stake_history`
+* `system_instruction` -> `solana_system_interface::instruction`
+* `system_program` -> `solana_system_interface::program`
+* `system_transaction` -> `solana_system_transaction`
+* `transaction_context` -> `solana_transaction_context`
+* `vote` -> `solana_vote_interface`
+
 ## Building
 
 ### **1. Install rustc, cargo and rustfmt.**

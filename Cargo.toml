@@ -301,7 +301,6 @@ solana-sysvar = { path = "sysvar", version = "2.2.1" }
 solana-sysvar-id = { path = "sysvar-id", version = "2.2.1" }
 solana-time-utils = { path = "time-utils", version = "2.2.1" }
 solana-transaction = { path = "transaction", version = "2.2.1" }
-solana-transaction-context = { version = "2.2.1" }
 solana-transaction-error = { path = "transaction-error", version = "2.2.1" }
 solana-validator-exit = { path = "validator-exit", version = "2.2.1" }
 solana-vote-interface = { path = "vote-interface", version = "2.2.1" }
