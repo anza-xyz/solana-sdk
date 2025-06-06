@@ -619,3 +619,28 @@ impl<T: AbiExample> AbiExample for std::sync::OnceLock<T> {
         Self::from(T::example())
     }
 }
+
+#[cfg(not(target_os = "solana"))]
+impl<
+        T: std::cmp::Eq + std::hash::Hash + AbiExample,
+        S: AbiExample,
+        H: std::hash::BuildHasher + Default + std::clone::Clone,
+    > AbiExample for dashmap::DashMap<T, S, H>
+{
+    fn example() -> Self {
+        info!("AbiExample for (DashMap<T, S, H>): {}", type_name::<Self>());
+        let map = dashmap::DashMap::default();
+        map.insert(T::example(), S::example());
+        map
+    }
+}
+
+#[cfg(not(target_os = "solana"))]
+impl<T: AbiExample> AbiExample for boxcar::Vec<T> {
+    fn example() -> Self {
+        info!("AbiExample for (boxcar::Vec): {}", type_name::<Self>());
+        let vec = boxcar::Vec::new();
+        vec.push(T::example());
+        vec
+    }
+}

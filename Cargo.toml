@@ -140,6 +140,7 @@ bitflags = { version = "2.8.0" }
 blake3 = "1.5.5"
 borsh = { version = "1.5.5", features = ["derive", "unstable__schema"] }
 borsh0-10 = { package = "borsh", version = "0.10.3" }
+boxcar = "0.2.12"
 bs58 = { version = "0.5.1", default-features = false }
 bv = "0.11.1"
 bytemuck = "1.21.0"
@@ -152,6 +153,7 @@ console_error_panic_hook = "0.1.7"
 console_log = "0.2.2"
 criterion = "0.5.1"
 curve25519-dalek = { version = "4.1.3", features = ["digest", "rand_core"] }
+dashmap = { version = "5.5.3", features = ["serde"] }
 derivation-path = { version = "0.2.0", default-features = false }
 digest = "0.10.7"
 ed25519-dalek = "=1.0.1"
