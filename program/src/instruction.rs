@@ -1,9 +1,6 @@
-pub use {
-    crate::message::compiled_instruction::CompiledInstruction,
-    solana_instruction::{
-        error::InstructionError, AccountMeta, Instruction, ProcessedSiblingInstruction,
-        TRANSACTION_LEVEL_STACK_HEIGHT,
-    },
+pub use solana_instruction::{
+    error::InstructionError, AccountMeta, Instruction, ProcessedSiblingInstruction,
+    TRANSACTION_LEVEL_STACK_HEIGHT,
 };
 
 /// Returns a sibling instruction from the processed sibling instruction list.

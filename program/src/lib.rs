@@ -470,10 +470,8 @@
 // Allows macro expansion of `use ::solana_program::*` to work within this crate
 extern crate self as solana_program;
 
-pub mod address_lookup_table;
 pub mod bpf_loader;
 pub mod bpf_loader_deprecated;
-pub mod bpf_loader_upgradeable;
 pub mod compute_units;
 pub mod ed25519_program;
 pub mod entrypoint_deprecated;
@@ -483,38 +481,13 @@ pub mod hash;
 pub mod incinerator;
 pub mod instruction;
 pub mod lamports;
-#[deprecated(
-    since = "2.3.0",
-    note = "Use solana_loader_v3_interface::instruction instead"
-)]
-pub mod loader_upgradeable_instruction {
-    pub use solana_loader_v3_interface::instruction::UpgradeableLoaderInstruction;
-}
-pub mod loader_v4;
-#[deprecated(
-    since = "2.3.0",
-    note = "Use solana_loader_v4_interface::instruction instead"
-)]
-pub mod loader_v4_instruction {
-    pub use solana_loader_v4_interface::instruction::LoaderV4Instruction;
-}
 pub mod log;
-pub mod nonce;
 pub mod program;
 pub mod program_error;
-#[deprecated(
-    since = "2.3.0",
-    note = "Use `solana_bincode::limited_deserialize` instead"
-)]
-pub mod program_utils;
 pub mod secp256k1_program;
 pub mod slot_hashes;
 pub mod slot_history;
-pub mod stake;
-pub mod stake_history;
 pub mod syscalls;
-pub mod system_instruction;
-pub mod system_program;
 pub mod sysvar;
 pub mod wasm;
 
@@ -533,38 +506,16 @@ pub use solana_borsh::v0_10 as borsh0_10;
 pub use solana_borsh::v1 as borsh1;
 #[deprecated(since = "2.1.0", note = "Use `solana-epoch-rewards` crate instead")]
 pub use solana_epoch_rewards as epoch_rewards;
-#[deprecated(
-    since = "2.3.0",
-    note = "Use `solana-feature-gate-interface` crate instead"
-)]
-pub mod feature {
-    pub use solana_feature_gate_interface::*;
-}
 #[deprecated(since = "2.1.0", note = "Use `solana-fee-calculator` crate instead")]
 pub use solana_fee_calculator as fee_calculator;
 #[deprecated(since = "2.2.0", note = "Use `solana-keccak-hasher` crate instead")]
 pub use solana_keccak_hasher as keccak;
 #[deprecated(since = "2.1.0", note = "Use `solana-last-restart-slot` crate instead")]
 pub use solana_last_restart_slot as last_restart_slot;
-#[deprecated(
-    since = "2.3.0",
-    note = "Use `solana-loader-v2-interface` crate instead"
-)]
-pub mod loader_instruction {
-    pub use solana_loader_v2_interface::*;
-}
-#[deprecated(since = "2.3.0", note = "Use `solana-message` crate instead")]
-pub mod message {
-    pub use solana_message::*;
-}
 #[deprecated(since = "2.1.0", note = "Use `solana-program-memory` crate instead")]
 pub use solana_program_memory as program_memory;
 #[deprecated(since = "2.1.0", note = "Use `solana-program-pack` crate instead")]
 pub use solana_program_pack as program_pack;
-#[deprecated(since = "2.3.0", note = "Use `solana-sanitize` crate instead")]
-pub mod sanitize {
-    pub use solana_sanitize::*;
-}
 #[deprecated(since = "2.1.0", note = "Use `solana-secp256k1-recover` crate instead")]
 pub use solana_secp256k1_recover as secp256k1_recover;
 #[deprecated(since = "2.1.0", note = "Use `solana-serde-varint` crate instead")]
@@ -577,10 +528,6 @@ pub use solana_short_vec as short_vec;
 pub use solana_stable_layout as stable_layout;
 #[cfg(not(target_os = "solana"))]
 pub use solana_sysvar::program_stubs;
-#[deprecated(since = "2.3.0", note = "Use `solana-vote-interface` crate instead")]
-pub mod vote {
-    pub use solana_vote_interface::*;
-}
 #[cfg(target_arch = "wasm32")]
 pub use wasm_bindgen::prelude::wasm_bindgen;
 pub use {
@@ -604,52 +551,6 @@ pub mod config {
     }
 }
 
-/// A vector of Solana SDK IDs.
-#[deprecated(
-    since = "2.0.0",
-    note = "Please use `solana_sdk::reserved_account_keys::ReservedAccountKeys` instead"
-)]
-#[allow(deprecated)]
-pub mod sdk_ids {
-    use {
-        crate::{
-            address_lookup_table, bpf_loader, bpf_loader_deprecated, bpf_loader_upgradeable,
-            config, ed25519_program, feature, incinerator, loader_v4, secp256k1_program,
-            solana_program::pubkey::Pubkey, stake, system_program, sysvar, vote,
-        },
-        lazy_static::lazy_static,
-    };
-
-    lazy_static! {
-        pub static ref SDK_IDS: Vec<Pubkey> = {
-            let mut sdk_ids = vec![
-                ed25519_program::id(),
-                secp256k1_program::id(),
-                system_program::id(),
-                sysvar::id(),
-                bpf_loader::id(),
-                bpf_loader_upgradeable::id(),
-                incinerator::id(),
-                config::program::id(),
-                vote::program::id(),
-                feature::id(),
-                bpf_loader_deprecated::id(),
-                address_lookup_table::program::id(),
-                loader_v4::id(),
-                stake::program::id(),
-                #[allow(deprecated)]
-                stake::config::id(),
-            ];
-            sdk_ids.extend(sysvar::ALL_IDS.iter());
-            sdk_ids
-        };
-    }
-}
-
-#[deprecated(since = "2.3.0", note = "Use `num_traits::FromPrimitive` instead")]
-pub mod decode_error {
-    pub use solana_decode_error::*;
-}
 pub use solana_pubkey::{declare_deprecated_id, declare_id, pubkey};
 #[deprecated(since = "2.1.0", note = "Use `solana-sysvar-id` crate instead")]
 pub use solana_sysvar_id::{declare_deprecated_sysvar_id, declare_sysvar_id};
