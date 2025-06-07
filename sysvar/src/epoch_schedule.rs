@@ -121,13 +121,16 @@
 //! # Ok::<(), anyhow::Error>(())
 //! ```
 #[cfg(feature = "bincode")]
-use crate::{impl_sysvar_get, Sysvar};
+use crate::Sysvar;
+use crate::{impl_sysvar_get, SysvarGet};
 pub use {
     solana_epoch_schedule::EpochSchedule,
     solana_sdk_ids::sysvar::epoch_schedule::{check_id, id, ID},
 };
 
-#[cfg(feature = "bincode")]
-impl Sysvar for EpochSchedule {
+impl SysvarGet for EpochSchedule {
     impl_sysvar_get!(sol_get_epoch_schedule_sysvar);
 }
+
+#[cfg(feature = "bincode")]
+impl Sysvar for EpochSchedule {}
