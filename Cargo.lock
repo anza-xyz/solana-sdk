@@ -3468,6 +3468,7 @@ version = "2.2.2"
 dependencies = [
  "borsh 1.5.5",
  "num-traits",
+ "num_enum",
  "serde",
  "serde_derive",
  "solana-decode-error",

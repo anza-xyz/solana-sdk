@@ -189,22 +189,54 @@ impl PrintProgramError for ProgramError {
     }
 }
 
-/// A trait for converting a program error to a `&str`.
+/// A trait for converting a program's specific error type to a `&str`.
+///
+/// Can be used with `ProgramError::to_str::<E>()` to get an error string
+/// belonging to a specific program's error if the variant is
+/// `ProgramError::Custom(...)`, or generic strings from the contained
+/// `ProgramError` for all other variants.
+///
+/// The `ProgramError::to_str::<E>()` function also requires implementing
+/// `TryFrom<u32>` on an error type, which can be done easily using
+/// `num_enum::TryFromPrimitive`.
 pub trait ToStr {
-    fn to_str<E>(&self) -> &'static str
-    where
-        E: 'static + ToStr + TryFrom<u32>;
+    fn to_str(&self) -> &'static str;
 }
 
-impl ToStr for ProgramError {
-    fn to_str<E>(&self) -> &'static str
+impl ProgramError {
+    /// Get an appropriate error string given a program error and an expected
+    /// error type, if the error implements `TryFrom<u32>` and `ToStr`.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// #[derive(num_enum::TryFromPrimitive)]
+    /// #[repr(u32)]
+    /// enum MyError {
+    ///     A,
+    ///     B,
+    /// }
+    ///
+    /// impl solana_program_error::ToStr for MyError {
+    ///     fn to_str(&self) -> &'static str {
+    ///         match self {
+    ///             MyError::A => "Message for A",
+    ///             MyError::B => "Some other message for B",
+    ///         }
+    ///     }
+    /// }
+    ///
+    /// let program_error = solana_program_error::ProgramError::Custom(1);
+    /// assert_eq!("Some other message for B", program_error.to_str::<MyError>());
+    /// ```
+    pub fn to_str<E>(&self) -> &'static str
     where
         E: 'static + ToStr + TryFrom<u32>,
     {
         match self {
             Self::Custom(error) => {
                 if let Ok(custom_error) = E::try_from(*error) {
-                    custom_error.to_str::<E>()
+                    custom_error.to_str()
                 } else {
                     "Error: Unknown"
                 }

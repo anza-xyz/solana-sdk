@@ -29,3 +29,6 @@ solana-instruction = { workspace = true, default-features = false, features = [
 ] }
 solana-msg = { workspace = true }
 solana-pubkey = { workspace = true, default-features = false }
+
+[dev-dependencies]
+num_enum = { workspace = true }
