@@ -28,7 +28,7 @@ directly:
 * [`genesis_config`](https://docs.rs/solana-sdk/latest/solana_sdk/genesis_config) -> [`solana_genesis_config`](https://docs.rs/solana-genesis-config/latest/solana_genesis_config)
 * [`hard_forks`](https://docs.rs/solana-sdk/latest/solana_sdk/hard_forks) -> [`solana_hard_forks`](https://docs.rs/solana-hard-forks/latest/solana_hard_forks)
 * [`loader_instruction`](https://docs.rs/solana-sdk/latest/solana_sdk/loader_instruction) -> [`solana_loader_v2_interface`](https://docs.rs/solana-loader-v2-interface/latest/solana_loader_v2_interface)
-* [`loader_upgradeble_instruction`](https://docs.rs/solana-sdk/latest/solana_sdk/loader_upgradeble_instruction) -> [`solana_loader_v3_interface::instruction`](https://docs.rs/solana-loader-v3-interface/latest/solana_loader_v3_interface/instruction)
+* [`loader_upgradeable_instruction`](https://docs.rs/solana-sdk/latest/solana_sdk/loader_upgradeable_instruction) -> [`solana_loader_v3_interface::instruction`](https://docs.rs/solana-loader-v3-interface/latest/solana_loader_v3_interface/instruction)
 * [`loader_v4`](https://docs.rs/solana-sdk/latest/solana_sdk/loader_v4) -> [`solana_loader_v4_interface`](https://docs.rs/solana-loader-v4-interface/latest/solana_loader_v4_interface)
 * [`loader_v4_instruction`](https://docs.rs/solana-sdk/latest/solana_sdk/loader_v4_instruction) -> [`solana_loader_v4_interface::instruction`](https://docs.rs/solana-loader-v4-interface/latest/solana_loader_v4_interface/instruction)
 * [`nonce`](https://docs.rs/solana-sdk/latest/solana_sdk/nonce) -> [`solana_nonce`](https://docs.rs/solana-nonce/latest/solana_nonce)
