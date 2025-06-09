@@ -1,3 +1,12 @@
+use crate::{
+    error::BlsError,
+    proof_of_possession::ProofOfPossessionProjective,
+    pubkey::{PubkeyProjective, BLS_PUBLIC_KEY_AFFINE_SIZE},
+    secret_key::{SecretKey, BLS_SECRET_KEY_SIZE},
+    signature::SignatureProjective,
+};
+#[cfg(feature = "solana-signer-derive")]
+use solana_signer::Signer;
 #[cfg(feature = "std")]
 use std::{
     boxed::Box,
@@ -8,208 +17,9 @@ use std::{
     string::String,
     vec::Vec,
 };
-use {
-    crate::{
-        error::BlsError,
-        pod::{Pubkey, BLS_PUBLIC_KEY_AFFINE_SIZE},
-        proof_of_possession::ProofOfPossessionProjective,
-        signature::SignatureProjective,
-        Bls,
-    },
-    blst::{blst_keygen, blst_scalar},
-    blstrs::{G1Affine, G1Projective, Scalar},
-    core::ptr,
-    ff::Field,
-    group::Group,
-    rand::rngs::OsRng,
-};
-#[cfg(feature = "solana-signer-derive")]
-use {solana_signature::Signature, solana_signer::Signer, subtle::ConstantTimeEq};
-
-/// Size of BLS secret key in bytes
-pub const BLS_SECRET_KEY_SIZE: usize = 32;
 
 /// Size of BLS keypair in bytes
 pub const BLS_KEYPAIR_SIZE: usize = BLS_SECRET_KEY_SIZE + BLS_PUBLIC_KEY_AFFINE_SIZE;
-
-/// A BLS secret key
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub struct SecretKey(pub(crate) Scalar);
-
-impl SecretKey {
-    /// Constructs a new, random `BlsSecretKey` using `OsRng`
-    #[allow(clippy::new_without_default)]
-    pub fn new() -> Self {
-        let mut rng = OsRng;
-        Self(Scalar::random(&mut rng))
-    }
-
-    /// Derive a `BlsSecretKey` from a seed (input key material)
-    pub fn derive(ikm: &[u8]) -> Result<Self, BlsError> {
-        let mut scalar = blst_scalar::default();
-        unsafe {
-            blst_keygen(
-                &mut scalar as *mut blst_scalar,
-                ikm.as_ptr(),
-                ikm.len(),
-                ptr::null(),
-                0,
-            );
-        }
-        scalar
-            .try_into()
-            .map(Self)
-            .map_err(|_| BlsError::FieldDecode)
-    }
-
-    /// Derive a `BlsSecretKey` from a Solana signer
-    #[cfg(feature = "solana-signer-derive")]
-    pub fn derive_from_signer(signer: &dyn Signer, public_seed: &[u8]) -> Result<Self, BlsError> {
-        let message = [b"bls-key-derive-", public_seed].concat();
-        let signature = signer
-            .try_sign_message(&message)
-            .map_err(|_| BlsError::KeyDerivation)?;
-
-        // Some `Signer` implementations return the default signature, which is not suitable for
-        // use as key material
-        if bool::from(signature.as_ref().ct_eq(Signature::default().as_ref())) {
-            return Err(BlsError::KeyDerivation);
-        }
-
-        Self::derive(signature.as_ref())
-    }
-
-    /// Generate a proof of possession for the corresponding pubkey
-    pub fn proof_of_possession(&self) -> ProofOfPossessionProjective {
-        let pubkey = PubkeyProjective::from_secret(self);
-        Bls::generate_proof_of_possession(self, &pubkey)
-    }
-
-    /// Sign a message using the provided secret key
-    pub fn sign(&self, message: &[u8]) -> SignatureProjective {
-        Bls::sign(self, message)
-    }
-}
-
-impl TryFrom<&[u8]> for SecretKey {
-    type Error = BlsError;
-    fn try_from(bytes: &[u8]) -> Result<Self, Self::Error> {
-        if bytes.len() != BLS_SECRET_KEY_SIZE {
-            return Err(BlsError::ParseFromBytes);
-        }
-        // unwrap safe due to the length check above
-        let scalar: Option<Scalar> = Scalar::from_bytes_le(bytes.try_into().unwrap()).into();
-        scalar.ok_or(BlsError::FieldDecode).map(Self)
-    }
-}
-
-impl From<&SecretKey> for [u8; BLS_SECRET_KEY_SIZE] {
-    fn from(secret_key: &SecretKey) -> Self {
-        secret_key.0.to_bytes_le()
-    }
-}
-
-/// A BLS public key in a projective point representation
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub struct PubkeyProjective(pub(crate) G1Projective);
-
-impl Default for PubkeyProjective {
-    fn default() -> Self {
-        Self(G1Projective::identity())
-    }
-}
-
-impl PubkeyProjective {
-    /// Construct a corresponding `BlsPubkey` for a `BlsSecretKey`
-    #[allow(clippy::arithmetic_side_effects)]
-    pub fn from_secret(secret: &SecretKey) -> Self {
-        Self(G1Projective::generator() * secret.0)
-    }
-
-    /// Verify a signature against a message and a public key
-    pub fn verify(&self, signature: &SignatureProjective, message: &[u8]) -> bool {
-        Bls::verify(self, signature, message)
-    }
-
-    /// Verify a proof of possession against a public key
-    pub fn verify_proof_of_possession(&self, proof: &ProofOfPossessionProjective) -> bool {
-        Bls::verify_proof_of_possession(self, proof)
-    }
-
-    /// Aggregate a list of public keys into an existing aggregate
-    #[allow(clippy::arithmetic_side_effects)]
-    pub fn aggregate_with<'a, I>(&mut self, pubkeys: I)
-    where
-        I: IntoIterator<Item = &'a PubkeyProjective>,
-    {
-        self.0 = pubkeys.into_iter().fold(self.0, |mut acc, pubkey| {
-            acc += &pubkey.0;
-            acc
-        });
-    }
-
-    /// Aggregate a list of public keys
-    #[allow(clippy::arithmetic_side_effects)]
-    pub fn aggregate<'a, I>(pubkeys: I) -> Result<PubkeyProjective, BlsError>
-    where
-        I: IntoIterator<Item = &'a PubkeyProjective>,
-    {
-        let mut iter = pubkeys.into_iter();
-        if let Some(acc) = iter.next() {
-            let aggregate_point = iter.fold(acc.0, |mut acc, pubkey| {
-                acc += &pubkey.0;
-                acc
-            });
-            Ok(Self(aggregate_point))
-        } else {
-            Err(BlsError::EmptyAggregation)
-        }
-    }
-}
-
-impl From<PubkeyProjective> for Pubkey {
-    fn from(proof: PubkeyProjective) -> Self {
-        Self(proof.0.to_uncompressed())
-    }
-}
-
-impl TryFrom<Pubkey> for PubkeyProjective {
-    type Error = BlsError;
-
-    fn try_from(proof: Pubkey) -> Result<Self, Self::Error> {
-        (&proof).try_into()
-    }
-}
-
-impl TryFrom<&Pubkey> for PubkeyProjective {
-    type Error = BlsError;
-
-    fn try_from(proof: &Pubkey) -> Result<Self, Self::Error> {
-        let maybe_uncompressed: Option<G1Affine> = G1Affine::from_uncompressed(&proof.0).into();
-        let uncompressed = maybe_uncompressed.ok_or(BlsError::PointConversion)?;
-        Ok(Self(uncompressed.into()))
-    }
-}
-
-impl TryFrom<&[u8]> for PubkeyProjective {
-    type Error = BlsError;
-    fn try_from(bytes: &[u8]) -> Result<Self, Self::Error> {
-        if bytes.len() != BLS_PUBLIC_KEY_AFFINE_SIZE {
-            return Err(BlsError::ParseFromBytes);
-        }
-        // unwrap safe due to the length check above
-        let public_affine = Pubkey(bytes.try_into().unwrap());
-
-        public_affine.try_into()
-    }
-}
-
-impl From<&PubkeyProjective> for [u8; BLS_PUBLIC_KEY_AFFINE_SIZE] {
-    fn from(pubkey: &PubkeyProjective) -> Self {
-        let pubkey_affine: Pubkey = (*pubkey).into();
-        pubkey_affine.0
-    }
-}
 
 /// A BLS keypair
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -244,17 +54,17 @@ impl Keypair {
 
     /// Generate a proof of possession for the given keypair
     pub fn proof_of_possession(&self) -> ProofOfPossessionProjective {
-        Bls::generate_proof_of_possession(&self.secret, &self.public)
+        self.secret.proof_of_possession()
     }
 
     /// Sign a message using the provided secret key
     pub fn sign(&self, message: &[u8]) -> SignatureProjective {
-        Bls::sign(&self.secret, message)
+        self.secret.sign(message)
     }
 
     /// Verify a signature against a message and a public key
     pub fn verify(&self, signature: &SignatureProjective, message: &[u8]) -> bool {
-        Bls::verify(&self.public, signature, message)
+        self.public.verify(signature, message)
     }
 }
 

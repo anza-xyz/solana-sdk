@@ -215,9 +215,9 @@ solana-atomic-u64 = { path = "atomic-u64", version = "2.2.1" }
 solana-big-mod-exp = { path = "big-mod-exp", version = "2.2.1" }
 solana-bincode = { path = "bincode", version = "2.2.1" }
 solana-blake3-hasher = { path = "blake3-hasher", version = "2.2.1" }
+solana-bls = { path = "bls", version = "0.1.1" }
 solana-bn254 = { path = "bn254", version = "2.2.2" }
 solana-borsh = { path = "borsh", version = "2.2.1" }
-solana-bls = { path = "bls", version = "0.1.1" }
 solana-client-traits = { path = "client-traits", version = "2.2.1" }
 solana-clock = { path = "clock", version = "2.2.1" }
 solana-cluster-type = { path = "cluster-type", version = "2.2.1" }
