@@ -14,7 +14,6 @@ pub mod syscalls {
     };
 }
 
-#[cfg(not(target_os = "solana"))]
 /// Check that two regions do not overlap.
 #[cfg(any(test, not(target_os = "solana")))]
 fn is_nonoverlapping(src: usize, src_len: usize, dst: usize, dst_len: usize) -> bool {
