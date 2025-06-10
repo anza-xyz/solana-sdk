@@ -23,13 +23,13 @@ use {
 
 #[cfg_attr(
     feature = "frozen-abi",
-    frozen_abi(digest = "BRwozbypfYXsHqFVj9w3iH5x1ak2NWHqCCn6pr3gHBkG"),
+    frozen_abi(digest = "4cUA9matKNYX1R9TceL4D14w23AfLXVjhZaStwuermQX"),
     derive(AbiExample)
 )]
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[derive(Debug, Default, PartialEq, Eq, Clone)]
 #[cfg_attr(feature = "dev-context-only-utils", derive(Arbitrary))]
-pub struct VoteState {
+pub struct VoteStateV3 {
     /// the node that votes in this account
     pub node_pubkey: Pubkey,
 
@@ -61,14 +61,14 @@ pub struct VoteState {
     pub last_timestamp: BlockTimestamp,
 }
 
-impl VoteState {
+impl VoteStateV3 {
     pub fn new(vote_init: &VoteInit, clock: &Clock) -> Self {
         Self {
             node_pubkey: vote_init.node_pubkey,
             authorized_voters: AuthorizedVoters::new(clock.epoch, vote_init.authorized_voter),
             authorized_withdrawer: vote_init.authorized_withdrawer,
             commission: vote_init.commission,
-            ..VoteState::default()
+            ..VoteStateV3::default()
         }
     }
 
@@ -86,7 +86,7 @@ impl VoteState {
             node_pubkey,
             root_slot: Some(root_slot),
             votes,
-            ..VoteState::default()
+            ..VoteStateV3::default()
         }
     }
 
@@ -103,7 +103,7 @@ impl VoteState {
     }
 
     pub fn get_rent_exempt_reserve(rent: &Rent) -> u64 {
-        rent.minimum_balance(VoteState::size_of())
+        rent.minimum_balance(VoteStateV3::size_of())
     }
 
     /// Upper limit on the size of the Vote State
@@ -113,7 +113,7 @@ impl VoteState {
     }
 
     // NOTE we retain `bincode::deserialize` for `not(target_os = "solana")` pending testing on mainnet-beta
-    // once that testing is done, `VoteState::deserialize_into` may be used for all targets
+    // once that testing is done, `VoteStateV3::deserialize_into` may be used for all targets
     // conversion of V0_23_5 to current must be handled specially, however
     // because it inserts a null voter into `authorized_voters`
     // which `VoteStateVersions::is_uninitialized` erroneously reports as initialized
@@ -133,23 +133,23 @@ impl VoteState {
         }
     }
 
-    /// Deserializes the input `VoteStateVersions` buffer directly into the provided `VoteState`.
+    /// Deserializes the input `VoteStateVersions` buffer directly into the provided `VoteStateV3`.
     ///
     /// In a SBPF context, V0_23_5 is not supported, but in non-SBPF, all versions are supported for
     /// compatibility with `bincode::deserialize`.
     ///
     /// On success, `vote_state` reflects the state of the input data. On failure, `vote_state` is
-    /// reset to `VoteState::default()`.
+    /// reset to `VoteStateV3::default()`.
     #[cfg(any(target_os = "solana", feature = "bincode"))]
     pub fn deserialize_into(
         input: &[u8],
-        vote_state: &mut VoteState,
+        vote_state: &mut VoteStateV3,
     ) -> Result<(), InstructionError> {
-        // Rebind vote_state to *mut VoteState so that the &mut binding isn't
+        // Rebind vote_state to *mut VoteStateV3 so that the &mut binding isn't
         // accessible anymore, preventing accidental use after this point.
         //
         // NOTE: switch to ptr::from_mut() once platform-tools moves to rustc >= 1.76
-        let vote_state = vote_state as *mut VoteState;
+        let vote_state = vote_state as *mut VoteStateV3;
 
         // Safety: vote_state is valid to_drop (see drop_in_place() docs). After
         // dropping, the pointer is treated as uninitialized and only accessed
@@ -158,9 +158,9 @@ impl VoteState {
             std::ptr::drop_in_place(vote_state);
         }
 
-        // This is to reset vote_state to VoteState::default() if deserialize fails or panics.
+        // This is to reset vote_state to VoteStateV3::default() if deserialize fails or panics.
         struct DropGuard {
-            vote_state: *mut VoteState,
+            vote_state: *mut VoteStateV3,
         }
 
         impl Drop for DropGuard {
@@ -169,20 +169,20 @@ impl VoteState {
                 //
                 // Deserialize failed or panicked so at this point vote_state is uninitialized. We
                 // must write a new _valid_ value into it or after returning (or unwinding) from
-                // this function the caller is left with an uninitialized `&mut VoteState`, which is
+                // this function the caller is left with an uninitialized `&mut VoteStateV3`, which is
                 // UB (references must always be valid).
                 //
                 // This is always safe and doesn't leak memory because deserialize_into_ptr() writes
                 // into the fields that heap alloc only when it returns Ok().
                 unsafe {
-                    self.vote_state.write(VoteState::default());
+                    self.vote_state.write(VoteStateV3::default());
                 }
             }
         }
 
         let guard = DropGuard { vote_state };
 
-        let res = VoteState::deserialize_into_ptr(input, vote_state);
+        let res = VoteStateV3::deserialize_into_ptr(input, vote_state);
         if res.is_ok() {
             std::mem::forget(guard);
         }
@@ -191,26 +191,26 @@ impl VoteState {
     }
 
     /// Deserializes the input `VoteStateVersions` buffer directly into the provided
-    /// `MaybeUninit<VoteState>`.
+    /// `MaybeUninit<VoteStateV3>`.
     ///
     /// In a SBPF context, V0_23_5 is not supported, but in non-SBPF, all versions are supported for
     /// compatibility with `bincode::deserialize`.
     ///
-    /// On success, `vote_state` is fully initialized and can be converted to `VoteState` using
+    /// On success, `vote_state` is fully initialized and can be converted to `VoteStateV3` using
     /// [MaybeUninit::assume_init]. On failure, `vote_state` may still be uninitialized and must not
-    /// be converted to `VoteState`.
+    /// be converted to `VoteStateV3`.
     #[cfg(any(target_os = "solana", feature = "bincode"))]
     pub fn deserialize_into_uninit(
         input: &[u8],
-        vote_state: &mut std::mem::MaybeUninit<VoteState>,
+        vote_state: &mut std::mem::MaybeUninit<VoteStateV3>,
     ) -> Result<(), InstructionError> {
-        VoteState::deserialize_into_ptr(input, vote_state.as_mut_ptr())
+        VoteStateV3::deserialize_into_ptr(input, vote_state.as_mut_ptr())
     }
 
     #[cfg(any(target_os = "solana", feature = "bincode"))]
     fn deserialize_into_ptr(
         input: &[u8],
-        vote_state: *mut VoteState,
+        vote_state: *mut VoteStateV3,
     ) -> Result<(), InstructionError> {
         use vote_state_deserialize::deserialize_vote_state_into;
 
@@ -223,8 +223,8 @@ impl VoteState {
             0 => {
                 #[cfg(not(target_os = "solana"))]
                 {
-                    // Safety: vote_state is valid as it comes from `&mut MaybeUninit<VoteState>` or
-                    // `&mut VoteState`. In the first case, the value is uninitialized so we write()
+                    // Safety: vote_state is valid as it comes from `&mut MaybeUninit<VoteStateV3>` or
+                    // `&mut VoteStateV3`. In the first case, the value is uninitialized so we write()
                     // to avoid dropping invalid data; in the latter case, we `drop_in_place()`
                     // before writing so the value has already been dropped and we just write a new
                     // one in place.
@@ -303,14 +303,14 @@ impl VoteState {
     }
 
     #[cfg(test)]
-    pub(crate) fn get_max_sized_vote_state() -> VoteState {
+    pub(crate) fn get_max_sized_vote_state() -> VoteStateV3 {
         use solana_epoch_schedule::MAX_LEADER_SCHEDULE_EPOCH_OFFSET;
         let mut authorized_voters = AuthorizedVoters::default();
         for i in 0..=MAX_LEADER_SCHEDULE_EPOCH_OFFSET {
             authorized_voters.insert(i, Pubkey::new_unique());
         }
 
-        VoteState {
+        VoteStateV3 {
             votes: VecDeque::from(vec![LandedVote::default(); MAX_LOCKOUT_HISTORY]),
             root_slot: Some(u64::MAX),
             epoch_credits: vec![(0, 0, 0); MAX_EPOCH_CREDITS_HISTORY],
@@ -454,7 +454,7 @@ impl VoteState {
     }
 
     /// Number of "credits" owed to this account from the mining pool. Submit this
-    /// VoteState to the Rewards program to trade credits for lamports.
+    /// VoteStateV3 to the Rewards program to trade credits for lamports.
     pub fn credits(&self) -> u64 {
         if self.epoch_credits.is_empty() {
             0
@@ -592,7 +592,7 @@ impl VoteState {
     pub fn is_correct_size_and_initialized(data: &[u8]) -> bool {
         const VERSION_OFFSET: usize = 4;
         const DEFAULT_PRIOR_VOTERS_END: usize = VERSION_OFFSET + DEFAULT_PRIOR_VOTERS_OFFSET;
-        data.len() == VoteState::size_of()
+        data.len() == VoteStateV3::size_of()
             && data[VERSION_OFFSET..DEFAULT_PRIOR_VOTERS_END] != [0; DEFAULT_PRIOR_VOTERS_OFFSET]
     }
 }
@@ -603,7 +603,7 @@ mod vote_state_deserialize {
         crate::{
             authorized_voters::AuthorizedVoters,
             state::{
-                BlockTimestamp, LandedVote, Lockout, VoteState, MAX_EPOCH_CREDITS_HISTORY,
+                BlockTimestamp, LandedVote, Lockout, VoteStateV3, MAX_EPOCH_CREDITS_HISTORY,
                 MAX_ITEMS, MAX_LOCKOUT_HISTORY,
             },
         },
@@ -619,7 +619,7 @@ mod vote_state_deserialize {
 
     pub(super) fn deserialize_vote_state_into(
         cursor: &mut Cursor<&[u8]>,
-        vote_state: *mut VoteState,
+        vote_state: *mut VoteStateV3,
         has_latency: bool,
     ) -> Result<(), InstructionError> {
         // General safety note: we must use add_or_mut! to access the `vote_state` fields as the value
@@ -648,7 +648,7 @@ mod vote_state_deserialize {
         // valid pointers.
         //
         // Heap allocated collections - votes, authorized_voters and epoch_credits -
-        // are guaranteed not to leak after this point as the VoteState is fully
+        // are guaranteed not to leak after this point as the VoteStateV3 is fully
         // initialized and will be regularly dropped.
         unsafe {
             addr_of_mut!((*vote_state).commission).write(commission);
@@ -698,7 +698,7 @@ mod vote_state_deserialize {
 
     fn read_prior_voters_into<T: AsRef<[u8]>>(
         cursor: &mut Cursor<T>,
-        vote_state: *mut VoteState,
+        vote_state: *mut VoteStateV3,
     ) -> Result<(), InstructionError> {
         // Safety: if vote_state is non-null, prior_voters is guaranteed to be valid too
         unsafe {
@@ -740,7 +740,7 @@ mod vote_state_deserialize {
 
     fn read_last_timestamp_into<T: AsRef<[u8]>>(
         cursor: &mut Cursor<T>,
-        vote_state: *mut VoteState,
+        vote_state: *mut VoteStateV3,
     ) -> Result<(), InstructionError> {
         let slot = read_u64(cursor)?;
         let timestamp = read_i64(cursor)?;

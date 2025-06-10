@@ -5,7 +5,7 @@ use {
         authorized_voters::AuthorizedVoters,
         state::{
             vote_state_0_23_5::VoteState0_23_5, vote_state_1_14_11::VoteState1_14_11, CircBuf,
-            LandedVote, Lockout, VoteState,
+            LandedVote, Lockout, VoteStateV3,
         },
     },
     solana_pubkey::Pubkey,
@@ -20,21 +20,21 @@ use {
 pub enum VoteStateVersions {
     V0_23_5(Box<VoteState0_23_5>),
     V1_14_11(Box<VoteState1_14_11>),
-    Current(Box<VoteState>),
+    Current(Box<VoteStateV3>),
 }
 
 impl VoteStateVersions {
-    pub fn new_current(vote_state: VoteState) -> Self {
+    pub fn new_current(vote_state: VoteStateV3) -> Self {
         Self::Current(Box::new(vote_state))
     }
 
-    pub fn convert_to_current(self) -> VoteState {
+    pub fn convert_to_current(self) -> VoteStateV3 {
         match self {
             VoteStateVersions::V0_23_5(state) => {
                 let authorized_voters =
                     AuthorizedVoters::new(state.authorized_voter_epoch, state.authorized_voter);
 
-                VoteState {
+                VoteStateV3 {
                     node_pubkey: state.node_pubkey,
 
                     authorized_withdrawer: state.authorized_withdrawer,
@@ -55,7 +55,7 @@ impl VoteStateVersions {
                 }
             }
 
-            VoteStateVersions::V1_14_11(state) => VoteState {
+            VoteStateVersions::V1_14_11(state) => VoteStateV3 {
                 node_pubkey: state.node_pubkey,
                 authorized_withdrawer: state.authorized_withdrawer,
                 commission: state.commission,
@@ -95,14 +95,14 @@ impl VoteStateVersions {
 
     pub fn vote_state_size_of(is_current: bool) -> usize {
         if is_current {
-            VoteState::size_of()
+            VoteStateV3::size_of()
         } else {
             VoteState1_14_11::size_of()
         }
     }
 
     pub fn is_correct_size_and_initialized(data: &[u8]) -> bool {
-        VoteState::is_correct_size_and_initialized(data)
+        VoteStateV3::is_correct_size_and_initialized(data)
             || VoteState1_14_11::is_correct_size_and_initialized(data)
     }
 }
@@ -112,7 +112,7 @@ impl Arbitrary<'_> for VoteStateVersions {
     fn arbitrary(u: &mut Unstructured<'_>) -> arbitrary::Result<Self> {
         let variant = u.choose_index(2)?;
         match variant {
-            0 => Ok(Self::Current(Box::new(VoteState::arbitrary(u)?))),
+            0 => Ok(Self::Current(Box::new(VoteStateV3::arbitrary(u)?))),
             1 => Ok(Self::V1_14_11(Box::new(VoteState1_14_11::arbitrary(u)?))),
             _ => unreachable!(),
         }

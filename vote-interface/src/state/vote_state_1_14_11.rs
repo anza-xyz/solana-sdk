@@ -64,8 +64,8 @@ impl VoteState1_14_11 {
     }
 }
 
-impl From<VoteState> for VoteState1_14_11 {
-    fn from(vote_state: VoteState) -> Self {
+impl From<VoteStateV3> for VoteState1_14_11 {
+    fn from(vote_state: VoteStateV3) -> Self {
         Self {
             node_pubkey: vote_state.node_pubkey,
             authorized_withdrawer: vote_state.authorized_withdrawer,
@@ -96,7 +96,7 @@ mod tests {
         let vote_state_buf = bincode::serialize(&target_vote_state_versions).unwrap();
 
         let mut test_vote_state = MaybeUninit::uninit();
-        VoteState::deserialize_into_uninit(&vote_state_buf, &mut test_vote_state).unwrap();
+        VoteStateV3::deserialize_into_uninit(&vote_state_buf, &mut test_vote_state).unwrap();
         let test_vote_state = unsafe { test_vote_state.assume_init() };
 
         assert_eq!(
@@ -119,7 +119,7 @@ mod tests {
             let target_vote_state = target_vote_state_versions.convert_to_current();
 
             let mut test_vote_state = MaybeUninit::uninit();
-            VoteState::deserialize_into_uninit(&vote_state_buf, &mut test_vote_state).unwrap();
+            VoteStateV3::deserialize_into_uninit(&vote_state_buf, &mut test_vote_state).unwrap();
             let test_vote_state = unsafe { test_vote_state.assume_init() };
 
             assert_eq!(target_vote_state, test_vote_state);
