@@ -2842,8 +2842,8 @@ dependencies = [
 ]
 
 [[package]]
-name = "solana-bls"
-version = "0.1.1"
+name = "solana-bls-signatures"
+version = "0.1.0"
 dependencies = [
  "base64 0.22.1",
  "bincode",
@@ -2857,7 +2857,7 @@ dependencies = [
  "serde",
  "serde_json",
  "serde_with",
- "solana-bls",
+ "solana-bls-signatures",
  "solana-frozen-abi",
  "solana-frozen-abi-macro",
  "solana-keypair",

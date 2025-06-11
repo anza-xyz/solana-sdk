@@ -1,8 +1,8 @@
 [package]
-name = "solana-bls"
-description = "Solana BLS"
-documentation = "https://docs.rs/solana-bls"
-version = "0.1.1"
+name = "solana-bls-signatures"
+description = "Solana BLS Signatures"
+documentation = "https://docs.rs/solana-bls-signatures"
+version = "0.1.0"
 authors = { workspace = true }
 repository = { workspace = true }
 homepage = { workspace = true }
@@ -47,7 +47,7 @@ subtle = { workspace = true, optional = true }
 
 [dev-dependencies]
 bincode = { workspace = true }
-solana-bls = { path = ".", features = ["std"] }
+solana-bls-signatures = { path = ".", features = ["std"] }
 solana-keypair = { workspace = true }
 tempfile = { workspace = true }
 
