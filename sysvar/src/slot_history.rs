@@ -50,13 +50,14 @@
 
 #[cfg(feature = "bincode")]
 use crate::Sysvar;
+use crate::SysvarGet;
 pub use {
     solana_account_info::AccountInfo,
     solana_program_error::ProgramError,
     solana_sdk_ids::sysvar::slot_history::{check_id, id, ID},
     solana_slot_history::SlotHistory,
 };
-
+impl SysvarGet for SlotHistory {}
 #[cfg(feature = "bincode")]
 impl Sysvar for SlotHistory {
     // override
