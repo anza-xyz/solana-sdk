@@ -13,7 +13,7 @@ crate_dirs=(
   big-mod-exp
   bincode
   blake3-hasher
-  bls
+  bls-signatures
   bn254
   borsh
   client-traits
