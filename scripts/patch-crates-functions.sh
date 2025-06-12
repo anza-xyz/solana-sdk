@@ -32,7 +32,6 @@ crate_dirs=(
   epoch-schedule
   example-mocks
   feature-gate-interface
-  feature-set
   fee-calculator
   fee-structure
   file-download
@@ -62,7 +61,6 @@ crate_dirs=(
   packet
   poh-config
   precompile-error
-  precompiles
   presigner
   program
   program-entrypoint
@@ -75,7 +73,6 @@ crate_dirs=(
   rent
   rent-collector
   rent-debits
-  reserved-account-keys
   reward-info
   sanitize
   sdk

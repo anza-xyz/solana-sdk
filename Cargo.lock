@@ -24,7 +24,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e89da841a80418a9b391ebaea17f5c112ffaaa96f621d2c285b5174da76b9011"
 dependencies = [
  "cfg-if",
- "getrandom 0.2.15",
  "once_cell",
  "version_check",
  "zerocopy",
@@ -1367,12 +1366,6 @@ name = "hermit-abi"
 version = "0.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f154ce46856750ed433c8649605bf7ed2de3bc35fd9d2a9f30cddd873c80cb08"
-
-[[package]]
-name = "hex"
-version = "0.4.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7f24254aa9a54b5c858eaee2f5bccdb46aaf0e486a595ed5fd8f86ba55232a70"
 
 [[package]]
 name = "hmac"
@@ -3002,18 +2995,8 @@ version = "2.2.3"
 dependencies = [
  "bytemuck",
  "bytemuck_derive",
- "ed25519-dalek",
- "hex",
- "rand 0.7.3",
- "solana-feature-set",
- "solana-hash",
  "solana-instruction",
- "solana-keypair",
- "solana-logger",
- "solana-precompile-error",
- "solana-sdk",
  "solana-sdk-ids",
- "solana-signer",
 ]
 
 [[package]]
@@ -3099,30 +3082,6 @@ dependencies = [
  "solana-rent",
  "solana-sdk-ids",
  "solana-system-interface",
-]
-
-[[package]]
-name = "solana-feature-set"
-version = "2.2.5"
-dependencies = [
- "ahash",
- "lazy_static",
- "solana-epoch-schedule",
- "solana-frozen-abi",
- "solana-frozen-abi-macro",
- "solana-hash",
- "solana-pubkey",
- "solana-sha256-hasher",
-]
-
-[[package]]
-name = "solana-feature-set-interface"
-version = "4.0.1"
-dependencies = [
- "ahash",
- "solana-frozen-abi",
- "solana-frozen-abi-macro",
- "solana-pubkey",
 ]
 
 [[package]]
@@ -3544,21 +3503,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "solana-precompiles"
-version = "2.2.2"
-dependencies = [
- "lazy_static",
- "solana-ed25519-program",
- "solana-feature-set",
- "solana-message",
- "solana-precompile-error",
- "solana-pubkey",
- "solana-sdk-ids",
- "solana-secp256k1-program",
- "solana-secp256r1-program",
-]
-
-[[package]]
 name = "solana-presigner"
 version = "2.2.1"
 dependencies = [
@@ -3762,20 +3706,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "solana-reserved-account-keys"
-version = "2.2.2"
-dependencies = [
- "lazy_static",
- "solana-feature-set",
- "solana-frozen-abi",
- "solana-frozen-abi-macro",
- "solana-message",
- "solana-pubkey",
- "solana-sdk-ids",
- "solana-sysvar",
-]
-
-[[package]]
 name = "solana-reward-info"
 version = "2.2.1"
 dependencies = [
@@ -3810,7 +3740,6 @@ dependencies = [
  "solana-message",
  "solana-native-token",
  "solana-offchain-message",
- "solana-precompile-error",
  "solana-presigner",
  "solana-program",
  "solana-program-memory",
@@ -3855,31 +3784,15 @@ dependencies = [
 name = "solana-secp256k1-program"
 version = "2.2.3"
 dependencies = [
- "anyhow",
  "bincode",
  "digest 0.10.7",
- "hex",
  "libsecp256k1",
- "rand 0.7.3",
  "serde",
  "serde_derive",
  "sha3",
- "solana-account-info",
- "solana-feature-set",
- "solana-hash",
  "solana-instruction",
- "solana-instructions-sysvar",
- "solana-keccak-hasher",
- "solana-keypair",
- "solana-logger",
- "solana-msg",
- "solana-precompile-error",
- "solana-program-error",
- "solana-sdk",
  "solana-sdk-ids",
- "solana-secp256k1-program",
  "solana-signature",
- "solana-signer",
 ]
 
 [[package]]
@@ -3902,11 +3815,7 @@ version = "2.2.4"
 dependencies = [
  "bytemuck",
  "openssl",
- "solana-feature-set",
  "solana-instruction",
- "solana-logger",
- "solana-precompile-error",
- "solana-sdk",
  "solana-sdk-ids",
 ]
 
@@ -4163,13 +4072,11 @@ version = "2.2.1"
 name = "solana-transaction"
 version = "2.2.3"
 dependencies = [
- "anyhow",
  "bincode",
  "borsh 1.5.5",
  "serde",
  "serde_derive",
  "solana-bincode",
- "solana-feature-set",
  "solana-frozen-abi",
  "solana-frozen-abi-macro",
  "solana-hash",
@@ -4179,11 +4086,9 @@ dependencies = [
  "solana-message",
  "solana-nonce",
  "solana-packet",
- "solana-precompiles",
  "solana-presigner",
  "solana-pubkey",
  "solana-sanitize",
- "solana-sdk",
  "solana-sdk-ids",
  "solana-sha256-hasher",
  "solana-short-vec",

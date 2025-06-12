@@ -15,20 +15,8 @@ targets = ["x86_64-unknown-linux-gnu"]
 [dependencies]
 bytemuck = { workspace = true }
 bytemuck_derive = { workspace = true }
-ed25519-dalek = { workspace = true }
-solana-feature-set = { workspace = true }
 solana-instruction = { workspace = true, features = ["std"] }
-solana-precompile-error = { workspace = true }
 solana-sdk-ids = { workspace = true }
-
-[dev-dependencies]
-hex = { workspace = true }
-rand0-7 = { workspace = true }
-solana-hash = { workspace = true }
-solana-keypair = { workspace = true }
-solana-logger = { workspace = true }
-solana-sdk = { path = "../sdk" }
-solana-signer = { workspace = true }
 
 [lints]
 workspace = true

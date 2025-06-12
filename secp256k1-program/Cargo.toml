@@ -17,9 +17,7 @@ rustdoc-args = ["--cfg=docsrs"]
 [features]
 bincode = [
     "dep:bincode",
-    "dep:solana-feature-set",
     "dep:solana-instruction",
-    "dep:solana-precompile-error",
     "dep:solana-sdk-ids",
     "serde",
 ]
@@ -33,24 +31,6 @@ libsecp256k1 = { workspace = true, features = ["hmac"] }
 serde = { workspace = true, optional = true }
 serde_derive = { workspace = true, optional = true }
 sha3 = { workspace = true }
-solana-feature-set = { workspace = true, optional = true }
 solana-instruction = { workspace = true, features = ["std"], optional = true }
-solana-precompile-error = { workspace = true, optional = true }
 solana-sdk-ids = { workspace = true, optional = true }
 solana-signature = { workspace = true, features = ["std"] }
-
-[dev-dependencies]
-anyhow = { workspace = true }
-hex = { workspace = true }
-rand0-7 = { workspace = true }
-solana-account-info = { workspace = true }
-solana-hash = { workspace = true }
-solana-instructions-sysvar = { workspace = true }
-solana-keccak-hasher = { workspace = true }
-solana-keypair = { workspace = true }
-solana-logger = { workspace = true }
-solana-msg = { workspace = true }
-solana-program-error = { workspace = true }
-solana-sdk = { path = "../sdk" }
-solana-secp256k1-program = { path = ".", features = ["dev-context-only-utils"] }
-solana-signer = { workspace = true }

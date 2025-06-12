@@ -26,8 +26,6 @@ members = [
     "epoch-schedule",
     "example-mocks",
     "feature-gate-interface",
-    "feature-set",
-    "feature-set-interface",
     "fee-calculator",
     "fee-structure",
     "file-download",
@@ -56,7 +54,6 @@ members = [
     "packet",
     "poh-config",
     "precompile-error",
-    "precompiles",
     "presigner",
     "program",
     "program-entrypoint",
@@ -69,7 +66,6 @@ members = [
     "rent",
     "rent-collector",
     "rent-debits",
-    "reserved-account-keys",
     "reward-info",
     "sanitize",
     "sdk",
@@ -234,8 +230,6 @@ solana-epoch-rewards-hasher = { path = "epoch-rewards-hasher", version = "2.2.1"
 solana-epoch-schedule = { path = "epoch-schedule", version = "2.2.1" }
 solana-example-mocks = { path = "example-mocks", version = "2.2.1" }
 solana-feature-gate-interface = { path = "feature-gate-interface", version = "2.2.1" }
-solana-feature-set = { path = "feature-set", version = "2.2.1" }
-solana-feature-set-interface = { path = "feature-set-interface", version = "4.0.1" }
 solana-fee-calculator = { path = "fee-calculator", version = "2.2.1" }
 solana-fee-structure = { path = "fee-structure", version = "2.2.1" }
 solana-file-download = { path = "file-download", version = "2.2.1" }
@@ -265,7 +259,6 @@ solana-package-metadata-macro = { path = "package-metadata-macro", version = "2.
 solana-packet = { path = "packet", version = "2.2.1" }
 solana-poh-config = { path = "poh-config", version = "2.2.1" }
 solana-precompile-error = { path = "precompile-error", version = "2.2.1" }
-solana-precompiles = { path = "precompiles", version = "2.2.1" }
 solana-presigner = { path = "presigner", version = "2.2.1" }
 solana-program = { path = "program", version = "2.2.1", default-features = false }
 solana-program-entrypoint = { path = "program-entrypoint", version = "2.2.1" }
@@ -278,7 +271,6 @@ solana-quic-definitions = { path = "quic-definitions", version = "2.2.1" }
 solana-rent = { path = "rent", version = "2.2.1", default-features = false }
 solana-rent-collector = { path = "rent-collector", version = "2.2.1" }
 solana-rent-debits = { path = "rent-debits", version = "2.2.1" }
-solana-reserved-account-keys = { path = "reserved-account-keys", version = "2.2.1", default-features = false }
 solana-reward-info = { path = "reward-info", version = "2.2.1" }
 solana-sanitize = { path = "sanitize", version = "2.2.1" }
 solana-sdk = { path = "sdk", version = "2.2.1" }
