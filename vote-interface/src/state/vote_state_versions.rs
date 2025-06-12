@@ -5,7 +5,7 @@ use {
         authorized_voters::AuthorizedVoters,
         state::{
             vote_state_0_23_5::VoteState0_23_5, vote_state_1_14_11::VoteState1_14_11, CircBuf,
-            LandedVote, Lockout, VoteStateV3,
+            LandedVote, Lockout, VoteStateV3, VoteStateV4,
         },
     },
     solana_pubkey::Pubkey,
@@ -21,6 +21,7 @@ pub enum VoteStateVersions {
     V0_23_5(Box<VoteState0_23_5>),
     V1_14_11(Box<VoteState1_14_11>),
     Current(Box<VoteStateV3>),
+    V4(Box<VoteStateV4>),
 }
 
 impl VoteStateVersions {
@@ -74,6 +75,17 @@ impl VoteStateVersions {
             },
 
             VoteStateVersions::Current(state) => *state,
+            VoteStateVersions::V4(state) => VoteStateV3 {
+                node_pubkey: state.node_pubkey,
+                authorized_withdrawer: state.authorized_withdrawer,
+                commission: (state.inflation_rewards_commission_bps / 100).min(100) as u8,
+                votes: state.votes,
+                root_slot: state.root_slot,
+                authorized_voters: state.authorized_voters,
+                prior_voters: CircBuf::default(),
+                epoch_credits: state.epoch_credits,
+                last_timestamp: state.last_timestamp,
+            },
         }
     }
 
@@ -90,6 +102,7 @@ impl VoteStateVersions {
             VoteStateVersions::V1_14_11(vote_state) => vote_state.authorized_voters.is_empty(),
 
             VoteStateVersions::Current(vote_state) => vote_state.authorized_voters.is_empty(),
+            VoteStateVersions::V4(vote_state) => vote_state.authorized_voters.is_empty(),
         }
     }
 
