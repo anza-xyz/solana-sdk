@@ -22,7 +22,6 @@ crate_dirs=(
   commitment-config
   compute-budget-interface
   cpi
-  decode-error
   define-syscall
   derivation-path
   ed25519-program

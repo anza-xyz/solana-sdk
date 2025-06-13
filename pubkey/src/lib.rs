@@ -119,12 +119,6 @@ impl fmt::Display for PubkeyError {
     }
 }
 
-#[allow(deprecated)]
-impl<T> solana_decode_error::DecodeError<T> for PubkeyError {
-    fn type_of() -> &'static str {
-        "PubkeyError"
-    }
-}
 impl From<u64> for PubkeyError {
     fn from(error: u64) -> Self {
         match error {
@@ -378,13 +372,6 @@ impl fmt::Display for ParsePubkeyError {
 impl From<Infallible> for ParsePubkeyError {
     fn from(_: Infallible) -> Self {
         unreachable!("Infallible uninhabited");
-    }
-}
-
-#[allow(deprecated)]
-impl<T> solana_decode_error::DecodeError<T> for ParsePubkeyError {
-    fn type_of() -> &'static str {
-        "ParsePubkeyError"
     }
 }
 
