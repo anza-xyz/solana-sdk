@@ -9,6 +9,14 @@ homepage = { workspace = true }
 license = { workspace = true }
 edition = { workspace = true }
 
+[package.metadata.docs.rs]
+targets = ["wasm32-unknown-unknown"]
+all-features = true
+rustdoc-args = ["--cfg=docsrs"]
+
+[lib]
+crate-type = ["cdylib"]
+
 [dependencies]
 solana-instruction = { workspace = true, features = ["std"] }
 solana-program = { workspace = true }
@@ -17,17 +25,9 @@ solana-sdk = { workspace = true }
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 console_error_panic_hook = { workspace = true }
 console_log = { workspace = true }
-wasm-bindgen = { workspace = true }
-log = { workspace = true }
 js-sys = { workspace = true }
-
-[lib]
-crate-type = ["cdylib"]
+log = { workspace = true }
+wasm-bindgen = { workspace = true }
 
 [lints]
 workspace = true
-
-[package.metadata.docs.rs]
-targets = ["wasm32-unknown-unknown"]
-all-features = true
-rustdoc-args = ["--cfg=docsrs"]
