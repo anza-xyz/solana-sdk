@@ -12,6 +12,4 @@ applications.
 
 More information about Solana is available in the [Solana documentation](https://solana.com/docs).
 
-The [Solana Program Organization](https://github.com/solana-program) provides examples of how to use this crate.
-
 Still have questions?  Ask us on [Stack Exchange](https://sola.na/sse)
