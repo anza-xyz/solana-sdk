@@ -1,3 +1,6 @@
+#![no_std]
+#[cfg(feature = "std")]
+extern crate std;
 /// Print a message to the log.
 ///
 /// Supports simple strings as well as Rust [format strings][fs]. When passed a
@@ -25,6 +28,7 @@
 /// let err = "not enough signers";
 /// msg!("multisig failed: {}", err);
 /// ```
+#[cfg(feature = "std")]
 #[macro_export]
 macro_rules! msg {
     ($msg:expr) => {
@@ -44,6 +48,9 @@ pub fn sol_log(message: &str) {
         syscalls::sol_log_(message.as_ptr(), message.len() as u64);
     }
 
-    #[cfg(not(target_os = "solana"))]
-    println!("{message}");
+    #[cfg(all(not(target_os = "solana"), feature = "std"))]
+    std::println!("{message}");
+
+    #[cfg(all(not(target_os = "solana"), not(feature = "std")))]
+    core::hint::black_box(message);
 }

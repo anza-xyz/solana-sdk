@@ -9,6 +9,9 @@ homepage = { workspace = true }
 license = { workspace = true }
 edition = { workspace = true }
 
+[package.metadata.docs.rs]
+targets = ["x86_64-unknown-linux-gnu"]
+
 [dependencies]
 solana-instruction = { workspace = true, default-features = false, features = [
     "std",
@@ -25,6 +28,3 @@ solana-pubkey = { workspace = true, default-features = false, features = [
     "borsh",
     "serde",
 ] }
-
-[package.metadata.docs.rs]
-targets = ["x86_64-unknown-linux-gnu"]

@@ -9,6 +9,13 @@ homepage = { workspace = true }
 license = { workspace = true }
 edition = { workspace = true }
 
+[package.metadata.docs.rs]
+targets = ["x86_64-unknown-linux-gnu"]
+
+[features]
+borsh = ["dep:borsh"]
+frozen-abi = ["dep:solana-frozen-abi", "dep:solana-frozen-abi-macro"]
+
 [dependencies]
 borsh = { workspace = true, optional = true }
 solana-frozen-abi = { workspace = true, optional = true, features = [
@@ -19,11 +26,11 @@ solana-frozen-abi-macro = { workspace = true, optional = true, features = [
 ] }
 thiserror = { workspace = true }
 
-[target.'cfg(target_os = "solana")'.dependencies]
-solana-define-syscall = { workspace = true }
-
 [target.'cfg(not(target_os = "solana"))'.dependencies]
 libsecp256k1 = { workspace = true }
+
+[target.'cfg(target_os = "solana")'.dependencies]
+solana-define-syscall = { workspace = true }
 
 [dev-dependencies]
 anyhow = { workspace = true }
@@ -32,13 +39,6 @@ solana-program = { path = "../program" }
 
 [target.'cfg(not(target_os = "solana"))'.dev-dependencies]
 libsecp256k1 = { workspace = true, features = ["hmac"] }
-
-[features]
-borsh = ["dep:borsh"]
-frozen-abi = ["dep:solana-frozen-abi", "dep:solana-frozen-abi-macro"]
-
-[package.metadata.docs.rs]
-targets = ["x86_64-unknown-linux-gnu"]
 
 [lints]
 workspace = true

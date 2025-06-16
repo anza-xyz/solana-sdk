@@ -646,11 +646,13 @@ impl Message {
     /// Returns true if the account at the specified index was requested to be
     /// writable. This method should not be used directly.
     pub(super) fn is_writable_index(&self, i: usize) -> bool {
-        i < (self.header.num_required_signatures - self.header.num_readonly_signed_accounts)
-            as usize
+        i < (self.header.num_required_signatures as usize)
+            .saturating_sub(self.header.num_readonly_signed_accounts as usize)
             || (i >= self.header.num_required_signatures as usize
-                && i < self.account_keys.len()
-                    - self.header.num_readonly_unsigned_accounts as usize)
+                && i < self
+                    .account_keys
+                    .len()
+                    .saturating_sub(self.header.num_readonly_unsigned_accounts as usize))
     }
 
     /// Returns true if the account at the specified index is writable by the
@@ -1022,5 +1024,82 @@ mod tests {
     #[test]
     fn test_inline_all_ids() {
         assert_eq!(solana_sysvar::ALL_IDS.to_vec(), ALL_IDS.to_vec());
+    }
+
+    #[test]
+    fn test_is_writable_index_saturating_behavior() {
+        // Directly matching issue #150 PoC 1:
+        // num_readonly_signed_accounts > num_required_signatures
+        // This now results in the first part of the OR condition in is_writable_index effectively becoming `i < 0`.
+        let key0 = Pubkey::new_unique();
+        let message1 = Message {
+            header: MessageHeader {
+                num_required_signatures: 1,
+                num_readonly_signed_accounts: 2, // 2 > 1
+                num_readonly_unsigned_accounts: 0,
+            },
+            account_keys: vec![key0],
+            recent_blockhash: Hash::default(),
+            instructions: vec![],
+        };
+        assert!(!message1.is_writable_index(0));
+
+        // Matching issue #150 PoC 2 - num_readonly_unsigned_accounts > account_keys.len()
+        let key_for_poc2 = Pubkey::new_unique();
+        let message2 = Message {
+            header: MessageHeader {
+                num_required_signatures: 0,
+                num_readonly_signed_accounts: 0,
+                num_readonly_unsigned_accounts: 2, // 2 > account_keys.len() (1)
+            },
+            account_keys: vec![key_for_poc2],
+            recent_blockhash: Hash::default(),
+            instructions: vec![],
+        };
+        assert!(!message2.is_writable_index(0));
+
+        // Scenario 3: num_readonly_unsigned_accounts > account_keys.len() with writable signed account
+        // This should result in the first condition being true for the signed account
+        let message3 = Message {
+            header: MessageHeader {
+                num_required_signatures: 1, // Writable range starts before index 1
+                num_readonly_signed_accounts: 0,
+                num_readonly_unsigned_accounts: 2, // 2 > account_keys.len() (1)
+            },
+            account_keys: vec![key0],
+            recent_blockhash: Hash::default(),
+            instructions: vec![],
+        };
+        assert!(message3.is_writable_index(0));
+
+        // Scenario 4: Both conditions, and testing an index that would rely on the second part of OR
+        let key1 = Pubkey::new_unique();
+        let message4 = Message {
+            header: MessageHeader {
+                num_required_signatures: 1, // Writable range starts before index 1 for signed accounts
+                num_readonly_signed_accounts: 0,
+                num_readonly_unsigned_accounts: 3, // 3 > account_keys.len() (2)
+            },
+            account_keys: vec![key0, key1],
+            recent_blockhash: Hash::default(),
+            instructions: vec![],
+        };
+        assert!(message4.is_writable_index(0));
+        assert!(!message4.is_writable_index(1));
+
+        // Scenario 5: num_required_signatures is 0 due to saturating_sub
+        // and num_readonly_unsigned_accounts makes the second range empty
+        let message5 = Message {
+            header: MessageHeader {
+                num_required_signatures: 1,
+                num_readonly_signed_accounts: 2, // 1.saturating_sub(2) = 0
+                num_readonly_unsigned_accounts: 3, // account_keys.len().saturating_sub(3) potentially 0
+            },
+            account_keys: vec![key0, key1], // len is 2
+            recent_blockhash: Hash::default(),
+            instructions: vec![],
+        };
+        assert!(!message5.is_writable_index(0));
+        assert!(!message5.is_writable_index(1));
     }
 }

@@ -42,6 +42,9 @@ impl Feature {
         if *account_info.owner != id() {
             return Err(ProgramError::InvalidAccountOwner);
         }
+        if account_info.data_len() < Feature::size_of() {
+            return Err(ProgramError::InvalidAccountData);
+        }
         bincode::deserialize(&account_info.data.borrow())
             .map_err(|_| ProgramError::InvalidAccountData)
     }
@@ -72,7 +75,7 @@ pub fn activate_with_lamports(
 
 #[cfg(feature = "bincode")]
 pub fn from_account<T: ReadableAccount>(account: &T) -> Option<Feature> {
-    if account.owner() != &id() {
+    if account.owner() != &id() || account.data().len() < Feature::size_of() {
         None
     } else {
         bincode::deserialize(account.data()).ok()
@@ -126,11 +129,75 @@ mod test {
     }
 
     #[test]
-    fn feature_deserialize_none() {
-        let just_initialized = AccountSharedData::new(42, Feature::size_of(), &id());
+    fn feature_from_account_info_none() {
+        let key = Pubkey::new_unique();
+        let mut lamports = 42;
+
+        let mut good_data = vec![0; Feature::size_of()];
+        let mut small_data = vec![0; Feature::size_of() - 1]; // Too small
+
         assert_eq!(
-            from_account(&just_initialized),
+            Feature::from_account_info(&AccountInfo::new(
+                &key,
+                false,
+                false,
+                &mut lamports,
+                &mut good_data,
+                &id(),
+                false,
+                u64::MAX,
+            )),
+            Ok(Feature { activated_at: None })
+        );
+        assert_eq!(
+            Feature::from_account_info(&AccountInfo::new(
+                &key,
+                false,
+                false,
+                &mut lamports,
+                &mut small_data, // Too small
+                &id(),
+                false,
+                u64::MAX,
+            )),
+            Err(ProgramError::InvalidAccountData),
+        );
+        assert_eq!(
+            Feature::from_account_info(&AccountInfo::new(
+                &key,
+                false,
+                false,
+                &mut lamports,
+                &mut good_data,
+                &Pubkey::new_unique(), // Wrong owner
+                false,
+                u64::MAX,
+            )),
+            Err(ProgramError::InvalidAccountOwner),
+        );
+    }
+
+    #[test]
+    fn feature_deserialize_none() {
+        assert_eq!(
+            from_account(&AccountSharedData::new(42, Feature::size_of(), &id())),
             Some(Feature { activated_at: None })
+        );
+        assert_eq!(
+            from_account(&AccountSharedData::new(
+                42,
+                Feature::size_of() - 1, // Too small
+                &id()
+            )),
+            None,
+        );
+        assert_eq!(
+            from_account(&AccountSharedData::new(
+                42,
+                Feature::size_of(),
+                &Pubkey::new_unique(), // Wrong owner
+            )),
+            None,
         );
     }
 }

@@ -9,6 +9,17 @@ homepage = { workspace = true }
 license = { workspace = true }
 edition = { workspace = true }
 
+[package.metadata.docs.rs]
+targets = ["x86_64-unknown-linux-gnu"]
+all-features = true
+rustdoc-args = ["--cfg=docsrs"]
+
+[features]
+bincode = ["dep:solana-system-interface", "serde", "solana-instruction/bincode"]
+dev-context-only-utils = ["bincode"]
+frozen-abi = ["dep:solana-frozen-abi", "dep:solana-frozen-abi-macro", "serde"]
+serde = ["dep:serde", "dep:serde_bytes", "dep:serde_derive", "solana-pubkey/serde"]
+
 [dependencies]
 serde = { workspace = true, optional = true }
 serde_bytes = { workspace = true, optional = true }
@@ -27,17 +38,6 @@ solana-system-interface = { workspace = true, features = ["bincode"], optional =
 [dev-dependencies]
 memoffset = { workspace = true }
 solana-loader-v4-interface = { path = ".", features = ["dev-context-only-utils"] }
-
-[features]
-bincode = ["dep:solana-system-interface", "serde", "solana-instruction/bincode"]
-dev-context-only-utils = ["bincode"]
-frozen-abi = ["dep:solana-frozen-abi", "dep:solana-frozen-abi-macro", "serde"]
-serde = ["dep:serde", "dep:serde_bytes", "dep:serde_derive", "solana-pubkey/serde"]
-
-[package.metadata.docs.rs]
-targets = ["x86_64-unknown-linux-gnu"]
-all-features = true
-rustdoc-args = ["--cfg=docsrs"]
 
 [lints]
 workspace = true

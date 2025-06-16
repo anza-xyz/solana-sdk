@@ -2,12 +2,21 @@
 name = "solana-precompiles"
 description = "Solana precompiled programs."
 documentation = "https://docs.rs/solana-precompiles"
-version = "2.2.1"
+version = "2.2.2"
 authors = { workspace = true }
 repository = { workspace = true }
 homepage = { workspace = true }
 license = { workspace = true }
 edition = { workspace = true }
+
+[package.metadata.docs.rs]
+targets = ["x86_64-unknown-linux-gnu"]
+all-features = true
+rustdoc-args = ["--cfg=docsrs"]
+
+[features]
+# Enables the "vendored" feature of openssl inside of secp256r1-program
+openssl-vendored = ["solana-secp256r1-program/openssl-vendored"]
 
 [dependencies]
 lazy_static = { workspace = true }
@@ -19,15 +28,6 @@ solana-pubkey = { workspace = true }
 solana-sdk-ids = { workspace = true }
 solana-secp256k1-program = { workspace = true, features = ["bincode"] }
 solana-secp256r1-program = { workspace = true, default-features = false }
-
-[features]
-# Enables the "vendored" feature of openssl inside of secp256r1-program
-openssl-vendored = ["solana-secp256r1-program/openssl-vendored"]
-
-[package.metadata.docs.rs]
-targets = ["x86_64-unknown-linux-gnu"]
-all-features = true
-rustdoc-args = ["--cfg=docsrs"]
 
 [lints]
 workspace = true

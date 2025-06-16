@@ -41,7 +41,7 @@ use {
 };
 use {
     solana_account_info::AccountInfo,
-    solana_instruction::{AccountMeta, Instruction},
+    solana_instruction::{error::InstructionError, AccountMeta, Instruction},
     solana_program_error::ProgramError,
     solana_sanitize::SanitizeError,
     solana_serialize_utils::{read_pubkey, read_slice, read_u16, read_u8},
@@ -161,9 +161,23 @@ pub fn load_current_index_checked(
 }
 
 /// Store the current `Instruction`'s index in the instructions sysvar data.
+#[deprecated(since = "2.2.1", note = "Use store_current_index_checked instead")]
 pub fn store_current_index(data: &mut [u8], instruction_index: u16) {
     let last_index = data.len() - 2;
     data[last_index..last_index + 2].copy_from_slice(&instruction_index.to_le_bytes());
+}
+
+/// Store the current `Instruction`'s index in the instructions sysvar data.
+pub fn store_current_index_checked(
+    data: &mut [u8],
+    instruction_index: u16,
+) -> Result<(), InstructionError> {
+    if data.len() < 2 {
+        return Err(InstructionError::AccountDataTooSmall);
+    }
+    let last_index = data.len() - 2;
+    data[last_index..last_index + 2].copy_from_slice(&instruction_index.to_le_bytes());
+    Ok(())
 }
 
 #[cfg_attr(feature = "dev-context-only-utils", qualifiers(pub))]
@@ -289,11 +303,19 @@ mod tests {
     #[test]
     fn test_load_store_instruction() {
         let mut data = [4u8; 10];
-        store_current_index(&mut data, 3);
+        let res = store_current_index_checked(&mut data, 3);
+        assert!(res.is_ok());
         #[allow(deprecated)]
         let index = load_current_index(&data);
         assert_eq!(index, 3);
         assert_eq!([4u8; 8], data[0..8]);
+    }
+
+    #[test]
+    fn test_store_instruction_too_small_data() {
+        let mut data = [4u8; 1];
+        let res = store_current_index_checked(&mut data, 3);
+        assert!(res.is_err());
     }
 
     #[derive(Copy, Clone)]
@@ -422,7 +444,8 @@ mod tests {
         let key = id();
         let mut lamports = 0;
         let mut data = construct_instructions_data(&[borrowed_instruction0, borrowed_instruction1]);
-        store_current_index(&mut data, 1);
+        let res = store_current_index_checked(&mut data, 1);
+        assert!(res.is_ok());
         let owner = solana_sdk_ids::sysvar::id();
         let mut account_info = AccountInfo::new(
             &key,
@@ -438,7 +461,8 @@ mod tests {
         assert_eq!(1, load_current_index_checked(&account_info).unwrap());
         {
             let mut data = account_info.try_borrow_mut_data().unwrap();
-            store_current_index(&mut data, 0);
+            let res = store_current_index_checked(&mut data, 0);
+            assert!(res.is_ok());
         }
         assert_eq!(0, load_current_index_checked(&account_info).unwrap());
 
@@ -490,7 +514,8 @@ mod tests {
             borrowed_instruction1,
             borrowed_instruction2,
         ]);
-        store_current_index(&mut data, 1);
+        let res = store_current_index_checked(&mut data, 1);
+        assert!(res.is_ok());
         let owner = solana_sdk_ids::sysvar::id();
         let mut account_info = AccountInfo::new(
             &key,
@@ -525,7 +550,8 @@ mod tests {
         );
         {
             let mut data = account_info.try_borrow_mut_data().unwrap();
-            store_current_index(&mut data, 0);
+            let res = store_current_index_checked(&mut data, 0);
+            assert!(res.is_ok());
         }
         assert_eq!(
             Err(ProgramError::InvalidArgument),

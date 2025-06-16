@@ -29,7 +29,6 @@ use {
         str::{from_utf8_unchecked, FromStr},
     },
     num_traits::{FromPrimitive, ToPrimitive},
-    solana_decode_error::DecodeError,
 };
 #[cfg(target_arch = "wasm32")]
 use {
@@ -120,7 +119,8 @@ impl fmt::Display for PubkeyError {
     }
 }
 
-impl<T> DecodeError<T> for PubkeyError {
+#[allow(deprecated)]
+impl<T> solana_decode_error::DecodeError<T> for PubkeyError {
     fn type_of() -> &'static str {
         "PubkeyError"
     }
@@ -381,7 +381,8 @@ impl From<Infallible> for ParsePubkeyError {
     }
 }
 
-impl<T> DecodeError<T> for ParsePubkeyError {
+#[allow(deprecated)]
+impl<T> solana_decode_error::DecodeError<T> for ParsePubkeyError {
     fn type_of() -> &'static str {
         "ParsePubkeyError"
     }

@@ -9,7 +9,6 @@ use serde_derive::{Deserialize, Serialize};
 use {
     core::fmt,
     num_traits::FromPrimitive,
-    solana_decode_error::DecodeError,
     solana_instruction::error::{
         InstructionError, ACCOUNT_ALREADY_INITIALIZED, ACCOUNT_BORROW_FAILED,
         ACCOUNT_DATA_TOO_SMALL, ACCOUNT_NOT_RENT_EXEMPT, ARITHMETIC_OVERFLOW, BORSH_IO_ERROR,
@@ -126,17 +125,26 @@ impl fmt::Display for ProgramError {
     since = "2.2.2",
     note = "Use `ToStr` instead with `solana_msg::msg!` or any other logging"
 )]
+#[allow(deprecated)]
 pub trait PrintProgramError {
     fn print<E>(&self)
     where
-        E: 'static + std::error::Error + DecodeError<E> + PrintProgramError + FromPrimitive;
+        E: 'static
+            + std::error::Error
+            + solana_decode_error::DecodeError<E>
+            + PrintProgramError
+            + FromPrimitive;
 }
 
 #[allow(deprecated)]
 impl PrintProgramError for ProgramError {
     fn print<E>(&self)
     where
-        E: 'static + std::error::Error + DecodeError<E> + PrintProgramError + FromPrimitive,
+        E: 'static
+            + std::error::Error
+            + solana_decode_error::DecodeError<E>
+            + PrintProgramError
+            + FromPrimitive,
     {
         match self {
             Self::Custom(error) => {
@@ -181,22 +189,54 @@ impl PrintProgramError for ProgramError {
     }
 }
 
-/// A trait for converting a program error to a `&str`.
+/// A trait for converting a program's specific error type to a `&str`.
+///
+/// Can be used with `ProgramError::to_str::<E>()` to get an error string
+/// belonging to a specific program's error if the variant is
+/// `ProgramError::Custom(...)`, or generic strings from the contained
+/// `ProgramError` for all other variants.
+///
+/// The `ProgramError::to_str::<E>()` function also requires implementing
+/// `TryFrom<u32>` on an error type, which can be done easily using
+/// `num_enum::TryFromPrimitive`.
 pub trait ToStr {
-    fn to_str<E>(&self) -> &'static str
-    where
-        E: 'static + ToStr + TryFrom<u32>;
+    fn to_str(&self) -> &'static str;
 }
 
-impl ToStr for ProgramError {
-    fn to_str<E>(&self) -> &'static str
+impl ProgramError {
+    /// Get an appropriate error string given a program error and an expected
+    /// error type, if the error implements `TryFrom<u32>` and `ToStr`.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// #[derive(num_enum::TryFromPrimitive)]
+    /// #[repr(u32)]
+    /// enum MyError {
+    ///     A,
+    ///     B,
+    /// }
+    ///
+    /// impl solana_program_error::ToStr for MyError {
+    ///     fn to_str(&self) -> &'static str {
+    ///         match self {
+    ///             MyError::A => "Message for A",
+    ///             MyError::B => "Some other message for B",
+    ///         }
+    ///     }
+    /// }
+    ///
+    /// let program_error = solana_program_error::ProgramError::Custom(1);
+    /// assert_eq!("Some other message for B", program_error.to_str::<MyError>());
+    /// ```
+    pub fn to_str<E>(&self) -> &'static str
     where
         E: 'static + ToStr + TryFrom<u32>,
     {
         match self {
             Self::Custom(error) => {
                 if let Ok(custom_error) = E::try_from(*error) {
-                    custom_error.to_str::<E>()
+                    custom_error.to_str()
                 } else {
                     "Error: Unknown"
                 }

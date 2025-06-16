@@ -2,12 +2,32 @@
 name = "solana-genesis-config"
 description = "A Solana network's genesis config."
 documentation = "https://docs.rs/solana-genesis-config"
-version = "2.2.1"
+version = "2.3.0"
 authors = { workspace = true }
 repository = { workspace = true }
 homepage = { workspace = true }
 license = { workspace = true }
 edition = { workspace = true }
+
+[package.metadata.docs.rs]
+targets = ["x86_64-unknown-linux-gnu"]
+all-features = true
+rustdoc-args = ["--cfg=docsrs"]
+
+[features]
+frozen-abi = ["dep:solana-frozen-abi", "dep:solana-frozen-abi-macro"]
+serde = [
+    "dep:serde",
+    "dep:serde_derive",
+    "solana-account/serde",
+    "solana-clock/serde",
+    "solana-cluster-type/serde",
+    "solana-epoch-schedule/serde",
+    "solana-fee-calculator/serde",
+    "solana-inflation/serde",
+    "solana-poh-config/serde",
+    "solana-rent/serde",
+]
 
 [dependencies]
 bincode = { workspace = true }
@@ -26,7 +46,6 @@ solana-hash = { workspace = true }
 solana-inflation = { workspace = true }
 solana-keypair = { workspace = true }
 solana-logger = { workspace = true }
-solana-native-token = { workspace = true }
 solana-poh-config = { workspace = true }
 solana-pubkey = { workspace = true }
 solana-rent = { workspace = true }
@@ -39,26 +58,6 @@ solana-time-utils = { workspace = true }
 [dev-dependencies]
 solana-genesis-config = { path = ".", features = ["serde"] }
 solana-pubkey = { workspace = true, features = ["rand"] }
-
-[features]
-frozen-abi = ["dep:solana-frozen-abi", "dep:solana-frozen-abi-macro"]
-serde = [
-    "dep:serde",
-    "dep:serde_derive",
-    "solana-account/serde",
-    "solana-clock/serde",
-    "solana-cluster-type/serde",
-    "solana-epoch-schedule/serde",
-    "solana-fee-calculator/serde",
-    "solana-inflation/serde",
-    "solana-poh-config/serde",
-    "solana-rent/serde",
-]
-
-[package.metadata.docs.rs]
-targets = ["x86_64-unknown-linux-gnu"]
-all-features = true
-rustdoc-args = ["--cfg=docsrs"]
 
 [lints]
 workspace = true

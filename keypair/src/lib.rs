@@ -32,6 +32,10 @@ impl Keypair {
     pub const SECRET_KEY_LENGTH: usize = 32;
 
     /// Constructs a new, random `Keypair` using a caller-provided RNG
+    #[deprecated(
+        since = "2.2.2",
+        note = "Use `Keypair::new()` instead or generate 32 random bytes and use `Keypair::new_from_array`"
+    )]
     pub fn generate<R>(csprng: &mut R) -> Self
     where
         R: CryptoRng + RngCore,
@@ -42,7 +46,15 @@ impl Keypair {
     /// Constructs a new, random `Keypair` using `OsRng`
     pub fn new() -> Self {
         let mut rng = OsRng;
-        Self::generate(&mut rng)
+        Self(ed25519_dalek::Keypair::generate(&mut rng))
+    }
+
+    /// Constructs a new `Keypair` using secret key bytes
+    pub fn new_from_array(secret_key: [u8; 32]) -> Self {
+        // unwrap is safe because the only error condition is an incorrect length
+        let secret = ed25519_dalek::SecretKey::from_bytes(&secret_key).unwrap();
+        let public = ed25519_dalek::PublicKey::from(&secret);
+        Self(ed25519_dalek::Keypair { secret, public })
     }
 
     /// Recovers a `Keypair` from a byte array

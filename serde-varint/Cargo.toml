@@ -2,12 +2,15 @@
 name = "solana-serde-varint"
 description = "Solana definitions for integers that serialize to variable size"
 documentation = "https://docs.rs/solana-serde-varint"
-version = "2.2.1"
+version = "2.2.2"
 authors = { workspace = true }
 repository = { workspace = true }
 homepage = { workspace = true }
 license = { workspace = true }
 edition = { workspace = true }
+
+[package.metadata.docs.rs]
+targets = ["x86_64-unknown-linux-gnu"]
 
 [dependencies]
 serde = { workspace = true }
@@ -17,6 +20,3 @@ bincode = { workspace = true }
 rand = { workspace = true }
 serde_derive = { workspace = true }
 solana-short-vec = { workspace = true }
-
-[package.metadata.docs.rs]
-targets = ["x86_64-unknown-linux-gnu"]

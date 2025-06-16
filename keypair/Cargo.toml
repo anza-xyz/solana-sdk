@@ -2,12 +2,24 @@
 name = "solana-keypair"
 description = "Concrete implementation of a Solana `Signer`."
 documentation = "https://docs.rs/solana-keypair"
-version = "2.2.1"
+version = "2.2.3"
 authors = { workspace = true }
 repository = { workspace = true }
 homepage = { workspace = true }
 license = { workspace = true }
 edition = { workspace = true }
+
+[package.metadata.docs.rs]
+targets = ["x86_64-unknown-linux-gnu", "wasm32-unknown-unknown"]
+all-features = true
+rustdoc-args = ["--cfg=docsrs"]
+
+[features]
+seed-derivable = [
+    "dep:solana-derivation-path",
+    "dep:solana-seed-derivable",
+    "dep:ed25519-dalek-bip32",
+]
 
 [dependencies]
 ed25519-dalek = { workspace = true }
@@ -28,11 +40,3 @@ wasm-bindgen = { workspace = true }
 serde_json = { workspace = true }
 static_assertions = { workspace = true }
 tiny-bip39 = { workspace = true }
-
-[features]
-seed-derivable = ["dep:solana-derivation-path", "dep:solana-seed-derivable", "dep:ed25519-dalek-bip32"]
-
-[package.metadata.docs.rs]
-targets = ["x86_64-unknown-linux-gnu", "wasm32-unknown-unknown"]
-all-features = true
-rustdoc-args = ["--cfg=docsrs"]

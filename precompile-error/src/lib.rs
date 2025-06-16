@@ -1,5 +1,5 @@
 /// Precompile errors
-use {core::fmt, solana_decode_error::DecodeError};
+use core::fmt;
 
 /// Precompile errors
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -69,7 +69,8 @@ impl fmt::Display for PrecompileError {
     }
 }
 
-impl<T> DecodeError<T> for PrecompileError {
+#[allow(deprecated)]
+impl<T> solana_decode_error::DecodeError<T> for PrecompileError {
     fn type_of() -> &'static str {
         "PrecompileError"
     }

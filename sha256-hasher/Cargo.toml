@@ -12,6 +12,9 @@ edition = { workspace = true }
 [package.metadata.docs.rs]
 targets = ["x86_64-unknown-linux-gnu"]
 
+[features]
+sha2 = ["dep:sha2"]
+
 [dependencies]
 solana-hash = { workspace = true }
 
@@ -24,9 +27,6 @@ sha2 = { workspace = true }
 # onchain
 sha2 = { workspace = true, optional = true }
 solana-define-syscall = { workspace = true }
-
-[features]
-sha2 = ["dep:sha2"]
 
 [lints]
 workspace = true

@@ -24,6 +24,7 @@ pub mod instructions {
     #[deprecated(since = "2.2.0", note = "Use solana-instructions-sysvar crate instead")]
     pub use solana_instructions_sysvar::{deserialize_instruction, load_instruction_at};
     #[deprecated(since = "2.2.0", note = "Use solana-instructions-sysvar crate instead")]
+    #[allow(deprecated)]
     pub use solana_instructions_sysvar::{
         get_instruction_relative, load_current_index_checked, load_instruction_at_checked,
         store_current_index, Instructions,

@@ -13,6 +13,7 @@ crate_dirs=(
   big-mod-exp
   bincode
   blake3-hasher
+  bls-signatures
   bn254
   borsh
   client-traits
@@ -77,7 +78,6 @@ crate_dirs=(
   reserved-account-keys
   reward-info
   sanitize
-  scripts
   sdk
   sdk-ids
   sdk-macro
@@ -100,7 +100,6 @@ crate_dirs=(
   system-transaction
   sysvar
   sysvar-id
-  target
   time-utils
   transaction
   transaction-error

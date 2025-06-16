@@ -9,24 +9,10 @@ homepage = { workspace = true }
 license = { workspace = true }
 edition = { workspace = true }
 
-[dependencies]
-bincode = { workspace = true, optional = true }
-qualifier_attr = { workspace = true, optional = true }
-serde = { workspace = true, optional = true }
-serde_bytes = { workspace = true, optional = true }
-serde_derive = { workspace = true, optional = true }
-solana-account-info = { workspace = true }
-solana-clock = { workspace = true }
-solana-frozen-abi = { workspace = true, optional = true }
-solana-frozen-abi-macro = { workspace = true, optional = true }
-solana-instruction = { workspace = true }
-solana-logger = { workspace = true, optional = true }
-solana-pubkey = { workspace = true }
-solana-sdk-ids = { workspace = true }
-solana-sysvar = { workspace = true, features = ["bincode"], optional = true }
-
-[dev-dependencies]
-solana-account = { path = ".", features = ["dev-context-only-utils"] }
+[package.metadata.docs.rs]
+targets = ["x86_64-unknown-linux-gnu"]
+all-features = true
+rustdoc-args = ["--cfg=docsrs"]
 
 [features]
 bincode = [
@@ -49,7 +35,21 @@ serde = [
     "solana-pubkey/serde",
 ]
 
-[package.metadata.docs.rs]
-targets = ["x86_64-unknown-linux-gnu"]
-all-features = true
-rustdoc-args = ["--cfg=docsrs"]
+[dependencies]
+bincode = { workspace = true, optional = true }
+qualifier_attr = { workspace = true, optional = true }
+serde = { workspace = true, optional = true }
+serde_bytes = { workspace = true, optional = true }
+serde_derive = { workspace = true, optional = true }
+solana-account-info = { workspace = true }
+solana-clock = { workspace = true }
+solana-frozen-abi = { workspace = true, optional = true }
+solana-frozen-abi-macro = { workspace = true, optional = true }
+solana-instruction = { workspace = true }
+solana-logger = { workspace = true, optional = true }
+solana-pubkey = { workspace = true }
+solana-sdk-ids = { workspace = true }
+solana-sysvar = { workspace = true, features = ["bincode"], optional = true }
+
+[dev-dependencies]
+solana-account = { path = ".", features = ["dev-context-only-utils"] }

@@ -4,7 +4,7 @@
 
 #[cfg(not(target_os = "solana"))]
 use solana_message::SanitizedMessage;
-use {solana_native_token::sol_to_lamports, std::num::NonZeroU32};
+use std::num::NonZeroU32;
 
 /// A fee and its associated compute unit limit
 #[derive(Debug, Default, Clone, Eq, PartialEq)]
@@ -76,6 +76,11 @@ impl FeeDetails {
 pub const ACCOUNT_DATA_COST_PAGE_SIZE: u64 = 32_u64.saturating_mul(1024);
 
 impl FeeStructure {
+    #[deprecated(
+        since = "2.3.0",
+        note = "Use FeeStructure::default() and modify fields as needed"
+    )]
+    #[allow(deprecated)]
     pub fn new(
         sol_per_signature: f64,
         sol_per_write_lock: f64,
@@ -85,12 +90,12 @@ impl FeeStructure {
             .iter()
             .map(|(limit, sol)| FeeBin {
                 limit: *limit,
-                fee: sol_to_lamports(*sol),
+                fee: solana_native_token::sol_to_lamports(*sol),
             })
             .collect::<Vec<_>>();
         FeeStructure {
-            lamports_per_signature: sol_to_lamports(sol_per_signature),
-            lamports_per_write_lock: sol_to_lamports(sol_per_write_lock),
+            lamports_per_signature: solana_native_token::sol_to_lamports(sol_per_signature),
+            lamports_per_write_lock: solana_native_token::sol_to_lamports(sol_per_write_lock),
             compute_fee_bins,
         }
     }
@@ -201,7 +206,14 @@ impl FeeStructure {
 
 impl Default for FeeStructure {
     fn default() -> Self {
-        Self::new(0.000005, 0.0, vec![(1_400_000, 0.0)])
+        Self {
+            lamports_per_signature: 5000,
+            lamports_per_write_lock: 0,
+            compute_fee_bins: vec![FeeBin {
+                limit: 1_400_000,
+                fee: 0,
+            }],
+        }
     }
 }
 

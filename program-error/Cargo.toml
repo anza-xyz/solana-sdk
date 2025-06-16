@@ -2,12 +2,21 @@
 name = "solana-program-error"
 description = "Solana ProgramError type and related definitions."
 documentation = "https://docs.rs/solana-program-error"
-version = "2.2.1"
+version = "2.2.2"
 authors = { workspace = true }
 repository = { workspace = true }
 homepage = { workspace = true }
 license = { workspace = true }
 edition = { workspace = true }
+
+[package.metadata.docs.rs]
+targets = ["x86_64-unknown-linux-gnu"]
+all-features = true
+rustdoc-args = ["--cfg=docsrs"]
+
+[features]
+borsh = ["dep:borsh"]
+serde = ["dep:serde", "dep:serde_derive"]
 
 [dependencies]
 borsh = { workspace = true, optional = true }
@@ -21,11 +30,5 @@ solana-instruction = { workspace = true, default-features = false, features = [
 solana-msg = { workspace = true }
 solana-pubkey = { workspace = true, default-features = false }
 
-[features]
-borsh = ["dep:borsh"]
-serde = ["dep:serde", "dep:serde_derive"]
-
-[package.metadata.docs.rs]
-targets = ["x86_64-unknown-linux-gnu"]
-all-features = true
-rustdoc-args = ["--cfg=docsrs"]
+[dev-dependencies]
+num_enum = { workspace = true }
