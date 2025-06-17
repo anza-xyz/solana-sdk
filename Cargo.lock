@@ -3749,14 +3749,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "solana-rent-debits"
-version = "2.2.1"
-dependencies = [
- "solana-pubkey",
- "solana-reward-info",
-]
-
-[[package]]
 name = "solana-reward-info"
 version = "2.2.1"
 dependencies = [

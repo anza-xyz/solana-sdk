@@ -73,7 +73,6 @@ crate_dirs=(
   quic-definitions
   rent
   rent-collector
-  rent-debits
   reward-info
   sanitize
   sdk
