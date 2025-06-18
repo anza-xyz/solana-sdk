@@ -1,6 +1,5 @@
 //! Convenience macro to declare a static public key and functions to interact with it
-//!
-//! Input: a single literal base58 string representation of a program's id
+//! Supports explicit import pattern for Pubkey types
 
 extern crate proc_macro;
 
@@ -17,6 +16,87 @@ use {
         Expr, Ident, LitByte, LitStr, Token,
     },
 };
+
+
+fn parse_solana_pubkey_param(input: ParseStream) -> Result<proc_macro2::TokenStream> {
+    if input.peek(Token![,]) {
+        let _comma: Token![,] = input.parse()?;
+        if input.peek(Ident) {
+            let param_name: Ident = input.parse()?;
+            if param_name == "solana_pubkey" {
+                let _eq: Token![=] = input.parse()?;
+                let path_str: LitStr = input.parse()?;
+                let path = path_str.value();
+                let pubkey_path =
+                    syn::parse_str::<proc_macro2::TokenStream>(&format!("::{}::Pubkey", path))?;
+                return Ok(pubkey_path);
+            }
+        }
+    }
+    Ok(quote! { ::solana_pubkey::Pubkey })
+}
+
+fn parse_sdk_pubkey_param(input: ParseStream) -> Result<proc_macro2::TokenStream> {
+    if input.peek(Token![,]) {
+        let _comma: Token![,] = input.parse()?;
+        if input.peek(Ident) {
+            let param_name: Ident = input.parse()?;
+            if param_name == "solana_pubkey" {
+                let _eq: Token![=] = input.parse()?;
+                let path_str: LitStr = input.parse()?;
+                let path = path_str.value();
+                let pubkey_path =
+                    syn::parse_str::<proc_macro2::TokenStream>(&format!("::{}::Pubkey", path))?;
+                return Ok(pubkey_path);
+            }
+        }
+    }
+    Ok(quote! { ::solana_sdk::pubkey::Pubkey })
+}
+
+fn parse_id_with_optional_param(
+    input: ParseStream,
+) -> Result<(proc_macro2::TokenStream, proc_macro2::TokenStream)> {
+    let id = if input.peek(syn::LitStr) {
+        let id_literal: LitStr = input.parse()?;
+        let pubkey_type = parse_solana_pubkey_param(input)?;
+        let parsed_id = parse_pubkey(&id_literal, &pubkey_type)?;
+        (parsed_id, pubkey_type)
+    } else {
+        let expr: Expr = input.parse()?;
+        let pubkey_type = parse_solana_pubkey_param(input)?;
+        (quote! { #expr }, pubkey_type)
+    };
+
+    if !input.is_empty() {
+        let stream: proc_macro2::TokenStream = input.parse()?;
+        return Err(syn::Error::new_spanned(stream, "unexpected token"));
+    }
+
+    Ok(id)
+}
+
+fn parse_sdk_id_with_optional_param(
+    input: ParseStream,
+) -> Result<(proc_macro2::TokenStream, proc_macro2::TokenStream)> {
+    let id = if input.peek(syn::LitStr) {
+        let id_literal: LitStr = input.parse()?;
+        let pubkey_type = parse_sdk_pubkey_param(input)?;
+        let parsed_id = parse_pubkey(&id_literal, &pubkey_type)?;
+        (parsed_id, pubkey_type)
+    } else {
+        let expr: Expr = input.parse()?;
+        let pubkey_type = parse_sdk_pubkey_param(input)?;
+        (quote! { #expr }, pubkey_type)
+    };
+
+    if !input.is_empty() {
+        let stream: proc_macro2::TokenStream = input.parse()?;
+        return Err(syn::Error::new_spanned(stream, "unexpected token"));
+    }
+
+    Ok(id)
+}
 
 fn parse_id(
     input: ParseStream,
@@ -96,17 +176,21 @@ fn deprecated_id_to_tokens(
     });
 }
 
-struct SdkPubkey(proc_macro2::TokenStream);
+struct SdkPubkey {
+    id: proc_macro2::TokenStream,
+    pubkey_type: proc_macro2::TokenStream,
+}
 
 impl Parse for SdkPubkey {
     fn parse(input: ParseStream) -> Result<Self> {
-        parse_id(input, quote! { ::solana_pubkey::Pubkey }).map(Self)
+        let (id, pubkey_type) = parse_sdk_id_with_optional_param(input)?;
+        Ok(SdkPubkey { id, pubkey_type })
     }
 }
 
 impl ToTokens for SdkPubkey {
     fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
-        let id = &self.0;
+        let id = &self.id;
         tokens.extend(quote! {#id})
     }
 }
@@ -126,31 +210,39 @@ impl ToTokens for ProgramSdkPubkey {
     }
 }
 
-struct Id(proc_macro2::TokenStream);
+struct Id {
+    id: proc_macro2::TokenStream,
+    pubkey_type: proc_macro2::TokenStream,
+}
 
 impl Parse for Id {
     fn parse(input: ParseStream) -> Result<Self> {
-        parse_id(input, quote! { ::solana_pubkey::Pubkey }).map(Self)
+        let (id, pubkey_type) = parse_id_with_optional_param(input)?;
+        Ok(Id { id, pubkey_type })
     }
 }
 
 impl ToTokens for Id {
     fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
-        id_to_tokens(&self.0, quote! { ::solana_pubkey::Pubkey }, tokens)
+        id_to_tokens(&self.id, self.pubkey_type.clone(), tokens)
     }
 }
 
-struct IdDeprecated(proc_macro2::TokenStream);
+struct IdDeprecated {
+    id: proc_macro2::TokenStream,
+    pubkey_type: proc_macro2::TokenStream,
+}
 
 impl Parse for IdDeprecated {
     fn parse(input: ParseStream) -> Result<Self> {
-        parse_id(input, quote! { ::solana_pubkey::Pubkey }).map(Self)
+        let (id, pubkey_type) = parse_id_with_optional_param(input)?;
+        Ok(IdDeprecated { id, pubkey_type })
     }
 }
 
 impl ToTokens for IdDeprecated {
     fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
-        deprecated_id_to_tokens(&self.0, quote! { ::solana_pubkey::Pubkey }, tokens)
+        deprecated_id_to_tokens(&self.id, self.pubkey_type.clone(), tokens)
     }
 }
 
@@ -248,29 +340,30 @@ struct Pubkeys {
     method: Ident,
     num: usize,
     pubkeys: proc_macro2::TokenStream,
+    pubkey_type: proc_macro2::TokenStream,
 }
 
 impl Parse for Pubkeys {
     fn parse(input: ParseStream) -> Result<Self> {
-        let pubkey_type = quote! {
-            ::solana_pubkey::Pubkey
-        };
-
         let method = input.parse()?;
         let _comma: Token![,] = input.parse()?;
-        let (num, pubkeys) = if input.peek(syn::LitStr) {
+
+        let (num, pubkeys, pubkey_type) = if input.peek(syn::LitStr) {
             let id_literal: LitStr = input.parse()?;
-            (1, parse_pubkey(&id_literal, &pubkey_type)?)
+            let pubkey_type = parse_solana_pubkey_param(input)?;
+            let parsed_pubkey = parse_pubkey(&id_literal, &pubkey_type)?;
+            (1, parsed_pubkey, pubkey_type)
         } else if input.peek(Bracket) {
             let pubkey_strings;
             bracketed!(pubkey_strings in input);
             let punctuated: Punctuated<LitStr, Token![,]> =
                 Punctuated::parse_terminated(&pubkey_strings)?;
+            let pubkey_type = parse_solana_pubkey_param(input)?;
             let mut pubkeys: Punctuated<proc_macro2::TokenStream, Token![,]> = Punctuated::new();
             for string in punctuated.iter() {
                 pubkeys.push(parse_pubkey(string, &pubkey_type)?);
             }
-            (pubkeys.len(), quote! {#pubkeys})
+            (pubkeys.len(), quote! {#pubkeys}, pubkey_type)
         } else {
             let stream: proc_macro2::TokenStream = input.parse()?;
             return Err(syn::Error::new_spanned(stream, "unexpected token"));
@@ -280,6 +373,7 @@ impl Parse for Pubkeys {
             method,
             num,
             pubkeys,
+            pubkey_type,
         })
     }
 }
@@ -290,11 +384,9 @@ impl ToTokens for Pubkeys {
             method,
             num,
             pubkeys,
+            pubkey_type,
         } = self;
 
-        let pubkey_type = quote! {
-            ::solana_pubkey::Pubkey
-        };
         if *num == 1 {
             tokens.extend(quote! {
                 pub fn #method() -> #pubkey_type {
