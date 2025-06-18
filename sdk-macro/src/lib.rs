@@ -17,7 +17,6 @@ use {
     },
 };
 
-
 fn parse_solana_pubkey_param(input: ParseStream) -> Result<proc_macro2::TokenStream> {
     if input.peek(Token![,]) {
         let _comma: Token![,] = input.parse()?;
@@ -190,8 +189,7 @@ impl Parse for SdkPubkey {
 
 impl ToTokens for SdkPubkey {
     fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
-        let id = &self.id;
-        tokens.extend(quote! {#id})
+        id_to_tokens(&self.id, self.pubkey_type.clone(), tokens)
     }
 }
 
