@@ -66,7 +66,6 @@ solana-blake3-hasher = { workspace = true, features = ["blake3"] }
 solana-borsh = { workspace = true, optional = true }
 solana-clock = { workspace = true, features = ["serde", "sysvar"] }
 solana-cpi = { workspace = true }
-solana-decode-error = { workspace = true }
 solana-epoch-rewards = { workspace = true, features = ["serde", "sysvar"] }
 solana-epoch-schedule = { workspace = true, features = ["serde", "sysvar"] }
 solana-fee-calculator = { workspace = true, features = ["serde"] }

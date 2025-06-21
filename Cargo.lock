@@ -2970,8 +2970,9 @@ dependencies = [
 [[package]]
 name = "solana-decode-error"
 version = "2.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8c781686a18db2f942e70913f7ca15dc120ec38dcab42ff7557db2c70c625a35"
 dependencies = [
- "num-derive",
  "num-traits",
 ]
 
@@ -3499,7 +3500,6 @@ name = "solana-precompile-error"
 version = "2.2.2"
 dependencies = [
  "num-traits",
- "solana-decode-error",
 ]
 
 [[package]]
@@ -3538,7 +3538,6 @@ dependencies = [
  "solana-borsh",
  "solana-clock",
  "solana-cpi",
- "solana-decode-error",
  "solana-define-syscall",
  "solana-epoch-rewards",
  "solana-epoch-schedule",
@@ -3595,7 +3594,6 @@ dependencies = [
  "num_enum",
  "serde",
  "serde_derive",
- "solana-decode-error",
  "solana-instruction",
  "solana-msg",
  "solana-pubkey",
@@ -3640,7 +3638,6 @@ dependencies = [
  "serde",
  "serde_derive",
  "solana-atomic-u64",
- "solana-decode-error",
  "solana-define-syscall",
  "solana-frozen-abi",
  "solana-frozen-abi-macro",
@@ -4140,7 +4137,6 @@ dependencies = [
  "serde",
  "serde_derive",
  "solana-clock",
- "solana-decode-error",
  "solana-epoch-schedule",
  "solana-frozen-abi",
  "solana-frozen-abi-macro",

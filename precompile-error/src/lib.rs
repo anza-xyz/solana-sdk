@@ -68,10 +68,3 @@ impl fmt::Display for PrecompileError {
         }
     }
 }
-
-#[allow(deprecated)]
-impl<T> solana_decode_error::DecodeError<T> for PrecompileError {
-    fn type_of() -> &'static str {
-        "PrecompileError"
-    }
-}

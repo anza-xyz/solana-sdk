@@ -16,7 +16,6 @@ members = [
     "commitment-config",
     "compute-budget-interface",
     "cpi",
-    "decode-error",
     "define-syscall",
     "derivation-path",
     "ed25519-program",
@@ -221,7 +220,6 @@ solana-cluster-type = { path = "cluster-type", version = "2.2.1" }
 solana-commitment-config = { path = "commitment-config", version = "2.2.1" }
 solana-compute-budget-interface = { path = "compute-budget-interface", version = "2.2.1" }
 solana-cpi = { path = "cpi", version = "2.2.1" }
-solana-decode-error = { path = "decode-error", version = "2.2.1" }
 solana-define-syscall = { path = "define-syscall", version = "2.2.1" }
 solana-derivation-path = { path = "derivation-path", version = "2.2.1" }
 solana-ed25519-program = { path = "ed25519-program", version = "2.2.1" }
@@ -354,7 +352,6 @@ opt-level = 1
 solana-account = { path = "account" }
 solana-clock = { path = "clock" }
 solana-cpi = { path = "cpi" }
-solana-decode-error = { path = "decode-error" }
 solana-frozen-abi = { path = "frozen-abi" }
 solana-frozen-abi-macro = { path = "frozen-abi-macro" }
 solana-instruction = { path = "instruction" }

@@ -129,26 +129,18 @@ impl fmt::Display for ProgramError {
 pub trait PrintProgramError {
     fn print<E>(&self)
     where
-        E: 'static
-            + std::error::Error
-            + solana_decode_error::DecodeError<E>
-            + PrintProgramError
-            + FromPrimitive;
+        E: 'static + std::error::Error + PrintProgramError + FromPrimitive;
 }
 
 #[allow(deprecated)]
 impl PrintProgramError for ProgramError {
     fn print<E>(&self)
     where
-        E: 'static
-            + std::error::Error
-            + solana_decode_error::DecodeError<E>
-            + PrintProgramError
-            + FromPrimitive,
+        E: 'static + std::error::Error + PrintProgramError + FromPrimitive,
     {
         match self {
             Self::Custom(error) => {
-                if let Some(custom_error) = E::decode_custom_error_to_enum(*error) {
+                if let Some(custom_error) = E::from_u32(*error) {
                     custom_error.print::<E>();
                 } else {
                     msg!("Error: Unknown");
