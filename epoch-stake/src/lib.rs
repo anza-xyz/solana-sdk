@@ -4,14 +4,14 @@
 //! current epoch or the stake for a specific vote account using the
 //! `sol_get_epoch_stake` syscall.
 
-use crate::pubkey::Pubkey;
+use solana_pubkey::Pubkey;
 
 fn get_epoch_stake(var_addr: *const u8) -> u64 {
     #[cfg(target_os = "solana")]
-    let result = unsafe { crate::syscalls::sol_get_epoch_stake(var_addr) };
+    let result = unsafe { solana_define_syscall::definitions::sol_get_epoch_stake(var_addr) };
 
     #[cfg(not(target_os = "solana"))]
-    let result = crate::program_stubs::sol_get_epoch_stake(var_addr);
+    let result = solana_program_stubs::sol_get_epoch_stake(var_addr);
 
     result
 }
