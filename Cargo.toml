@@ -60,6 +60,7 @@ members = [
     "program-memory",
     "program-option",
     "program-pack",
+    "program-stubs",
     "pubkey",
     "quic-definitions",
     "rent",
@@ -265,6 +266,7 @@ solana-program-error = { path = "program-error", version = "2.2.1" }
 solana-program-memory = { path = "program-memory", version = "2.2.1" }
 solana-program-option = { path = "program-option", version = "2.2.1" }
 solana-program-pack = { path = "program-pack", version = "2.2.1" }
+solana-program-stubs = { path = "program-stubs", version = "2.2.1" }
 solana-pubkey = { path = "pubkey", version = "2.2.1", default-features = false }
 solana-quic-definitions = { path = "quic-definitions", version = "2.2.1" }
 solana-rent = { path = "rent", version = "2.2.1", default-features = false }

@@ -21,7 +21,7 @@ declare print_free_tree=(
   ':^msg/src/lib.rs'
   ':^program-option/src/lib.rs'
   ':^pubkey/src/lib.rs'
-  ':^sysvar/src/program_stubs.rs'
+  ':^program-stubs/src/lib.rs'
   ':^**bin**.rs'
   ':^**bench**.rs'
   ':^**test**.rs'

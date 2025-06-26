@@ -3618,6 +3618,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "solana-program-stubs"
+version = "2.2.1"
+dependencies = [
+ "base64 0.22.1",
+ "lazy_static",
+ "solana-account-info",
+ "solana-instruction",
+ "solana-program-error",
+ "solana-program-memory",
+ "solana-pubkey",
+]
+
+[[package]]
 name = "solana-pubkey"
 version = "2.4.0"
 dependencies = [
@@ -4047,6 +4060,7 @@ dependencies = [
  "solana-program-entrypoint",
  "solana-program-error",
  "solana-program-memory",
+ "solana-program-stubs",
  "solana-pubkey",
  "solana-rent",
  "solana-sanitize",
