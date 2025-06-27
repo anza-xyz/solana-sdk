@@ -83,7 +83,7 @@ mod tests {
         let test_vote_state = unsafe { test_vote_state_v3.assume_init() };
 
         assert_eq!(
-            target_vote_state_versions.clone().convert_to_current(),
+            target_vote_state_versions.clone().convert_to_v3(),
             test_vote_state
         );
 
@@ -92,7 +92,10 @@ mod tests {
         VoteStateV4::deserialize_into_uninit(&vote_state_buf, &mut test_vote_state_v4).unwrap();
         let test_vote_state = unsafe { test_vote_state_v4.assume_init() };
 
-        assert_eq!(target_vote_state_versions.convert_to_v4(), test_vote_state);
+        assert_eq!(
+            target_vote_state_versions.convert_to_current(),
+            test_vote_state
+        );
 
         // variant
         // provide 4x the minimum struct size in bytes to ensure we typically touch every field
@@ -107,7 +110,7 @@ mod tests {
 
             // v3
             let vote_state_buf = bincode::serialize(&target_vote_state_versions).unwrap();
-            let target_vote_state_v3 = target_vote_state_versions.clone().convert_to_current();
+            let target_vote_state_v3 = target_vote_state_versions.clone().convert_to_v3();
 
             let mut test_vote_state_v3 = MaybeUninit::uninit();
             VoteStateV3::deserialize_into_uninit(&vote_state_buf, &mut test_vote_state_v3).unwrap();
@@ -116,7 +119,7 @@ mod tests {
             assert_eq!(target_vote_state_v3, test_vote_state);
 
             // v4
-            let target_vote_state_v4 = target_vote_state_versions.convert_to_v4();
+            let target_vote_state_v4 = target_vote_state_versions.convert_to_current();
 
             let mut test_vote_state_v4 = MaybeUninit::uninit();
             VoteStateV4::deserialize_into_uninit(&vote_state_buf, &mut test_vote_state_v4).unwrap();

@@ -20,20 +20,20 @@ use {
 pub enum VoteStateVersions {
     V0_23_5(Box<VoteState0_23_5>),
     V1_14_11(Box<VoteState1_14_11>),
-    Current(Box<VoteStateV3>),
-    V4(Box<VoteStateV4>),
+    V3(Box<VoteStateV3>),
+    Current(Box<VoteStateV4>),
 }
 
 impl VoteStateVersions {
-    pub fn new_current(vote_state: VoteStateV3) -> Self {
+    pub fn new_current(vote_state: VoteStateV4) -> Self {
         Self::Current(Box::new(vote_state))
     }
 
-    pub fn new_v4(vote_state: VoteStateV4) -> Self {
-        Self::V4(Box::new(vote_state))
+    pub fn new_v3(vote_state: VoteStateV3) -> Self {
+        Self::V3(Box::new(vote_state))
     }
 
-    pub fn convert_to_current(self) -> VoteStateV3 {
+    pub fn convert_to_v3(self) -> VoteStateV3 {
         match self {
             VoteStateVersions::V0_23_5(state) => {
                 let authorized_voters =
@@ -78,8 +78,8 @@ impl VoteStateVersions {
                 last_timestamp: state.last_timestamp,
             },
 
-            VoteStateVersions::Current(state) => *state,
-            VoteStateVersions::V4(state) => VoteStateV3 {
+            VoteStateVersions::V3(state) => *state,
+            VoteStateVersions::Current(state) => VoteStateV3 {
                 node_pubkey: state.node_pubkey,
                 authorized_withdrawer: state.authorized_withdrawer,
                 commission: (state.inflation_rewards_commission_bps / 100).min(100) as u8,
@@ -93,7 +93,7 @@ impl VoteStateVersions {
         }
     }
 
-    pub fn convert_to_v4(self) -> VoteStateV4 {
+    pub fn convert_to_current(self) -> VoteStateV4 {
         match self {
             VoteStateVersions::V0_23_5(state) => {
                 let authorized_voters =
@@ -131,7 +131,7 @@ impl VoteStateVersions {
                 last_timestamp: state.last_timestamp,
             },
 
-            VoteStateVersions::Current(state) => VoteStateV4 {
+            VoteStateVersions::V3(state) => VoteStateV4 {
                 node_pubkey: state.node_pubkey,
                 authorized_withdrawer: state.authorized_withdrawer,
                 inflation_rewards_collector: Pubkey::default(),
@@ -146,7 +146,7 @@ impl VoteStateVersions {
                 last_timestamp: state.last_timestamp,
             },
 
-            VoteStateVersions::V4(state) => *state,
+            VoteStateVersions::Current(state) => *state,
         }
     }
 
@@ -162,21 +162,22 @@ impl VoteStateVersions {
 
             VoteStateVersions::V1_14_11(vote_state) => vote_state.authorized_voters.is_empty(),
 
+            VoteStateVersions::V3(vote_state) => vote_state.authorized_voters.is_empty(),
             VoteStateVersions::Current(vote_state) => vote_state.authorized_voters.is_empty(),
-            VoteStateVersions::V4(vote_state) => vote_state.authorized_voters.is_empty(),
         }
     }
 
     pub fn vote_state_size_of(is_current: bool) -> usize {
         if is_current {
-            VoteStateV3::size_of()
+            VoteStateV4::size_of() // Same as v3
         } else {
             VoteState1_14_11::size_of()
         }
     }
 
     pub fn is_correct_size_and_initialized(data: &[u8]) -> bool {
-        VoteStateV3::is_correct_size_and_initialized(data)
+        VoteStateV4::is_correct_size_and_initialized(data)
+            || VoteStateV3::is_correct_size_and_initialized(data)
             || VoteState1_14_11::is_correct_size_and_initialized(data)
     }
 }
@@ -186,8 +187,8 @@ impl Arbitrary<'_> for VoteStateVersions {
     fn arbitrary(u: &mut Unstructured<'_>) -> arbitrary::Result<Self> {
         let variant = u.choose_index(3)?;
         match variant {
-            0 => Ok(Self::V4(Box::new(VoteStateV4::arbitrary(u)?))),
-            1 => Ok(Self::Current(Box::new(VoteStateV3::arbitrary(u)?))),
+            0 => Ok(Self::Current(Box::new(VoteStateV4::arbitrary(u)?))),
+            1 => Ok(Self::V3(Box::new(VoteStateV3::arbitrary(u)?))),
             2 => Ok(Self::V1_14_11(Box::new(VoteState1_14_11::arbitrary(u)?))),
             _ => unreachable!(),
         }

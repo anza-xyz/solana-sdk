@@ -91,7 +91,7 @@ impl VoteStateV4 {
         #[cfg(not(target_os = "solana"))]
         {
             bincode::deserialize::<VoteStateVersions>(input)
-                .map(|versioned| versioned.convert_to_v4())
+                .map(|versioned| versioned.convert_to_current())
                 .map_err(|_| InstructionError::InvalidAccountData)
         }
         #[cfg(target_os = "solana")]
@@ -160,7 +160,7 @@ impl VoteStateV4 {
                     unsafe {
                         vote_state.write(
                             bincode::deserialize::<VoteStateVersions>(input)
-                                .map(|versioned| versioned.convert_to_v4())
+                                .map(|versioned| versioned.convert_to_current())
                                 .map_err(|_| InstructionError::InvalidAccountData)?,
                         );
                     }
@@ -190,5 +190,11 @@ impl VoteStateV4 {
             bincode::ErrorKind::SizeLimit => InstructionError::AccountDataTooSmall,
             _ => InstructionError::GenericError,
         })
+    }
+
+    pub fn is_correct_size_and_initialized(data: &[u8]) -> bool {
+        const VERSION_OFFSET: usize = 4;
+        data.len() == VoteStateV4::size_of() && data.get(VERSION_OFFSET).copied() == Some(3)
+        // Always initialized
     }
 }
