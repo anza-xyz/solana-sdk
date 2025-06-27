@@ -122,7 +122,7 @@ impl VoteStateV3 {
         #[cfg(not(target_os = "solana"))]
         {
             bincode::deserialize::<VoteStateVersions>(input)
-                .map(|versioned| versioned.convert_to_current())
+                .map(|versioned| versioned.convert_to_v3())
                 .map_err(|_| InstructionError::InvalidAccountData)
         }
         #[cfg(target_os = "solana")]
@@ -190,7 +190,7 @@ impl VoteStateV3 {
                     unsafe {
                         vote_state.write(
                             bincode::deserialize::<VoteStateVersions>(input)
-                                .map(|versioned| versioned.convert_to_current())
+                                .map(|versioned| versioned.convert_to_v3())
                                 .map_err(|_| InstructionError::InvalidAccountData)?,
                         );
                     }
@@ -201,9 +201,9 @@ impl VoteStateV3 {
             }
             // V1_14_11. substantially different layout and data from V0_23_5
             1 => deserialize_vote_state_into_v3(&mut cursor, vote_state, false),
-            // Current. the only difference from V1_14_11 is the addition of a slot-latency to each vote
+            // V3. the only difference from V1_14_11 is the addition of a slot-latency to each vote
             2 => deserialize_vote_state_into_v3(&mut cursor, vote_state, true),
-            // V4. Convert to V3 through bincode
+            // Current (V4). Convert to V3 through bincode
             3 => {
                 #[cfg(not(target_os = "solana"))]
                 {
@@ -215,7 +215,7 @@ impl VoteStateV3 {
                     unsafe {
                         vote_state.write(
                             bincode::deserialize::<VoteStateVersions>(input)
-                                .map(|versioned| versioned.convert_to_current())
+                                .map(|versioned| versioned.convert_to_v3())
                                 .map_err(|_| InstructionError::InvalidAccountData)?,
                         );
                     }
