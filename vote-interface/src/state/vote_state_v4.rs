@@ -1,11 +1,15 @@
+#[cfg(feature = "bincode")]
+use super::VoteStateVersions;
 #[cfg(feature = "dev-context-only-utils")]
 use arbitrary::Arbitrary;
 #[cfg(feature = "serde")]
 use serde_derive::{Deserialize, Serialize};
 #[cfg(feature = "frozen-abi")]
 use solana_frozen_abi_macro::{frozen_abi, AbiExample};
+#[cfg(any(target_os = "solana", feature = "bincode"))]
+use solana_instruction::error::InstructionError;
 use {
-    super::{BlockTimestamp, LandedVote},
+    super::{BlockTimestamp, LandedVote, Lockout},
     crate::authorized_voters::AuthorizedVoters,
     solana_clock::{Epoch, Slot},
     solana_pubkey::Pubkey,
@@ -55,4 +59,136 @@ pub struct VoteStateV4 {
 
     /// Most recent timestamp submitted with a vote.
     pub last_timestamp: BlockTimestamp,
+}
+
+impl VoteStateV4 {
+    /// Upper limit on the size of the Vote State
+    /// when votes.len() is MAX_LOCKOUT_HISTORY.
+    pub const fn size_of() -> usize {
+        3762 // Same size as V3 to avoid account resizing
+    }
+
+    pub fn new_rand_for_tests(node_pubkey: Pubkey, root_slot: Slot) -> Self {
+        let votes = (1..32)
+            .map(|x| LandedVote {
+                latency: 0,
+                lockout: Lockout::new_with_confirmation_count(
+                    u64::from(x).saturating_add(root_slot),
+                    32_u32.saturating_sub(x),
+                ),
+            })
+            .collect();
+        Self {
+            node_pubkey,
+            root_slot: Some(root_slot),
+            votes,
+            ..VoteStateV4::default()
+        }
+    }
+
+    #[cfg(any(target_os = "solana", feature = "bincode"))]
+    pub fn deserialize(input: &[u8]) -> Result<Self, InstructionError> {
+        #[cfg(not(target_os = "solana"))]
+        {
+            bincode::deserialize::<VoteStateVersions>(input)
+                .map(|versioned| versioned.convert_to_v4())
+                .map_err(|_| InstructionError::InvalidAccountData)
+        }
+        #[cfg(target_os = "solana")]
+        {
+            let mut vote_state = Self::default();
+            Self::deserialize_into(input, &mut vote_state)?;
+            Ok(vote_state)
+        }
+    }
+
+    /// Deserializes the input `VoteStateVersions` buffer directly into the provided `VoteStateV4`.
+    ///
+    /// In a SBPF context, V0_23_5 is not supported, but in non-SBPF, all versions are supported for
+    /// compatibility with `bincode::deserialize`.
+    ///
+    /// On success, `vote_state` reflects the state of the input data. On failure, `vote_state` is
+    /// reset to `VoteStateV4::default()`.
+    #[cfg(any(target_os = "solana", feature = "bincode"))]
+    pub fn deserialize_into(
+        input: &[u8],
+        vote_state: &mut VoteStateV4,
+    ) -> Result<(), InstructionError> {
+        use super::vote_state_deserialize;
+        vote_state_deserialize::deserialize_into(input, vote_state, Self::deserialize_into_ptr)
+    }
+
+    /// Deserializes the input `VoteStateVersions` buffer directly into the provided
+    /// `MaybeUninit<VoteStateV4>`.
+    ///
+    /// In a SBPF context, V0_23_5 is not supported, but in non-SBPF, all versions are supported for
+    /// compatibility with `bincode::deserialize`.
+    ///
+    /// On success, `vote_state` is fully initialized and can be converted to `VoteStateV4` using
+    /// [MaybeUninit::assume_init]. On failure, `vote_state` may still be uninitialized and must not
+    /// be converted to `VoteStateV4`.
+    #[cfg(any(target_os = "solana", feature = "bincode"))]
+    pub fn deserialize_into_uninit(
+        input: &[u8],
+        vote_state: &mut std::mem::MaybeUninit<VoteStateV4>,
+    ) -> Result<(), InstructionError> {
+        Self::deserialize_into_ptr(input, vote_state.as_mut_ptr())
+    }
+
+    #[cfg(any(target_os = "solana", feature = "bincode"))]
+    fn deserialize_into_ptr(
+        input: &[u8],
+        vote_state: *mut VoteStateV4,
+    ) -> Result<(), InstructionError> {
+        use super::vote_state_deserialize::{deserialize_vote_state_into_v4, SourceVersion};
+
+        let mut cursor = std::io::Cursor::new(input);
+
+        let variant = solana_serialize_utils::cursor::read_u32(&mut cursor)?;
+        match variant {
+            // V0_23_5. not supported for bpf targets; these should not exist on mainnet
+            // supported for non-bpf targets for backwards compatibility.
+            // **Same pattern as v3 for this variant**.
+            0 => {
+                #[cfg(not(target_os = "solana"))]
+                {
+                    // Safety: vote_state is valid as it comes from `&mut MaybeUninit<VoteStateV4>` or
+                    // `&mut VoteStateV4`. In the first case, the value is uninitialized so we write()
+                    // to avoid dropping invalid data; in the latter case, we `drop_in_place()`
+                    // before writing so the value has already been dropped and we just write a new
+                    // one in place.
+                    unsafe {
+                        vote_state.write(
+                            bincode::deserialize::<VoteStateVersions>(input)
+                                .map(|versioned| versioned.convert_to_v4())
+                                .map_err(|_| InstructionError::InvalidAccountData)?,
+                        );
+                    }
+                    Ok(())
+                }
+                #[cfg(target_os = "solana")]
+                Err(InstructionError::InvalidAccountData)
+            }
+            // V1_14_11
+            1 => deserialize_vote_state_into_v4(&mut cursor, vote_state, SourceVersion::V1_14_11),
+            // V3
+            2 => deserialize_vote_state_into_v4(&mut cursor, vote_state, SourceVersion::V3),
+            // V4
+            3 => deserialize_vote_state_into_v4(&mut cursor, vote_state, SourceVersion::V4),
+            _ => Err(InstructionError::InvalidAccountData),
+        }?;
+
+        Ok(())
+    }
+
+    #[cfg(feature = "bincode")]
+    pub fn serialize(
+        versioned: &VoteStateVersions,
+        output: &mut [u8],
+    ) -> Result<(), InstructionError> {
+        bincode::serialize_into(output, versioned).map_err(|err| match *err {
+            bincode::ErrorKind::SizeLimit => InstructionError::AccountDataTooSmall,
+            _ => InstructionError::GenericError,
+        })
+    }
 }

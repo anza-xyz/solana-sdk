@@ -29,6 +29,10 @@ impl VoteStateVersions {
         Self::Current(Box::new(vote_state))
     }
 
+    pub fn new_v4(vote_state: VoteStateV4) -> Self {
+        Self::V4(Box::new(vote_state))
+    }
+
     pub fn convert_to_current(self) -> VoteStateV3 {
         match self {
             VoteStateVersions::V0_23_5(state) => {
@@ -89,6 +93,63 @@ impl VoteStateVersions {
         }
     }
 
+    pub fn convert_to_v4(self) -> VoteStateV4 {
+        match self {
+            VoteStateVersions::V0_23_5(state) => {
+                let authorized_voters =
+                    AuthorizedVoters::new(state.authorized_voter_epoch, state.authorized_voter);
+
+                VoteStateV4 {
+                    node_pubkey: state.node_pubkey,
+                    authorized_withdrawer: state.authorized_withdrawer,
+                    inflation_rewards_collector: Pubkey::default(),
+                    block_revenue_collector: Pubkey::default(),
+                    inflation_rewards_commission_bps: u16::from(state.commission)
+                        .saturating_mul(100),
+                    block_revenue_commission_bps: 10_000u16,
+                    pending_delegator_rewards: 0,
+                    votes: Self::landed_votes_from_lockouts(state.votes),
+                    root_slot: state.root_slot,
+                    authorized_voters,
+                    epoch_credits: state.epoch_credits.clone(),
+                    last_timestamp: state.last_timestamp.clone(),
+                }
+            }
+
+            VoteStateVersions::V1_14_11(state) => VoteStateV4 {
+                node_pubkey: state.node_pubkey,
+                authorized_withdrawer: state.authorized_withdrawer,
+                inflation_rewards_collector: Pubkey::default(),
+                block_revenue_collector: Pubkey::default(),
+                inflation_rewards_commission_bps: u16::from(state.commission).saturating_mul(100),
+                block_revenue_commission_bps: 10_000u16,
+                pending_delegator_rewards: 0,
+                votes: Self::landed_votes_from_lockouts(state.votes),
+                root_slot: state.root_slot,
+                authorized_voters: state.authorized_voters.clone(),
+                epoch_credits: state.epoch_credits,
+                last_timestamp: state.last_timestamp,
+            },
+
+            VoteStateVersions::Current(state) => VoteStateV4 {
+                node_pubkey: state.node_pubkey,
+                authorized_withdrawer: state.authorized_withdrawer,
+                inflation_rewards_collector: Pubkey::default(),
+                block_revenue_collector: Pubkey::default(),
+                inflation_rewards_commission_bps: u16::from(state.commission).saturating_mul(100),
+                block_revenue_commission_bps: 10_000u16,
+                pending_delegator_rewards: 0,
+                votes: state.votes,
+                root_slot: state.root_slot,
+                authorized_voters: state.authorized_voters,
+                epoch_credits: state.epoch_credits,
+                last_timestamp: state.last_timestamp,
+            },
+
+            VoteStateVersions::V4(state) => *state,
+        }
+    }
+
     fn landed_votes_from_lockouts(lockouts: VecDeque<Lockout>) -> VecDeque<LandedVote> {
         lockouts.into_iter().map(|lockout| lockout.into()).collect()
     }
@@ -123,10 +184,11 @@ impl VoteStateVersions {
 #[cfg(test)]
 impl Arbitrary<'_> for VoteStateVersions {
     fn arbitrary(u: &mut Unstructured<'_>) -> arbitrary::Result<Self> {
-        let variant = u.choose_index(2)?;
+        let variant = u.choose_index(3)?;
         match variant {
-            0 => Ok(Self::Current(Box::new(VoteStateV3::arbitrary(u)?))),
-            1 => Ok(Self::V1_14_11(Box::new(VoteState1_14_11::arbitrary(u)?))),
+            0 => Ok(Self::V4(Box::new(VoteStateV4::arbitrary(u)?))),
+            1 => Ok(Self::Current(Box::new(VoteStateV3::arbitrary(u)?))),
+            2 => Ok(Self::V1_14_11(Box::new(VoteState1_14_11::arbitrary(u)?))),
             _ => unreachable!(),
         }
     }
