@@ -108,8 +108,7 @@ pub unsafe fn deserialize<'a>(input: *mut u8) -> (&'a Pubkey, Vec<AccountInfo<'a
             let executable = *(input.add(offset) as *const u8) != 0;
             offset += size_of::<u8>();
 
-            #[allow(clippy::cast_ptr_alignment)]
-            let rent_epoch = *(input.add(offset) as *const u64);
+            // rent epoch is skipped
             offset += size_of::<u64>();
 
             accounts.push(AccountInfo {
@@ -120,7 +119,7 @@ pub unsafe fn deserialize<'a>(input: *mut u8) -> (&'a Pubkey, Vec<AccountInfo<'a
                 data,
                 owner,
                 executable,
-                rent_epoch,
+                unused: 0,
             });
         } else {
             // Duplicate account, clone the original

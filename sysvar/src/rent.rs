@@ -40,7 +40,7 @@
 //! # let p = Rent::id();
 //! # let l = &mut 1009200;
 //! # let d = &mut vec![152, 13, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 64, 100];
-//! # let a = AccountInfo::new(&p, false, false, l, d, &p, false, 0);
+//! # let a = AccountInfo::new(&p, false, false, l, d, &p, false);
 //! # let accounts = &[a.clone(), a];
 //! # process_instruction(
 //! #     &Pubkey::new_unique(),
@@ -81,7 +81,7 @@
 //! # let p = Rent::id();
 //! # let l = &mut 1009200;
 //! # let d = &mut vec![152, 13, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 64, 100];
-//! # let a = AccountInfo::new(&p, false, false, l, d, &p, false, 0);
+//! # let a = AccountInfo::new(&p, false, false, l, d, &p, false);
 //! # let accounts = &[a.clone(), a];
 //! # process_instruction(
 //! #     &Pubkey::new_unique(),
@@ -108,7 +108,6 @@
 //! #       data: vec![152, 13, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 64, 100],
 //! #       owner: solana_sdk_ids::system_program::ID,
 //! #       executable: false,
-//! #       rent_epoch: 307,
 //! # });
 //! #
 //!     let rent = client.get_account(&rent::ID)?;

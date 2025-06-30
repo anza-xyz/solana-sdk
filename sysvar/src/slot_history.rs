@@ -33,7 +33,6 @@
 //! #       data,
 //! #       owner: solana_sdk_ids::system_program::ID,
 //! #       executable: false,
-//! #       rent_epoch: 307,
 //! #   });
 //! #
 //!     let slot_history = client.get_account(&slot_history::ID)?;
