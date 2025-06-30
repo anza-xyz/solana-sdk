@@ -216,13 +216,13 @@ impl SanitizedTransaction {
     pub fn get_account_locks(
         &self,
         tx_account_lock_limit: usize,
-    ) -> Result<TransactionAccountLocks> {
+    ) -> Result<TransactionAccountLocks<'_>> {
         Self::validate_account_locks(self.message(), tx_account_lock_limit)?;
         Ok(self.get_account_locks_unchecked())
     }
 
     /// Return the list of accounts that must be locked during processing this transaction.
-    pub fn get_account_locks_unchecked(&self) -> TransactionAccountLocks {
+    pub fn get_account_locks_unchecked(&self) -> TransactionAccountLocks<'_> {
         let message = &self.message;
         let account_keys = message.account_keys();
         let num_readonly_accounts = message.num_readonly_accounts();

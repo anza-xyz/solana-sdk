@@ -38,7 +38,7 @@ pub fn sol_str_to_lamports(sol_str: &str) -> Option<u64> {
         let lamports = if lamports.is_empty() {
             0
         } else {
-            format!("{:0<9}", lamports)[..SOL_DECIMALS].parse().ok()?
+            format!("{lamports:0<9}")[..SOL_DECIMALS].parse().ok()?
         };
         LAMPORTS_PER_SOL
             .checked_mul(sol)

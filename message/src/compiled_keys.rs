@@ -35,8 +35,7 @@ impl fmt::Display for CompileError {
                 f.write_str("address lookup table index overflowed during compilation")
             }
             CompileError::UnknownInstructionKey(key) => f.write_fmt(format_args!(
-                "encountered unknown account key `{0}` during instruction compilation",
-                key,
+                "encountered unknown account key `{key}` during instruction compilation",
             )),
         }
     }
