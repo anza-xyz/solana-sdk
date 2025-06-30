@@ -32,7 +32,6 @@ default = [
 full = [
     "serde_json",
     "solana-signature",
-    "solana-transaction-context/debug-signature",
     "solana-pubkey/rand",
     "dep:solana-client-traits",
     "dep:solana-cluster-type",
