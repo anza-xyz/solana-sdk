@@ -3688,6 +3688,9 @@ dependencies = [
  "bs58",
  "proc-macro2",
  "quote",
+ "solana-program",
+ "solana-pubkey",
+ "solana-sdk",
  "syn 2.0.98",
 ]
 
