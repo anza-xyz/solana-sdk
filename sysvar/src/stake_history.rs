@@ -31,7 +31,6 @@
 //! #       data: vec![0, 0, 0, 0, 0, 0, 0, 0],
 //! #       owner: solana_sdk_ids::system_program::ID,
 //! #       executable: false,
-//! #       rent_epoch: 307,
 //! #   });
 //! #
 //!     let stake_history = client.get_account(&stake_history::ID)?;

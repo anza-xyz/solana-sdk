@@ -57,7 +57,7 @@
 //! #     ..EpochRewards::default()
 //! # };
 //! # let mut d: Vec<u8> = bincode::serialize(&epoch_rewards).unwrap();
-//! # let a = AccountInfo::new(&p, false, false, l, &mut d, &p, false, 0);
+//! # let a = AccountInfo::new(&p, false, false, l, &mut d, &p, false);
 //! # let accounts = &[a.clone(), a];
 //! # process_instruction(
 //! #     &Pubkey::new_unique(),
@@ -105,7 +105,7 @@
 //! #     ..EpochRewards::default()
 //! # };
 //! # let mut d: Vec<u8> = bincode::serialize(&epoch_rewards).unwrap();
-//! # let a = AccountInfo::new(&p, false, false, l, &mut d, &p, false, 0);
+//! # let a = AccountInfo::new(&p, false, false, l, &mut d, &p, false);
 //! # let accounts = &[a.clone(), a];
 //! # process_instruction(
 //! #     &Pubkey::new_unique(),
@@ -140,7 +140,6 @@
 //! #       data,
 //! #       owner: solana_sdk_ids::system_program::ID,
 //! #       executable: false,
-//! #       rent_epoch: 307,
 //! # });
 //! #
 //!     let epoch_rewards = client.get_account(&epoch_rewards::ID)?;

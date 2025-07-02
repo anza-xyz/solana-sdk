@@ -39,7 +39,7 @@
 //! # let p = EpochSchedule::id();
 //! # let l = &mut 1120560;
 //! # let d = &mut vec![0, 32, 0, 0, 0, 0, 0, 0, 0, 32, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
-//! # let a = AccountInfo::new(&p, false, false, l, d, &p, false, 0);
+//! # let a = AccountInfo::new(&p, false, false, l, d, &p, false);
 //! # let accounts = &[a.clone(), a];
 //! # process_instruction(
 //! #     &Pubkey::new_unique(),
@@ -79,7 +79,7 @@
 //! # let p = EpochSchedule::id();
 //! # let l = &mut 1120560;
 //! # let d = &mut vec![0, 32, 0, 0, 0, 0, 0, 0, 0, 32, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
-//! # let a = AccountInfo::new(&p, false, false, l, d, &p, false, 0);
+//! # let a = AccountInfo::new(&p, false, false, l, d, &p, false);
 //! # let accounts = &[a.clone(), a];
 //! # process_instruction(
 //! #     &Pubkey::new_unique(),
@@ -106,7 +106,6 @@
 //! #       data: vec![0, 32, 0, 0, 0, 0, 0, 0, 0, 32, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
 //! #       owner: solana_sdk_ids::system_program::ID,
 //! #       executable: false,
-//! #       rent_epoch: 307,
 //! # });
 //! #
 //!     let epoch_schedule = client.get_account(&epoch_schedule::ID)?;

@@ -444,7 +444,7 @@ unsafe fn deserialize_account_info<'a>(
     offset += (offset as *const u8).align_offset(BPF_ALIGN_OF_U128); // padding
 
     #[allow(clippy::cast_ptr_alignment)]
-    let rent_epoch = *(input.add(offset) as *const u64);
+    let _rent_epoch = *(input.add(offset) as *const u64);
     offset += size_of::<u64>();
 
     (
@@ -456,7 +456,6 @@ unsafe fn deserialize_account_info<'a>(
             data,
             owner,
             executable,
-            rent_epoch,
         },
         offset,
     )

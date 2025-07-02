@@ -28,8 +28,6 @@ pub struct AccountInfo<'a> {
     pub data: Rc<RefCell<&'a mut [u8]>>,
     /// Program that owns this account
     pub owner: &'a Pubkey,
-    /// The epoch at which this account will next owe rent
-    pub rent_epoch: u64,
     /// Was the transaction signed by this account's public key?
     pub is_signer: bool,
     /// Is the account writable?
@@ -47,7 +45,6 @@ impl fmt::Debug for AccountInfo<'_> {
             .field("is_signer", &self.is_signer)
             .field("is_writable", &self.is_writable)
             .field("executable", &self.executable)
-            .field("rent_epoch", &self.rent_epoch)
             .field("lamports", &self.lamports())
             .field("data.len", &self.data_len());
         debug_account_data::debug_account_data(&self.data.borrow(), &mut f);
@@ -218,7 +215,6 @@ impl<'a> AccountInfo<'a> {
         data: &'a mut [u8],
         owner: &'a Pubkey,
         executable: bool,
-        rent_epoch: u64,
     ) -> Self {
         Self {
             key,
@@ -228,7 +224,6 @@ impl<'a> AccountInfo<'a> {
             data: Rc::new(RefCell::new(data)),
             owner,
             executable,
-            rent_epoch,
         }
     }
 
@@ -259,17 +254,15 @@ impl<'a, T: IntoAccountInfo<'a>> From<T> for AccountInfo<'a> {
 /// Provides information required to construct an `AccountInfo`, used in
 /// conversion implementations.
 pub trait Account {
-    fn get(&mut self) -> (&mut u64, &mut [u8], &Pubkey, bool, u64);
+    fn get(&mut self) -> (&mut u64, &mut [u8], &Pubkey, bool);
 }
 
 /// Convert (&'a Pubkey, &'a mut T) where T: Account into an `AccountInfo`
 impl<'a, T: Account> IntoAccountInfo<'a> for (&'a Pubkey, &'a mut T) {
     fn into_account_info(self) -> AccountInfo<'a> {
         let (key, account) = self;
-        let (lamports, data, owner, executable, rent_epoch) = account.get();
-        AccountInfo::new(
-            key, false, false, lamports, data, owner, executable, rent_epoch,
-        )
+        let (lamports, data, owner, executable) = account.get();
+        AccountInfo::new(key, false, false, lamports, data, owner, executable)
     }
 }
 
@@ -278,10 +271,8 @@ impl<'a, T: Account> IntoAccountInfo<'a> for (&'a Pubkey, &'a mut T) {
 impl<'a, T: Account> IntoAccountInfo<'a> for (&'a Pubkey, bool, &'a mut T) {
     fn into_account_info(self) -> AccountInfo<'a> {
         let (key, is_signer, account) = self;
-        let (lamports, data, owner, executable, rent_epoch) = account.get();
-        AccountInfo::new(
-            key, is_signer, false, lamports, data, owner, executable, rent_epoch,
-        )
+        let (lamports, data, owner, executable) = account.get();
+        AccountInfo::new(key, is_signer, false, lamports, data, owner, executable)
     }
 }
 
@@ -289,10 +280,8 @@ impl<'a, T: Account> IntoAccountInfo<'a> for (&'a Pubkey, bool, &'a mut T) {
 impl<'a, T: Account> IntoAccountInfo<'a> for &'a mut (Pubkey, T) {
     fn into_account_info(self) -> AccountInfo<'a> {
         let (ref key, account) = self;
-        let (lamports, data, owner, executable, rent_epoch) = account.get();
-        AccountInfo::new(
-            key, false, false, lamports, data, owner, executable, rent_epoch,
-        )
+        let (lamports, data, owner, executable) = account.get();
+        AccountInfo::new(key, false, false, lamports, data, owner, executable)
     }
 }
 
@@ -331,7 +320,7 @@ impl<'a, T: Account> IntoAccountInfo<'a> for &'a mut (Pubkey, T) {
 /// # let p = Pubkey::new_unique();
 /// # let l = &mut 0;
 /// # let d = &mut [0u8];
-/// # let a = AccountInfo::new(&p, false, false, l, d, &p, false, 0);
+/// # let a = AccountInfo::new(&p, false, false, l, d, &p, false, );
 /// # let accounts = &[a.clone(), a];
 /// # process_instruction(
 /// #    &Pubkey::new_unique(),
@@ -381,7 +370,7 @@ pub fn next_account_info<'a, 'b, I: Iterator<Item = &'a AccountInfo<'b>>>(
 /// # let p = Pubkey::new_unique();
 /// # let l = &mut 0;
 /// # let d = &mut [0u8];
-/// # let a = AccountInfo::new(&p, false, false, l, d, &p, false, 0);
+/// # let a = AccountInfo::new(&p, false, false, l, d, &p, false, );
 /// # let accounts = &[a.clone(), a.clone(), a.clone(), a.clone(), a];
 /// # process_instruction(
 /// #    &Pubkey::new_unique(),
@@ -435,11 +424,11 @@ mod tests {
         let d5 = &mut [0u8];
 
         let infos = &[
-            AccountInfo::new(&k1, false, false, l1, d1, &k1, false, 0),
-            AccountInfo::new(&k2, false, false, l2, d2, &k2, false, 0),
-            AccountInfo::new(&k3, false, false, l3, d3, &k3, false, 0),
-            AccountInfo::new(&k4, false, false, l4, d4, &k4, false, 0),
-            AccountInfo::new(&k5, false, false, l5, d5, &k5, false, 0),
+            AccountInfo::new(&k1, false, false, l1, d1, &k1, false),
+            AccountInfo::new(&k2, false, false, l2, d2, &k2, false),
+            AccountInfo::new(&k3, false, false, l3, d3, &k3, false),
+            AccountInfo::new(&k4, false, false, l4, d4, &k4, false),
+            AccountInfo::new(&k5, false, false, l5, d5, &k5, false),
         ];
         let infos_iter = &mut infos.iter();
         let info1 = next_account_info(infos_iter).unwrap();
@@ -458,7 +447,7 @@ mod tests {
         let k = Pubkey::new_unique();
         let l = &mut 0;
         let d = &mut [0u8];
-        let info = AccountInfo::new(&k, false, false, l, d, &k, false, 0);
+        let info = AccountInfo::new(&k, false, false, l, d, &k, false);
         assert_eq!(info.key, info.as_ref().key);
     }
 
@@ -468,7 +457,7 @@ mod tests {
         let mut lamports = 42;
         let mut data = vec![5; 80];
         let data_str = format!("{:?}", Hex(&data[..MAX_DEBUG_ACCOUNT_DATA]));
-        let info = AccountInfo::new(&key, false, false, &mut lamports, &mut data, &key, false, 0);
+        let info = AccountInfo::new(&key, false, false, &mut lamports, &mut data, &key, false);
         assert_eq!(
             format!("{info:?}"),
             format!(
@@ -478,7 +467,6 @@ mod tests {
                 is_signer: {}, \
                 is_writable: {}, \
                 executable: {}, \
-                rent_epoch: {}, \
                 lamports: {}, \
                 data.len: {}, \
                 data: {}, .. }}",
@@ -487,7 +475,6 @@ mod tests {
                 false,
                 false,
                 false,
-                0,
                 lamports,
                 data.len(),
                 data_str,
@@ -496,7 +483,7 @@ mod tests {
 
         let mut data = vec![5; 40];
         let data_str = format!("{:?}", Hex(&data));
-        let info = AccountInfo::new(&key, false, false, &mut lamports, &mut data, &key, false, 0);
+        let info = AccountInfo::new(&key, false, false, &mut lamports, &mut data, &key, false);
         assert_eq!(
             format!("{info:?}"),
             format!(
@@ -506,7 +493,6 @@ mod tests {
                 is_signer: {}, \
                 is_writable: {}, \
                 executable: {}, \
-                rent_epoch: {}, \
                 lamports: {}, \
                 data.len: {}, \
                 data: {}, .. }}",
@@ -515,7 +501,6 @@ mod tests {
                 false,
                 false,
                 false,
-                0,
                 lamports,
                 data.len(),
                 data_str,
@@ -523,7 +508,7 @@ mod tests {
         );
 
         let mut data = vec![];
-        let info = AccountInfo::new(&key, false, false, &mut lamports, &mut data, &key, false, 0);
+        let info = AccountInfo::new(&key, false, false, &mut lamports, &mut data, &key, false);
         assert_eq!(
             format!("{info:?}"),
             format!(
@@ -533,7 +518,6 @@ mod tests {
                 is_signer: {}, \
                 is_writable: {}, \
                 executable: {}, \
-                rent_epoch: {}, \
                 lamports: {}, \
                 data.len: {}, .. }}",
                 key,
@@ -541,7 +525,6 @@ mod tests {
                 false,
                 false,
                 false,
-                0,
                 lamports,
                 data.len(),
             )

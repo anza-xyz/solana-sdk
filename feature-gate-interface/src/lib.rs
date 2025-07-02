@@ -145,7 +145,6 @@ mod test {
                 &mut good_data,
                 &id(),
                 false,
-                u64::MAX,
             )),
             Ok(Feature { activated_at: None })
         );
@@ -158,7 +157,6 @@ mod test {
                 &mut small_data, // Too small
                 &id(),
                 false,
-                u64::MAX,
             )),
             Err(ProgramError::InvalidAccountData),
         );
@@ -171,7 +169,6 @@ mod test {
                 &mut good_data,
                 &Pubkey::new_unique(), // Wrong owner
                 false,
-                u64::MAX,
             )),
             Err(ProgramError::InvalidAccountOwner),
         );

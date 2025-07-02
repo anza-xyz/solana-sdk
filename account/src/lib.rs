@@ -12,7 +12,6 @@ use solana_frozen_abi_macro::{frozen_abi, AbiExample};
 use solana_sysvar::Sysvar;
 use {
     solana_account_info::{debug_account_data::*, AccountInfo},
-    solana_clock::{Epoch, INITIAL_RENT_EPOCH},
     solana_instruction::error::LamportsError,
     solana_pubkey::Pubkey,
     solana_sdk_ids::{bpf_loader, bpf_loader_deprecated, bpf_loader_upgradeable, loader_v4},
@@ -33,7 +32,7 @@ pub mod state_traits;
 #[cfg_attr(
     feature = "frozen-abi",
     derive(AbiExample),
-    frozen_abi(digest = "2SUJNHbXMPWrsSXmDTFc4VHx2XQ85fT5Leabefh5Nwe7")
+    frozen_abi(digest = "DPdmB9E8Zi9DCvYoTwQpY3eJJmiY4BXm3FkR8ebuhVg9")
 )]
 #[cfg_attr(
     feature = "serde",
@@ -51,8 +50,6 @@ pub struct Account {
     pub owner: Pubkey,
     /// this account's data contains a loaded program (and is now read-only)
     pub executable: bool,
-    /// the epoch at which this account will next owe rent
-    pub rent_epoch: Epoch,
 }
 
 // mod because we need 'Account' below to have the name 'Account' to match expected serialization
@@ -63,14 +60,13 @@ mod account_serialize {
     use {
         crate::ReadableAccount,
         serde::{ser::Serializer, Serialize},
-        solana_clock::Epoch,
         solana_pubkey::Pubkey,
     };
     #[repr(C)]
     #[cfg_attr(
         feature = "frozen-abi",
         derive(AbiExample),
-        frozen_abi(digest = "2SUJNHbXMPWrsSXmDTFc4VHx2XQ85fT5Leabefh5Nwe7")
+        frozen_abi(digest = "DPdmB9E8Zi9DCvYoTwQpY3eJJmiY4BXm3FkR8ebuhVg9")
     )]
     #[derive(serde_derive::Serialize)]
     #[serde(rename_all = "camelCase")]
@@ -81,7 +77,6 @@ mod account_serialize {
         data: &'a [u8],
         owner: &'a Pubkey,
         executable: bool,
-        rent_epoch: Epoch,
     }
 
     /// allows us to implement serialize on AccountSharedData that is equivalent to Account::serialize without making a copy of the Vec<u8>
@@ -97,7 +92,6 @@ mod account_serialize {
             data: account.data(),
             owner: account.owner(),
             executable: account.executable(),
-            rent_epoch: account.rent_epoch(),
         };
         temp.serialize(serializer)
     }
@@ -142,8 +136,6 @@ pub struct AccountSharedData {
     owner: Pubkey,
     /// this account's data contains a loaded program (and is now read-only)
     executable: bool,
-    /// the epoch at which this account will next owe rent
-    rent_epoch: Epoch,
 }
 
 /// Compares two ReadableAccounts
@@ -152,7 +144,6 @@ pub struct AccountSharedData {
 pub fn accounts_equal<T: ReadableAccount, U: ReadableAccount>(me: &T, other: &U) -> bool {
     me.lamports() == other.lamports()
         && me.executable() == other.executable()
-        && me.rent_epoch() == other.rent_epoch()
         && me.owner() == other.owner()
         && me.data() == other.data()
 }
@@ -165,7 +156,6 @@ impl From<AccountSharedData> for Account {
             data: std::mem::take(account_data),
             owner: other.owner,
             executable: other.executable,
-            rent_epoch: other.rent_epoch,
         }
     }
 }
@@ -177,7 +167,6 @@ impl From<Account> for AccountSharedData {
             data: Arc::new(other.data),
             owner: other.owner,
             executable: other.executable,
-            rent_epoch: other.rent_epoch,
         }
     }
 }
@@ -210,14 +199,7 @@ pub trait WritableAccount: ReadableAccount {
     fn set_owner(&mut self, owner: Pubkey);
     fn copy_into_owner_from_slice(&mut self, source: &[u8]);
     fn set_executable(&mut self, executable: bool);
-    fn set_rent_epoch(&mut self, epoch: Epoch);
-    fn create(
-        lamports: u64,
-        data: Vec<u8>,
-        owner: Pubkey,
-        executable: bool,
-        rent_epoch: Epoch,
-    ) -> Self;
+    fn create(lamports: u64, data: Vec<u8>, owner: Pubkey, executable: bool) -> Self;
 }
 
 pub trait ReadableAccount: Sized {
@@ -225,14 +207,12 @@ pub trait ReadableAccount: Sized {
     fn data(&self) -> &[u8];
     fn owner(&self) -> &Pubkey;
     fn executable(&self) -> bool;
-    fn rent_epoch(&self) -> Epoch;
     fn to_account_shared_data(&self) -> AccountSharedData {
         AccountSharedData::create(
             self.lamports(),
             self.data().to_vec(),
             *self.owner(),
             self.executable(),
-            self.rent_epoch(),
         )
     }
 }
@@ -249,9 +229,6 @@ impl ReadableAccount for Account {
     }
     fn executable(&self) -> bool {
         self.executable
-    }
-    fn rent_epoch(&self) -> Epoch {
-        self.rent_epoch
     }
 }
 
@@ -271,22 +248,12 @@ impl WritableAccount for Account {
     fn set_executable(&mut self, executable: bool) {
         self.executable = executable;
     }
-    fn set_rent_epoch(&mut self, epoch: Epoch) {
-        self.rent_epoch = epoch;
-    }
-    fn create(
-        lamports: u64,
-        data: Vec<u8>,
-        owner: Pubkey,
-        executable: bool,
-        rent_epoch: Epoch,
-    ) -> Self {
+    fn create(lamports: u64, data: Vec<u8>, owner: Pubkey, executable: bool) -> Self {
         Account {
             lamports,
             data,
             owner,
             executable,
-            rent_epoch,
         }
     }
 }
@@ -307,22 +274,12 @@ impl WritableAccount for AccountSharedData {
     fn set_executable(&mut self, executable: bool) {
         self.executable = executable;
     }
-    fn set_rent_epoch(&mut self, epoch: Epoch) {
-        self.rent_epoch = epoch;
-    }
-    fn create(
-        lamports: u64,
-        data: Vec<u8>,
-        owner: Pubkey,
-        executable: bool,
-        rent_epoch: Epoch,
-    ) -> Self {
+    fn create(lamports: u64, data: Vec<u8>, owner: Pubkey, executable: bool) -> Self {
         AccountSharedData {
             lamports,
             data: Arc::new(data),
             owner,
             executable,
-            rent_epoch,
         }
     }
 }
@@ -339,9 +296,6 @@ impl ReadableAccount for AccountSharedData {
     }
     fn executable(&self) -> bool {
         self.executable
-    }
-    fn rent_epoch(&self) -> Epoch {
-        self.rent_epoch
     }
     fn to_account_shared_data(&self) -> AccountSharedData {
         // avoid data copy here
@@ -362,9 +316,6 @@ impl ReadableAccount for Ref<'_, AccountSharedData> {
     fn executable(&self) -> bool {
         self.executable
     }
-    fn rent_epoch(&self) -> Epoch {
-        self.rent_epoch
-    }
     fn to_account_shared_data(&self) -> AccountSharedData {
         AccountSharedData {
             lamports: self.lamports(),
@@ -372,7 +323,6 @@ impl ReadableAccount for Ref<'_, AccountSharedData> {
             data: Arc::clone(&self.data),
             owner: *self.owner(),
             executable: self.executable(),
-            rent_epoch: self.rent_epoch(),
         }
     }
 }
@@ -390,9 +340,6 @@ impl ReadableAccount for Ref<'_, Account> {
     fn executable(&self) -> bool {
         self.executable
     }
-    fn rent_epoch(&self) -> Epoch {
-        self.rent_epoch
-    }
 }
 
 fn debug_fmt<T: ReadableAccount>(item: &T, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -401,8 +348,7 @@ fn debug_fmt<T: ReadableAccount>(item: &T, f: &mut fmt::Formatter<'_>) -> fmt::R
     f.field("lamports", &item.lamports())
         .field("data.len", &item.data().len())
         .field("owner", &item.owner())
-        .field("executable", &item.executable())
-        .field("rent_epoch", &item.rent_epoch());
+        .field("executable", &item.executable());
     debug_account_data(item.data(), &mut f);
 
     f.finish()
@@ -421,28 +367,7 @@ impl fmt::Debug for AccountSharedData {
 }
 
 fn shared_new<T: WritableAccount>(lamports: u64, space: usize, owner: &Pubkey) -> T {
-    T::create(
-        lamports,
-        vec![0u8; space],
-        *owner,
-        bool::default(),
-        Epoch::default(),
-    )
-}
-
-fn shared_new_rent_epoch<T: WritableAccount>(
-    lamports: u64,
-    space: usize,
-    owner: &Pubkey,
-    rent_epoch: Epoch,
-) -> T {
-    T::create(
-        lamports,
-        vec![0u8; space],
-        *owner,
-        bool::default(),
-        rent_epoch,
-    )
+    T::create(lamports, vec![0u8; space], *owner, bool::default())
 }
 
 fn shared_new_ref<T: WritableAccount>(
@@ -460,13 +385,7 @@ fn shared_new_data<T: serde::Serialize, U: WritableAccount>(
     owner: &Pubkey,
 ) -> Result<U, bincode::Error> {
     let data = bincode::serialize(state)?;
-    Ok(U::create(
-        lamports,
-        data,
-        *owner,
-        bool::default(),
-        Epoch::default(),
-    ))
+    Ok(U::create(lamports, data, *owner, bool::default()))
 }
 
 #[cfg(feature = "bincode")]
@@ -564,9 +483,6 @@ impl Account {
         owner: &Pubkey,
     ) -> Result<RefCell<Self>, bincode::Error> {
         shared_new_ref_data_with_space(lamports, state, space, owner)
-    }
-    pub fn new_rent_epoch(lamports: u64, space: usize, owner: &Pubkey, rent_epoch: Epoch) -> Self {
-        shared_new_rent_epoch(lamports, space, owner, rent_epoch)
     }
     #[cfg(feature = "bincode")]
     pub fn deserialize_data<T: serde::de::DeserializeOwned>(&self) -> Result<T, bincode::Error> {
@@ -701,9 +617,6 @@ impl AccountSharedData {
     ) -> Result<RefCell<Self>, bincode::Error> {
         shared_new_ref_data_with_space(lamports, state, space, owner)
     }
-    pub fn new_rent_epoch(lamports: u64, space: usize, owner: &Pubkey, rent_epoch: Epoch) -> Self {
-        shared_new_rent_epoch(lamports, space, owner, rent_epoch)
-    }
     #[cfg(feature = "bincode")]
     pub fn deserialize_data<T: serde::de::DeserializeOwned>(&self) -> Result<T, bincode::Error> {
         shared_deserialize_data(self)
@@ -714,40 +627,35 @@ impl AccountSharedData {
     }
 }
 
-pub type InheritableAccountFields = (u64, Epoch);
-pub const DUMMY_INHERITABLE_ACCOUNT_FIELDS: InheritableAccountFields = (1, INITIAL_RENT_EPOCH);
+pub const DUMMY_INHERITABLE_LAMPORTS: u64 = 1;
 
 #[cfg(feature = "bincode")]
-pub fn create_account_with_fields<S: Sysvar>(
-    sysvar: &S,
-    (lamports, rent_epoch): InheritableAccountFields,
-) -> Account {
+pub fn create_account_with_lamports<S: Sysvar>(sysvar: &S, lamports: u64) -> Account {
     let data_len = S::size_of().max(bincode::serialized_size(sysvar).unwrap() as usize);
     let mut account = Account::new(lamports, data_len, &solana_sdk_ids::sysvar::id());
     to_account::<S, Account>(sysvar, &mut account).unwrap();
-    account.rent_epoch = rent_epoch;
     account
 }
 
 #[cfg(feature = "bincode")]
 pub fn create_account_for_test<S: Sysvar>(sysvar: &S) -> Account {
-    create_account_with_fields(sysvar, DUMMY_INHERITABLE_ACCOUNT_FIELDS)
+    create_account_with_lamports(sysvar, DUMMY_INHERITABLE_LAMPORTS)
 }
 
 #[cfg(feature = "bincode")]
 /// Create an `Account` from a `Sysvar`.
 pub fn create_account_shared_data_with_fields<S: Sysvar>(
     sysvar: &S,
-    fields: InheritableAccountFields,
+    lamports: u64,
 ) -> AccountSharedData {
-    AccountSharedData::from(create_account_with_fields(sysvar, fields))
+    AccountSharedData::from(create_account_with_lamports(sysvar, lamports))
 }
 
 #[cfg(feature = "bincode")]
 pub fn create_account_shared_data_for_test<S: Sysvar>(sysvar: &S) -> AccountSharedData {
-    AccountSharedData::from(create_account_with_fields(
+    AccountSharedData::from(create_account_with_lamports(
         sysvar,
-        DUMMY_INHERITABLE_ACCOUNT_FIELDS,
+        DUMMY_INHERITABLE_LAMPORTS,
     ))
 }
 
@@ -766,13 +674,12 @@ pub fn to_account<S: Sysvar, T: WritableAccount>(sysvar: &S, account: &mut T) ->
 /// Return the information required to construct an `AccountInfo`.  Used by the
 /// `AccountInfo` conversion implementations.
 impl solana_account_info::Account for Account {
-    fn get(&mut self) -> (&mut u64, &mut [u8], &Pubkey, bool, Epoch) {
+    fn get(&mut self) -> (&mut u64, &mut [u8], &Pubkey, bool) {
         (
             &mut self.lamports,
             &mut self.data,
             &self.owner,
             self.executable,
-            self.rent_epoch,
         )
     }
 }
@@ -792,7 +699,6 @@ pub fn create_is_signer_account_infos<'a>(
                 &mut account.data,
                 &account.owner,
                 account.executable,
-                account.rent_epoch,
             )
         })
         .collect()
@@ -813,10 +719,8 @@ pub mod tests {
     fn make_two_accounts(key: &Pubkey) -> (Account, AccountSharedData) {
         let mut account1 = Account::new(1, 2, key);
         account1.executable = true;
-        account1.rent_epoch = 4;
         let mut account2 = AccountSharedData::new(1, 2, key);
         account2.executable = true;
-        account2.rent_epoch = 4;
         assert!(accounts_equal(&account1, &account2));
         (account1, account2)
     }
@@ -925,8 +829,6 @@ pub mod tests {
         assert_eq!(account.owner(), &key);
         assert!(account.executable);
         assert!(account.executable());
-        assert_eq!(account.rent_epoch, 4);
-        assert_eq!(account.rent_epoch(), 4);
         let account = account2;
         assert_eq!(account.lamports, 1);
         assert_eq!(account.lamports(), 1);
@@ -936,8 +838,6 @@ pub mod tests {
         assert_eq!(account.owner(), &key);
         assert!(account.executable);
         assert!(account.executable());
-        assert_eq!(account.rent_epoch, 4);
-        assert_eq!(account.rent_epoch(), 4);
     }
 
     // test clone and from for both types against expected
@@ -1050,7 +950,7 @@ pub mod tests {
         assert!(accounts_equal(&account1, &account_expected));
         assert!(accounts_equal(&account1, &account2.clone())); // test the clone here
 
-        for field_index in 0..5 {
+        for field_index in 0..4 {
             for pass in 0..4 {
                 if field_index == 0 {
                     if pass == 0 {
@@ -1100,20 +1000,7 @@ pub mod tests {
                         account_expected.executable = !account_expected.executable;
                         account2.executable = !account2.executable;
                     }
-                } else if field_index == 4 {
-                    if pass == 0 {
-                        account1.rent_epoch += 1;
-                    } else if pass == 1 {
-                        account_expected.rent_epoch += 1;
-                        account2.set_rent_epoch(account2.rent_epoch + 1);
-                    } else if pass == 2 {
-                        account1.set_rent_epoch(account1.rent_epoch + 1);
-                    } else if pass == 3 {
-                        account_expected.rent_epoch += 1;
-                        account2.rent_epoch += 1;
-                    }
                 }
-
                 let should_be_equal = pass == 1 || pass == 3;
                 test_equal(should_be_equal, &account1, &account2, &account_expected);
 

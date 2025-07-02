@@ -165,8 +165,6 @@ pub type BankId = u64;
 pub type Epoch = u64;
 
 pub const GENESIS_EPOCH: Epoch = 0;
-// must be sync with Account::rent_epoch::default()
-pub const INITIAL_RENT_EPOCH: Epoch = 0;
 
 /// An index to the slots of a epoch.
 pub type SlotIndex = u64;

@@ -249,7 +249,6 @@ mod tests {
         super::*,
         crate::program_stubs::{set_syscall_stubs, SyscallStubs},
         serde_derive::{Deserialize, Serialize},
-        solana_clock::Epoch,
         solana_program_entrypoint::SUCCESS,
         solana_program_error::ProgramError,
         solana_pubkey::Pubkey,
@@ -305,16 +304,8 @@ mod tests {
         let owner = Pubkey::new_unique();
         let mut lamports = 42;
         let mut data = vec![0_u8; TestSysvar::size_of()];
-        let mut account_info = AccountInfo::new(
-            &key,
-            false,
-            true,
-            &mut lamports,
-            &mut data,
-            &owner,
-            false,
-            Epoch::default(),
-        );
+        let mut account_info =
+            AccountInfo::new(&key, false, true, &mut lamports, &mut data, &owner, false);
 
         test_sysvar.to_account_info(&mut account_info).unwrap();
         let new_test_sysvar = TestSysvar::from_account_info(&account_info).unwrap();

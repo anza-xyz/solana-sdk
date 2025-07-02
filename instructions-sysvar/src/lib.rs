@@ -388,16 +388,8 @@ mod tests {
         let mut lamports = 0;
         let mut data = construct_instructions_data(&[borrowed_instruction0, borrowed_instruction1]);
         let owner = solana_sdk_ids::sysvar::id();
-        let mut account_info = AccountInfo::new(
-            &key,
-            false,
-            false,
-            &mut lamports,
-            &mut data,
-            &owner,
-            false,
-            0,
-        );
+        let mut account_info =
+            AccountInfo::new(&key, false, false, &mut lamports, &mut data, &owner, false);
 
         assert_eq!(
             instruction0,
@@ -447,16 +439,8 @@ mod tests {
         let res = store_current_index_checked(&mut data, 1);
         assert!(res.is_ok());
         let owner = solana_sdk_ids::sysvar::id();
-        let mut account_info = AccountInfo::new(
-            &key,
-            false,
-            false,
-            &mut lamports,
-            &mut data,
-            &owner,
-            false,
-            0,
-        );
+        let mut account_info =
+            AccountInfo::new(&key, false, false, &mut lamports, &mut data, &owner, false);
 
         assert_eq!(1, load_current_index_checked(&account_info).unwrap());
         {
@@ -517,16 +501,8 @@ mod tests {
         let res = store_current_index_checked(&mut data, 1);
         assert!(res.is_ok());
         let owner = solana_sdk_ids::sysvar::id();
-        let mut account_info = AccountInfo::new(
-            &key,
-            false,
-            false,
-            &mut lamports,
-            &mut data,
-            &owner,
-            false,
-            0,
-        );
+        let mut account_info =
+            AccountInfo::new(&key, false, false, &mut lamports, &mut data, &owner, false);
 
         assert_eq!(
             Err(ProgramError::InvalidArgument),
