@@ -9,6 +9,9 @@ homepage = { workspace = true }
 license = { workspace = true }
 edition = { workspace = true }
 
+[package.metadata.docs.rs]
+targets = ["x86_64-unknown-linux-gnu"]
+
 [dependencies]
 bincode = { workspace = true }
 serde = { workspace = true }
@@ -18,9 +21,6 @@ solana-instruction = { workspace = true, default-features = false, features = [
 
 [dev-dependencies]
 solana-system-interface = { workspace = true, features = ["bincode"] }
-
-[package.metadata.docs.rs]
-targets = ["x86_64-unknown-linux-gnu"]
 
 [lints]
 workspace = true

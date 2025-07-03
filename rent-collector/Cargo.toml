@@ -9,6 +9,20 @@ homepage = { workspace = true }
 license = { workspace = true }
 edition = { workspace = true }
 
+[package.metadata.docs.rs]
+targets = ["x86_64-unknown-linux-gnu"]
+all-features = true
+rustdoc-args = ["--cfg=docsrs"]
+
+[features]
+frozen-abi = ["dep:solana-frozen-abi", "dep:solana-frozen-abi-macro"]
+serde = [
+    "dep:serde",
+    "dep:serde_derive",
+    "solana-epoch-schedule/serde",
+    "solana-rent/serde",
+]
+
 [dependencies]
 serde = { workspace = true, optional = true }
 serde_derive = { workspace = true, optional = true }
@@ -26,20 +40,6 @@ solana-sdk-ids = { workspace = true }
 assert_matches = { workspace = true }
 solana-logger = { workspace = true }
 solana-pubkey = { workspace = true, features = ["rand"] }
-
-[features]
-frozen-abi = ["dep:solana-frozen-abi", "dep:solana-frozen-abi-macro"]
-serde = [
-  "dep:serde",
-  "dep:serde_derive",
-  "solana-epoch-schedule/serde",
-  "solana-rent/serde",
-]
-
-[package.metadata.docs.rs]
-targets = ["x86_64-unknown-linux-gnu"]
-all-features = true
-rustdoc-args = ["--cfg=docsrs"]
 
 [lints]
 workspace = true

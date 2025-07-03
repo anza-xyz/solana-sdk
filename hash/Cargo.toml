@@ -14,6 +14,16 @@ targets = ["x86_64-unknown-linux-gnu", "wasm32-unknown-unknown"]
 all-features = true
 rustdoc-args = ["--cfg=docsrs"]
 
+[features]
+borsh = ["dep:borsh", "std"]
+bytemuck = ["dep:bytemuck", "dep:bytemuck_derive"]
+default = ["std", "js"]
+dev-context-only-utils = ["bs58/alloc"]
+frozen-abi = ["dep:solana-frozen-abi", "dep:solana-frozen-abi-macro", "std"]
+js = ["dep:wasm-bindgen", "dep:js-sys"]
+serde = ["dep:serde", "dep:serde_derive"]
+std = []
+
 [dependencies]
 borsh = { workspace = true, optional = true }
 bs58 = { workspace = true, default-features = false }
@@ -30,26 +40,12 @@ solana-frozen-abi-macro = { workspace = true, optional = true, features = [
 ] }
 solana-sanitize = { workspace = true }
 
-[dev-dependencies]
-solana-hash = { path = ".", features = ["dev-context-only-utils"] }
-
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 js-sys = { workspace = true, optional = true }
 wasm-bindgen = { workspace = true, optional = true }
 
-[features]
-borsh = ["dep:borsh", "std"]
-bytemuck = ["dep:bytemuck", "dep:bytemuck_derive"]
-default = ["std", "js"]
-dev-context-only-utils = ["bs58/alloc"]
-frozen-abi = [
-    "dep:solana-frozen-abi",
-    "dep:solana-frozen-abi-macro",
-    "std"
-]
-js = ["dep:wasm-bindgen", "dep:js-sys"]
-serde = ["dep:serde", "dep:serde_derive"]
-std = []
+[dev-dependencies]
+solana-hash = { path = ".", features = ["dev-context-only-utils"] }
 
 [lints]
 workspace = true

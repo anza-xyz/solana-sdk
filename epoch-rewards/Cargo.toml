@@ -9,6 +9,22 @@ homepage = { workspace = true }
 license = { workspace = true }
 edition = { workspace = true }
 
+[package.metadata.docs.rs]
+targets = ["x86_64-unknown-linux-gnu"]
+all-features = true
+rustdoc-args = ["--cfg=docsrs"]
+
+[features]
+frozen-abi = [
+    "dep:solana-frozen-abi",
+    "dep:solana-frozen-abi-macro",
+    "solana-hash/frozen-abi",
+    "std",
+]
+serde = ["dep:serde", "dep:serde_derive", "solana-hash/serde"]
+std = []
+sysvar = ["dep:solana-sysvar-id"]
+
 [dependencies]
 serde = { workspace = true, optional = true }
 serde_derive = { workspace = true, optional = true }
@@ -21,17 +37,6 @@ solana-sysvar-id = { workspace = true, optional = true }
 
 [dev-dependencies]
 solana-epoch-rewards = { path = ".", features = ["sysvar"] }
-
-[package.metadata.docs.rs]
-targets = ["x86_64-unknown-linux-gnu"]
-all-features = true
-rustdoc-args = ["--cfg=docsrs"]
-
-[features]
-frozen-abi = ["dep:solana-frozen-abi", "dep:solana-frozen-abi-macro", "solana-hash/frozen-abi", "std"]
-serde = ["dep:serde", "dep:serde_derive", "solana-hash/serde"]
-std = []
-sysvar = ["dep:solana-sysvar-id"]
 
 [lints]
 workspace = true
