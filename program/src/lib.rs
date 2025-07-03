@@ -8,7 +8,7 @@
 //! [`solana-sdk`] crate, which reexports all modules from `solana-program`.
 //!
 //! [std]: https://doc.rust-lang.org/stable/std/
-//! [sstd]: https://solana.com/docs/programs/lang-rust#restrictions
+//! [sstd]: https://solana.com/docs/programs/limitations#rust-libraries
 //! [`solana-sdk`]: https://docs.rs/solana-sdk/latest/solana_sdk/
 //!
 //! This library defines
