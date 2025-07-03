@@ -123,11 +123,7 @@ mod tests {
                 // size is same or 1 less
                 assert!(
                     len == expected_len_of_partition || len + 1 == expected_len_of_partition,
-                    "{}, {}, {}, {}",
-                    expected_len_of_partition,
-                    len,
-                    partition,
-                    partitions
+                    "{expected_len_of_partition}, {len}, {partition}, {partitions}",
                 );
             }
         }

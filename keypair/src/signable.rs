@@ -17,7 +17,7 @@ pub trait Signable {
     }
 
     fn pubkey(&self) -> Pubkey;
-    fn signable_data(&self) -> Cow<[u8]>;
+    fn signable_data(&self) -> Cow<'_, [u8]>;
     fn get_signature(&self) -> Signature;
     fn set_signature(&mut self, signature: Signature);
 }

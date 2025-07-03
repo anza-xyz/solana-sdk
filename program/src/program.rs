@@ -244,7 +244,7 @@ pub fn check_type_assumptions() {
         assert_eq!(offset_of!(AccountInfo, data), 16);
         let data_ptr = (account_info_addr + 16) as *const Rc<RefCell<&mut [u8]>>;
         unsafe {
-            assert_eq!((*(*data_ptr).as_ptr())[..], data[..]);
+            assert_eq!((&(*(*data_ptr).as_ptr()))[..], data[..]);
         }
 
         // owner

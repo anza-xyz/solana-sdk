@@ -68,7 +68,7 @@ impl LegacyMessage<'_> {
     }
 
     /// Returns the full list of account keys.
-    pub fn account_keys(&self) -> AccountKeys {
+    pub fn account_keys(&self) -> AccountKeys<'_> {
         AccountKeys::new(&self.message.account_keys, None)
     }
 
@@ -197,7 +197,7 @@ impl SanitizedMessage {
     }
 
     /// Returns the list of account keys that are loaded for this message.
-    pub fn account_keys(&self) -> AccountKeys {
+    pub fn account_keys(&self) -> AccountKeys<'_> {
         match self {
             Self::Legacy(message) => message.account_keys(),
             Self::V0(message) => message.account_keys(),
@@ -285,7 +285,7 @@ impl SanitizedMessage {
     }
 
     /// Decompile message instructions without cloning account keys
-    pub fn decompile_instructions(&self) -> Vec<BorrowedInstruction> {
+    pub fn decompile_instructions(&self) -> Vec<BorrowedInstruction<'_>> {
         let account_keys = self.account_keys();
         self.program_instructions_iter()
             .map(|(program_id, instruction)| {

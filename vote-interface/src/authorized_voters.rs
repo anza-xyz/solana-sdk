@@ -80,7 +80,7 @@ impl AuthorizedVoters {
         self.authorized_voters.contains_key(&epoch)
     }
 
-    pub fn iter(&self) -> std::collections::btree_map::Iter<Epoch, Pubkey> {
+    pub fn iter(&self) -> std::collections::btree_map::Iter<'_, Epoch, Pubkey> {
         self.authorized_voters.iter()
     }
 
