@@ -24,6 +24,7 @@ members = [
     "epoch-rewards",
     "epoch-rewards-hasher",
     "epoch-schedule",
+    "epoch-stake",
     "example-mocks",
     "feature-gate-interface",
     "fee-calculator",
@@ -61,6 +62,7 @@ members = [
     "program-memory",
     "program-option",
     "program-pack",
+    "program-stubs",
     "pubkey",
     "quic-definitions",
     "rent",
@@ -230,6 +232,7 @@ solana-epoch-info = { path = "epoch-info", version = "2.2.1" }
 solana-epoch-rewards = { path = "epoch-rewards", version = "2.2.1" }
 solana-epoch-rewards-hasher = { path = "epoch-rewards-hasher", version = "2.2.1" }
 solana-epoch-schedule = { path = "epoch-schedule", version = "2.2.1" }
+solana-epoch-stake = { path = "epoch-stake", version = "2.2.1" }
 solana-example-mocks = { path = "example-mocks", version = "2.2.1" }
 solana-feature-gate-interface = { path = "feature-gate-interface", version = "2.2.1" }
 solana-fee-calculator = { path = "fee-calculator", version = "2.2.1" }
@@ -268,6 +271,7 @@ solana-program-error = { path = "program-error", version = "2.2.1" }
 solana-program-memory = { path = "program-memory", version = "2.2.1" }
 solana-program-option = { path = "program-option", version = "2.2.1" }
 solana-program-pack = { path = "program-pack", version = "2.2.1" }
+solana-program-stubs = { path = "program-stubs", version = "2.2.1" }
 solana-pubkey = { path = "pubkey", version = "2.2.1", default-features = false }
 solana-quic-definitions = { path = "quic-definitions", version = "2.2.1" }
 solana-rent = { path = "rent", version = "2.2.1", default-features = false }

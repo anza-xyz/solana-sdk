@@ -1,4 +1,5 @@
-//! Implementations of syscalls used when `solana-program` is built for non-SBF targets.
+//! Implementations of syscalls used when program development libs are built
+//! for non-SBF targets.
 
 #![cfg(not(target_os = "solana"))]
 
@@ -142,8 +143,7 @@ pub fn sol_invoke_signed(
         .sol_invoke_signed(instruction, account_infos, signers_seeds)
 }
 
-#[allow(dead_code)]
-pub(crate) fn sol_get_sysvar(
+pub fn sol_get_sysvar(
     sysvar_id_addr: *const u8,
     var_addr: *mut u8,
     offset: u64,
@@ -155,31 +155,26 @@ pub(crate) fn sol_get_sysvar(
         .sol_get_sysvar(sysvar_id_addr, var_addr, offset, length)
 }
 
-#[cfg(feature = "bincode")]
-pub(crate) fn sol_get_clock_sysvar(var_addr: *mut u8) -> u64 {
+pub fn sol_get_clock_sysvar(var_addr: *mut u8) -> u64 {
     SYSCALL_STUBS.read().unwrap().sol_get_clock_sysvar(var_addr)
 }
 
-#[cfg(feature = "bincode")]
-pub(crate) fn sol_get_epoch_schedule_sysvar(var_addr: *mut u8) -> u64 {
+pub fn sol_get_epoch_schedule_sysvar(var_addr: *mut u8) -> u64 {
     SYSCALL_STUBS
         .read()
         .unwrap()
         .sol_get_epoch_schedule_sysvar(var_addr)
 }
 
-#[cfg(feature = "bincode")]
-pub(crate) fn sol_get_fees_sysvar(var_addr: *mut u8) -> u64 {
+pub fn sol_get_fees_sysvar(var_addr: *mut u8) -> u64 {
     SYSCALL_STUBS.read().unwrap().sol_get_fees_sysvar(var_addr)
 }
 
-#[cfg(feature = "bincode")]
-pub(crate) fn sol_get_rent_sysvar(var_addr: *mut u8) -> u64 {
+pub fn sol_get_rent_sysvar(var_addr: *mut u8) -> u64 {
     SYSCALL_STUBS.read().unwrap().sol_get_rent_sysvar(var_addr)
 }
 
-#[cfg(feature = "bincode")]
-pub(crate) fn sol_get_last_restart_slot(var_addr: *mut u8) -> u64 {
+pub fn sol_get_last_restart_slot(var_addr: *mut u8) -> u64 {
     SYSCALL_STUBS
         .read()
         .unwrap()
@@ -216,8 +211,7 @@ pub fn sol_get_stack_height() -> u64 {
     SYSCALL_STUBS.read().unwrap().sol_get_stack_height()
 }
 
-#[cfg(feature = "bincode")]
-pub(crate) fn sol_get_epoch_rewards_sysvar(var_addr: *mut u8) -> u64 {
+pub fn sol_get_epoch_rewards_sysvar(var_addr: *mut u8) -> u64 {
     SYSCALL_STUBS
         .read()
         .unwrap()

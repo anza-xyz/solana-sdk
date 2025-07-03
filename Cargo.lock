@@ -3056,6 +3056,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "solana-epoch-stake"
+version = "2.2.1"
+dependencies = [
+ "solana-define-syscall",
+ "solana-program-stubs",
+ "solana-pubkey",
+]
+
+[[package]]
 name = "solana-example-mocks"
 version = "2.2.1"
 dependencies = [
@@ -3548,6 +3557,7 @@ dependencies = [
  "solana-define-syscall",
  "solana-epoch-rewards",
  "solana-epoch-schedule",
+ "solana-epoch-stake",
  "solana-example-mocks",
  "solana-fee-calculator",
  "solana-frozen-abi",
@@ -3622,6 +3632,19 @@ name = "solana-program-pack"
 version = "2.2.1"
 dependencies = [
  "solana-program-error",
+]
+
+[[package]]
+name = "solana-program-stubs"
+version = "2.2.1"
+dependencies = [
+ "base64 0.22.1",
+ "lazy_static",
+ "solana-account-info",
+ "solana-instruction",
+ "solana-program-error",
+ "solana-program-memory",
+ "solana-pubkey",
 ]
 
 [[package]]
@@ -4054,6 +4077,7 @@ dependencies = [
  "solana-program-entrypoint",
  "solana-program-error",
  "solana-program-memory",
+ "solana-program-stubs",
  "solana-pubkey",
  "solana-rent",
  "solana-sanitize",
