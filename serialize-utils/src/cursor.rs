@@ -16,6 +16,15 @@ pub fn read_u8<T: AsRef<[u8]>>(cursor: &mut Cursor<T>) -> Result<u8, Instruction
     Ok(buf[0])
 }
 
+pub fn read_u16<T: AsRef<[u8]>>(cursor: &mut Cursor<T>) -> Result<u16, InstructionError> {
+    let mut buf = [0; 2];
+    cursor
+        .read_exact(&mut buf)
+        .map_err(|_| InstructionError::InvalidAccountData)?;
+
+    Ok(u16::from_le_bytes(buf))
+}
+
 pub fn read_u32<T: AsRef<[u8]>>(cursor: &mut Cursor<T>) -> Result<u32, InstructionError> {
     let mut buf = [0; 4];
     cursor
