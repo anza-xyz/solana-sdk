@@ -17,6 +17,17 @@ default = []
 bitvec = { version = "1.0.1", optional = true }
 
 [dev-dependencies]
+bitvec = "1.0.1"
+criterion = { workspace = true }
 
 [lints]
 workspace = true
+
+[[bench]]
+name = "bytes"
+harness = false
+
+[[bench]]
+name = "bitvec"
+harness = false
+required-features = ["bitvec"]
