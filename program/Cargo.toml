@@ -82,6 +82,7 @@ solana-instruction = { workspace = true, default-features = false, features = [
     "std",
     "syscalls",
 ] }
+solana-instruction-error = { workspace = true, features = ["num-traits"] }
 solana-instructions-sysvar = { workspace = true }
 solana-keccak-hasher = { workspace = true, features = ["sha3"] }
 solana-last-restart-slot = { workspace = true, features = ["serde", "sysvar"] }

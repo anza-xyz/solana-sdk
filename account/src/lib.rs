@@ -13,7 +13,7 @@ use solana_sysvar::Sysvar;
 use {
     solana_account_info::{debug_account_data::*, AccountInfo},
     solana_clock::{Epoch, INITIAL_RENT_EPOCH},
-    solana_instruction::error::LamportsError,
+    solana_instruction_error::LamportsError,
     solana_pubkey::Pubkey,
     solana_sdk_ids::{bpf_loader, bpf_loader_deprecated, bpf_loader_upgradeable, loader_v4},
     std::{

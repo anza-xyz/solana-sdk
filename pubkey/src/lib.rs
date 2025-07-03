@@ -29,6 +29,7 @@ use {
         str::{from_utf8_unchecked, FromStr},
     },
     num_traits::{FromPrimitive, ToPrimitive},
+    solana_program_error::ProgramError,
 };
 #[cfg(target_arch = "wasm32")]
 use {
@@ -59,7 +60,7 @@ const SUCCESS: u64 = 0;
 // Use strum when testing to ensure our FromPrimitive
 // impl is exhaustive
 #[cfg_attr(test, derive(strum_macros::FromRepr, strum_macros::EnumIter))]
-#[cfg_attr(feature = "serde", derive(Serialize))]
+#[cfg_attr(feature = "serde", derive(serde_derive::Serialize))]
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum PubkeyError {
     /// Length of the seed is too long for address generation
@@ -126,6 +127,16 @@ impl From<u64> for PubkeyError {
             1 => PubkeyError::InvalidSeeds,
             2 => PubkeyError::IllegalOwner,
             _ => panic!("Unsupported PubkeyError"),
+        }
+    }
+}
+
+impl From<PubkeyError> for ProgramError {
+    fn from(error: PubkeyError) -> Self {
+        match error {
+            PubkeyError::MaxSeedLengthExceeded => Self::MaxSeedLengthExceeded,
+            PubkeyError::InvalidSeeds => Self::InvalidSeeds,
+            PubkeyError::IllegalOwner => Self::IllegalOwner,
         }
     }
 }

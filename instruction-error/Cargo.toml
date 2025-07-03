@@ -1,8 +1,8 @@
 [package]
-name = "solana-transaction-error"
-description = "Solana TransactionError type"
-documentation = "https://docs.rs/solana-transaction-error"
-version = "2.2.1"
+name = "solana-instruction-error"
+description = "Solana InstructionError type."
+documentation = "https://docs.rs/solana-instruction-error"
+version = "1.0.0"
 authors = { workspace = true }
 repository = { workspace = true }
 homepage = { workspace = true }
@@ -15,16 +15,23 @@ all-features = true
 rustdoc-args = ["--cfg=docsrs"]
 
 [features]
-frozen-abi = ["dep:solana-frozen-abi", "dep:solana-frozen-abi-macro"]
-serde = ["dep:serde", "dep:serde_derive", "solana-instruction-error/serde"]
+frozen-abi = [
+    "dep:solana-frozen-abi",
+    "dep:solana-frozen-abi-macro",
+    "serde",
+    "std",
+]
+num-traits = ["dep:num-traits"]
+serde = ["dep:serde", "dep:serde_derive"]
+std = []
 
 [dependencies]
+num-traits = { workspace = true, optional = true }
 serde = { workspace = true, optional = true }
 serde_derive = { workspace = true, optional = true }
 solana-frozen-abi = { workspace = true, optional = true }
 solana-frozen-abi-macro = { workspace = true, optional = true }
-solana-instruction-error = { workspace = true }
-solana-sanitize = { workspace = true }
+solana-program-error = { workspace = true }
 
 [lints]
 workspace = true

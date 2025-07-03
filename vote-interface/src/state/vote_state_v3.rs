@@ -15,7 +15,7 @@ use {
         authorized_voters::AuthorizedVoters, error::VoteError, state::DEFAULT_PRIOR_VOTERS_OFFSET,
     },
     solana_clock::{Clock, Epoch, Slot, UnixTimestamp},
-    solana_instruction::error::InstructionError,
+    solana_instruction_error::InstructionError,
     solana_pubkey::Pubkey,
     solana_rent::Rent,
     std::{collections::VecDeque, fmt::Debug},
@@ -608,7 +608,7 @@ mod vote_state_deserialize {
             },
         },
         solana_clock::Epoch,
-        solana_instruction::error::InstructionError,
+        solana_instruction_error::InstructionError,
         solana_pubkey::Pubkey,
         solana_serialize_utils::cursor::{
             read_bool, read_i64, read_option_u64, read_pubkey, read_pubkey_into, read_u32,

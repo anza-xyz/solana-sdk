@@ -3,7 +3,7 @@ use serde_derive::{Deserialize, Serialize};
 #[cfg(feature = "frozen-abi")]
 use solana_frozen_abi_macro::{AbiEnumVisitor, AbiExample};
 #[cfg(feature = "bincode")]
-use solana_instruction::error::InstructionError;
+use solana_instruction_error::InstructionError;
 use {
     crate::error::AddressLookupError,
     solana_clock::Slot,

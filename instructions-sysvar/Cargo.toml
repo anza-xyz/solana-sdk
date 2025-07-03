@@ -20,7 +20,8 @@ dev-context-only-utils = ["dep:qualifier_attr"]
 [dependencies]
 qualifier_attr = { workspace = true, optional = true }
 solana-account-info = { workspace = true }
-solana-instruction = { workspace = true, default-features = false }
+solana-instruction = { workspace = true, default-features = false, features = ["std"] }
+solana-instruction-error = { workspace = true }
 solana-program-error = { workspace = true }
 solana-pubkey = { workspace = true, default-features = false }
 solana-sanitize = { workspace = true }

@@ -17,17 +17,12 @@ rustdoc-args = ["--cfg=docsrs"]
 [features]
 borsh = ["dep:borsh"]
 serde = ["dep:serde", "dep:serde_derive"]
+std = []
 
 [dependencies]
 borsh = { workspace = true, optional = true }
-num-traits = { workspace = true }
 serde = { workspace = true, optional = true }
 serde_derive = { workspace = true, optional = true }
-solana-instruction = { workspace = true, default-features = false, features = [
-    "std",
-] }
-solana-msg = { workspace = true }
-solana-pubkey = { workspace = true, default-features = false }
 
 [dev-dependencies]
 num_enum = { workspace = true }

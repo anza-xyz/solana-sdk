@@ -391,7 +391,7 @@ mod tests {
     use {
         super::*, crate::error::VoteError, bincode::serialized_size, core::mem::MaybeUninit,
         itertools::Itertools, rand::Rng, solana_clock::Clock, solana_hash::Hash,
-        solana_instruction::error::InstructionError,
+        solana_instruction_error::InstructionError,
     };
 
     #[test]

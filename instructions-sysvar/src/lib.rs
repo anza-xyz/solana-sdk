@@ -41,7 +41,8 @@ use {
 };
 use {
     solana_account_info::AccountInfo,
-    solana_instruction::{error::InstructionError, AccountMeta, Instruction},
+    solana_instruction::{AccountMeta, Instruction},
+    solana_instruction_error::InstructionError,
     solana_program_error::ProgramError,
     solana_sanitize::SanitizeError,
     solana_serialize_utils::{read_pubkey, read_slice, read_u16, read_u8},

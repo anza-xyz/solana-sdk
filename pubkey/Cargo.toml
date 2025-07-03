@@ -45,6 +45,7 @@ solana-frozen-abi = { workspace = true, optional = true, features = [
 solana-frozen-abi-macro = { workspace = true, optional = true, features = [
     "frozen-abi",
 ] }
+solana-program-error = { workspace = true }
 solana-sanitize = { workspace = true }
 
 [target.'cfg(not(target_os = "solana"))'.dependencies]

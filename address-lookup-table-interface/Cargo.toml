@@ -18,6 +18,7 @@ rustdoc-args = ["--cfg=docsrs"]
 bincode = [
     "dep:bincode",
     "dep:solana-instruction",
+    "dep:solana-instruction-error",
     "serde",
     "solana-instruction/bincode",
 ]
@@ -39,6 +40,7 @@ solana-frozen-abi-macro = { workspace = true, features = [
     "frozen-abi",
 ], optional = true }
 solana-instruction = { workspace = true, features = ["std"], optional = true }
+solana-instruction-error = { workspace = true, optional = true }
 solana-pubkey = { workspace = true }
 solana-sdk-ids = { workspace = true }
 solana-slot-hashes = { workspace = true }

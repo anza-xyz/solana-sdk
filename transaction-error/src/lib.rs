@@ -4,7 +4,7 @@
 use serde_derive::{Deserialize, Serialize};
 #[cfg(feature = "frozen-abi")]
 use solana_frozen_abi_macro::{AbiEnumVisitor, AbiExample};
-use {core::fmt, solana_instruction::error::InstructionError, solana_sanitize::SanitizeError};
+use {core::fmt, solana_instruction_error::InstructionError, solana_sanitize::SanitizeError};
 
 pub type TransactionResult<T> = Result<T, TransactionError>;
 

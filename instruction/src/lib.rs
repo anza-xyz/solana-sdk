@@ -11,7 +11,6 @@
 //! [`AccountMeta`] values. The runtime uses this information to efficiently
 //! schedule execution of transactions.
 #![cfg_attr(docsrs, feature(doc_auto_cfg))]
-#![cfg_attr(feature = "frozen-abi", feature(min_specialization))]
 #![allow(clippy::arithmetic_side_effects)]
 #![no_std]
 
@@ -23,7 +22,7 @@ use std::vec::Vec;
 pub mod account_meta;
 #[cfg(feature = "std")]
 pub use account_meta::AccountMeta;
-pub mod error;
+pub use solana_instruction_error as error;
 #[cfg(any(feature = "syscalls", target_os = "solana"))]
 pub mod syscalls;
 #[cfg(all(feature = "std", target_arch = "wasm32"))]
