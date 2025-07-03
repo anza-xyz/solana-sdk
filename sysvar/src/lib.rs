@@ -110,6 +110,17 @@ pub mod slot_hashes;
 pub mod slot_history;
 pub mod stake_history;
 
+/// Return value indicating that the  `offset + length` is greater than the length of
+/// the sysvar data.
+//
+// Defined in the bpf loader as [`OFFSET_LENGTH_EXCEEDS_SYSVAR`](https://github.com/anza-xyz/agave/blob/master/programs/bpf_loader/src/syscalls/sysvar.rs#L172).
+const OFFSET_LENGTH_EXCEEDS_SYSVAR: u64 = 1;
+
+/// Return value indicating that the sysvar was not found.
+//
+// Defined in the bpf loader as [`SYSVAR_NOT_FOUND`](https://github.com/anza-xyz/agave/blob/master/programs/bpf_loader/src/syscalls/sysvar.rs#L171).
+const SYSVAR_NOT_FOUND: u64 = 2;
+
 #[deprecated(
     since = "2.0.0",
     note = "please use `solana_sdk::reserved_account_keys::ReservedAccountKeys` instead"
@@ -206,7 +217,8 @@ macro_rules! impl_sysvar_get {
 
             match result {
                 $crate::__private::SUCCESS => Ok(var),
-                e => Err(e.into()),
+                // Unexpected errors are folded into `UnsupportedSysvar`.
+                _ => Err($crate::__private::ProgramError::UnsupportedSysvar),
             }
         }
     };
@@ -239,7 +251,10 @@ fn get_sysvar(
 
     match result {
         solana_program_entrypoint::SUCCESS => Ok(()),
-        e => Err(e.into()),
+        OFFSET_LENGTH_EXCEEDS_SYSVAR => Err(solana_program_error::ProgramError::InvalidArgument),
+        SYSVAR_NOT_FOUND => Err(solana_program_error::ProgramError::UnsupportedSysvar),
+        // Unexpected errors are folded into `UnsupportedSysvar`.
+        _ => Err(solana_program_error::ProgramError::UnsupportedSysvar),
     }
 }
 
