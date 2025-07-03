@@ -72,14 +72,15 @@ pub trait VerifiablePubkey: AsPubkeyProjective {
 pub struct PubkeyProjective(pub(crate) G1Projective);
 
 #[cfg(not(target_os = "solana"))]
-impl Default for PubkeyProjective {
-    fn default() -> Self {
+impl PubkeyProjective {
+    /// Creates the identity element, which is the starting point for aggregation
+    ///
+    /// The identity element is not a valid public key and it should only be used
+    /// for the purpose of aggregation
+    pub fn identity() -> Self {
         Self(G1Projective::identity())
     }
-}
 
-#[cfg(not(target_os = "solana"))]
-impl PubkeyProjective {
     /// Verify a signature and a message against a public key
     pub(crate) fn _verify_signature(
         &self,
@@ -106,29 +107,32 @@ impl PubkeyProjective {
 
     /// Aggregate a list of public keys into an existing aggregate
     #[allow(clippy::arithmetic_side_effects)]
-    pub fn aggregate_with<'a, I>(&mut self, pubkeys: I)
+    pub fn aggregate_with<'a, P: 'a + AsPubkeyProjective + ?Sized, I>(
+        &mut self,
+        pubkeys: I,
+    ) -> Result<(), BlsError>
     where
-        I: IntoIterator<Item = &'a PubkeyProjective>,
+        I: IntoIterator<Item = &'a P>,
     {
-        self.0 = pubkeys.into_iter().fold(self.0, |mut acc, pubkey| {
-            acc += &pubkey.0;
-            acc
-        });
+        for pubkey in pubkeys {
+            self.0 += &pubkey.try_as_projective()?.0;
+        }
+        Ok(())
     }
 
     /// Aggregate a list of public keys
     #[allow(clippy::arithmetic_side_effects)]
-    pub fn aggregate<'a, I>(pubkeys: I) -> Result<PubkeyProjective, BlsError>
+    pub fn aggregate<'a, P: 'a + AsPubkeyProjective + ?Sized, I>(
+        pubkeys: I,
+    ) -> Result<PubkeyProjective, BlsError>
     where
-        I: IntoIterator<Item = &'a PubkeyProjective>,
+        I: IntoIterator<Item = &'a P>,
     {
         let mut iter = pubkeys.into_iter();
-        if let Some(acc) = iter.next() {
-            let aggregate_point = iter.fold(acc.0, |mut acc, pubkey| {
-                acc += &pubkey.0;
-                acc
-            });
-            Ok(Self(aggregate_point))
+        if let Some(first) = iter.next() {
+            let mut aggregate = first.try_as_projective()?;
+            aggregate.aggregate_with(iter)?;
+            Ok(aggregate)
         } else {
             Err(BlsError::EmptyAggregation)
         }
@@ -258,7 +262,7 @@ mod tests {
             signature::{Signature, SignatureCompressed},
         },
         core::str::FromStr,
-        std::string::ToString,
+        std::{string::ToString, vec::Vec},
     };
 
     #[test]
@@ -346,6 +350,25 @@ mod tests {
         assert!(pubkey_compressed
             .verify_proof_of_possession(&proof_compressed)
             .unwrap());
+    }
+
+    #[test]
+    fn test_pubkey_aggregate_dyn() {
+        let keypair0 = Keypair::new();
+        let keypair1 = Keypair::new();
+
+        let pubkey_projective = keypair0.public;
+        let pubkey_affine: Pubkey = keypair1.public.into();
+        let pubkey_compressed: PubkeyCompressed = Pubkey::from(keypair1.public).try_into().unwrap();
+
+        let dyn_pubkeys: Vec<&dyn AsPubkeyProjective> =
+            std::vec![&pubkey_projective, &pubkey_affine, &pubkey_compressed];
+
+        let aggregate_from_dyn = PubkeyProjective::aggregate(dyn_pubkeys).unwrap();
+        let pubkeys_for_baseline = [keypair0.public, keypair1.public, keypair1.public];
+        let baseline_aggregate = PubkeyProjective::aggregate(&pubkeys_for_baseline).unwrap();
+
+        assert_eq!(aggregate_from_dyn, baseline_aggregate);
     }
 
     #[test]
