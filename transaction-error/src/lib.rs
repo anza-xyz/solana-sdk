@@ -152,7 +152,7 @@ impl fmt::Display for TransactionError {
             Self::AccountLoadedTwice
              => f.write_str("Account loaded twice"),
             Self::AccountNotFound
-             => f.write_str("Attempt to debit an account but found no record of a prior credit."),
+             => f.write_str("Attempt to debit an account but found no record of a prior credit"),
             Self::ProgramAccountNotFound
              => f.write_str("Attempt to load a program that does not exist"),
             Self::InsufficientFundsForFee
@@ -213,12 +213,12 @@ impl fmt::Display for TransactionError {
             Self::MaxLoadedAccountsDataSizeExceeded
              => f.write_str("Transaction exceeded max loaded accounts data size cap"),
             Self::InvalidLoadedAccountsDataSizeLimit
-             => f.write_str("LoadedAccountsDataSizeLimit set for transaction must be greater than 0."),
+             => f.write_str("LoadedAccountsDataSizeLimit set for transaction must be greater than 0"),
             Self::ResanitizationNeeded
              => f.write_str("ResanitizationNeeded"),
             Self::ProgramExecutionTemporarilyRestricted {
                 account_index
-            } =>  write!(f,"Execution of the program referenced by account at index {account_index} is temporarily restricted."),
+            } =>  write!(f,"Execution of the program referenced by account at index {account_index} is temporarily restricted"),
             Self::UnbalancedTransaction
              => f.write_str("Sum of account balances before and after transaction do not match"),
             Self::ProgramCacheHitMaxLimit
