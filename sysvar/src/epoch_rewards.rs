@@ -156,16 +156,16 @@
 //! ```
 
 #[cfg(feature = "bincode")]
-use crate::Sysvar;
-use crate::{impl_sysvar_get, SysvarGet};
+use crate::SysvarSerialize;
+use crate::{impl_sysvar_get, Sysvar};
 pub use {
     solana_epoch_rewards::EpochRewards,
     solana_sdk_ids::sysvar::epoch_rewards::{check_id, id, ID},
 };
 
-impl SysvarGet for EpochRewards {
+impl Sysvar for EpochRewards {
     impl_sysvar_get!(sol_get_epoch_rewards_sysvar);
 }
 
 #[cfg(feature = "bincode")]
-impl Sysvar for EpochRewards {}
+impl SysvarSerialize for EpochRewards {}

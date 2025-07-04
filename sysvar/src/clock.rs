@@ -123,16 +123,16 @@
 //! ```
 
 #[cfg(feature = "bincode")]
-use crate::Sysvar;
-use crate::{impl_sysvar_get, SysvarGet};
+use crate::SysvarSerialize;
+use crate::{impl_sysvar_get, Sysvar};
 pub use {
     solana_clock::Clock,
     solana_sdk_ids::sysvar::clock::{check_id, id, ID},
 };
 
-impl SysvarGet for Clock {
+impl Sysvar for Clock {
     impl_sysvar_get!(sol_get_clock_sysvar);
 }
 
 #[cfg(feature = "bincode")]
-impl Sysvar for Clock {}
+impl SysvarSerialize for Clock {}

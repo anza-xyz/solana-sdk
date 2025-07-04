@@ -48,8 +48,8 @@
 #[cfg(feature = "bytemuck")]
 use bytemuck_derive::{Pod, Zeroable};
 #[cfg(feature = "bincode")]
-use {crate::Sysvar, solana_account_info::AccountInfo};
-use {crate::SysvarGet, solana_clock::Slot, solana_hash::Hash};
+use {crate::SysvarSerialize, solana_account_info::AccountInfo};
+use {crate::Sysvar, solana_clock::Slot, solana_hash::Hash};
 
 #[cfg(feature = "bytemuck")]
 const U64_SIZE: usize = std::mem::size_of::<u64>();
@@ -63,9 +63,9 @@ pub use {
     solana_sysvar_id::SysvarId,
 };
 
-impl SysvarGet for SlotHashes {}
+impl Sysvar for SlotHashes {}
 #[cfg(feature = "bincode")]
-impl Sysvar for SlotHashes {
+impl SysvarSerialize for SlotHashes {
     // override
     fn size_of() -> usize {
         // hard-coded so that we don't have to construct an empty

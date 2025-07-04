@@ -1,10 +1,10 @@
 //! This sysvar is deprecated and unused.
 #[cfg(feature = "bincode")]
-use crate::Sysvar;
+use crate::SysvarSerialize;
 #[cfg(feature = "serde")]
 use serde_derive::{Deserialize, Serialize};
 pub use solana_sdk_ids::sysvar::rewards::{check_id, id, ID};
-use {crate::SysvarGet, solana_sysvar_id::impl_sysvar_id};
+use {crate::Sysvar, solana_sysvar_id::impl_sysvar_id};
 
 impl_sysvar_id!(Rewards);
 
@@ -23,6 +23,6 @@ impl Rewards {
         }
     }
 }
-impl SysvarGet for Rewards {}
-#[cfg(feature = "bincode")]
 impl Sysvar for Rewards {}
+#[cfg(feature = "bincode")]
+impl SysvarSerialize for Rewards {}

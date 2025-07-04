@@ -37,16 +37,16 @@
 //! ```
 //!
 #[cfg(feature = "bincode")]
-use crate::Sysvar;
-use crate::{impl_sysvar_get, SysvarGet};
+use crate::SysvarSerialize;
+use crate::{impl_sysvar_get, Sysvar};
 pub use {
     solana_last_restart_slot::LastRestartSlot,
     solana_sdk_ids::sysvar::last_restart_slot::{check_id, id, ID},
 };
 
-impl SysvarGet for LastRestartSlot {
+impl Sysvar for LastRestartSlot {
     impl_sysvar_get!(sol_get_last_restart_slot);
 }
 
 #[cfg(feature = "bincode")]
-impl Sysvar for LastRestartSlot {}
+impl SysvarSerialize for LastRestartSlot {}

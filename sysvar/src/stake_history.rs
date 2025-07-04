@@ -47,7 +47,7 @@
 //! ```
 
 #[cfg(feature = "bincode")]
-use crate::Sysvar;
+use crate::SysvarSerialize;
 pub use solana_sdk_ids::sysvar::stake_history::{check_id, id, ID};
 #[deprecated(
     since = "2.2.0",
@@ -57,13 +57,13 @@ pub use solana_stake_interface::stake_history::{
     StakeHistory, StakeHistoryEntry, StakeHistoryGetEntry, MAX_ENTRIES,
 };
 use {
-    crate::{get_sysvar, SysvarGet},
+    crate::{get_sysvar, Sysvar},
     solana_clock::Epoch,
 };
 
-impl SysvarGet for StakeHistory {}
+impl Sysvar for StakeHistory {}
 #[cfg(feature = "bincode")]
-impl Sysvar for StakeHistory {
+impl SysvarSerialize for StakeHistory {
     // override
     fn size_of() -> usize {
         // hard-coded so that we don't have to construct an empty
