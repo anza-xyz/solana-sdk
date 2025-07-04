@@ -48,17 +48,18 @@
 //! # Ok::<(), anyhow::Error>(())
 //! ```
 
-#[cfg(feature = "bincode")]
 use crate::Sysvar;
+#[cfg(feature = "bincode")]
+use crate::SysvarSerialize;
 pub use {
     solana_account_info::AccountInfo,
     solana_program_error::ProgramError,
     solana_sdk_ids::sysvar::slot_history::{check_id, id, ID},
     solana_slot_history::SlotHistory,
 };
-
+impl Sysvar for SlotHistory {}
 #[cfg(feature = "bincode")]
-impl Sysvar for SlotHistory {
+impl SysvarSerialize for SlotHistory {
     // override
     fn size_of() -> usize {
         // hard-coded so that we don't have to construct an empty
