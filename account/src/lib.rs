@@ -759,7 +759,10 @@ pub fn from_account<S: SysvarSerialize, T: ReadableAccount>(account: &T) -> Opti
 
 #[cfg(feature = "bincode")]
 /// Serialize a `Sysvar` into an `Account`'s data.
-pub fn to_account<S: SysvarSerialize, T: WritableAccount>(sysvar: &S, account: &mut T) -> Option<()> {
+pub fn to_account<S: SysvarSerialize, T: WritableAccount>(
+    sysvar: &S,
+    account: &mut T,
+) -> Option<()> {
     bincode::serialize_into(account.data_as_mut_slice(), sysvar).ok()
 }
 
