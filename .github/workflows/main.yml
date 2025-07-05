@@ -131,9 +131,22 @@ jobs:
         run: |
           echo "PERL=$(which perl)" >> $GITHUB_ENV
           echo "OPENSSL_SRC_PERL=$(which perl)" >> $GITHUB_ENV
-          choco install openssl --version 3.4.1 --install-arguments="'/DIR=C:\OpenSSL'" -y
-          echo "OPENSSL_LIB_DIR=C:\OpenSSL\lib\VC\x64\MT" >> $GITHUB_ENV
-          echo "OPENSSL_INCLUDE_DIR=C:\OpenSSL\include" >> $GITHUB_ENV
+          cat > vcpkg.json <<EOL
+          {
+            "dependencies": ["openssl"],
+            "overrides": [
+              {
+                "name": "openssl",
+                "version": "3.4.1"
+              }
+            ],
+            "builtin-baseline": "5ee5eee0d3e9c6098b24d263e9099edcdcef6631"
+          }
+          EOL
+          vcpkg install --triplet x64-windows-static-md
+          rm vcpkg.json
+          echo "OPENSSL_LIB_DIR=$GITHUB_WORKSPACE/vcpkg_installed/x64-windows-static-md/lib" >> $GITHUB_ENV
+          echo "OPENSSL_INCLUDE_DIR=$GITHUB_WORKSPACE/vcpkg_installed/x64-windows-static-md/include" >> $GITHUB_ENV
 
       - name: Run clippy
         shell: bash
