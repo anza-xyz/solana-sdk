@@ -3,20 +3,20 @@
 //! For more information see the [`bpf_loader`] module.
 //!
 //! [`bpf_loader`]: crate::bpf_loader
+#![no_std]
 
 extern crate alloc;
 use {
-    alloc::vec::Vec,
-    solana_account_info::AccountInfo,
-    solana_pubkey::Pubkey,
-    std::{
+    alloc::{rc::Rc, vec::Vec},
+    core::{
         alloc::Layout,
         cell::RefCell,
         mem::{size_of, MaybeUninit},
         ptr::null_mut,
-        rc::Rc,
         slice::{from_raw_parts, from_raw_parts_mut},
     },
+    solana_account_info::AccountInfo,
+    solana_pubkey::Pubkey,
 };
 // need to re-export msg for custom_heap_default macro, `AccountInfo` and `Pubkey` for
 // entrypoint_no_alloc macro
@@ -165,7 +165,7 @@ macro_rules! entrypoint_no_alloc {
         /// # Safety
         #[no_mangle]
         pub unsafe extern "C" fn entrypoint(input: *mut u8) -> u64 {
-            use std::mem::MaybeUninit;
+            use core::mem::MaybeUninit;
             // Clippy complains about this because a `const` with interior
             // mutability `RefCell` should use `static` instead to make it
             // clear that it can change.
@@ -355,7 +355,7 @@ impl BumpAllocator {
 /// operating on the prescribed `HEAP_START_ADDRESS` and `HEAP_LENGTH`. Any
 /// other use may overflow and is thus unsupported and at one's own risk.
 #[allow(clippy::arithmetic_side_effects)]
-unsafe impl std::alloc::GlobalAlloc for BumpAllocator {
+unsafe impl core::alloc::GlobalAlloc for BumpAllocator {
     #[inline]
     #[allow(deprecated)] //we get to use deprecated pub fields
     unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
@@ -379,7 +379,7 @@ unsafe impl std::alloc::GlobalAlloc for BumpAllocator {
     }
 }
 
-/// `assert_eq(std::mem::align_of::<u128>(), 8)` is true for BPF but not for some host machines
+/// `assert_eq(core::mem::align_of::<u128>(), 8)` is true for BPF but not for some host machines
 pub const BPF_ALIGN_OF_U128: usize = 8;
 
 #[allow(clippy::arithmetic_side_effects)]
@@ -574,7 +574,7 @@ pub unsafe fn deserialize_into<'a>(
 
 #[cfg(test)]
 mod test {
-    use {super::*, std::alloc::GlobalAlloc};
+    use {super::*, core::alloc::GlobalAlloc};
 
     #[test]
     fn test_bump_allocator() {
