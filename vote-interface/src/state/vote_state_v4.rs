@@ -193,8 +193,7 @@ impl VoteStateV4 {
     }
 
     pub fn is_correct_size_and_initialized(data: &[u8]) -> bool {
-        const VERSION_OFFSET: usize = 4;
-        data.len() == VoteStateV4::size_of() && data.get(VERSION_OFFSET).copied() == Some(3)
-        // Always initialized
+        data.len() == VoteStateV4::size_of() && data[..4] == [3, 0, 0, 0] // little-endian 3u32
+                                                                          // Always initialized
     }
 }
