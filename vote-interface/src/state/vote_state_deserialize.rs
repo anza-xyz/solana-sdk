@@ -262,12 +262,16 @@ pub(crate) fn deserialize_vote_state_into_v4(
                 // V1_14_11 and V3 have commission field here.
                 let commission = read_u8(cursor)?;
 
-                // Set collectors to `Pubkey::default()`.
+                // Set collectors based on SIMD-0185.
                 // Safety: if vote_state is non-null, collectors are guaranteed to be valid too
                 unsafe {
+                    // We already read `node_pubkey` earlier, so we can read it
+                    // here again.
+                    let node_pubkey = (*vote_state).node_pubkey;
+
                     addr_of_mut!((*vote_state).inflation_rewards_collector)
                         .write(Pubkey::default());
-                    addr_of_mut!((*vote_state).block_revenue_collector).write(Pubkey::default());
+                    addr_of_mut!((*vote_state).block_revenue_collector).write(node_pubkey);
                 }
 
                 // Convert commission to basis points and set block revenue to 100%.
