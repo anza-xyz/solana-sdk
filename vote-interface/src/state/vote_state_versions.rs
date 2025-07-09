@@ -158,6 +158,8 @@ impl VoteStateVersions {
             VoteStateVersions::V1_14_11(vote_state) => vote_state.authorized_voters.is_empty(),
 
             VoteStateVersions::V3(vote_state) => vote_state.authorized_voters.is_empty(),
+
+            // As per SIMD-0185, v4 is always initialized.
             VoteStateVersions::V4(_) => false,
         }
     }
