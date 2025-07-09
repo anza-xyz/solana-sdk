@@ -167,14 +167,6 @@ impl VoteStateVersions {
         }
     }
 
-    pub fn vote_state_size_of(is_current: bool) -> usize {
-        if is_current {
-            VoteStateV4::size_of() // Same as v3
-        } else {
-            VoteState1_14_11::size_of()
-        }
-    }
-
     pub fn is_correct_size_and_initialized(data: &[u8]) -> bool {
         VoteStateV4::is_correct_size_and_initialized(data)
             || VoteStateV3::is_correct_size_and_initialized(data)

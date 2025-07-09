@@ -1124,7 +1124,7 @@ mod tests {
     #[test]
     fn test_is_correct_size_and_initialized() {
         // Check all zeroes
-        let mut vote_account_data = vec![0; VoteStateVersions::vote_state_size_of(true)];
+        let mut vote_account_data = vec![0; VoteStateV3::size_of()];
         assert!(!VoteStateVersions::is_correct_size_and_initialized(
             &vote_account_data
         ));
@@ -1143,7 +1143,7 @@ mod tests {
         ));
 
         // Check non-zero large account
-        let mut large_vote_data = vec![1; 2 * VoteStateVersions::vote_state_size_of(true)];
+        let mut large_vote_data = vec![1; 2 * VoteStateV3::size_of()];
         let default_account_state = VoteStateVersions::new_v3(VoteStateV3::default());
         VoteStateV3::serialize(&default_account_state, &mut large_vote_data).unwrap();
         assert!(!VoteStateVersions::is_correct_size_and_initialized(
@@ -1169,7 +1169,7 @@ mod tests {
         // Check old VoteStateV3 that hasn't been upgraded to newest version yet
         let old_vote_state = VoteState1_14_11::from(vote_state);
         let account_state = VoteStateVersions::V1_14_11(Box::new(old_vote_state));
-        let mut vote_account_data = vec![0; VoteStateVersions::vote_state_size_of(false)];
+        let mut vote_account_data = vec![0; VoteState1_14_11::size_of()];
         VoteStateV3::serialize(&account_state, &mut vote_account_data).unwrap();
         assert!(VoteStateVersions::is_correct_size_and_initialized(
             &vote_account_data
