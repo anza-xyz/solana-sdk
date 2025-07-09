@@ -122,8 +122,8 @@ impl VoteStateV3 {
         #[cfg(not(target_os = "solana"))]
         {
             bincode::deserialize::<VoteStateVersions>(input)
-                .map(|versioned| versioned.convert_to_v3())
                 .map_err(|_| InstructionError::InvalidAccountData)
+                .and_then(|versioned| versioned.try_convert_to_v3())
         }
         #[cfg(target_os = "solana")]
         {
@@ -190,8 +190,8 @@ impl VoteStateV3 {
                     unsafe {
                         vote_state.write(
                             bincode::deserialize::<VoteStateVersions>(input)
-                                .map(|versioned| versioned.convert_to_v3())
-                                .map_err(|_| InstructionError::InvalidAccountData)?,
+                                .map_err(|_| InstructionError::InvalidAccountData)
+                                .and_then(|versioned| versioned.try_convert_to_v3())?,
                         );
                     }
                     Ok(())
@@ -215,8 +215,8 @@ impl VoteStateV3 {
                     unsafe {
                         vote_state.write(
                             bincode::deserialize::<VoteStateVersions>(input)
-                                .map(|versioned| versioned.convert_to_v3())
-                                .map_err(|_| InstructionError::InvalidAccountData)?,
+                                .map_err(|_| InstructionError::InvalidAccountData)
+                                .and_then(|versioned| versioned.try_convert_to_v3())?,
                         );
                     }
                     Ok(())

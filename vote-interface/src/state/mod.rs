@@ -414,7 +414,7 @@ mod tests {
         VoteStateV3::serialize(&versioned, &mut buffer).unwrap();
         assert_eq!(
             VoteStateV3::deserialize(&buffer).unwrap(),
-            versioned.convert_to_v3()
+            versioned.try_convert_to_v3().unwrap()
         );
     }
 
@@ -457,12 +457,14 @@ mod tests {
             let target_vote_state_versions =
                 VoteStateVersions::arbitrary(&mut unstructured).unwrap();
             let vote_state_buf = bincode::serialize(&target_vote_state_versions).unwrap();
-            let target_vote_state = target_vote_state_versions.convert_to_v3();
 
-            let mut test_vote_state = VoteStateV3::default();
-            VoteStateV3::deserialize_into(&vote_state_buf, &mut test_vote_state).unwrap();
+            // Skip any v4 since they can't convert to v3.
+            if let Ok(target_vote_state) = target_vote_state_versions.try_convert_to_v3() {
+                let mut test_vote_state = VoteStateV3::default();
+                VoteStateV3::deserialize_into(&vote_state_buf, &mut test_vote_state).unwrap();
 
-            assert_eq!(target_vote_state, test_vote_state);
+                assert_eq!(target_vote_state, test_vote_state);
+            }
         }
     }
 
@@ -546,13 +548,16 @@ mod tests {
             let target_vote_state_versions =
                 VoteStateVersions::arbitrary(&mut unstructured).unwrap();
             let vote_state_buf = bincode::serialize(&target_vote_state_versions).unwrap();
-            let target_vote_state = target_vote_state_versions.convert_to_v3();
 
-            let mut test_vote_state = MaybeUninit::uninit();
-            VoteStateV3::deserialize_into_uninit(&vote_state_buf, &mut test_vote_state).unwrap();
-            let test_vote_state = unsafe { test_vote_state.assume_init() };
+            // Skip any v4 since they can't convert to v3.
+            if let Ok(target_vote_state) = target_vote_state_versions.try_convert_to_v3() {
+                let mut test_vote_state = MaybeUninit::uninit();
+                VoteStateV3::deserialize_into_uninit(&vote_state_buf, &mut test_vote_state)
+                    .unwrap();
+                let test_vote_state = unsafe { test_vote_state.assume_init() };
 
-            assert_eq!(target_vote_state, test_vote_state);
+                assert_eq!(target_vote_state, test_vote_state);
+            }
         }
     }
 
@@ -616,8 +621,12 @@ mod tests {
             // so we only check that the parser does not panic and that it succeeds or fails exactly in line with bincode
             let mut test_vote_state = MaybeUninit::uninit();
             let test_res = VoteStateV3::deserialize_into_uninit(&raw_data, &mut test_vote_state);
+
+            // `deserialize_into_uninit` will eventually call into
+            // `try_convert_to_v3`, so we have alignment in the following map.
             let bincode_res = bincode::deserialize::<VoteStateVersions>(&raw_data)
-                .map(|versioned| versioned.convert_to_v3());
+                .map_err(|_| InstructionError::InvalidAccountData)
+                .and_then(|versioned| versioned.try_convert_to_v3());
 
             if test_res.is_err() {
                 assert!(bincode_res.is_err());
@@ -679,30 +688,39 @@ mod tests {
                 VoteStateVersions::arbitrary(&mut unstructured).unwrap();
             let original_buf = bincode::serialize(&original_vote_state_versions).unwrap();
 
-            let mut truncated_buf = original_buf.clone();
-            let mut expanded_buf = original_buf.clone();
+            // Skip any v4 since they can't convert to v3.
+            if original_vote_state_versions.try_convert_to_v3().is_ok() {
+                let mut truncated_buf = original_buf.clone();
+                let mut expanded_buf = original_buf.clone();
 
-            truncated_buf.resize(original_buf.len() - 8, 0);
-            expanded_buf.resize(original_buf.len() + 8, 0);
+                truncated_buf.resize(original_buf.len() - 8, 0);
+                expanded_buf.resize(original_buf.len() + 8, 0);
 
-            // truncated fails
-            let mut test_vote_state = MaybeUninit::uninit();
-            let test_res =
-                VoteStateV3::deserialize_into_uninit(&truncated_buf, &mut test_vote_state);
-            let bincode_res = bincode::deserialize::<VoteStateVersions>(&truncated_buf)
-                .map(|versioned| versioned.convert_to_v3());
+                // truncated fails
+                let mut test_vote_state = MaybeUninit::uninit();
+                let test_res =
+                    VoteStateV3::deserialize_into_uninit(&truncated_buf, &mut test_vote_state);
+                // `deserialize_into_uninit` will eventually call into
+                // `try_convert_to_v3`, so we have alignment in the following map.
+                let bincode_res = bincode::deserialize::<VoteStateVersions>(&truncated_buf)
+                    .map_err(|_| InstructionError::InvalidAccountData)
+                    .and_then(|versioned| versioned.try_convert_to_v3());
 
-            assert!(test_res.is_err());
-            assert!(bincode_res.is_err());
+                assert!(test_res.is_err());
+                assert!(bincode_res.is_err());
 
-            // expanded succeeds
-            let mut test_vote_state = MaybeUninit::uninit();
-            VoteStateV3::deserialize_into_uninit(&expanded_buf, &mut test_vote_state).unwrap();
-            let bincode_res = bincode::deserialize::<VoteStateVersions>(&expanded_buf)
-                .map(|versioned| versioned.convert_to_v3());
+                // expanded succeeds
+                let mut test_vote_state = MaybeUninit::uninit();
+                VoteStateV3::deserialize_into_uninit(&expanded_buf, &mut test_vote_state).unwrap();
+                // `deserialize_into_uninit` will eventually call into
+                // `try_convert_to_v3`, so we have alignment in the following map.
+                let bincode_res = bincode::deserialize::<VoteStateVersions>(&expanded_buf)
+                    .map_err(|_| InstructionError::InvalidAccountData)
+                    .and_then(|versioned| versioned.try_convert_to_v3());
 
-            let test_vote_state = unsafe { test_vote_state.assume_init() };
-            assert_eq!(test_vote_state, bincode_res.unwrap());
+                let test_vote_state = unsafe { test_vote_state.assume_init() };
+                assert_eq!(test_vote_state, bincode_res.unwrap());
+            }
         }
     }
 
@@ -1109,7 +1127,7 @@ mod tests {
 
             let versioned = VoteStateVersions::new_v3(vote_state.take().unwrap());
             VoteStateV3::serialize(&versioned, &mut max_sized_data).unwrap();
-            vote_state = Some(versioned.convert_to_v3());
+            vote_state = Some(versioned.try_convert_to_v3().unwrap());
         }
     }
 

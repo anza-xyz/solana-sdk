@@ -8,6 +8,7 @@ use {
             LandedVote, Lockout, VoteStateV3, VoteStateV4,
         },
     },
+    solana_instruction::error::InstructionError,
     solana_pubkey::Pubkey,
     std::collections::VecDeque,
 };
@@ -33,13 +34,13 @@ impl VoteStateVersions {
         Self::V3(Box::new(vote_state))
     }
 
-    pub fn convert_to_v3(self) -> VoteStateV3 {
+    pub fn try_convert_to_v3(self) -> Result<VoteStateV3, InstructionError> {
         match self {
             VoteStateVersions::V0_23_5(state) => {
                 let authorized_voters =
                     AuthorizedVoters::new(state.authorized_voter_epoch, state.authorized_voter);
 
-                VoteStateV3 {
+                Ok(VoteStateV3 {
                     node_pubkey: state.node_pubkey,
 
                     authorized_withdrawer: state.authorized_withdrawer,
@@ -57,10 +58,10 @@ impl VoteStateVersions {
                     epoch_credits: state.epoch_credits.clone(),
 
                     last_timestamp: state.last_timestamp.clone(),
-                }
+                })
             }
 
-            VoteStateVersions::V1_14_11(state) => VoteStateV3 {
+            VoteStateVersions::V1_14_11(state) => Ok(VoteStateV3 {
                 node_pubkey: state.node_pubkey,
                 authorized_withdrawer: state.authorized_withdrawer,
                 commission: state.commission,
@@ -76,20 +77,10 @@ impl VoteStateVersions {
                 epoch_credits: state.epoch_credits,
 
                 last_timestamp: state.last_timestamp,
-            },
+            }),
 
-            VoteStateVersions::V3(state) => *state,
-            VoteStateVersions::V4(state) => VoteStateV3 {
-                node_pubkey: state.node_pubkey,
-                authorized_withdrawer: state.authorized_withdrawer,
-                commission: (state.inflation_rewards_commission_bps / 100).min(100) as u8,
-                votes: state.votes,
-                root_slot: state.root_slot,
-                authorized_voters: state.authorized_voters,
-                prior_voters: CircBuf::default(),
-                epoch_credits: state.epoch_credits,
-                last_timestamp: state.last_timestamp,
-            },
+            VoteStateVersions::V3(state) => Ok(*state),
+            VoteStateVersions::V4(_) => Err(InstructionError::InvalidArgument),
         }
     }
 
