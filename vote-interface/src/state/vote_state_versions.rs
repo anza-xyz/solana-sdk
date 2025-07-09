@@ -21,12 +21,12 @@ pub enum VoteStateVersions {
     V0_23_5(Box<VoteState0_23_5>),
     V1_14_11(Box<VoteState1_14_11>),
     V3(Box<VoteStateV3>),
-    Current(Box<VoteStateV4>),
+    V4(Box<VoteStateV4>),
 }
 
 impl VoteStateVersions {
-    pub fn new_current(vote_state: VoteStateV4) -> Self {
-        Self::Current(Box::new(vote_state))
+    pub fn new_v4(vote_state: VoteStateV4) -> Self {
+        Self::V4(Box::new(vote_state))
     }
 
     pub fn new_v3(vote_state: VoteStateV3) -> Self {
@@ -79,7 +79,7 @@ impl VoteStateVersions {
             },
 
             VoteStateVersions::V3(state) => *state,
-            VoteStateVersions::Current(state) => VoteStateV3 {
+            VoteStateVersions::V4(state) => VoteStateV3 {
                 node_pubkey: state.node_pubkey,
                 authorized_withdrawer: state.authorized_withdrawer,
                 commission: (state.inflation_rewards_commission_bps / 100).min(100) as u8,
@@ -93,7 +93,7 @@ impl VoteStateVersions {
         }
     }
 
-    pub fn convert_to_current(self) -> VoteStateV4 {
+    pub fn convert_to_v4(self) -> VoteStateV4 {
         match self {
             VoteStateVersions::V0_23_5(state) => {
                 let authorized_voters =
@@ -146,7 +146,7 @@ impl VoteStateVersions {
                 last_timestamp: state.last_timestamp,
             },
 
-            VoteStateVersions::Current(state) => *state,
+            VoteStateVersions::V4(state) => *state,
         }
     }
 
@@ -163,7 +163,7 @@ impl VoteStateVersions {
             VoteStateVersions::V1_14_11(vote_state) => vote_state.authorized_voters.is_empty(),
 
             VoteStateVersions::V3(vote_state) => vote_state.authorized_voters.is_empty(),
-            VoteStateVersions::Current(_) => false,
+            VoteStateVersions::V4(_) => false,
         }
     }
 
@@ -179,7 +179,7 @@ impl Arbitrary<'_> for VoteStateVersions {
     fn arbitrary(u: &mut Unstructured<'_>) -> arbitrary::Result<Self> {
         let variant = u.choose_index(3)?;
         match variant {
-            0 => Ok(Self::Current(Box::new(VoteStateV4::arbitrary(u)?))),
+            0 => Ok(Self::V4(Box::new(VoteStateV4::arbitrary(u)?))),
             1 => Ok(Self::V3(Box::new(VoteStateV3::arbitrary(u)?))),
             2 => Ok(Self::V1_14_11(Box::new(VoteState1_14_11::arbitrary(u)?))),
             _ => unreachable!(),
