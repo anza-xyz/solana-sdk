@@ -163,7 +163,7 @@ impl VoteStateVersions {
             VoteStateVersions::V1_14_11(vote_state) => vote_state.authorized_voters.is_empty(),
 
             VoteStateVersions::V3(vote_state) => vote_state.authorized_voters.is_empty(),
-            VoteStateVersions::Current(vote_state) => vote_state.authorized_voters.is_empty(),
+            VoteStateVersions::Current(_) => false,
         }
     }
 
