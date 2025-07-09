@@ -33,6 +33,9 @@ pub use vote_state_v3::VoteStateV3 as VoteState;
 #[cfg(any(target_os = "solana", feature = "bincode"))]
 pub(crate) mod vote_state_deserialize;
 
+/// Number of bytes in a compressed BLS public key.
+pub const BLS_PUBKEY_COMPRESSED_BYTES: usize = 48;
+
 // Maximum number of votes to keep around, tightly coupled with epoch_schedule::MINIMUM_SLOTS_PER_EPOCH
 pub const MAX_LOCKOUT_HISTORY: usize = 31;
 pub const INITIAL_LOCKOUT: usize = 2;
@@ -396,9 +399,15 @@ pub mod serde_tower_sync {
 #[cfg(test)]
 mod tests {
     use {
-        super::*, crate::error::VoteError, bincode::serialized_size, core::mem::MaybeUninit,
-        itertools::Itertools, rand::Rng, solana_clock::Clock, solana_hash::Hash,
-        solana_instruction_error::InstructionError,
+        super::*,
+        crate::{error::VoteError, state::vote_state_0_23_5::VoteState0_23_5},
+        bincode::serialized_size,
+        core::mem::MaybeUninit,
+        itertools::Itertools,
+        rand::Rng,
+        solana_clock::Clock,
+        solana_hash::Hash,
+        solana_instruction::error::InstructionError,
     };
 
     #[test]
@@ -1286,5 +1295,61 @@ mod tests {
         let data: &[u8] = &[0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x00];
         let circ_buf: CircBuf<()> = bincode::deserialize(data).unwrap();
         assert_eq!(circ_buf.last(), None);
+    }
+
+    #[test]
+    fn test_vote_state_v4_bls_pubkey_compressed() {
+        let vote_pubkey = Pubkey::new_unique();
+
+        let run_test = |start, expected| {
+            let versioned = VoteStateVersions::new_v4(start);
+            let serialized = bincode::serialize(&versioned).unwrap();
+            let deserialized = VoteStateV4::deserialize(&serialized, &vote_pubkey).unwrap();
+            assert_eq!(deserialized.bls_pubkey_compressed, expected);
+        };
+
+        // First try `None`.
+        let vote_state_none = VoteStateV4::default();
+        assert_eq!(vote_state_none.bls_pubkey_compressed, None);
+        run_test(vote_state_none, None);
+
+        // Now try `Some`.
+        let test_bls_key = [42u8; BLS_PUBKEY_COMPRESSED_BYTES];
+        let vote_state_some = VoteStateV4 {
+            bls_pubkey_compressed: Some(test_bls_key),
+            ..VoteStateV4::default()
+        };
+        assert_eq!(vote_state_some.bls_pubkey_compressed, Some(test_bls_key));
+        run_test(vote_state_some, Some(test_bls_key));
+    }
+
+    #[test]
+    fn test_vote_state_version_conversion_bls_pubkey() {
+        let vote_pubkey = Pubkey::new_unique();
+
+        // All versions before v4 should result in `None` for BLS pubkey.
+        let v0_23_5_state = VoteState0_23_5::default();
+        let v0_23_5_versioned = VoteStateVersions::V0_23_5(Box::new(v0_23_5_state));
+
+        let v1_14_11_state = VoteState1_14_11::default();
+        let v1_14_11_versioned = VoteStateVersions::V1_14_11(Box::new(v1_14_11_state));
+
+        let v3_state = VoteStateV3::default();
+        let v3_versioned = VoteStateVersions::V3(Box::new(v3_state));
+
+        for versioned in [v0_23_5_versioned, v1_14_11_versioned, v3_versioned] {
+            let converted = versioned.try_convert_to_v4(&vote_pubkey).unwrap();
+            assert_eq!(converted.bls_pubkey_compressed, None);
+        }
+
+        // v4 to v4 conversion should preserve the BLS pubkey.
+        let test_bls_key = [128u8; BLS_PUBKEY_COMPRESSED_BYTES];
+        let v4_state = VoteStateV4 {
+            bls_pubkey_compressed: Some(test_bls_key),
+            ..VoteStateV4::default()
+        };
+        let v4_versioned = VoteStateVersions::V4(Box::new(v4_state));
+        let converted = v4_versioned.try_convert_to_v4(&vote_pubkey).unwrap();
+        assert_eq!(converted.bls_pubkey_compressed, Some(test_bls_key));
     }
 }

@@ -9,7 +9,7 @@ use solana_frozen_abi_macro::{frozen_abi, AbiExample};
 #[cfg(any(target_os = "solana", feature = "bincode"))]
 use solana_instruction::error::InstructionError;
 use {
-    super::{BlockTimestamp, LandedVote, Lockout},
+    super::{BlockTimestamp, LandedVote, Lockout, BLS_PUBKEY_COMPRESSED_BYTES},
     crate::authorized_voters::AuthorizedVoters,
     solana_clock::{Epoch, Slot},
     solana_pubkey::Pubkey,
@@ -44,6 +44,10 @@ pub struct VoteStateV4 {
 
     /// Reward amount pending distribution to stake delegators.
     pub pending_delegator_rewards: u64,
+
+    /// Compressed BLS pubkey for Alpenglow.
+    #[cfg_attr(feature = "serde", serde(with = "serde_bls_pubkey_compressed"))]
+    pub bls_pubkey_compressed: Option<[u8; BLS_PUBKEY_COMPRESSED_BYTES]>,
 
     pub votes: VecDeque<LandedVote>,
     pub root_slot: Option<Slot>,
@@ -208,5 +212,106 @@ impl VoteStateV4 {
     pub fn is_correct_size_and_initialized(data: &[u8]) -> bool {
         data.len() == VoteStateV4::size_of() && data[..4] == [3, 0, 0, 0] // little-endian 3u32
                                                                           // Always initialized
+    }
+}
+
+// Based off of serde's array impls. See:
+// https://github.com/serde-rs/serde/blob/babafa54d283fb087fa94f50a2cf82fa9e582a7c/serde/src/de/impls.rs#L1268
+#[cfg(feature = "serde")]
+mod serde_bls_pubkey_compressed {
+    use {
+        super::BLS_PUBKEY_COMPRESSED_BYTES,
+        serde::{
+            de::{Error, SeqAccess, Visitor},
+            ser::SerializeTuple,
+            Deserializer, Serialize, Serializer,
+        },
+        std::fmt,
+    };
+
+    pub fn serialize<S>(
+        value: &Option<[u8; BLS_PUBKEY_COMPRESSED_BYTES]>,
+        serializer: S,
+    ) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        match value {
+            Some(array) => serializer.serialize_some(&ArrayWrapper(array)),
+            None => serializer.serialize_none(),
+        }
+    }
+
+    pub fn deserialize<'de, D>(
+        deserializer: D,
+    ) -> Result<Option<[u8; BLS_PUBKEY_COMPRESSED_BYTES]>, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        deserializer.deserialize_option(BLSPubkeyVisitor)
+    }
+
+    struct ArrayWrapper<'a>(&'a [u8; BLS_PUBKEY_COMPRESSED_BYTES]);
+
+    impl<'a> Serialize for ArrayWrapper<'a> {
+        fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+        where
+            S: Serializer,
+        {
+            let mut seq = serializer.serialize_tuple(BLS_PUBKEY_COMPRESSED_BYTES)?;
+            for element in self.0.iter() {
+                seq.serialize_element(element)?;
+            }
+            seq.end()
+        }
+    }
+
+    struct BLSPubkeyVisitor;
+
+    impl<'de> Visitor<'de> for BLSPubkeyVisitor {
+        type Value = Option<[u8; BLS_PUBKEY_COMPRESSED_BYTES]>;
+
+        fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+            formatter.write_str("an optional BLS pubkey")
+        }
+
+        fn visit_none<E>(self) -> Result<Self::Value, E>
+        where
+            E: Error,
+        {
+            Ok(None)
+        }
+
+        fn visit_some<D>(self, deserializer: D) -> Result<Self::Value, D::Error>
+        where
+            D: Deserializer<'de>,
+        {
+            deserializer
+                .deserialize_tuple(BLS_PUBKEY_COMPRESSED_BYTES, ArrayVisitor)
+                .map(Some)
+        }
+    }
+
+    struct ArrayVisitor;
+
+    impl<'de> Visitor<'de> for ArrayVisitor {
+        type Value = [u8; BLS_PUBKEY_COMPRESSED_BYTES];
+
+        fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+            formatter.write_str(&format!("an array of {BLS_PUBKEY_COMPRESSED_BYTES} bytes"))
+        }
+
+        fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
+        where
+            A: SeqAccess<'de>,
+        {
+            let mut array = [0u8; BLS_PUBKEY_COMPRESSED_BYTES];
+            for (i, element) in array.iter_mut().enumerate() {
+                *element = seq
+                    .next_element()?
+                    .ok_or_else(|| Error::invalid_length(i, &self))?;
+            }
+            Ok(array)
+        }
     }
 }
