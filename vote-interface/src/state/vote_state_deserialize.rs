@@ -212,16 +212,16 @@ pub(crate) fn deserialize_vote_state_into_v3(
 }
 
 #[derive(PartialEq)]
-pub(crate) enum SourceVersion {
-    V1_14_11,
-    V3,
+pub(crate) enum SourceVersion<'a> {
+    V1_14_11 { vote_pubkey: &'a Pubkey },
+    V3 { vote_pubkey: &'a Pubkey },
     V4,
 }
 
-pub(crate) fn deserialize_vote_state_into_v4(
+pub(crate) fn deserialize_vote_state_into_v4<'a>(
     cursor: &mut Cursor<&[u8]>,
     vote_state: *mut VoteStateV4,
-    source_version: SourceVersion,
+    source_version: SourceVersion<'a>,
 ) -> Result<(), InstructionError> {
     // General safety note: we must use addr_of_mut! to access the `vote_state` fields as the value
     // is assumed to be _uninitialized_, so creating references to the state or any of its inner
@@ -258,7 +258,7 @@ pub(crate) fn deserialize_vote_state_into_v4(
 
                 (inflation, block, pending)
             }
-            SourceVersion::V1_14_11 | SourceVersion::V3 => {
+            SourceVersion::V1_14_11 { vote_pubkey } | SourceVersion::V3 { vote_pubkey } => {
                 // V1_14_11 and V3 have commission field here.
                 let commission = read_u8(cursor)?;
 
@@ -269,8 +269,7 @@ pub(crate) fn deserialize_vote_state_into_v4(
                     // here again.
                     let node_pubkey = (*vote_state).node_pubkey;
 
-                    addr_of_mut!((*vote_state).inflation_rewards_collector)
-                        .write(Pubkey::default());
+                    addr_of_mut!((*vote_state).inflation_rewards_collector).write(*vote_pubkey);
                     addr_of_mut!((*vote_state).block_revenue_collector).write(node_pubkey);
                 }
 
@@ -281,13 +280,16 @@ pub(crate) fn deserialize_vote_state_into_v4(
         };
 
     // For V3 and V4, `has_latency` is always true.
-    let votes = read_votes(cursor, source_version != SourceVersion::V1_14_11)?;
+    let votes = read_votes(
+        cursor,
+        !matches!(source_version, SourceVersion::V1_14_11 { .. }),
+    )?;
     let root_slot = read_option_u64(cursor)?;
     let authorized_voters = read_authorized_voters(cursor)?;
 
     // V1_14_11 and V3 have `prior_voters` field here.
     // Skip, since V4 doesn't have this field.
-    if source_version != SourceVersion::V4 {
+    if !matches!(source_version, SourceVersion::V4) {
         skip_prior_voters(cursor)?;
     }
 

@@ -91,12 +91,20 @@ mod tests {
         );
 
         // v4
+        let vote_pubkey = Pubkey::new_unique();
         let mut test_vote_state_v4 = MaybeUninit::uninit();
-        VoteStateV4::deserialize_into_uninit(&vote_state_buf, &mut test_vote_state_v4).unwrap();
+        VoteStateV4::deserialize_into_uninit(
+            &vote_state_buf,
+            &mut test_vote_state_v4,
+            &vote_pubkey,
+        )
+        .unwrap();
         let test_vote_state = unsafe { test_vote_state_v4.assume_init() };
 
         assert_eq!(
-            target_vote_state_versions.try_convert_to_v4().unwrap(),
+            target_vote_state_versions
+                .try_convert_to_v4(&vote_pubkey)
+                .unwrap(),
             test_vote_state
         );
 
@@ -125,10 +133,18 @@ mod tests {
             assert_eq!(target_vote_state_v3, test_vote_state);
 
             // v4
-            let target_vote_state_v4 = target_vote_state_versions.try_convert_to_v4().unwrap();
+            let vote_pubkey = Pubkey::new_unique();
+            let target_vote_state_v4 = target_vote_state_versions
+                .try_convert_to_v4(&vote_pubkey)
+                .unwrap();
 
             let mut test_vote_state_v4 = MaybeUninit::uninit();
-            VoteStateV4::deserialize_into_uninit(&vote_state_buf, &mut test_vote_state_v4).unwrap();
+            VoteStateV4::deserialize_into_uninit(
+                &vote_state_buf,
+                &mut test_vote_state_v4,
+                &vote_pubkey,
+            )
+            .unwrap();
             let test_vote_state = unsafe { test_vote_state_v4.assume_init() };
 
             assert_eq!(target_vote_state_v4, test_vote_state);

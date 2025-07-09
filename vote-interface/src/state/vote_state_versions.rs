@@ -88,7 +88,7 @@ impl VoteStateVersions {
     // this function returns `Ok(..)`. However, future versions may not be
     // convertible to v4 without data loss, so this function returns a `Result`
     // for forward compatibility.
-    pub fn try_convert_to_v4(self) -> Result<VoteStateV4, InstructionError> {
+    pub fn try_convert_to_v4(self, vote_pubkey: &Pubkey) -> Result<VoteStateV4, InstructionError> {
         Ok(match self {
             VoteStateVersions::V0_23_5(state) => {
                 let authorized_voters =
@@ -97,7 +97,7 @@ impl VoteStateVersions {
                 VoteStateV4 {
                     node_pubkey: state.node_pubkey,
                     authorized_withdrawer: state.authorized_withdrawer,
-                    inflation_rewards_collector: Pubkey::default(),
+                    inflation_rewards_collector: *vote_pubkey,
                     block_revenue_collector: state.node_pubkey,
                     inflation_rewards_commission_bps: u16::from(state.commission)
                         .saturating_mul(100),
@@ -114,7 +114,7 @@ impl VoteStateVersions {
             VoteStateVersions::V1_14_11(state) => VoteStateV4 {
                 node_pubkey: state.node_pubkey,
                 authorized_withdrawer: state.authorized_withdrawer,
-                inflation_rewards_collector: Pubkey::default(),
+                inflation_rewards_collector: *vote_pubkey,
                 block_revenue_collector: state.node_pubkey,
                 inflation_rewards_commission_bps: u16::from(state.commission).saturating_mul(100),
                 block_revenue_commission_bps: 10_000u16,
@@ -129,7 +129,7 @@ impl VoteStateVersions {
             VoteStateVersions::V3(state) => VoteStateV4 {
                 node_pubkey: state.node_pubkey,
                 authorized_withdrawer: state.authorized_withdrawer,
-                inflation_rewards_collector: Pubkey::default(),
+                inflation_rewards_collector: *vote_pubkey,
                 block_revenue_collector: state.node_pubkey,
                 inflation_rewards_commission_bps: u16::from(state.commission).saturating_mul(100),
                 block_revenue_commission_bps: 10_000u16,

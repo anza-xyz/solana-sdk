@@ -87,17 +87,17 @@ impl VoteStateV4 {
     }
 
     #[cfg(any(target_os = "solana", feature = "bincode"))]
-    pub fn deserialize(input: &[u8]) -> Result<Self, InstructionError> {
+    pub fn deserialize(input: &[u8], vote_pubkey: &Pubkey) -> Result<Self, InstructionError> {
         #[cfg(not(target_os = "solana"))]
         {
             bincode::deserialize::<VoteStateVersions>(input)
                 .map_err(|_| InstructionError::InvalidAccountData)
-                .and_then(|versioned| versioned.try_convert_to_v4())
+                .and_then(|versioned| versioned.try_convert_to_v4(vote_pubkey))
         }
         #[cfg(target_os = "solana")]
         {
             let mut vote_state = Self::default();
-            Self::deserialize_into(input, &mut vote_state)?;
+            Self::deserialize_into(input, &mut vote_state, vote_pubkey)?;
             Ok(vote_state)
         }
     }
@@ -113,9 +113,12 @@ impl VoteStateV4 {
     pub fn deserialize_into(
         input: &[u8],
         vote_state: &mut VoteStateV4,
+        vote_pubkey: &Pubkey,
     ) -> Result<(), InstructionError> {
         use super::vote_state_deserialize;
-        vote_state_deserialize::deserialize_into(input, vote_state, Self::deserialize_into_ptr)
+        vote_state_deserialize::deserialize_into(input, vote_state, |input, vote_state| {
+            Self::deserialize_into_ptr(input, vote_state, vote_pubkey)
+        })
     }
 
     /// Deserializes the input `VoteStateVersions` buffer directly into the provided
@@ -131,14 +134,16 @@ impl VoteStateV4 {
     pub fn deserialize_into_uninit(
         input: &[u8],
         vote_state: &mut std::mem::MaybeUninit<VoteStateV4>,
+        vote_pubkey: &Pubkey,
     ) -> Result<(), InstructionError> {
-        Self::deserialize_into_ptr(input, vote_state.as_mut_ptr())
+        Self::deserialize_into_ptr(input, vote_state.as_mut_ptr(), vote_pubkey)
     }
 
     #[cfg(any(target_os = "solana", feature = "bincode"))]
     fn deserialize_into_ptr(
         input: &[u8],
         vote_state: *mut VoteStateV4,
+        vote_pubkey: &Pubkey,
     ) -> Result<(), InstructionError> {
         use super::vote_state_deserialize::{deserialize_vote_state_into_v4, SourceVersion};
 
@@ -161,7 +166,7 @@ impl VoteStateV4 {
                         vote_state.write(
                             bincode::deserialize::<VoteStateVersions>(input)
                                 .map_err(|_| InstructionError::InvalidAccountData)
-                                .and_then(|versioned| versioned.try_convert_to_v4())?,
+                                .and_then(|versioned| versioned.try_convert_to_v4(vote_pubkey))?,
                         );
                     }
                     Ok(())
@@ -170,9 +175,17 @@ impl VoteStateV4 {
                 Err(InstructionError::InvalidAccountData)
             }
             // V1_14_11
-            1 => deserialize_vote_state_into_v4(&mut cursor, vote_state, SourceVersion::V1_14_11),
+            1 => deserialize_vote_state_into_v4(
+                &mut cursor,
+                vote_state,
+                SourceVersion::V1_14_11 { vote_pubkey },
+            ),
             // V3
-            2 => deserialize_vote_state_into_v4(&mut cursor, vote_state, SourceVersion::V3),
+            2 => deserialize_vote_state_into_v4(
+                &mut cursor,
+                vote_state,
+                SourceVersion::V3 { vote_pubkey },
+            ),
             // V4
             3 => deserialize_vote_state_into_v4(&mut cursor, vote_state, SourceVersion::V4),
             _ => Err(InstructionError::InvalidAccountData),
