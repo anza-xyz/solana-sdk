@@ -84,8 +84,12 @@ impl VoteStateVersions {
         }
     }
 
-    pub fn convert_to_v4(self) -> VoteStateV4 {
-        match self {
+    // Currently, all versions can be converted to v4 without data loss, so
+    // this function returns `Ok(..)`. However, future versions may not be
+    // convertible to v4 without data loss, so this function returns a `Result`
+    // for forward compatibility.
+    pub fn try_convert_to_v4(self) -> Result<VoteStateV4, InstructionError> {
+        Ok(match self {
             VoteStateVersions::V0_23_5(state) => {
                 let authorized_voters =
                     AuthorizedVoters::new(state.authorized_voter_epoch, state.authorized_voter);
@@ -138,7 +142,7 @@ impl VoteStateVersions {
             },
 
             VoteStateVersions::V4(state) => *state,
-        }
+        })
     }
 
     fn landed_votes_from_lockouts(lockouts: VecDeque<Lockout>) -> VecDeque<LandedVote> {
