@@ -25,6 +25,9 @@ pub mod vote_state_v3;
 pub use vote_state_v3::VoteStateV3;
 mod vote_instruction_data;
 pub use vote_instruction_data::*;
+// The struct's name has changed.
+#[deprecated(since = "2.2.6", note = "Use vote_state_v3::VoteStateV3 instead")]
+pub use vote_state_v3::VoteStateV3 as VoteState;
 
 // Maximum number of votes to keep around, tightly coupled with epoch_schedule::MINIMUM_SLOTS_PER_EPOCH
 pub const MAX_LOCKOUT_HISTORY: usize = 31;
