@@ -125,6 +125,9 @@ To patch all of the crates in this repo for Agave, just run:
 
 ### Publishing a crate from this repository
 
+NOTE: The repo currently contains unpublished breaking changes, so please
+double-check before publishing any crates!
+
 Unlike Agave, the solana-sdk crates are versioned independently, and published
 as needed.
 
@@ -136,6 +139,14 @@ Simply type in the path to the crate directory you want to release, ie.
 The publish job will run checks, bump the crate version, commit and tag the
 bump, publish the crate to crates.io, and finally create GitHub Release with
 a simple changelog of all commits to the crate since the previous release.
+
+### Backports
+
+If you would like to backport a pull request, simply add the appropriate label,
+named `backport <BRANCH_NAME>`.
+
+For example, to create a backport to the `maintenance/v2.x` branch, just add the
+`backport maintenance/v2.x` label.
 
 ## Testing
 
