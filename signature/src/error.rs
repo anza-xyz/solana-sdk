@@ -1,5 +1,5 @@
-//! Signature error copied directly from RustCrypto's opaque signature error at
-//! https://github.com/RustCrypto/traits/tree/master/signature
+//! Signature error copied directly from
+//! [RustCrypto's opaque signature error](https://github.com/RustCrypto/traits/tree/master/signature)
 
 #[cfg(all(feature = "std", feature = "alloc"))]
 use alloc::boxed::Box;
@@ -11,11 +11,13 @@ use core::fmt::{self, Debug, Display};
 /// could potentially be used recover signing private keys or forge signatures
 /// (e.g. [BB'06]).
 ///
-/// When the `std` feature is enabled, it impls [`std::error::Error`].
+/// When the `std` feature is enabled, it impls
+/// [`std::error::Error`](https://doc.rust-lang.org/std/error/trait.Error.html).
 ///
 /// When the `alloc` feature is enabled, it supports an optional
-/// [`std::error::Error::source`], which can be used by things like remote
-/// signers (e.g. HSM, KMS) to report I/O or auth errors.
+/// [`std::error::Error::source`](https://doc.rust-lang.org/std/error/trait.Error.html#method.source),
+/// which can be used by things like remote signers (e.g. HSM, KMS) to report
+/// I/O or auth errors.
 ///
 /// [BB'06]: https://en.wikipedia.org/wiki/Daniel_Bleichenbacher
 #[derive(Default)]

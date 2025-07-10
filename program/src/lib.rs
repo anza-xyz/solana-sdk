@@ -429,42 +429,42 @@
 //! - __System Program__: Creates new accounts, allocates account data, assigns
 //!   accounts to owning programs, transfers lamports from System Program owned
 //!   accounts and pays transaction fees.
-//!   - ID: [`solana_program::system_program`]
-//!   - Instruction: [`solana_program::system_instruction`]
+//!   - ID: [`solana_system_interface::program::ID`](https://docs.rs/solana-system-interface/latest/solana_system_interface/program/constant.ID.html)
+//!   - Instruction: [`solana_system_interface::instruction`](https://docs.rs/solana-system-interface/latest/solana_system_interface/instruction/index.html)
 //!   - Invokable by programs? yes
 //!
 //! - __Compute Budget Program__: Requests additional CPU or memory resources
 //!   for a transaction. This program does nothing when called from another
 //!   program.
-//!   - ID: [`solana_sdk::compute_budget`](https://docs.rs/solana-sdk/latest/solana_sdk/compute_budget/index.html)
-//!   - Instruction: [`solana_sdk::compute_budget`](https://docs.rs/solana-sdk/latest/solana_sdk/compute_budget/index.html)
+//!   - ID: [`solana_compute_budget_interface::ID`](https://docs.rs/solana-compute-budget-interface/latest/solana_compute_budget_interface/constant.ID.html)
+//!   - Instruction: [`solana_compute_budget_interface::ComputeBudgetInstruction`](https://docs.rs/solana-compute-budget-interface/latest/solana_compute_budget_interface/enum.ComputeBudgetInstruction.html)
 //!   - Invokable by programs? no
 //!
 //! - __ed25519 Program__: Verifies an ed25519 signature.
-//!   - ID: [`solana_program::ed25519_program`]
-//!   - Instruction: [`solana_sdk::ed25519_instruction`](https://docs.rs/solana-sdk/latest/solana_sdk/ed25519_instruction/index.html)
+//!   - ID: [`solana_sdk_ids::ed25519_program::ID`](https://docs.rs/solana-sdk-ids/latest/solana_sdk_ids/ed25519_program/constant.ID.html)
+//!   - Instruction: [`solana_ed25519_program::new_ed25519_instruction_with_signature`](https://docs.rs/solana-ed25519-program/latest/solana_ed25519_program/fn.new_ed25519_instruction_with_signature.html)
 //!   - Invokable by programs? no
 //!
 //! - __secp256k1 Program__: Verifies secp256k1 public key recovery operations.
-//!   - ID: [`solana_program::secp256k1_program`]
-//!   - Instruction: [`solana_sdk::secp256k1_instruction`](https://docs.rs/solana-sdk/latest/solana_sdk/secp256k1_instruction/index.html)
+//!   - ID: [`solana_sdk_ids::secp256k1_program::ID`](https://docs.rs/solana-sdk-ids/latest/solana_sdk_ids/secp256k1_program/constant.ID.html)
+//!   - Instruction: [`solana_secp256k1_program::new_secp256k1_instruction_with_signature`](https://docs.rs/solana-secp256k1-program/latest/solana_secp256k1_program/fn.new_secp256k1_instruction_with_signature.html)
 //!   - Invokable by programs? no
 //!
 //! - __BPF Loader__: Deploys, and executes immutable programs on the chain.
-//!   - ID: [`solana_program::bpf_loader`]
-//!   - Instruction: [`solana_program::loader_instruction`]
+//!   - ID: [`solana_sdk_ids::bpf_loader::ID`](https://docs.rs/solana-sdk-ids/latest/solana_sdk_ids/bpf_loader/constant.ID.html)
+//!   - Instruction: [`solana_loader_v2_interface::instruction`](https://docs.rs/solana-loader-v2-interface/latest/solana_loader_v2_interface/instruction/index.html)
 //!   - Invokable by programs? yes
 //!
 //! - __Upgradable BPF Loader__: Deploys, upgrades, and executes upgradable
 //!   programs on the chain.
-//!   - ID: [`solana_program::bpf_loader_upgradeable`]
-//!   - Instruction: [`solana_program::loader_upgradeable_instruction`]
+//!   - ID: [`solana_sdk_ids::bpf_loader_upgradeable::ID`](https://docs.rs/solana-sdk-ids/latest/solana_sdk_ids/bpf_loader_upgradeable/constant.ID.html)
+//!   - Instruction: [`solana_loader_v3_interface::instruction`](https://docs.rs/solana-loader-v3-interface/latest/solana_loader_v3_interface/instruction/index.html)
 //!   - Invokable by programs? yes
 //!
 //! - __Deprecated BPF Loader__: Deploys, and executes immutable programs on the
 //!   chain.
-//!   - ID: [`solana_program::bpf_loader_deprecated`]
-//!   - Instruction: [`solana_program::loader_instruction`]
+//!   - ID: [`solana_sdk_ids::bpf_loader_deprecated::ID`](https://docs.rs/solana-sdk-ids/latest/solana_sdk_ids/bpf_loader_deprecated/constant.ID.html)
+//!   - Instruction: [`solana_loader_v2_interface::instruction`](https://docs.rs/solana-loader-v2-interface/latest/solana_loader_v2_interface/instruction/index.html)
 //!   - Invokable by programs? yes
 //!
 //! [lut]: https://docs.solanalabs.com/proposals/versioned-transactions

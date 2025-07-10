@@ -1,5 +1,5 @@
-//! Instructions for the [secp256r1 native program][np].
-//! [np]: https://docs.solana.com/developing/runtime-facilities/programs#secp256r1-program
+//! Instructions for the
+//! [secp256r1 native program](https://docs.solana.com/developing/runtime-facilities/programs#secp256r1-program)
 //!
 //! Note on Signature Malleability:
 //! This precompile requires low-S values in signatures (s <= half_curve_order) to prevent signature malleability.

@@ -196,9 +196,11 @@ impl VoteStateV3 {
     /// In a SBPF context, V0_23_5 is not supported, but in non-SBPF, all versions are supported for
     /// compatibility with `bincode::deserialize`.
     ///
-    /// On success, `vote_state` is fully initialized and can be converted to `VoteStateV3` using
-    /// [MaybeUninit::assume_init]. On failure, `vote_state` may still be uninitialized and must not
-    /// be converted to `VoteStateV3`.
+    /// On success, `vote_state` is fully initialized and can be converted to
+    /// `VoteStateV3` using
+    /// [`MaybeUninit::assume_init`](https://doc.rust-lang.org/std/mem/union.MaybeUninit.html#method.assume_init).
+    /// On failure, `vote_state` may still be uninitialized and must not be
+    /// converted to `VoteStateV3`.
     #[cfg(any(target_os = "solana", feature = "bincode"))]
     pub fn deserialize_into_uninit(
         input: &[u8],

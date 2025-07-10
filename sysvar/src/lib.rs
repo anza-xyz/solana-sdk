@@ -5,8 +5,8 @@
 //! Sysvars are special accounts that contain dynamically-updated data about the
 //! network cluster, the blockchain history, and the executing transaction. Each
 //! sysvar is defined in its own submodule within this module. The [`clock`],
-//! [`epoch_schedule`], [`instructions`], and [`rent`] sysvars are most useful
-//! to on-chain programs.
+//! [`epoch_schedule`], and [`rent`] sysvars are most useful to on-chain
+//! programs.
 //!
 //! Simple sysvars implement the [`Sysvar::get`] method, which loads a sysvar
 //! directly from the runtime, as in this example that logs the `clock` sysvar:

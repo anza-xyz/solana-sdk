@@ -17,7 +17,7 @@ use {
 
 /// Domain separation tag used when hashing public keys to G2 in the proof of
 /// possession signing and verification functions. See
-/// https://datatracker.ietf.org/doc/html/draft-irtf-cfrg-bls-signature-05#section-4.2.3.
+/// <https://datatracker.ietf.org/doc/html/draft-irtf-cfrg-bls-signature-05#section-4.2.3>.
 pub const POP_DST: &[u8] = b"BLS_SIG_BLS12381G1_XMD:SHA-256_SSWU_RO_POP_";
 
 /// Size of a BLS proof of possession in a compressed point representation

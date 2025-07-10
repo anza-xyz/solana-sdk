@@ -14,7 +14,7 @@
 //! instruction sysvar is accessed through several free functions within this
 //! module.
 //!
-//! [`Sysvar`]: crate::Sysvar
+//! [`Sysvar`]: https://docs.rs/solana-sysvar/latest/solana_sysvar/trait.Sysvar.html
 //!
 //! See also the Solana [documentation on the instructions sysvar][sdoc].
 //!
@@ -55,7 +55,7 @@ use {
 /// but does not implement the [`Sysvar`] trait.
 ///
 /// [`SysvarId`]: https://docs.rs/solana-sysvar-id/latest/solana_sysvar_id/trait.SysvarId.html
-/// [`Sysvar`]: crate::Sysvar
+/// [`Sysvar`]: https://docs.rs/solana-sysvar/latest/solana_sysvar/trait.Sysvar.html
 ///
 /// Use the free functions in this module to access the instructions sysvar.
 pub struct Instructions();
