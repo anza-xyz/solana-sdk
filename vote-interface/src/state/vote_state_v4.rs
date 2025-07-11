@@ -18,7 +18,7 @@ use {
 
 #[cfg_attr(
     feature = "frozen-abi",
-    frozen_abi(digest = "Dihnwn32nkpHMe8dDJPwLTQjuhotcAnPpcHQE5CTZZPq"),
+    frozen_abi(digest = "6wQjgsg3yTmdwi5SLBzRhGXrGnNMCD8rwxmUSR8mPEe6"),
     derive(AbiExample)
 )]
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
@@ -219,6 +219,8 @@ impl VoteStateV4 {
 // https://github.com/serde-rs/serde/blob/babafa54d283fb087fa94f50a2cf82fa9e582a7c/serde/src/de/impls.rs#L1268
 #[cfg(feature = "serde")]
 mod serde_bls_pubkey_compressed {
+    #[cfg(feature = "frozen-abi")]
+    use solana_frozen_abi_macro::AbiExample;
     use {
         super::BLS_PUBKEY_COMPRESSED_BYTES,
         serde::{
@@ -251,6 +253,7 @@ mod serde_bls_pubkey_compressed {
         deserializer.deserialize_option(BLSPubkeyVisitor)
     }
 
+    #[cfg_attr(feature = "frozen-abi", derive(AbiExample))]
     struct ArrayWrapper<'a>(&'a [u8; BLS_PUBKEY_COMPRESSED_BYTES]);
 
     impl<'a> Serialize for ArrayWrapper<'a> {
