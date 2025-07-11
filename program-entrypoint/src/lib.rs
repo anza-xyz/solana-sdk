@@ -436,12 +436,9 @@ unsafe fn deserialize_account_info<'a>(
     let data = Rc::new(RefCell::new({
         from_raw_parts_mut(input.add(offset), data_len)
     }));
-    offset += data_len + MAX_PERMITTED_DATA_INCREASE;
+    // rent epoch is not deserialized, so skip it
+    offset += data_len + MAX_PERMITTED_DATA_INCREASE + size_of::<u64>();
     offset += (offset as *const u8).align_offset(BPF_ALIGN_OF_U128); // padding
-
-    #[allow(clippy::cast_ptr_alignment)]
-    let rent_epoch = *(input.add(offset) as *const u64);
-    offset += size_of::<u64>();
 
     (
         AccountInfo {
@@ -452,7 +449,7 @@ unsafe fn deserialize_account_info<'a>(
             data,
             owner,
             executable,
-            rent_epoch,
+            unused: 0,
         },
         offset,
     )

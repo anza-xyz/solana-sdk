@@ -10,14 +10,11 @@
 //! [`invoke_signed`]: invoke_signed
 //! [cpi]: https://solana.com/docs/core/cpi
 
-pub use solana_cpi::MAX_RETURN_DATA;
-use {
-    crate::{
-        account_info::AccountInfo, entrypoint::ProgramResult, instruction::Instruction,
-        pubkey::Pubkey, stable_layout::stable_instruction::StableInstruction,
-    },
-    solana_clock::Epoch,
+use crate::{
+    account_info::AccountInfo, entrypoint::ProgramResult, instruction::Instruction, pubkey::Pubkey,
+    stable_layout::stable_instruction::StableInstruction,
 };
+pub use solana_cpi::MAX_RETURN_DATA;
 
 /// Like [`solana_cpi::invoke`], but with support
 /// for overwriting the `sol_invoke_signed` syscall stub.
@@ -136,9 +133,7 @@ pub fn check_type_assumptions() {
         crate::instruction::AccountMeta,
         memoffset::offset_of,
         std::{
-            cell::RefCell,
             mem::{align_of, size_of},
-            rc::Rc,
             str::FromStr,
         },
     };
@@ -208,80 +203,7 @@ pub fn check_type_assumptions() {
         }
     }
 
-    // Enforce AccountInfo layout
-    {
-        let key = Pubkey::from_str("6o8R9NsUxNskF1MfWM1f265y4w86JYbEwqCmTacdLkHp").unwrap();
-        let mut lamports = 31;
-        let mut data = vec![1, 2, 3, 4, 5];
-        let owner = Pubkey::from_str("2tjK4XyNU54XdN9jokx46QzLybbLVGwQQvTfhcuBXAjR").unwrap();
-        let account_info = AccountInfo {
-            key: &key,
-            is_signer: true,
-            is_writable: false,
-            lamports: Rc::new(RefCell::new(&mut lamports)),
-            data: Rc::new(RefCell::new(&mut data)),
-            owner: &owner,
-            executable: true,
-            rent_epoch: 42,
-        };
-        let account_info_addr = &account_info as *const _ as u64;
-
-        // key
-        assert_eq!(offset_of!(AccountInfo, key), 0);
-        let key_ptr = (account_info_addr) as *const &Pubkey;
-        unsafe {
-            assert_eq!(**key_ptr, key);
-        }
-
-        // lamports
-        assert_eq!(offset_of!(AccountInfo, lamports), 8);
-        let lamports_ptr = (account_info_addr + 8) as *const Rc<RefCell<&mut u64>>;
-        unsafe {
-            assert_eq!(**(*lamports_ptr).as_ptr(), 31);
-        }
-
-        // data
-        assert_eq!(offset_of!(AccountInfo, data), 16);
-        let data_ptr = (account_info_addr + 16) as *const Rc<RefCell<&mut [u8]>>;
-        unsafe {
-            assert_eq!((&(*(*data_ptr).as_ptr()))[..], data[..]);
-        }
-
-        // owner
-        assert_eq!(offset_of!(AccountInfo, owner), 24);
-        let owner_ptr = (account_info_addr + 24) as *const &Pubkey;
-        unsafe {
-            assert_eq!(**owner_ptr, owner);
-        }
-
-        // rent_epoch
-        assert_eq!(offset_of!(AccountInfo, rent_epoch), 32);
-        let renbt_epoch_ptr = (account_info_addr + 32) as *const Epoch;
-        unsafe {
-            assert_eq!(*renbt_epoch_ptr, 42);
-        }
-
-        // is_signer
-        assert_eq!(offset_of!(AccountInfo, is_signer), 40);
-        let is_signer_ptr = (account_info_addr + 40) as *const bool;
-        unsafe {
-            assert!(*is_signer_ptr);
-        }
-
-        // is_writable
-        assert_eq!(offset_of!(AccountInfo, is_writable), 41);
-        let is_writable_ptr = (account_info_addr + 41) as *const bool;
-        unsafe {
-            assert!(!*is_writable_ptr);
-        }
-
-        // executable
-        assert_eq!(offset_of!(AccountInfo, executable), 42);
-        let executable_ptr = (account_info_addr + 42) as *const bool;
-        unsafe {
-            assert!(*executable_ptr);
-        }
-    }
+    solana_account_info::check_type_assumptions();
 }
 
 #[cfg(test)]

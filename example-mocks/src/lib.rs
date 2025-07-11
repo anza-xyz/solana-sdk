@@ -110,14 +110,13 @@ pub mod solana_rpc_client_nonce_utils {
 }
 
 pub mod solana_account {
-    use {solana_clock::Epoch, solana_pubkey::Pubkey};
+    use solana_pubkey::Pubkey;
     #[derive(Clone)]
     pub struct Account {
         pub lamports: u64,
         pub data: Vec<u8>,
         pub owner: Pubkey,
         pub executable: bool,
-        pub rent_epoch: Epoch,
     }
 
     pub trait ReadableAccount: Sized {
