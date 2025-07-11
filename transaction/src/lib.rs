@@ -55,7 +55,7 @@
 //! [`anyhow`]: https://docs.rs/anyhow
 //!
 //! ```
-//! # use solana_sdk::example_mocks::solana_rpc_client;
+//! # use solana_example_mocks::{solana_keypair, solana_rpc_client, solana_signer, solana_transaction};
 //! use anyhow::Result;
 //! use borsh::{BorshSerialize, BorshDeserialize};
 //! use solana_instruction::Instruction;
@@ -251,7 +251,7 @@ impl Transaction {
     /// [`anyhow`]: https://docs.rs/anyhow
     ///
     /// ```
-    /// # use solana_sdk::example_mocks::solana_rpc_client;
+    /// # use solana_example_mocks::{solana_keypair, solana_rpc_client, solana_signer, solana_transaction};
     /// use anyhow::Result;
     /// use borsh::{BorshSerialize, BorshDeserialize};
     /// use solana_instruction::Instruction;
@@ -329,7 +329,7 @@ impl Transaction {
     /// [`anyhow`]: https://docs.rs/anyhow
     ///
     /// ```
-    /// # use solana_sdk::example_mocks::solana_rpc_client;
+    /// # use solana_example_mocks::{solana_keypair, solana_rpc_client, solana_signer, solana_transaction};
     /// use anyhow::Result;
     /// use borsh::{BorshSerialize, BorshDeserialize};
     /// use solana_instruction::Instruction;
@@ -408,7 +408,7 @@ impl Transaction {
     /// [`anyhow`]: https://docs.rs/anyhow
     ///
     /// ```
-    /// # use solana_sdk::example_mocks::solana_rpc_client;
+    /// # use solana_example_mocks::{solana_keypair, solana_rpc_client, solana_signer, solana_transaction};
     /// use anyhow::Result;
     /// use borsh::{BorshSerialize, BorshDeserialize};
     /// use solana_instruction::Instruction;
@@ -483,7 +483,7 @@ impl Transaction {
     /// [`anyhow`]: https://docs.rs/anyhow
     ///
     /// ```
-    /// # use solana_sdk::example_mocks::solana_rpc_client;
+    /// # use solana_example_mocks::{solana_keypair, solana_rpc_client, solana_signer, solana_transaction};
     /// use anyhow::Result;
     /// use borsh::{BorshSerialize, BorshDeserialize};
     /// use solana_instruction::Instruction;
@@ -693,7 +693,7 @@ impl Transaction {
     /// [`anyhow`]: https://docs.rs/anyhow
     ///
     /// ```
-    /// # use solana_sdk::example_mocks::solana_rpc_client;
+    /// # use solana_example_mocks::{solana_keypair, solana_rpc_client, solana_signer, solana_transaction};
     /// use anyhow::Result;
     /// use borsh::{BorshSerialize, BorshDeserialize};
     /// use solana_instruction::Instruction;
@@ -833,7 +833,7 @@ impl Transaction {
     /// [`anyhow`]: https://docs.rs/anyhow
     ///
     /// ```
-    /// # use solana_sdk::example_mocks::solana_rpc_client;
+    /// # use solana_example_mocks::{solana_keypair, solana_rpc_client, solana_signer, solana_transaction};
     /// use anyhow::Result;
     /// use borsh::{BorshSerialize, BorshDeserialize};
     /// use solana_instruction::Instruction;

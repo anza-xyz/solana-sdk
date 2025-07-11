@@ -64,8 +64,10 @@ solana-keypair = { workspace = true }
 wasm-bindgen = { workspace = true }
 
 [dev-dependencies]
+anyhow = { workspace = true }
 bincode = { workspace = true }
 borsh = { workspace = true }
+solana-example-mocks = { workspace = true }
 solana-hash = { workspace = true }
 solana-instruction = { workspace = true, features = ["borsh"] }
 solana-keypair = { workspace = true }

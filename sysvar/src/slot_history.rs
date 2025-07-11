@@ -17,10 +17,10 @@
 //! Calling via the RPC client:
 //!
 //! ```
-//! # use solana_program::example_mocks::solana_sdk;
-//! # use solana_program::example_mocks::solana_rpc_client;
+//! # use solana_example_mocks::solana_account;
+//! # use solana_example_mocks::solana_rpc_client;
 //! # use solana_rpc_client::rpc_client::RpcClient;
-//! # use solana_sdk::account::Account;
+//! # use solana_account::Account;
 //! # use solana_slot_history::SlotHistory;
 //! # use solana_sdk_ids::sysvar::slot_history;
 //! # use anyhow::Result;

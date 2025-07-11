@@ -256,18 +256,17 @@ impl Message {
     /// [`anyhow`]: https://docs.rs/anyhow
     ///
     /// ```
-    /// # use solana_program::example_mocks::solana_sdk;
-    /// # use solana_program::example_mocks::solana_rpc_client;
+    /// # use solana_example_mocks::{solana_keypair, solana_signer, solana_transaction};
+    /// # use solana_example_mocks::solana_rpc_client;
     /// use anyhow::Result;
     /// use borsh::{BorshSerialize, BorshDeserialize};
     /// use solana_instruction::Instruction;
+    /// use solana_keypair::Keypair;
     /// use solana_message::Message;
     /// use solana_pubkey::Pubkey;
     /// use solana_rpc_client::rpc_client::RpcClient;
-    /// use solana_sdk::{
-    ///     signature::{Keypair, Signer},
-    ///     transaction::Transaction,
-    /// };
+    /// use solana_signer::Signer;
+    /// use solana_transaction::Transaction;
     ///
     /// // A custom program instruction. This would typically be defined in
     /// // another crate so it can be shared between the on-chain program and
@@ -328,18 +327,17 @@ impl Message {
     /// [`anyhow`]: https://docs.rs/anyhow
     ///
     /// ```
-    /// # use solana_program::example_mocks::solana_sdk;
-    /// # use solana_program::example_mocks::solana_rpc_client;
+    /// # use solana_example_mocks::{solana_keypair, solana_signer, solana_transaction};
+    /// # use solana_example_mocks::solana_rpc_client;
     /// use anyhow::Result;
     /// use borsh::{BorshSerialize, BorshDeserialize};
     /// use solana_instruction::Instruction;
+    /// use solana_keypair::Keypair;
     /// use solana_message::Message;
     /// use solana_pubkey::Pubkey;
     /// use solana_rpc_client::rpc_client::RpcClient;
-    /// use solana_sdk::{
-    ///     signature::{Keypair, Signer},
-    ///     transaction::Transaction,
-    /// };
+    /// use solana_signer::Signer;
+    /// use solana_transaction::Transaction;
     ///
     /// // A custom program instruction. This would typically be defined in
     /// // another crate so it can be shared between the on-chain program and
@@ -425,19 +423,18 @@ impl Message {
     /// [`anyhow`]: https://docs.rs/anyhow
     ///
     /// ```
-    /// # use solana_program::example_mocks::solana_sdk;
-    /// # use solana_program::example_mocks::solana_rpc_client;
+    /// # use solana_example_mocks::{solana_keypair, solana_signer, solana_transaction};
+    /// # use solana_example_mocks::solana_rpc_client;
     /// use anyhow::Result;
     /// use borsh::{BorshSerialize, BorshDeserialize};
     /// use solana_hash::Hash;
     /// use solana_instruction::Instruction;
+    /// use solana_keypair::Keypair;
     /// use solana_message::Message;
     /// use solana_pubkey::Pubkey;
     /// use solana_rpc_client::rpc_client::RpcClient;
-    /// use solana_sdk::{
-    ///     signature::{Keypair, Signer},
-    ///     transaction::Transaction,
-    /// };
+    /// use solana_signer::Signer;
+    /// use solana_transaction::Transaction;
     /// use solana_system_interface::instruction::create_nonce_account;
     ///
     /// // A custom program instruction. This would typically be defined in

@@ -17,10 +17,9 @@
 //! Calling via the RPC client:
 //!
 //! ```
-//! # use solana_program::example_mocks::solana_sdk;
-//! # use solana_program::example_mocks::solana_rpc_client;
-//! # use solana_program::stake_history::StakeHistory;
-//! # use solana_sdk::account::Account;
+//! # use solana_example_mocks::{solana_account, solana_rpc_client};
+//! # use solana_stake_interface::stake_history::StakeHistory;
+//! # use solana_account::Account;
 //! # use solana_rpc_client::rpc_client::RpcClient;
 //! # use solana_sdk_ids::sysvar::stake_history;
 //! # use anyhow::Result;
