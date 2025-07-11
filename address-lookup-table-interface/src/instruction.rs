@@ -110,24 +110,6 @@ fn create_lookup_table_common(
 ///
 /// # Note
 ///
-/// This instruction requires the authority to be a signer but
-/// in v1.12 the address lookup table program will no longer require
-/// the authority to sign the transaction.
-#[deprecated(since = "2.2.0", note = "use `create_lookup_table` instead")]
-#[cfg(feature = "bincode")]
-pub fn create_lookup_table_signed(
-    authority_address: Pubkey,
-    payer_address: Pubkey,
-    recent_slot: Slot,
-) -> (Instruction, Pubkey) {
-    create_lookup_table_common(authority_address, payer_address, recent_slot, true)
-}
-
-/// Constructs an instruction to create a table account and returns
-/// the instruction and the table account's derived address.
-///
-/// # Note
-///
 /// This instruction doesn't require the authority to be a signer but
 /// until v1.12 the address lookup table program still requires the
 /// authority to sign the transaction.

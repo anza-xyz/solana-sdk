@@ -25,9 +25,6 @@ pub mod vote_state_v3;
 pub use vote_state_v3::VoteStateV3;
 mod vote_instruction_data;
 pub use vote_instruction_data::*;
-// The struct's name has changed.
-#[deprecated(since = "2.2.6", note = "Use vote_state_v3::VoteStateV3 instead")]
-pub use vote_state_v3::VoteStateV3 as VoteState;
 
 // Maximum number of votes to keep around, tightly coupled with epoch_schedule::MINIMUM_SLOTS_PER_EPOCH
 pub const MAX_LOCKOUT_HISTORY: usize = 31;
@@ -567,31 +564,6 @@ mod tests {
             let test_vote_state = unsafe { test_vote_state.assume_init() };
             assert_eq!(test_vote_state, bincode_res.unwrap());
         }
-    }
-
-    #[test]
-    #[allow(deprecated)]
-    fn test_vote_state_commission_split() {
-        let vote_state = VoteStateV3::default();
-
-        assert_eq!(vote_state.commission_split(1), (0, 1, false));
-
-        let mut vote_state = VoteStateV3 {
-            commission: u8::MAX,
-            ..VoteStateV3::default()
-        };
-        assert_eq!(vote_state.commission_split(1), (1, 0, false));
-
-        vote_state.commission = 99;
-        assert_eq!(vote_state.commission_split(10), (9, 0, true));
-
-        vote_state.commission = 1;
-        assert_eq!(vote_state.commission_split(10), (0, 9, true));
-
-        vote_state.commission = 50;
-        let (voter_portion, staker_portion, was_split) = vote_state.commission_split(10);
-
-        assert_eq!((voter_portion, staker_portion, was_split), (5, 5, true));
     }
 
     #[test]

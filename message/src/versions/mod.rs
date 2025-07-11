@@ -97,11 +97,6 @@ impl VersionedMessage {
         }
     }
 
-    #[deprecated(since = "2.0.0", note = "Please use `is_instruction_account` instead")]
-    pub fn is_key_passed_to_program(&self, key_index: usize) -> bool {
-        self.is_instruction_account(key_index)
-    }
-
     /// Returns true if the account at the specified index is an input to some
     /// program instruction in this message.
     fn is_instruction_account(&self, key_index: usize) -> bool {

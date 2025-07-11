@@ -96,36 +96,6 @@ fn deprecated_id_to_tokens(
     });
 }
 
-struct SdkPubkey(proc_macro2::TokenStream);
-
-impl Parse for SdkPubkey {
-    fn parse(input: ParseStream) -> Result<Self> {
-        parse_id(input, quote! { ::solana_sdk::pubkey::Pubkey }).map(Self)
-    }
-}
-
-impl ToTokens for SdkPubkey {
-    fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
-        let id = &self.0;
-        tokens.extend(quote! {#id})
-    }
-}
-
-struct ProgramSdkPubkey(proc_macro2::TokenStream);
-
-impl Parse for ProgramSdkPubkey {
-    fn parse(input: ParseStream) -> Result<Self> {
-        parse_id(input, quote! { ::solana_program::pubkey::Pubkey }).map(Self)
-    }
-}
-
-impl ToTokens for ProgramSdkPubkey {
-    fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
-        let id = &self.0;
-        tokens.extend(quote! {#id})
-    }
-}
-
 struct Id(proc_macro2::TokenStream);
 
 impl Parse for Id {
@@ -154,46 +124,6 @@ impl ToTokens for IdDeprecated {
     }
 }
 
-struct ProgramSdkId(proc_macro2::TokenStream);
-impl Parse for ProgramSdkId {
-    fn parse(input: ParseStream) -> Result<Self> {
-        parse_id(input, quote! { ::solana_program::pubkey::Pubkey }).map(Self)
-    }
-}
-
-impl ToTokens for ProgramSdkId {
-    fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
-        id_to_tokens(&self.0, quote! { ::solana_program::pubkey::Pubkey }, tokens)
-    }
-}
-
-struct ProgramSdkIdDeprecated(proc_macro2::TokenStream);
-impl Parse for ProgramSdkIdDeprecated {
-    fn parse(input: ParseStream) -> Result<Self> {
-        parse_id(input, quote! { ::solana_program::pubkey::Pubkey }).map(Self)
-    }
-}
-
-impl ToTokens for ProgramSdkIdDeprecated {
-    fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
-        deprecated_id_to_tokens(&self.0, quote! { ::solana_program::pubkey::Pubkey }, tokens)
-    }
-}
-
-#[deprecated(since = "2.1.0", note = "Use `solana_pubkey::pubkey` instead")]
-#[proc_macro]
-pub fn pubkey(input: TokenStream) -> TokenStream {
-    let id = parse_macro_input!(input as SdkPubkey);
-    TokenStream::from(quote! {#id})
-}
-
-#[deprecated(since = "2.1.0", note = "Use `solana_pubkey::pubkey!` instead")]
-#[proc_macro]
-pub fn program_pubkey(input: TokenStream) -> TokenStream {
-    let id = parse_macro_input!(input as ProgramSdkPubkey);
-    TokenStream::from(quote! {#id})
-}
-
 #[proc_macro]
 pub fn declare_id(input: TokenStream) -> TokenStream {
     let id = parse_macro_input!(input as Id);
@@ -203,23 +133,6 @@ pub fn declare_id(input: TokenStream) -> TokenStream {
 #[proc_macro]
 pub fn declare_deprecated_id(input: TokenStream) -> TokenStream {
     let id = parse_macro_input!(input as IdDeprecated);
-    TokenStream::from(quote! {#id})
-}
-
-#[deprecated(since = "2.1.0", note = "Use `solana_pubkey::declare_id` instead")]
-#[proc_macro]
-pub fn program_declare_id(input: TokenStream) -> TokenStream {
-    let id = parse_macro_input!(input as ProgramSdkId);
-    TokenStream::from(quote! {#id})
-}
-
-#[deprecated(
-    since = "2.1.0",
-    note = "Use `solana_pubkey::declare_deprecated_id` instead"
-)]
-#[proc_macro]
-pub fn program_declare_deprecated_id(input: TokenStream) -> TokenStream {
-    let id = parse_macro_input!(input as ProgramSdkIdDeprecated);
     TokenStream::from(quote! {#id})
 }
 

@@ -130,14 +130,10 @@ impl<'a> AccountInfo<'a> {
             .map_err(|_| ProgramError::AccountBorrowFailed)
     }
 
-    /// Realloc the account's data and optionally zero-initialize the new
-    /// memory.
+    /// Resize the account's data: Either truncating or zero extending.
     ///
     /// Note:  Account data can be increased within a single call by up to
     /// `solana_program::entrypoint::MAX_PERMITTED_DATA_INCREASE` bytes.
-    ///
-    /// Note: `zero_init` being `false` will no longer be supported by the
-    /// program runtime.
     ///
     /// # Safety
     ///
@@ -145,8 +141,7 @@ impl<'a> AccountInfo<'a> {
     /// referenced by `AccountInfo` fields. It should only be called for
     /// instances of `AccountInfo` that were created by the runtime and received
     /// in the `process_instruction` entrypoint of a program.
-    #[deprecated(since = "2.3.0", note = "Use AccountInfo::resize() instead")]
-    pub fn realloc(&self, new_len: usize, zero_init: bool) -> Result<(), ProgramError> {
+    pub fn resize(&self, new_len: usize) -> Result<(), ProgramError> {
         let mut data = self.try_borrow_mut_data()?;
         let old_len = data.len();
 
@@ -173,30 +168,12 @@ impl<'a> AccountInfo<'a> {
             *data = from_raw_parts_mut(data_ptr, new_len)
         }
 
-        if zero_init {
-            let len_increase = new_len.saturating_sub(old_len);
-            if len_increase > 0 {
-                unsafe { sol_memset(&mut data[old_len..], 0, len_increase) };
-            }
+        let len_increase = new_len.saturating_sub(old_len);
+        if len_increase > 0 {
+            unsafe { sol_memset(&mut data[old_len..], 0, len_increase) };
         }
 
         Ok(())
-    }
-
-    /// Resize the account's data: Either truncating or zero extending.
-    ///
-    /// Note:  Account data can be increased within a single call by up to
-    /// `solana_program::entrypoint::MAX_PERMITTED_DATA_INCREASE` bytes.
-    ///
-    /// # Safety
-    ///
-    /// This method makes assumptions about the layout and location of memory
-    /// referenced by `AccountInfo` fields. It should only be called for
-    /// instances of `AccountInfo` that were created by the runtime and received
-    /// in the `process_instruction` entrypoint of a program.
-    pub fn resize(&self, new_len: usize) -> Result<(), ProgramError> {
-        #[allow(deprecated)]
-        self.realloc(new_len, true)
     }
 
     #[allow(invalid_reference_casting)]

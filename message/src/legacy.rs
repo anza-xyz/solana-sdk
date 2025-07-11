@@ -11,8 +11,6 @@
 
 #![allow(clippy::arithmetic_side_effects)]
 
-#[allow(deprecated)]
-pub use builtins::{BUILTIN_PROGRAMS_KEYS, MAYBE_BUILTIN_KEY_OR_SYSVAR};
 #[cfg(feature = "serde")]
 use serde_derive::{Deserialize, Serialize};
 #[cfg(feature = "frozen-abi")]
@@ -27,88 +25,9 @@ use {
     solana_instruction::Instruction,
     solana_pubkey::Pubkey,
     solana_sanitize::{Sanitize, SanitizeError},
-    solana_sdk_ids::{
-        bpf_loader, bpf_loader_deprecated, bpf_loader_upgradeable, system_program, sysvar,
-    },
-    std::{collections::HashSet, convert::TryFrom, str::FromStr},
+    solana_sdk_ids::bpf_loader_upgradeable,
+    std::{collections::HashSet, convert::TryFrom},
 };
-
-// copied from deprecated code in solana_program::sysvar to avoid a dependency.
-// This should be removed when the items that depend on it are removed.
-lazy_static::lazy_static! {
-    // This will be deprecated and so this list shouldn't be modified
-    static ref ALL_IDS: Vec<Pubkey> = vec![
-        sysvar::clock::id(),
-        sysvar::epoch_schedule::id(),
-        sysvar::fees::id(),
-        sysvar::recent_blockhashes::id(),
-        sysvar::rent::id(),
-        sysvar::rewards::id(),
-        sysvar::slot_hashes::id(),
-        sysvar::slot_history::id(),
-        sysvar::stake_history::id(),
-        sysvar::instructions::id(),
-    ];
-}
-
-// copied from deprecated code in solana_program::sysvar to avoid a dependency.
-// This should be removed when the items that depend on it are removed.
-fn is_sysvar_id(id: &Pubkey) -> bool {
-    ALL_IDS.iter().any(|key| key == id)
-}
-
-#[deprecated(
-    since = "2.0.0",
-    note = "please use `solana_sdk::reserved_account_keys::ReservedAccountKeys` instead"
-)]
-#[allow(deprecated)]
-mod builtins {
-    use {super::*, lazy_static::lazy_static};
-
-    lazy_static! {
-        pub static ref BUILTIN_PROGRAMS_KEYS: [Pubkey; 10] = {
-            let parse = |s| Pubkey::from_str(s).unwrap();
-            [
-                parse("Config1111111111111111111111111111111111111"),
-                parse("Feature111111111111111111111111111111111111"),
-                parse("NativeLoader1111111111111111111111111111111"),
-                parse("Stake11111111111111111111111111111111111111"),
-                parse("StakeConfig11111111111111111111111111111111"),
-                parse("Vote111111111111111111111111111111111111111"),
-                system_program::id(),
-                bpf_loader::id(),
-                bpf_loader_deprecated::id(),
-                bpf_loader_upgradeable::id(),
-            ]
-        };
-    }
-
-    lazy_static! {
-        // Each element of a key is a u8. We use key[0] as an index into this table of 256 boolean
-        // elements, to store whether or not the first element of any key is present in the static
-        // lists of built-in-program keys or system ids. By using this lookup table, we can very
-        // quickly determine that a key under consideration cannot be in either of these lists (if
-        // the value is "false"), or might be in one of these lists (if the value is "true")
-        pub static ref MAYBE_BUILTIN_KEY_OR_SYSVAR: [bool; 256] = {
-            let mut temp_table: [bool; 256] = [false; 256];
-            BUILTIN_PROGRAMS_KEYS.iter().for_each(|key| temp_table[key.as_ref()[0] as usize] = true);
-            ALL_IDS.iter().for_each(|key| temp_table[key.as_ref()[0] as usize] = true);
-            temp_table
-        };
-    }
-}
-
-#[deprecated(
-    since = "2.0.0",
-    note = "please use `solana_sdk::reserved_account_keys::ReservedAccountKeys::is_reserved` instead"
-)]
-#[allow(deprecated)]
-pub fn is_builtin_key_or_sysvar(key: &Pubkey) -> bool {
-    if MAYBE_BUILTIN_KEY_OR_SYSVAR[key.as_ref()[0] as usize] {
-        return is_sysvar_id(key) || BUILTIN_PROGRAMS_KEYS.contains(key);
-    }
-    false
-}
 
 fn position(keys: &[Pubkey], key: &Pubkey) -> u8 {
     keys.iter().position(|k| k == key).unwrap() as u8
@@ -590,11 +509,6 @@ impl Message {
             .collect()
     }
 
-    #[deprecated(since = "2.0.0", note = "Please use `is_instruction_account` instead")]
-    pub fn is_key_passed_to_program(&self, key_index: usize) -> bool {
-        self.is_instruction_account(key_index)
-    }
-
     /// Returns true if the account at the specified index is an account input
     /// to some program instruction in this message.
     pub fn is_instruction_account(&self, key_index: usize) -> bool {
@@ -615,14 +529,6 @@ impl Message {
         } else {
             false
         }
-    }
-
-    #[deprecated(
-        since = "2.0.0",
-        note = "Please use `is_key_called_as_program` and `is_instruction_account` directly"
-    )]
-    pub fn is_non_loader_key(&self, key_index: usize) -> bool {
-        !self.is_key_called_as_program(key_index) || self.is_instruction_account(key_index)
     }
 
     pub fn program_position(&self, index: usize) -> Option<usize> {
@@ -650,18 +556,6 @@ impl Message {
                     .account_keys
                     .len()
                     .saturating_sub(self.header.num_readonly_unsigned_accounts as usize))
-    }
-
-    /// Returns true if the account at the specified index is writable by the
-    /// instructions in this message. Since the dynamic set of reserved accounts
-    /// isn't used here to demote write locks, this shouldn't be used in the
-    /// runtime.
-    #[deprecated(since = "2.0.0", note = "Please use `is_maybe_writable` instead")]
-    #[allow(deprecated)]
-    pub fn is_writable(&self, i: usize) -> bool {
-        (self.is_writable_index(i))
-            && !is_builtin_key_or_sysvar(&self.account_keys[i])
-            && !self.demote_program_id(i)
     }
 
     /// Returns true if the account at the specified index is writable by the
@@ -733,32 +627,12 @@ impl Message {
 
 #[cfg(test)]
 mod tests {
-    #![allow(deprecated)]
     use {
-        super::*, crate::MESSAGE_HEADER_LENGTH, solana_instruction::AccountMeta,
-        solana_sha256_hasher::hash, std::collections::HashSet,
+        super::*,
+        crate::MESSAGE_HEADER_LENGTH,
+        solana_instruction::AccountMeta,
+        std::{collections::HashSet, str::FromStr},
     };
-
-    #[test]
-    fn test_builtin_program_keys() {
-        let keys: HashSet<Pubkey> = BUILTIN_PROGRAMS_KEYS.iter().copied().collect();
-        assert_eq!(keys.len(), 10);
-        for k in keys {
-            let k = format!("{k}");
-            assert!(k.ends_with("11111111111111111111111"));
-        }
-    }
-
-    #[test]
-    fn test_builtin_program_keys_abi_freeze() {
-        // Once the feature is flipped on, we can't further modify
-        // BUILTIN_PROGRAMS_KEYS without the risk of breaking consensus.
-        let builtins = format!("{:?}", *BUILTIN_PROGRAMS_KEYS);
-        assert_eq!(
-            format!("{}", hash(builtins.as_bytes())),
-            "ACqmMkYbo9eqK6QrRSrB3HLyR6uHhLf31SCfGUAJjiWj"
-        );
-    }
 
     #[test]
     // Ensure there's a way to calculate the number of required signatures.
@@ -840,33 +714,6 @@ mod tests {
         assert_eq!(message.program_position(0), None);
         assert_eq!(message.program_position(1), Some(0));
         assert_eq!(message.program_position(2), Some(1));
-    }
-
-    #[test]
-    fn test_is_writable() {
-        let key0 = Pubkey::new_unique();
-        let key1 = Pubkey::new_unique();
-        let key2 = Pubkey::new_unique();
-        let key3 = Pubkey::new_unique();
-        let key4 = Pubkey::new_unique();
-        let key5 = Pubkey::new_unique();
-
-        let message = Message {
-            header: MessageHeader {
-                num_required_signatures: 3,
-                num_readonly_signed_accounts: 2,
-                num_readonly_unsigned_accounts: 1,
-            },
-            account_keys: vec![key0, key1, key2, key3, key4, key5],
-            recent_blockhash: Hash::default(),
-            instructions: vec![],
-        };
-        assert!(message.is_writable(0));
-        assert!(!message.is_writable(1));
-        assert!(!message.is_writable(2));
-        assert!(message.is_writable(3));
-        assert!(message.is_writable(4));
-        assert!(!message.is_writable(5));
     }
 
     #[test]
@@ -959,26 +806,6 @@ mod tests {
     }
 
     #[test]
-    fn test_is_non_loader_key() {
-        #![allow(deprecated)]
-        let key0 = Pubkey::new_unique();
-        let key1 = Pubkey::new_unique();
-        let loader2 = Pubkey::new_unique();
-        let instructions = vec![CompiledInstruction::new(2, &(), vec![0, 1])];
-        let message = Message::new_with_compiled_instructions(
-            1,
-            0,
-            2,
-            vec![key0, key1, loader2],
-            Hash::default(),
-            instructions,
-        );
-        assert!(message.is_non_loader_key(0));
-        assert!(message.is_non_loader_key(1));
-        assert!(!message.is_non_loader_key(2));
-    }
-
-    #[test]
     fn test_message_header_len_constant() {
         assert_eq!(
             bincode::serialized_size(&MessageHeader::default()).unwrap() as usize,
@@ -1016,11 +843,6 @@ mod tests {
             message.hash(),
             Hash::from_str("7VWCF4quo2CcWQFNUayZiorxpiR5ix8YzLebrXKf3fMF").unwrap()
         )
-    }
-
-    #[test]
-    fn test_inline_all_ids() {
-        assert_eq!(solana_sysvar::ALL_IDS.to_vec(), ALL_IDS.to_vec());
     }
 
     #[test]

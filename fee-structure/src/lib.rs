@@ -2,8 +2,6 @@
 #![cfg_attr(docsrs, feature(doc_auto_cfg))]
 #![cfg_attr(feature = "frozen-abi", feature(min_specialization))]
 
-#[cfg(not(target_os = "solana"))]
-use solana_message::SanitizedMessage;
 use std::num::NonZeroU32;
 
 /// A fee and its associated compute unit limit
@@ -76,30 +74,6 @@ impl FeeDetails {
 pub const ACCOUNT_DATA_COST_PAGE_SIZE: u64 = 32_u64.saturating_mul(1024);
 
 impl FeeStructure {
-    #[deprecated(
-        since = "2.3.0",
-        note = "Use FeeStructure::default() and modify fields as needed"
-    )]
-    #[allow(deprecated)]
-    pub fn new(
-        sol_per_signature: f64,
-        sol_per_write_lock: f64,
-        compute_fee_bins: Vec<(u64, f64)>,
-    ) -> Self {
-        let compute_fee_bins = compute_fee_bins
-            .iter()
-            .map(|(limit, sol)| FeeBin {
-                limit: *limit,
-                fee: solana_native_token::sol_to_lamports(*sol),
-            })
-            .collect::<Vec<_>>();
-        FeeStructure {
-            lamports_per_signature: solana_native_token::sol_to_lamports(sol_per_signature),
-            lamports_per_write_lock: solana_native_token::sol_to_lamports(sol_per_write_lock),
-            compute_fee_bins,
-        }
-    }
-
     pub fn get_max_fee(&self, num_signatures: u64, num_write_locks: u64) -> u64 {
         num_signatures
             .saturating_mul(self.lamports_per_signature)
@@ -120,87 +94,6 @@ impl FeeStructure {
             .saturating_add(ACCOUNT_DATA_COST_PAGE_SIZE.saturating_sub(1))
             .saturating_div(ACCOUNT_DATA_COST_PAGE_SIZE)
             .saturating_mul(heap_cost)
-    }
-
-    /// Calculate fee for `SanitizedMessage`
-    #[cfg(not(target_os = "solana"))]
-    #[deprecated(
-        since = "2.1.0",
-        note = "Please use `solana_fee::calculate_fee` instead."
-    )]
-    pub fn calculate_fee(
-        &self,
-        message: &SanitizedMessage,
-        lamports_per_signature: u64,
-        budget_limits: &FeeBudgetLimits,
-        include_loaded_account_data_size_in_fee: bool,
-    ) -> u64 {
-        #[allow(deprecated)]
-        self.calculate_fee_details(
-            message,
-            lamports_per_signature,
-            budget_limits,
-            include_loaded_account_data_size_in_fee,
-        )
-        .total_fee()
-    }
-
-    /// Calculate fee details for `SanitizedMessage`
-    #[cfg(not(target_os = "solana"))]
-    #[deprecated(
-        since = "2.1.0",
-        note = "Please use `solana_fee::calculate_fee_details` instead."
-    )]
-    pub fn calculate_fee_details(
-        &self,
-        message: &SanitizedMessage,
-        lamports_per_signature: u64,
-        budget_limits: &FeeBudgetLimits,
-        include_loaded_account_data_size_in_fee: bool,
-    ) -> FeeDetails {
-        // Backward compatibility - lamports_per_signature == 0 means to clear
-        // transaction fee to zero
-        if lamports_per_signature == 0 {
-            return FeeDetails::default();
-        }
-
-        let signature_fee = message
-            .num_total_signatures()
-            .saturating_mul(self.lamports_per_signature);
-        let write_lock_fee = message
-            .num_write_locks()
-            .saturating_mul(self.lamports_per_write_lock);
-
-        // `compute_fee` covers costs for both requested_compute_units and
-        // requested_loaded_account_data_size
-        let loaded_accounts_data_size_cost = if include_loaded_account_data_size_in_fee {
-            FeeStructure::calculate_memory_usage_cost(
-                budget_limits.loaded_accounts_data_size_limit.get(),
-                budget_limits.heap_cost,
-            )
-        } else {
-            0_u64
-        };
-        let total_compute_units =
-            loaded_accounts_data_size_cost.saturating_add(budget_limits.compute_unit_limit);
-        let compute_fee = self
-            .compute_fee_bins
-            .iter()
-            .find(|bin| total_compute_units <= bin.limit)
-            .map(|bin| bin.fee)
-            .unwrap_or_else(|| {
-                self.compute_fee_bins
-                    .last()
-                    .map(|bin| bin.fee)
-                    .unwrap_or_default()
-            });
-
-        FeeDetails {
-            transaction_fee: signature_fee
-                .saturating_add(write_lock_fee)
-                .saturating_add(compute_fee),
-            prioritization_fee: budget_limits.prioritization_fee,
-        }
     }
 }
 

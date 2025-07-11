@@ -3122,8 +3122,6 @@ dependencies = [
  "serde",
  "serde_derive",
  "solana-frozen-abi",
- "solana-message",
- "solana-native-token",
 ]
 
 [[package]]
@@ -3416,10 +3414,8 @@ dependencies = [
  "solana-pubkey",
  "solana-sanitize",
  "solana-sdk-ids",
- "solana-sha256-hasher",
  "solana-short-vec",
  "solana-system-interface",
- "solana-sysvar",
  "solana-transaction-error",
  "static_assertions",
  "wasm-bindgen",
@@ -4064,7 +4060,6 @@ dependencies = [
  "solana-frozen-abi-macro",
  "solana-hash",
  "solana-instruction",
- "solana-instructions-sysvar",
  "solana-last-restart-slot",
  "solana-msg",
  "solana-program-entrypoint",

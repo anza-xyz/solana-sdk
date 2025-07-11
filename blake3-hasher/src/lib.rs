@@ -102,12 +102,6 @@ impl FromStr for Hash {
 }
 
 impl Hash {
-    #[deprecated(since = "2.2.0", note = "Use 'Hash::new_from_array' instead")]
-    pub fn new(hash_slice: &[u8]) -> Self {
-        #[allow(deprecated)]
-        Self::from(solana_hash::Hash::new(hash_slice))
-    }
-
     pub const fn new_from_array(hash_array: [u8; HASH_BYTES]) -> Self {
         Self(hash_array)
     }

@@ -223,7 +223,6 @@ macro_rules! custom_heap_default {
     () => {
         #[cfg(all(not(feature = "custom-heap"), target_os = "solana"))]
         #[global_allocator]
-        #[allow(deprecated)] //we get to use deprecated pub fields
         static A: $crate::BumpAllocator = $crate::BumpAllocator {
             start: $crate::HEAP_START_ADDRESS as usize,
             len: $crate::HEAP_LENGTH,
@@ -301,16 +300,8 @@ macro_rules! custom_panic_default {
 
 /// The bump allocator used as the default rust heap when running programs.
 pub struct BumpAllocator {
-    #[deprecated(
-        since = "2.2.2",
-        note = "This field should not be accessed directly. It will become private in future versions"
-    )]
-    pub start: usize,
-    #[deprecated(
-        since = "2.2.2",
-        note = "This field should not be accessed directly. It will become private in future versions"
-    )]
-    pub len: usize,
+    start: usize,
+    len: usize,
 }
 
 impl BumpAllocator {
@@ -339,7 +330,6 @@ impl BumpAllocator {
         // initialize the data there
         *pos_ptr = pos_ptr as usize + arena.len();
 
-        #[allow(deprecated)] //we get to use deprecated pub fields
         Self {
             start: pos_ptr as usize,
             len: arena.len(),
@@ -353,7 +343,6 @@ impl BumpAllocator {
 #[allow(clippy::arithmetic_side_effects)]
 unsafe impl std::alloc::GlobalAlloc for BumpAllocator {
     #[inline]
-    #[allow(deprecated)] //we get to use deprecated pub fields
     unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
         let pos_ptr = self.start as *mut usize;
         let mut pos = *pos_ptr;

@@ -162,13 +162,6 @@ pub fn load_current_index_checked(
 }
 
 /// Store the current `Instruction`'s index in the instructions sysvar data.
-#[deprecated(since = "2.2.1", note = "Use store_current_index_checked instead")]
-pub fn store_current_index(data: &mut [u8], instruction_index: u16) {
-    let last_index = data.len() - 2;
-    data[last_index..last_index + 2].copy_from_slice(&instruction_index.to_le_bytes());
-}
-
-/// Store the current `Instruction`'s index in the instructions sysvar data.
 pub fn store_current_index_checked(
     data: &mut [u8],
     instruction_index: u16,
@@ -306,7 +299,6 @@ mod tests {
         let mut data = [4u8; 10];
         let res = store_current_index_checked(&mut data, 3);
         assert!(res.is_ok());
-        #[allow(deprecated)]
         let index = load_current_index(&data);
         assert_eq!(index, 3);
         assert_eq!([4u8; 8], data[0..8]);

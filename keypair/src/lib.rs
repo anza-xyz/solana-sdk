@@ -4,7 +4,7 @@
 use wasm_bindgen::prelude::*;
 use {
     ed25519_dalek::Signer as DalekSigner,
-    rand0_7::{rngs::OsRng, CryptoRng, RngCore},
+    rand0_7::rngs::OsRng,
     solana_pubkey::Pubkey,
     solana_seed_phrase::generate_seed_from_seed_phrase_and_passphrase,
     solana_signature::{error::Error as SignatureError, Signature},
@@ -31,19 +31,8 @@ impl Keypair {
     /// Can be used for generating a Keypair without a dependency on `rand` types
     pub const SECRET_KEY_LENGTH: usize = 32;
 
-    /// Constructs a new, random `Keypair` using a caller-provided RNG
-    #[deprecated(
-        since = "2.2.2",
-        note = "Use `Keypair::new()` instead or generate 32 random bytes and use `Keypair::new_from_array`"
-    )]
-    pub fn generate<R>(csprng: &mut R) -> Self
-    where
-        R: CryptoRng + RngCore,
-    {
-        Self(ed25519_dalek::Keypair::generate(csprng))
-    }
-
     /// Constructs a new, random `Keypair` using `OsRng`
+    #[allow(clippy::new_without_default)]
     pub fn new() -> Self {
         let mut rng = OsRng;
         Self(ed25519_dalek::Keypair::generate(&mut rng))
@@ -55,12 +44,6 @@ impl Keypair {
         let secret = ed25519_dalek::SecretKey::from_bytes(&secret_key).unwrap();
         let public = ed25519_dalek::PublicKey::from(&secret);
         Self(ed25519_dalek::Keypair { secret, public })
-    }
-
-    /// Recovers a `Keypair` from a byte array
-    #[deprecated(since = "2.2.2", note = "Use Keypair::try_from(&[u8]) instead")]
-    pub fn from_bytes(bytes: &[u8]) -> Result<Self, ed25519_dalek::SignatureError> {
-        Self::try_from(bytes).map_err(ed25519_dalek::SignatureError::from_source)
     }
 
     /// Returns this `Keypair` as a byte array
@@ -80,12 +63,6 @@ impl Keypair {
         let mut out = [0u8; five8::BASE58_ENCODED_64_MAX_LEN];
         let len = five8::encode_64(&self.0.to_bytes(), &mut out);
         unsafe { String::from_utf8_unchecked(out[..len as usize].to_vec()) }
-    }
-
-    /// Gets this `Keypair`'s SecretKey
-    #[deprecated(since = "2.2.2", note = "Use secret_bytes()")]
-    pub fn secret(&self) -> &ed25519_dalek::SecretKey {
-        &self.0.secret
     }
 
     /// Gets this `Keypair`'s secret key bytes
@@ -158,15 +135,6 @@ impl Keypair {
     pub fn js_pubkey(&self) -> Pubkey {
         // `wasm_bindgen` does not support traits (`Signer) yet
         self.pubkey()
-    }
-}
-
-// This should also be marked deprecated, but it's not possible to put a
-// `#[deprecated]` attribute on a trait implementation.
-// Remove during the next major version bump.
-impl From<ed25519_dalek::Keypair> for Keypair {
-    fn from(value: ed25519_dalek::Keypair) -> Self {
-        Self(value)
     }
 }
 

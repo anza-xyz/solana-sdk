@@ -13,7 +13,6 @@ use serde_derive::{Deserialize, Serialize};
 use std::string::ToString;
 use {
     core::{
-        convert::TryFrom,
         fmt,
         str::{from_utf8_unchecked, FromStr},
     },
@@ -125,11 +124,6 @@ impl FromStr for Hash {
 }
 
 impl Hash {
-    #[deprecated(since = "2.2.0", note = "Use 'Hash::new_from_array' instead")]
-    pub fn new(hash_slice: &[u8]) -> Self {
-        Hash(<[u8; HASH_BYTES]>::try_from(hash_slice).unwrap())
-    }
-
     pub const fn new_from_array(hash_array: [u8; HASH_BYTES]) -> Self {
         Self(hash_array)
     }

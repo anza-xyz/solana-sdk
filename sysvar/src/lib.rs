@@ -84,13 +84,6 @@ pub mod __private {
     pub use {solana_program_entrypoint::SUCCESS, solana_program_error::ProgramError};
 }
 use solana_pubkey::Pubkey;
-#[allow(deprecated)]
-#[doc(inline)]
-#[deprecated(
-    since = "2.0.0",
-    note = "please use `solana_sdk::reserved_account_keys::ReservedAccountKeys` instead"
-)]
-pub use sysvar_ids::ALL_IDS;
 #[cfg(feature = "bincode")]
 use {
     solana_account_info::AccountInfo, solana_program_error::ProgramError,
@@ -120,41 +113,6 @@ const OFFSET_LENGTH_EXCEEDS_SYSVAR: u64 = 1;
 //
 // Defined in the bpf loader as [`SYSVAR_NOT_FOUND`](https://github.com/anza-xyz/agave/blob/master/programs/bpf_loader/src/syscalls/sysvar.rs#L171).
 const SYSVAR_NOT_FOUND: u64 = 2;
-
-#[deprecated(
-    since = "2.0.0",
-    note = "please use `solana_sdk::reserved_account_keys::ReservedAccountKeys` instead"
-)]
-mod sysvar_ids {
-    use {super::*, lazy_static::lazy_static};
-    lazy_static! {
-        // This will be deprecated and so this list shouldn't be modified
-        pub static ref ALL_IDS: Vec<Pubkey> = vec![
-            clock::id(),
-            epoch_schedule::id(),
-            #[allow(deprecated)]
-            fees::id(),
-            #[allow(deprecated)]
-            recent_blockhashes::id(),
-            rent::id(),
-            rewards::id(),
-            slot_hashes::id(),
-            slot_history::id(),
-            stake_history::id(),
-            solana_sdk_ids::sysvar::instructions::id(),
-        ];
-    }
-}
-
-/// Returns `true` of the given `Pubkey` is a sysvar account.
-#[deprecated(
-    since = "2.0.0",
-    note = "please check the account's owner or use solana_sdk::reserved_account_keys::ReservedAccountKeys instead"
-)]
-#[allow(deprecated)]
-pub fn is_sysvar_id(id: &Pubkey) -> bool {
-    ALL_IDS.iter().any(|key| key == id)
-}
 
 #[cfg(feature = "bincode")]
 /// A type that holds sysvar data.

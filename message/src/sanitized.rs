@@ -1,8 +1,3 @@
-#[deprecated(
-    since = "2.1.0",
-    note = "Use solana_transaction_error::SanitizeMessageError instead"
-)]
-pub use solana_transaction_error::SanitizeMessageError;
 use {
     crate::{
         compiled_instruction::CompiledInstruction,
@@ -15,6 +10,7 @@ use {
     solana_pubkey::Pubkey,
     solana_sanitize::Sanitize,
     solana_sdk_ids::{ed25519_program, secp256k1_program, secp256r1_program},
+    solana_transaction_error::SanitizeMessageError,
     std::{borrow::Cow, collections::HashSet, convert::TryFrom},
 };
 
@@ -214,13 +210,6 @@ impl SanitizedMessage {
 
     /// Returns true if the account at the specified index is an input to some
     /// program instruction in this message.
-    #[deprecated(since = "2.0.0", note = "Please use `is_instruction_account` instead")]
-    pub fn is_key_passed_to_program(&self, key_index: usize) -> bool {
-        self.is_instruction_account(key_index)
-    }
-
-    /// Returns true if the account at the specified index is an input to some
-    /// program instruction in this message.
     pub fn is_instruction_account(&self, key_index: usize) -> bool {
         if let Ok(key_index) = u8::try_from(key_index) {
             self.instructions()
@@ -238,16 +227,6 @@ impl SanitizedMessage {
             Self::Legacy(message) => message.is_key_called_as_program(key_index),
             Self::V0(message) => message.is_key_called_as_program(key_index),
         }
-    }
-
-    /// Returns true if the account at the specified index is not invoked as a
-    /// program or, if invoked, is passed to a program.
-    #[deprecated(
-        since = "2.0.0",
-        note = "Please use `is_invoked` and `is_instruction_account` instead"
-    )]
-    pub fn is_non_loader_key(&self, key_index: usize) -> bool {
-        !self.is_invoked(key_index) || self.is_instruction_account(key_index)
     }
 
     /// Returns true if the account at the specified index is writable by the
@@ -363,14 +342,6 @@ impl SanitizedMessage {
                     }
                 })
             })
-    }
-
-    #[deprecated(
-        since = "2.1.0",
-        note = "Please use `SanitizedMessage::num_total_signatures` instead."
-    )]
-    pub fn num_signatures(&self) -> u64 {
-        self.num_total_signatures()
     }
 
     /// Returns the total number of signatures in the message.
@@ -498,35 +469,6 @@ mod tests {
             .err(),
             Some(SanitizeMessageError::IndexOutOfBounds),
         );
-    }
-
-    #[test]
-    fn test_is_non_loader_key() {
-        #![allow(deprecated)]
-        let key0 = Pubkey::new_unique();
-        let key1 = Pubkey::new_unique();
-        let loader_key = Pubkey::new_unique();
-        let instructions = vec![
-            CompiledInstruction::new(1, &(), vec![0]),
-            CompiledInstruction::new(2, &(), vec![0, 1]),
-        ];
-
-        let message = SanitizedMessage::try_from_legacy_message(
-            legacy::Message::new_with_compiled_instructions(
-                1,
-                0,
-                2,
-                vec![key0, key1, loader_key],
-                Hash::default(),
-                instructions,
-            ),
-            &HashSet::default(),
-        )
-        .unwrap();
-
-        assert!(message.is_non_loader_key(0));
-        assert!(message.is_non_loader_key(1));
-        assert!(!message.is_non_loader_key(2));
     }
 
     #[test]

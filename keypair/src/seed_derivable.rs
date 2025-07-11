@@ -46,7 +46,7 @@ fn bip32_derived_keypair(
     let extended = ed25519_dalek_bip32::ExtendedSecretKey::from_seed(seed)
         .and_then(|extended| extended.derive(&derivation_path))?;
     let extended_public_key = extended.public_key();
-    Ok(Keypair::from(ed25519_dalek::Keypair {
+    Ok(Keypair(ed25519_dalek::Keypair {
         secret: extended.secret_key,
         public: extended_public_key,
     }))
