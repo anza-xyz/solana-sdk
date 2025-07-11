@@ -40,7 +40,7 @@ anyhow = { workspace = true }
 hex = { workspace = true }
 rand0-7 = { workspace = true }
 solana-account-info = { workspace = true }
-solana-example-mocks = { workspace = true }
+solana-example-mocks = { path = "../example-mocks" }
 solana-instruction = { workspace = true }
 solana-instructions-sysvar = { workspace = true }
 solana-keccak-hasher = { workspace = true }

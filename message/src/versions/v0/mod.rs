@@ -201,6 +201,9 @@ impl Message {
     /// # use solana_example_mocks::{
     /// #     solana_rpc_client,
     /// #     solana_account,
+    /// #     solana_transaction,
+    /// #     solana_signer,
+    /// #     solana_keypair,
     /// # };
     /// # use std::borrow::Cow;
     /// # use solana_account::Account;

@@ -65,11 +65,11 @@ solana-sha256-hasher = { workspace = true }
 anyhow = { workspace = true }
 arbitrary = { workspace = true, features = ["derive"] }
 bs58 = { workspace = true, features = ["alloc"] }
-solana-account-info = { workspace = true }
-solana-cpi = { workspace = true }
-solana-example-mocks = { workspace = true }
+solana-account-info = { path = "../account-info" }
+solana-cpi = { path = "../cpi" }
+solana-example-mocks = { path = "../example-mocks" }
 solana-hash = { workspace = true }
-solana-instruction = { workspace = true, features = ["borsh"] }
+solana-instruction = { path = "../instruction", features = ["borsh"] }
 solana-program-error = { workspace = true, features = ["borsh"] }
 solana-pubkey = { path = ".", features = [
     "borsh",
