@@ -496,12 +496,6 @@ pub use solana_big_mod_exp as big_mod_exp;
 pub use solana_blake3_hasher as blake3;
 #[cfg(feature = "borsh")]
 #[deprecated(since = "2.1.0", note = "Use `solana-borsh` crate instead")]
-pub use solana_borsh::deprecated as borsh;
-#[cfg(feature = "borsh")]
-#[deprecated(since = "2.1.0", note = "Use `solana-borsh` crate instead")]
-pub use solana_borsh::v0_10 as borsh0_10;
-#[cfg(feature = "borsh")]
-#[deprecated(since = "2.1.0", note = "Use `solana-borsh` crate instead")]
 pub use solana_borsh::v1 as borsh1;
 #[deprecated(since = "2.1.0", note = "Use `solana-epoch-rewards` crate instead")]
 pub use solana_epoch_rewards as epoch_rewards;

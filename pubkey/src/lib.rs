@@ -1008,69 +1008,6 @@ impl fmt::Display for Pubkey {
     }
 }
 
-#[cfg(feature = "borsh")]
-impl borsh0_10::de::BorshDeserialize for Pubkey {
-    fn deserialize_reader<R: borsh0_10::maybestd::io::Read>(
-        reader: &mut R,
-    ) -> Result<Self, borsh0_10::maybestd::io::Error> {
-        Ok(Self(borsh0_10::BorshDeserialize::deserialize_reader(
-            reader,
-        )?))
-    }
-}
-
-#[cfg(feature = "borsh")]
-macro_rules! impl_borsh_schema {
-    ($borsh:ident) => {
-        impl $borsh::BorshSchema for Pubkey
-        where
-            [u8; 32]: $borsh::BorshSchema,
-        {
-            fn declaration() -> $borsh::schema::Declaration {
-                std::string::String::from("Pubkey")
-            }
-            fn add_definitions_recursively(
-                definitions: &mut $borsh::maybestd::collections::HashMap<
-                    $borsh::schema::Declaration,
-                    $borsh::schema::Definition,
-                >,
-            ) {
-                let fields = $borsh::schema::Fields::UnnamedFields(<[_]>::into_vec(
-                    $borsh::maybestd::boxed::Box::new([
-                        <[u8; 32] as $borsh::BorshSchema>::declaration(),
-                    ]),
-                ));
-                let definition = $borsh::schema::Definition::Struct { fields };
-                <Self as $borsh::BorshSchema>::add_definition(
-                    <Self as $borsh::BorshSchema>::declaration(),
-                    definition,
-                    definitions,
-                );
-                <[u8; 32] as $borsh::BorshSchema>::add_definitions_recursively(definitions);
-            }
-        }
-    };
-}
-#[cfg(feature = "borsh")]
-impl_borsh_schema!(borsh0_10);
-
-#[cfg(feature = "borsh")]
-macro_rules! impl_borsh_serialize {
-    ($borsh:ident) => {
-        impl $borsh::ser::BorshSerialize for Pubkey {
-            fn serialize<W: $borsh::maybestd::io::Write>(
-                &self,
-                writer: &mut W,
-            ) -> ::core::result::Result<(), $borsh::maybestd::io::Error> {
-                $borsh::BorshSerialize::serialize(&self.0, writer)?;
-                Ok(())
-            }
-        }
-    };
-}
-#[cfg(feature = "borsh")]
-impl_borsh_serialize!(borsh0_10);
-
 #[cfg(all(target_arch = "wasm32", feature = "curve25519"))]
 fn js_value_to_seeds_vec(array_of_uint8_arrays: &[JsValue]) -> Result<Vec<Vec<u8>>, JsValue> {
     let vec_vec_u8 = array_of_uint8_arrays

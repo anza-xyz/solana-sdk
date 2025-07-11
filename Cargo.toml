@@ -141,7 +141,6 @@ blake3 = "1.5.5"
 blst = "0.3.14"
 blstrs = "0.7.1"
 borsh = { version = "1.5.5", features = ["derive", "unstable__schema"] }
-borsh0-10 = { package = "borsh", version = "0.10.3" }
 boxcar = "0.2.12"
 bs58 = { version = "0.5.1", default-features = false }
 bv = "0.11.1"

@@ -15,7 +15,7 @@ all-features = true
 rustdoc-args = ["--cfg=docsrs"]
 
 [features]
-borsh = ["dep:borsh", "dep:borsh0-10", "std"]
+borsh = ["dep:borsh", "std"]
 bytemuck = ["dep:bytemuck", "dep:bytemuck_derive"]
 curve25519 = ["dep:curve25519-dalek", "sha2"]
 default = ["std"]
@@ -29,7 +29,6 @@ std = []
 [dependencies]
 arbitrary = { workspace = true, features = ["derive"], optional = true }
 borsh = { workspace = true, optional = true }
-borsh0-10 = { package = "borsh", version = "0.10.3", optional = true }
 bytemuck = { workspace = true, optional = true }
 bytemuck_derive = { workspace = true, optional = true }
 five8 = { workspace = true }
