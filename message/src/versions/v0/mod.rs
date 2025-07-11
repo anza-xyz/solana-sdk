@@ -191,29 +191,31 @@ impl Message {
     ///
     /// # Examples
     ///
-    /// This example uses the [`solana_rpc_client`], [`solana_sdk`], and [`anyhow`] crates.
+    /// This example uses the [`solana_rpc_client`], [`solana_account`], and [`anyhow`] crates.
     ///
     /// [`solana_rpc_client`]: https://docs.rs/solana-rpc-client
-    /// [`solana_sdk`]: https://docs.rs/solana-sdk
+    /// [`solana_account`]: https://docs.rs/solana-account
     /// [`anyhow`]: https://docs.rs/anyhow
     ///
     /// ```
-    /// # use solana_program::example_mocks::{
+    /// # use solana_example_mocks::{
     /// #     solana_rpc_client,
-    /// #     solana_sdk,
+    /// #     solana_account,
+    /// #     solana_transaction,
+    /// #     solana_signer,
+    /// #     solana_keypair,
     /// # };
     /// # use std::borrow::Cow;
-    /// # use solana_sdk::account::Account;
+    /// # use solana_account::Account;
     /// use anyhow::Result;
+    /// use solana_address_lookup_table_interface::state::{AddressLookupTable, LookupTableMeta};
     /// use solana_instruction::{AccountMeta, Instruction};
+    /// use solana_keypair::Keypair;
     /// use solana_message::{AddressLookupTableAccount, VersionedMessage, v0};
     /// use solana_pubkey::Pubkey;
     /// use solana_rpc_client::rpc_client::RpcClient;
-    /// use solana_program::address_lookup_table::{self, state::{AddressLookupTable, LookupTableMeta}};
-    /// use solana_sdk::{
-    ///      signature::{Keypair, Signer},
-    ///      transaction::VersionedTransaction,
-    /// };
+    /// use solana_signer::Signer;
+    /// use solana_transaction::versioned::VersionedTransaction;
     ///
     /// fn create_tx_with_address_table_lookup(
     ///     client: &RpcClient,
@@ -227,7 +229,7 @@ impl Message {
     ///     #     meta: LookupTableMeta::default(),
     ///     #     addresses: Cow::Owned(instruction.accounts.iter().map(|meta| meta.pubkey).collect()),
     ///     #   }.serialize_for_tests().unwrap(),
-    ///     #   owner: address_lookup_table::program::id(),
+    ///     #   owner: solana_address_lookup_table_interface::program::id(),
     ///     #   executable: false,
     ///     #   rent_epoch: 1,
     ///     # });

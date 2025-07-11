@@ -283,15 +283,12 @@
 //! A simple example of transferring lamports via CPI:
 //!
 //! ```
-//! use solana_program::{
-//!     account_info::{next_account_info, AccountInfo},
-//!     entrypoint,
-//!     entrypoint::ProgramResult,
-//!     program::invoke,
-//!     pubkey::Pubkey,
-//!     system_instruction,
-//!     system_program,
-//! };
+//! use solana_account_info::{next_account_info, AccountInfo};
+//! use solana_program_entrypoint::entrypoint;
+//! use solana_program_error::ProgramResult;
+//! use solana_cpi::invoke;
+//! use solana_pubkey::Pubkey;
+//! use solana_system_interface::instruction::transfer;
 //!
 //! entrypoint!(process_instruction);
 //!
@@ -312,7 +309,7 @@
 //!     let lamports = 1000000;
 //!
 //!     invoke(
-//!         &system_instruction::transfer(payer.key, recipient.key, lamports),
+//!         &transfer(payer.key, recipient.key, lamports),
 //!         &[payer.clone(), recipient.clone()],
 //!     )
 //! }
@@ -331,15 +328,12 @@
 //! A simple example of creating an account for a PDA:
 //!
 //! ```
-//! use solana_program::{
-//!     account_info::{next_account_info, AccountInfo},
-//!     entrypoint,
-//!     entrypoint::ProgramResult,
-//!     program::invoke_signed,
-//!     pubkey::Pubkey,
-//!     system_instruction,
-//!     system_program,
-//! };
+//! use solana_account_info::{next_account_info, AccountInfo};
+//! use solana_program_entrypoint::entrypoint;
+//! use solana_program_error::ProgramResult;
+//! use solana_cpi::invoke_signed;
+//! use solana_pubkey::Pubkey;
+//! use solana_system_interface::instruction::create_account;
 //!
 //! entrypoint!(process_instruction);
 //!
@@ -356,8 +350,8 @@
 //!     assert!(payer.is_writable);
 //!     assert!(payer.is_signer);
 //!     assert!(vault_pda.is_writable);
-//!     assert_eq!(vault_pda.owner, &system_program::ID);
-//!     assert!(system_program::check_id(system_program.key));
+//!     assert_eq!(vault_pda.owner, &solana_system_interface::program::ID);
+//!     assert!(solana_system_interface::program::check_id(system_program.key));
 //!
 //!     let vault_bump_seed = instruction_data[0];
 //!     let vault_seeds = &[b"vault", payer.key.as_ref(), &[vault_bump_seed]];
@@ -369,7 +363,7 @@
 //!     let vault_size = 16;
 //!
 //!     invoke_signed(
-//!         &system_instruction::create_account(
+//!         &create_account(
 //!             &payer.key,
 //!             &vault_pda.key,
 //!             lamports,

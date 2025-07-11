@@ -1368,6 +1368,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f154ce46856750ed433c8649605bf7ed2de3bc35fd9d2a9f30cddd873c80cb08"
 
 [[package]]
+name = "hex"
+version = "0.4.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7f24254aa9a54b5c858eaee2f5bccdb46aaf0e486a595ed5fd8f86ba55232a70"
+
+[[package]]
 name = "hmac"
 version = "0.8.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3397,15 +3403,17 @@ dependencies = [
  "serde",
  "serde_derive",
  "serde_json",
+ "solana-address-lookup-table-interface",
  "solana-bincode",
+ "solana-example-mocks",
  "solana-frozen-abi",
  "solana-frozen-abi-macro",
  "solana-hash",
  "solana-instruction",
+ "solana-instruction-error",
  "solana-logger",
  "solana-message",
  "solana-nonce",
- "solana-program",
  "solana-pubkey",
  "solana-sanitize",
  "solana-sdk-ids",
@@ -3593,6 +3601,7 @@ dependencies = [
  "solana-slot-hashes",
  "solana-slot-history",
  "solana-stable-layout",
+ "solana-system-interface",
  "solana-sysvar",
  "solana-sysvar-id",
  "thiserror 2.0.12",
@@ -3657,15 +3666,20 @@ dependencies = [
  "rand 0.8.5",
  "serde",
  "serde_derive",
+ "solana-account-info",
  "solana-atomic-u64",
+ "solana-cpi",
  "solana-define-syscall",
+ "solana-example-mocks",
  "solana-frozen-abi",
  "solana-frozen-abi-macro",
- "solana-program",
+ "solana-hash",
+ "solana-instruction",
  "solana-program-error",
  "solana-pubkey",
  "solana-sanitize",
  "solana-sha256-hasher",
+ "solana-system-interface",
  "strum",
  "strum_macros",
  "wasm-bindgen",
@@ -3811,14 +3825,24 @@ dependencies = [
 name = "solana-secp256k1-program"
 version = "2.2.3"
 dependencies = [
+ "anyhow",
  "bincode",
  "digest 0.10.7",
+ "hex",
  "libsecp256k1",
+ "rand 0.7.3",
  "serde",
  "serde_derive",
  "sha3",
+ "solana-account-info",
+ "solana-example-mocks",
  "solana-instruction",
+ "solana-instructions-sysvar",
+ "solana-keccak-hasher",
+ "solana-msg",
+ "solana-program-error",
  "solana-sdk-ids",
+ "solana-secp256k1-program",
  "solana-signature",
 ]
 
@@ -4056,6 +4080,7 @@ dependencies = [
  "solana-define-syscall",
  "solana-epoch-rewards",
  "solana-epoch-schedule",
+ "solana-example-mocks",
  "solana-fee-calculator",
  "solana-frozen-abi",
  "solana-frozen-abi-macro",
@@ -4064,14 +4089,12 @@ dependencies = [
  "solana-instructions-sysvar",
  "solana-last-restart-slot",
  "solana-msg",
- "solana-program",
  "solana-program-entrypoint",
  "solana-program-error",
  "solana-program-memory",
  "solana-pubkey",
  "solana-rent",
  "solana-sanitize",
- "solana-sdk",
  "solana-sdk-ids",
  "solana-sdk-macro",
  "solana-sha256-hasher",
@@ -4099,11 +4122,13 @@ version = "2.2.1"
 name = "solana-transaction"
 version = "2.2.3"
 dependencies = [
+ "anyhow",
  "bincode",
  "borsh 1.5.5",
  "serde",
  "serde_derive",
  "solana-bincode",
+ "solana-example-mocks",
  "solana-frozen-abi",
  "solana-frozen-abi-macro",
  "solana-hash",

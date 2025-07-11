@@ -69,9 +69,12 @@ bitflags = { workspace = true }
 borsh = { workspace = true }
 itertools = { workspace = true }
 serde_json = { workspace = true }
+solana-address-lookup-table-interface = { workspace = true, features = ["bincode", "bytemuck"] }
+solana-example-mocks = { path = "../example-mocks" }
+solana-instruction = { workspace = true, features = ["borsh"] }
+solana-instruction-error = { workspace = true, features = ["std"] }
 solana-message = { path = ".", features = ["dev-context-only-utils"] }
 solana-nonce = { workspace = true }
-solana-program = { path = "../program" }
 solana-sha256-hasher = { workspace = true }
 solana-sysvar = { workspace = true }
 static_assertions = { workspace = true }

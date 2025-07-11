@@ -626,16 +626,11 @@ impl Pubkey {
     ///
     /// ```
     /// # use borsh::{BorshSerialize, BorshDeserialize};
+    /// # use solana_account_info::{next_account_info, AccountInfo};
+    /// # use solana_program_error::ProgramResult;
+    /// # use solana_cpi::invoke_signed;
     /// # use solana_pubkey::Pubkey;
-    /// # use solana_program::{
-    /// #     entrypoint::ProgramResult,
-    /// #     program::invoke_signed,
-    /// #     system_instruction,
-    /// #     account_info::{
-    /// #         AccountInfo,
-    /// #         next_account_info,
-    /// #     },
-    /// # };
+    /// # use solana_system_interface::instruction::create_account;
     /// // The custom instruction processed by our program. It includes the
     /// // PDA's bump seed, which is derived by the client program. This
     /// // definition is also imported into the off-chain client program.
@@ -674,7 +669,7 @@ impl Pubkey {
     ///     // Invoke the system program to create an account while virtually
     ///     // signing with the vault PDA, which is owned by this caller program.
     ///     invoke_signed(
-    ///         &system_instruction::create_account(
+    ///         &create_account(
     ///             &payer.key,
     ///             &vault.key,
     ///             lamports,
@@ -706,14 +701,10 @@ impl Pubkey {
     ///
     /// ```
     /// # use borsh::{BorshSerialize, BorshDeserialize};
-    /// # use solana_program::example_mocks::{solana_sdk, solana_rpc_client};
+    /// # use solana_example_mocks::{solana_sdk, solana_rpc_client};
     /// # use solana_pubkey::Pubkey;
-    /// # use solana_program::{
-    /// #     instruction::Instruction,
-    /// #     hash::Hash,
-    /// #     instruction::AccountMeta,
-    /// #     system_program,
-    /// # };
+    /// # use solana_instruction::{AccountMeta, Instruction};
+    /// # use solana_hash::Hash;
     /// # use solana_sdk::{
     /// #     signature::Keypair,
     /// #     signature::{Signer, Signature},
@@ -759,7 +750,7 @@ impl Pubkey {
     ///     let accounts = vec![
     ///         AccountMeta::new(payer.pubkey(), true),
     ///         AccountMeta::new(vault_pubkey, false),
-    ///         AccountMeta::new(system_program::ID, false),
+    ///         AccountMeta::new(solana_system_interface::program::ID, false),
     ///     ];
     ///
     ///     // Create the instruction by serializing our instruction data via borsh

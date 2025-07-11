@@ -77,9 +77,8 @@ solana-define-syscall = { workspace = true }
 [dev-dependencies]
 anyhow = { workspace = true }
 serial_test = { workspace = true }
+solana-example-mocks = { path = "../example-mocks" }
 solana-msg = { workspace = true }
-solana-program = { path = "../program" }
-solana-sdk = { path = "../sdk" }
 solana-sha256-hasher = { workspace = true }
 solana-sysvar = { path = ".", features = ["dev-context-only-utils"] }
 test-case = { workspace = true }

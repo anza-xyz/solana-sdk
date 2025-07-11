@@ -418,13 +418,13 @@
 //! The client program:
 //!
 //! ```no_run
-//! # use solana_sdk::example_mocks::solana_rpc_client;
+//! # use solana_example_mocks::{solana_keypair, solana_rpc_client, solana_signer, solana_transaction};
 //! use anyhow::Result;
 //! use solana_instruction::{AccountMeta, Instruction};
 //! use solana_keypair::Keypair;
 //! use solana_rpc_client::rpc_client::RpcClient;
 //! use solana_signer::Signer;
-//! use solana_sdk::transaction::Transaction;
+//! use solana_transaction::Transaction;
 //! use solana_secp256k1_program::{
 //!     eth_address_from_pubkey, new_secp256k1_instruction_with_signature,
 //!     sign_message,
@@ -634,7 +634,7 @@
 //! The client program:
 //!
 //! ```no_run
-//! # use solana_sdk::example_mocks::solana_rpc_client;
+//! # use solana_example_mocks::{solana_keypair, solana_rpc_client, solana_signer, solana_transaction};
 //! use anyhow::Result;
 //! use solana_instruction::{AccountMeta, Instruction};
 //! use solana_rpc_client::rpc_client::RpcClient;
@@ -644,7 +644,7 @@
 //! };
 //! use solana_signer::Signer;
 //! use solana_keypair::Keypair;
-//! use solana_sdk::transaction::Transaction;
+//! use solana_transaction::Transaction;
 //!
 //! /// A struct to hold the values specified in the `SecpSignatureOffsets` struct.
 //! struct SecpSignature {

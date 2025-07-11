@@ -119,10 +119,10 @@
 //!
 //! ```
 //! # use solana_epoch_rewards::EpochRewards;
-//! # use solana_program::example_mocks::solana_sdk;
-//! # use solana_program::example_mocks::solana_rpc_client;
+//! # use solana_example_mocks::solana_account;
+//! # use solana_example_mocks::solana_rpc_client;
 //! # use solana_rpc_client::rpc_client::RpcClient;
-//! # use solana_sdk::account::Account;
+//! # use solana_account::Account;
 //! # use solana_sdk_ids::sysvar::epoch_rewards;
 //! # use anyhow::Result;
 //! #
