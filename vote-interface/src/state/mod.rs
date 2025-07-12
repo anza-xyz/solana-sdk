@@ -23,11 +23,18 @@ pub mod vote_state_versions;
 pub use vote_state_versions::*;
 pub mod vote_state_v3;
 pub use vote_state_v3::VoteStateV3;
+pub mod vote_state_v4;
+pub use vote_state_v4::VoteStateV4;
 mod vote_instruction_data;
 pub use vote_instruction_data::*;
 // The struct's name has changed.
 #[deprecated(since = "2.2.6", note = "Use vote_state_v3::VoteStateV3 instead")]
 pub use vote_state_v3::VoteStateV3 as VoteState;
+#[cfg(any(target_os = "solana", feature = "bincode"))]
+pub(crate) mod vote_state_deserialize;
+
+/// Number of bytes in a compressed BLS public key.
+pub const BLS_PUBKEY_COMPRESSED_BYTES: usize = 48;
 
 // Maximum number of votes to keep around, tightly coupled with epoch_schedule::MINIMUM_SLOTS_PER_EPOCH
 pub const MAX_LOCKOUT_HISTORY: usize = 31;
@@ -392,34 +399,58 @@ pub mod serde_tower_sync {
 #[cfg(test)]
 mod tests {
     use {
-        super::*, crate::error::VoteError, bincode::serialized_size, core::mem::MaybeUninit,
-        itertools::Itertools, rand::Rng, solana_clock::Clock, solana_hash::Hash,
-        solana_instruction_error::InstructionError,
+        super::*,
+        crate::{error::VoteError, state::vote_state_0_23_5::VoteState0_23_5},
+        bincode::serialized_size,
+        core::mem::MaybeUninit,
+        itertools::Itertools,
+        rand::Rng,
+        solana_clock::Clock,
+        solana_hash::Hash,
+        solana_instruction::error::InstructionError,
     };
 
     #[test]
-    fn test_vote_serialize() {
+    fn test_vote_serialize_v3() {
         let mut buffer: Vec<u8> = vec![0; VoteStateV3::size_of()];
         let mut vote_state = VoteStateV3::default();
         vote_state
             .votes
             .resize(MAX_LOCKOUT_HISTORY, LandedVote::default());
         vote_state.root_slot = Some(1);
-        let versioned = VoteStateVersions::new_current(vote_state);
+        let versioned = VoteStateVersions::new_v3(vote_state);
         assert!(VoteStateV3::serialize(&versioned, &mut buffer[0..4]).is_err());
         VoteStateV3::serialize(&versioned, &mut buffer).unwrap();
         assert_eq!(
             VoteStateV3::deserialize(&buffer).unwrap(),
-            versioned.convert_to_current()
+            versioned.try_convert_to_v3().unwrap()
         );
     }
 
     #[test]
-    fn test_vote_deserialize_into() {
+    fn test_vote_serialize_v4() {
+        let vote_pubkey = Pubkey::new_unique();
+        let mut buffer: Vec<u8> = vec![0; VoteStateV4::size_of()];
+        let mut vote_state = VoteStateV4::default();
+        vote_state
+            .votes
+            .resize(MAX_LOCKOUT_HISTORY, LandedVote::default());
+        vote_state.root_slot = Some(1);
+        let versioned = VoteStateVersions::new_v4(vote_state);
+        assert!(VoteStateV4::serialize(&versioned, &mut buffer[0..4]).is_err());
+        VoteStateV4::serialize(&versioned, &mut buffer).unwrap();
+        assert_eq!(
+            VoteStateV4::deserialize(&buffer, &vote_pubkey).unwrap(),
+            versioned.try_convert_to_v4(&vote_pubkey).unwrap()
+        );
+    }
+
+    #[test]
+    fn test_vote_deserialize_into_v3() {
         // base case
         let target_vote_state = VoteStateV3::default();
         let vote_state_buf =
-            bincode::serialize(&VoteStateVersions::new_current(target_vote_state.clone())).unwrap();
+            bincode::serialize(&VoteStateVersions::new_v3(target_vote_state.clone())).unwrap();
 
         let mut test_vote_state = VoteStateV3::default();
         VoteStateV3::deserialize_into(&vote_state_buf, &mut test_vote_state).unwrap();
@@ -436,20 +467,58 @@ mod tests {
             let target_vote_state_versions =
                 VoteStateVersions::arbitrary(&mut unstructured).unwrap();
             let vote_state_buf = bincode::serialize(&target_vote_state_versions).unwrap();
-            let target_vote_state = target_vote_state_versions.convert_to_current();
 
-            let mut test_vote_state = VoteStateV3::default();
-            VoteStateV3::deserialize_into(&vote_state_buf, &mut test_vote_state).unwrap();
+            // Skip any v4 since they can't convert to v3.
+            if let Ok(target_vote_state) = target_vote_state_versions.try_convert_to_v3() {
+                let mut test_vote_state = VoteStateV3::default();
+                VoteStateV3::deserialize_into(&vote_state_buf, &mut test_vote_state).unwrap();
+
+                assert_eq!(target_vote_state, test_vote_state);
+            }
+        }
+    }
+
+    #[test]
+    fn test_vote_deserialize_into_v4() {
+        let vote_pubkey = Pubkey::new_unique();
+
+        // base case
+        let target_vote_state = VoteStateV4::default();
+        let vote_state_buf =
+            bincode::serialize(&VoteStateVersions::new_v4(target_vote_state.clone())).unwrap();
+
+        let mut test_vote_state = VoteStateV4::default();
+        VoteStateV4::deserialize_into(&vote_state_buf, &mut test_vote_state, &vote_pubkey).unwrap();
+
+        assert_eq!(target_vote_state, test_vote_state);
+
+        // variant
+        // provide 4x the minimum struct size in bytes to ensure we typically touch every field
+        let struct_bytes_x4 = std::mem::size_of::<VoteStateV4>() * 4;
+        for _ in 0..1000 {
+            let raw_data: Vec<u8> = (0..struct_bytes_x4).map(|_| rand::random::<u8>()).collect();
+            let mut unstructured = Unstructured::new(&raw_data);
+
+            let target_vote_state_versions =
+                VoteStateVersions::arbitrary(&mut unstructured).unwrap();
+            let vote_state_buf = bincode::serialize(&target_vote_state_versions).unwrap();
+            let target_vote_state = target_vote_state_versions
+                .try_convert_to_v4(&vote_pubkey)
+                .unwrap();
+
+            let mut test_vote_state = VoteStateV4::default();
+            VoteStateV4::deserialize_into(&vote_state_buf, &mut test_vote_state, &vote_pubkey)
+                .unwrap();
 
             assert_eq!(target_vote_state, test_vote_state);
         }
     }
 
     #[test]
-    fn test_vote_deserialize_into_error() {
+    fn test_vote_deserialize_into_error_v3() {
         let target_vote_state = VoteStateV3::new_rand_for_tests(Pubkey::new_unique(), 42);
         let mut vote_state_buf =
-            bincode::serialize(&VoteStateVersions::new_current(target_vote_state.clone())).unwrap();
+            bincode::serialize(&VoteStateVersions::new_v3(target_vote_state.clone())).unwrap();
         let len = vote_state_buf.len();
         vote_state_buf.truncate(len - 1);
 
@@ -459,11 +528,27 @@ mod tests {
     }
 
     #[test]
-    fn test_vote_deserialize_into_uninit() {
+    fn test_vote_deserialize_into_error_v4() {
+        let vote_pubkey = Pubkey::new_unique();
+
+        let target_vote_state = VoteStateV4::new_rand_for_tests(Pubkey::new_unique(), 42);
+        let mut vote_state_buf =
+            bincode::serialize(&VoteStateVersions::new_v4(target_vote_state.clone())).unwrap();
+        let len = vote_state_buf.len();
+        vote_state_buf.truncate(len - 1);
+
+        let mut test_vote_state = VoteStateV4::default();
+        VoteStateV4::deserialize_into(&vote_state_buf, &mut test_vote_state, &vote_pubkey)
+            .unwrap_err();
+        assert_eq!(test_vote_state, VoteStateV4::default());
+    }
+
+    #[test]
+    fn test_vote_deserialize_into_uninit_v3() {
         // base case
         let target_vote_state = VoteStateV3::default();
         let vote_state_buf =
-            bincode::serialize(&VoteStateVersions::new_current(target_vote_state.clone())).unwrap();
+            bincode::serialize(&VoteStateVersions::new_v3(target_vote_state.clone())).unwrap();
 
         let mut test_vote_state = MaybeUninit::uninit();
         VoteStateV3::deserialize_into_uninit(&vote_state_buf, &mut test_vote_state).unwrap();
@@ -481,10 +566,56 @@ mod tests {
             let target_vote_state_versions =
                 VoteStateVersions::arbitrary(&mut unstructured).unwrap();
             let vote_state_buf = bincode::serialize(&target_vote_state_versions).unwrap();
-            let target_vote_state = target_vote_state_versions.convert_to_current();
+
+            // Skip any v4 since they can't convert to v3.
+            if let Ok(target_vote_state) = target_vote_state_versions.try_convert_to_v3() {
+                let mut test_vote_state = MaybeUninit::uninit();
+                VoteStateV3::deserialize_into_uninit(&vote_state_buf, &mut test_vote_state)
+                    .unwrap();
+                let test_vote_state = unsafe { test_vote_state.assume_init() };
+
+                assert_eq!(target_vote_state, test_vote_state);
+            }
+        }
+    }
+
+    #[test]
+    fn test_vote_deserialize_into_uninit_v4() {
+        let vote_pubkey = Pubkey::new_unique();
+
+        // base case
+        let target_vote_state = VoteStateV4::default();
+        let vote_state_buf =
+            bincode::serialize(&VoteStateVersions::new_v4(target_vote_state.clone())).unwrap();
+
+        let mut test_vote_state = MaybeUninit::uninit();
+        VoteStateV4::deserialize_into_uninit(&vote_state_buf, &mut test_vote_state, &vote_pubkey)
+            .unwrap();
+        let test_vote_state = unsafe { test_vote_state.assume_init() };
+
+        assert_eq!(target_vote_state, test_vote_state);
+
+        // variant
+        // provide 4x the minimum struct size in bytes to ensure we typically touch every field
+        let struct_bytes_x4 = std::mem::size_of::<VoteStateV4>() * 4;
+        for _ in 0..1000 {
+            let raw_data: Vec<u8> = (0..struct_bytes_x4).map(|_| rand::random::<u8>()).collect();
+            let mut unstructured = Unstructured::new(&raw_data);
+
+            let target_vote_state_versions =
+                VoteStateVersions::arbitrary(&mut unstructured).unwrap();
+            let vote_state_buf = bincode::serialize(&target_vote_state_versions).unwrap();
+            let target_vote_state = target_vote_state_versions
+                .try_convert_to_v4(&Pubkey::default())
+                .unwrap();
 
             let mut test_vote_state = MaybeUninit::uninit();
-            VoteStateV3::deserialize_into_uninit(&vote_state_buf, &mut test_vote_state).unwrap();
+            VoteStateV4::deserialize_into_uninit(
+                &vote_state_buf,
+                &mut test_vote_state,
+                &Pubkey::default(),
+            )
+            .unwrap();
             let test_vote_state = unsafe { test_vote_state.assume_init() };
 
             assert_eq!(target_vote_state, test_vote_state);
@@ -492,7 +623,7 @@ mod tests {
     }
 
     #[test]
-    fn test_vote_deserialize_into_uninit_nopanic() {
+    fn test_vote_deserialize_into_uninit_nopanic_v3() {
         // base case
         let mut test_vote_state = MaybeUninit::uninit();
         let e = VoteStateV3::deserialize_into_uninit(&[], &mut test_vote_state).unwrap_err();
@@ -518,8 +649,12 @@ mod tests {
             // so we only check that the parser does not panic and that it succeeds or fails exactly in line with bincode
             let mut test_vote_state = MaybeUninit::uninit();
             let test_res = VoteStateV3::deserialize_into_uninit(&raw_data, &mut test_vote_state);
+
+            // `deserialize_into_uninit` will eventually call into
+            // `try_convert_to_v3`, so we have alignment in the following map.
             let bincode_res = bincode::deserialize::<VoteStateVersions>(&raw_data)
-                .map(|versioned| versioned.convert_to_current());
+                .map_err(|_| InstructionError::InvalidAccountData)
+                .and_then(|versioned| versioned.try_convert_to_v3());
 
             if test_res.is_err() {
                 assert!(bincode_res.is_err());
@@ -531,9 +666,102 @@ mod tests {
     }
 
     #[test]
-    fn test_vote_deserialize_into_uninit_ill_sized() {
+    fn test_vote_deserialize_into_uninit_nopanic_v4() {
+        let vote_pubkey = Pubkey::new_unique();
+
+        // base case
+        let mut test_vote_state = MaybeUninit::uninit();
+        let e = VoteStateV4::deserialize_into_uninit(&[], &mut test_vote_state, &vote_pubkey)
+            .unwrap_err();
+        assert_eq!(e, InstructionError::InvalidAccountData);
+
+        // variant
+        let serialized_len_x4 = serialized_size(&VoteStateV4::default()).unwrap() * 4;
+        let mut rng = rand::thread_rng();
+        for _ in 0..1000 {
+            let raw_data_length = rng.gen_range(1..serialized_len_x4);
+            let mut raw_data: Vec<u8> = (0..raw_data_length).map(|_| rng.gen::<u8>()).collect();
+
+            // pure random data will ~never have a valid enum tag, so lets help it out
+            if raw_data_length >= 4 && rng.gen::<bool>() {
+                let tag = rng.gen::<u8>() % 3;
+                raw_data[0] = tag;
+                raw_data[1] = 0;
+                raw_data[2] = 0;
+                raw_data[3] = 0;
+            }
+
+            // it is extremely improbable, though theoretically possible, for random bytes to be syntactically valid
+            // so we only check that the parser does not panic and that it succeeds or fails exactly in line with bincode
+            let mut test_vote_state = MaybeUninit::uninit();
+            let test_res =
+                VoteStateV4::deserialize_into_uninit(&raw_data, &mut test_vote_state, &vote_pubkey);
+            let bincode_res = bincode::deserialize::<VoteStateVersions>(&raw_data)
+                .map(|versioned| versioned.try_convert_to_v4(&vote_pubkey).unwrap());
+
+            if test_res.is_err() {
+                assert!(bincode_res.is_err());
+            } else {
+                let test_vote_state = unsafe { test_vote_state.assume_init() };
+                assert_eq!(test_vote_state, bincode_res.unwrap());
+            }
+        }
+    }
+
+    #[test]
+    fn test_vote_deserialize_into_uninit_ill_sized_v3() {
         // provide 4x the minimum struct size in bytes to ensure we typically touch every field
         let struct_bytes_x4 = std::mem::size_of::<VoteStateV3>() * 4;
+        for _ in 0..1000 {
+            let raw_data: Vec<u8> = (0..struct_bytes_x4).map(|_| rand::random::<u8>()).collect();
+            let mut unstructured = Unstructured::new(&raw_data);
+
+            let original_vote_state_versions =
+                VoteStateVersions::arbitrary(&mut unstructured).unwrap();
+            let original_buf = bincode::serialize(&original_vote_state_versions).unwrap();
+
+            // Skip any v4 since they can't convert to v3.
+            if original_vote_state_versions.try_convert_to_v3().is_ok() {
+                let mut truncated_buf = original_buf.clone();
+                let mut expanded_buf = original_buf.clone();
+
+                truncated_buf.resize(original_buf.len() - 8, 0);
+                expanded_buf.resize(original_buf.len() + 8, 0);
+
+                // truncated fails
+                let mut test_vote_state = MaybeUninit::uninit();
+                let test_res =
+                    VoteStateV3::deserialize_into_uninit(&truncated_buf, &mut test_vote_state);
+                // `deserialize_into_uninit` will eventually call into
+                // `try_convert_to_v3`, so we have alignment in the following map.
+                let bincode_res = bincode::deserialize::<VoteStateVersions>(&truncated_buf)
+                    .map_err(|_| InstructionError::InvalidAccountData)
+                    .and_then(|versioned| versioned.try_convert_to_v3());
+
+                assert!(test_res.is_err());
+                assert!(bincode_res.is_err());
+
+                // expanded succeeds
+                let mut test_vote_state = MaybeUninit::uninit();
+                VoteStateV3::deserialize_into_uninit(&expanded_buf, &mut test_vote_state).unwrap();
+                // `deserialize_into_uninit` will eventually call into
+                // `try_convert_to_v3`, so we have alignment in the following map.
+                let bincode_res = bincode::deserialize::<VoteStateVersions>(&expanded_buf)
+                    .map_err(|_| InstructionError::InvalidAccountData)
+                    .and_then(|versioned| versioned.try_convert_to_v3());
+
+                let test_vote_state = unsafe { test_vote_state.assume_init() };
+                assert_eq!(test_vote_state, bincode_res.unwrap());
+            }
+        }
+    }
+
+    #[test]
+    fn test_vote_deserialize_into_uninit_ill_sized_v4() {
+        let vote_pubkey = Pubkey::new_unique();
+
+        // provide 4x the minimum struct size in bytes to ensure we typically touch every field
+        let struct_bytes_x4 = std::mem::size_of::<VoteStateV4>() * 4;
         for _ in 0..1000 {
             let raw_data: Vec<u8> = (0..struct_bytes_x4).map(|_| rand::random::<u8>()).collect();
             let mut unstructured = Unstructured::new(&raw_data);
@@ -550,19 +778,23 @@ mod tests {
 
             // truncated fails
             let mut test_vote_state = MaybeUninit::uninit();
-            let test_res =
-                VoteStateV3::deserialize_into_uninit(&truncated_buf, &mut test_vote_state);
+            let test_res = VoteStateV4::deserialize_into_uninit(
+                &truncated_buf,
+                &mut test_vote_state,
+                &vote_pubkey,
+            );
             let bincode_res = bincode::deserialize::<VoteStateVersions>(&truncated_buf)
-                .map(|versioned| versioned.convert_to_current());
+                .map(|versioned| versioned.try_convert_to_v4(&vote_pubkey).unwrap());
 
             assert!(test_res.is_err());
             assert!(bincode_res.is_err());
 
             // expanded succeeds
             let mut test_vote_state = MaybeUninit::uninit();
-            VoteStateV3::deserialize_into_uninit(&expanded_buf, &mut test_vote_state).unwrap();
+            VoteStateV4::deserialize_into_uninit(&expanded_buf, &mut test_vote_state, &vote_pubkey)
+                .unwrap();
             let bincode_res = bincode::deserialize::<VoteStateVersions>(&expanded_buf)
-                .map(|versioned| versioned.convert_to_current());
+                .map(|versioned| versioned.try_convert_to_v4(&vote_pubkey).unwrap());
 
             let test_vote_state = unsafe { test_vote_state.assume_init() };
             assert_eq!(test_vote_state, bincode_res.unwrap());
@@ -907,7 +1139,7 @@ mod tests {
     #[test]
     fn test_vote_state_size_of() {
         let vote_state = VoteStateV3::get_max_sized_vote_state();
-        let vote_state = VoteStateVersions::new_current(vote_state);
+        let vote_state = VoteStateVersions::new_v3(vote_state);
         let size = serialized_size(&vote_state).unwrap();
         assert_eq!(VoteStateV3::size_of() as u64, size);
     }
@@ -931,9 +1163,9 @@ mod tests {
                 )
             });
 
-            let versioned = VoteStateVersions::new_current(vote_state.take().unwrap());
+            let versioned = VoteStateVersions::new_v3(vote_state.take().unwrap());
             VoteStateV3::serialize(&versioned, &mut max_sized_data).unwrap();
-            vote_state = Some(versioned.convert_to_current());
+            vote_state = Some(versioned.try_convert_to_v3().unwrap());
         }
     }
 
@@ -942,19 +1174,19 @@ mod tests {
         // The default `VoteStateV3` is stored to de-initialize a zero-balance vote account,
         // so must remain such that `VoteStateVersions::is_uninitialized()` returns true
         // when called on a `VoteStateVersions` that stores it
-        assert!(VoteStateVersions::new_current(VoteStateV3::default()).is_uninitialized());
+        assert!(VoteStateVersions::new_v3(VoteStateV3::default()).is_uninitialized());
     }
 
     #[test]
     fn test_is_correct_size_and_initialized() {
         // Check all zeroes
-        let mut vote_account_data = vec![0; VoteStateVersions::vote_state_size_of(true)];
+        let mut vote_account_data = vec![0; VoteStateV3::size_of()];
         assert!(!VoteStateVersions::is_correct_size_and_initialized(
             &vote_account_data
         ));
 
         // Check default VoteStateV3
-        let default_account_state = VoteStateVersions::new_current(VoteStateV3::default());
+        let default_account_state = VoteStateVersions::new_v3(VoteStateV3::default());
         VoteStateV3::serialize(&default_account_state, &mut vote_account_data).unwrap();
         assert!(!VoteStateVersions::is_correct_size_and_initialized(
             &vote_account_data
@@ -967,8 +1199,8 @@ mod tests {
         ));
 
         // Check non-zero large account
-        let mut large_vote_data = vec![1; 2 * VoteStateVersions::vote_state_size_of(true)];
-        let default_account_state = VoteStateVersions::new_current(VoteStateV3::default());
+        let mut large_vote_data = vec![1; 2 * VoteStateV3::size_of()];
+        let default_account_state = VoteStateVersions::new_v3(VoteStateV3::default());
         VoteStateV3::serialize(&default_account_state, &mut large_vote_data).unwrap();
         assert!(!VoteStateVersions::is_correct_size_and_initialized(
             &vote_account_data
@@ -984,7 +1216,7 @@ mod tests {
             },
             &Clock::default(),
         );
-        let account_state = VoteStateVersions::new_current(vote_state.clone());
+        let account_state = VoteStateVersions::new_v3(vote_state.clone());
         VoteStateV3::serialize(&account_state, &mut vote_account_data).unwrap();
         assert!(VoteStateVersions::is_correct_size_and_initialized(
             &vote_account_data
@@ -993,7 +1225,7 @@ mod tests {
         // Check old VoteStateV3 that hasn't been upgraded to newest version yet
         let old_vote_state = VoteState1_14_11::from(vote_state);
         let account_state = VoteStateVersions::V1_14_11(Box::new(old_vote_state));
-        let mut vote_account_data = vec![0; VoteStateVersions::vote_state_size_of(false)];
+        let mut vote_account_data = vec![0; VoteState1_14_11::size_of()];
         VoteStateV3::serialize(&account_state, &mut vote_account_data).unwrap();
         assert!(VoteStateVersions::is_correct_size_and_initialized(
             &vote_account_data
@@ -1063,5 +1295,61 @@ mod tests {
         let data: &[u8] = &[0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x00];
         let circ_buf: CircBuf<()> = bincode::deserialize(data).unwrap();
         assert_eq!(circ_buf.last(), None);
+    }
+
+    #[test]
+    fn test_vote_state_v4_bls_pubkey_compressed() {
+        let vote_pubkey = Pubkey::new_unique();
+
+        let run_test = |start, expected| {
+            let versioned = VoteStateVersions::new_v4(start);
+            let serialized = bincode::serialize(&versioned).unwrap();
+            let deserialized = VoteStateV4::deserialize(&serialized, &vote_pubkey).unwrap();
+            assert_eq!(deserialized.bls_pubkey_compressed, expected);
+        };
+
+        // First try `None`.
+        let vote_state_none = VoteStateV4::default();
+        assert_eq!(vote_state_none.bls_pubkey_compressed, None);
+        run_test(vote_state_none, None);
+
+        // Now try `Some`.
+        let test_bls_key = [42u8; BLS_PUBKEY_COMPRESSED_BYTES];
+        let vote_state_some = VoteStateV4 {
+            bls_pubkey_compressed: Some(test_bls_key),
+            ..VoteStateV4::default()
+        };
+        assert_eq!(vote_state_some.bls_pubkey_compressed, Some(test_bls_key));
+        run_test(vote_state_some, Some(test_bls_key));
+    }
+
+    #[test]
+    fn test_vote_state_version_conversion_bls_pubkey() {
+        let vote_pubkey = Pubkey::new_unique();
+
+        // All versions before v4 should result in `None` for BLS pubkey.
+        let v0_23_5_state = VoteState0_23_5::default();
+        let v0_23_5_versioned = VoteStateVersions::V0_23_5(Box::new(v0_23_5_state));
+
+        let v1_14_11_state = VoteState1_14_11::default();
+        let v1_14_11_versioned = VoteStateVersions::V1_14_11(Box::new(v1_14_11_state));
+
+        let v3_state = VoteStateV3::default();
+        let v3_versioned = VoteStateVersions::V3(Box::new(v3_state));
+
+        for versioned in [v0_23_5_versioned, v1_14_11_versioned, v3_versioned] {
+            let converted = versioned.try_convert_to_v4(&vote_pubkey).unwrap();
+            assert_eq!(converted.bls_pubkey_compressed, None);
+        }
+
+        // v4 to v4 conversion should preserve the BLS pubkey.
+        let test_bls_key = [128u8; BLS_PUBKEY_COMPRESSED_BYTES];
+        let v4_state = VoteStateV4 {
+            bls_pubkey_compressed: Some(test_bls_key),
+            ..VoteStateV4::default()
+        };
+        let v4_versioned = VoteStateVersions::V4(Box::new(v4_state));
+        let converted = v4_versioned.try_convert_to_v4(&vote_pubkey).unwrap();
+        assert_eq!(converted.bls_pubkey_compressed, Some(test_bls_key));
     }
 }
