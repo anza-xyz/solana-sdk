@@ -2,11 +2,11 @@
 //!
 //! The _slot hashes sysvar_ provides access to the [`SlotHashes`] type.
 //!
-//! The [`Sysvar::from_account_info`] and [`Sysvar::get`] methods always return
+//! The [`SysvarSerialize::from_account_info`] and [`Sysvar::get`] methods always return
 //! [`solana_program_error::ProgramError::UnsupportedSysvar`] because this sysvar account is too large
 //! to process on-chain. Thus this sysvar cannot be accessed on chain, though
 //! one can still use the [`SysvarId::id`], [`SysvarId::check_id`] and
-//! [`Sysvar::size_of`] methods in an on-chain program, and it can be accessed
+//! [`SysvarSerialize::size_of`] methods in an on-chain program, and it can be accessed
 //! off-chain through RPC.
 //!
 //! [`SysvarId::id`]: https://docs.rs/solana-sysvar-id/latest/solana_sysvar_id/trait.SysvarId.html#tymethod.id
@@ -45,12 +45,11 @@
 //! #
 //! # Ok::<(), anyhow::Error>(())
 //! ```
-
 #[cfg(feature = "bytemuck")]
 use bytemuck_derive::{Pod, Zeroable};
+use {crate::Sysvar, solana_clock::Slot, solana_hash::Hash};
 #[cfg(feature = "bincode")]
-use {crate::Sysvar, solana_account_info::AccountInfo};
-use {solana_clock::Slot, solana_hash::Hash};
+use {crate::SysvarSerialize, solana_account_info::AccountInfo};
 
 #[cfg(feature = "bytemuck")]
 const U64_SIZE: usize = std::mem::size_of::<u64>();
@@ -64,8 +63,9 @@ pub use {
     solana_sysvar_id::SysvarId,
 };
 
+impl Sysvar for SlotHashes {}
 #[cfg(feature = "bincode")]
-impl Sysvar for SlotHashes {
+impl SysvarSerialize for SlotHashes {
     // override
     fn size_of() -> usize {
         // hard-coded so that we don't have to construct an empty
