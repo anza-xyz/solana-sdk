@@ -31,7 +31,11 @@ pub struct AccountInfo<'a> {
     /// Formerly, the epoch at which this account will next owe rent. A field
     /// must remain because the runtime depends on the exact layout of this
     /// struct.
-    pub unused: u64,
+    #[deprecated(
+        since = "3.0.0",
+        note = "Do not use this field, it will not exist in ABIv2"
+    )]
+    pub _unused: u64,
     /// Was the transaction signed by this account's public key?
     pub is_signer: bool,
     /// Is the account writable?
@@ -220,6 +224,7 @@ impl<'a> AccountInfo<'a> {
         owner: &'a Pubkey,
         executable: bool,
     ) -> Self {
+        #[allow(deprecated)]
         Self {
             key,
             is_signer,
@@ -228,7 +233,7 @@ impl<'a> AccountInfo<'a> {
             data: Rc::new(RefCell::new(data)),
             owner,
             executable,
-            unused: 0,
+            _unused: 0,
         }
     }
 
@@ -412,16 +417,7 @@ pub fn check_type_assumptions() {
     let mut lamports = 31;
     let mut data = vec![1, 2, 3, 4, 5];
     let owner = Pubkey::new_from_array([22; 32]);
-    let account_info = AccountInfo {
-        key: &key,
-        is_signer: true,
-        is_writable: false,
-        lamports: Rc::new(RefCell::new(&mut lamports)),
-        data: Rc::new(RefCell::new(&mut data)),
-        owner: &owner,
-        executable: true,
-        unused: 0,
-    };
+    let account_info = AccountInfo::new(&key, true, false, &mut lamports, &mut data, &owner, true);
     let account_info_addr = &account_info as *const _ as u64;
 
     // key
@@ -453,10 +449,13 @@ pub fn check_type_assumptions() {
     }
 
     // previously rent_epoch
-    assert_eq!(offset_of!(AccountInfo, unused), 32);
-    let unused_ptr = (account_info_addr + 32) as *const u64;
-    unsafe {
-        assert_eq!(*unused_ptr, 0);
+    #[allow(deprecated)]
+    {
+        assert_eq!(offset_of!(AccountInfo, _unused), 32);
+        let unused_ptr = (account_info_addr + 32) as *const u64;
+        unsafe {
+            assert_eq!(*unused_ptr, 0);
+        }
     }
 
     // is_signer
