@@ -28,6 +28,7 @@ dev-context-only-utils = ["blake3", "serde", "verify"]
 frozen-abi = [
     "dep:solana-frozen-abi",
     "dep:solana-frozen-abi-macro",
+    "dep:solana-logger",
 ]
 serde = [
     "dep:serde",
@@ -47,6 +48,7 @@ solana-frozen-abi = { workspace = true, optional = true }
 solana-frozen-abi-macro = { workspace = true, optional = true }
 solana-hash = { workspace = true }
 solana-instruction = { workspace = true }
+solana-logger = { workspace = true, optional = true }
 solana-message = { workspace = true }
 solana-pubkey = { workspace = true }
 solana-sanitize = { workspace = true }
