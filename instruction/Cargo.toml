@@ -39,8 +39,6 @@ solana-instruction-error = { workspace = true, features = ["num-traits"] }
 solana-pubkey = { workspace = true, default-features = false }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
-getrandom = { workspace = true, features = ["js", "wasm-bindgen"] }
-js-sys = { workspace = true }
 wasm-bindgen = { workspace = true }
 
 [target.'cfg(target_os = "solana")'.dependencies]

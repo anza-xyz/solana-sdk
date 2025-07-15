@@ -1247,10 +1247,8 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c4567c8db10ae91089c99af84c68c38da3ec2f087c3f82960bcdbf3656b6f4d7"
 dependencies = [
  "cfg-if",
- "js-sys",
  "libc",
  "wasi 0.11.0+wasi-snapshot-preview1",
- "wasm-bindgen",
 ]
 
 [[package]]
@@ -2757,7 +2755,6 @@ dependencies = [
  "solana-frozen-abi",
  "solana-frozen-abi-macro",
  "solana-instruction-error",
- "solana-logger",
  "solana-pubkey",
  "solana-sdk-ids",
  "solana-sysvar",
@@ -3188,7 +3185,6 @@ dependencies = [
  "solana-hash",
  "solana-inflation",
  "solana-keypair",
- "solana-logger",
  "solana-poh-config",
  "solana-pubkey",
  "solana-rent",
@@ -3244,8 +3240,6 @@ version = "2.3.0"
 dependencies = [
  "bincode",
  "borsh 1.5.5",
- "getrandom 0.2.15",
- "js-sys",
  "serde",
  "serde_derive",
  "solana-define-syscall",
@@ -3411,7 +3405,6 @@ dependencies = [
  "solana-hash",
  "solana-instruction",
  "solana-instruction-error",
- "solana-logger",
  "solana-message",
  "solana-nonce",
  "solana-pubkey",
@@ -3547,23 +3540,9 @@ dependencies = [
 name = "solana-program"
 version = "2.3.0"
 dependencies = [
- "arbitrary",
- "bincode",
- "blake3",
- "borsh 0.10.4",
- "borsh 1.5.5",
- "bytemuck",
  "getrandom 0.2.15",
- "lazy_static",
- "log",
  "memoffset",
- "num-bigint",
- "num-traits",
- "serde",
- "serde_derive",
  "solana-account-info",
- "solana-address-lookup-table-interface",
- "solana-atomic-u64",
  "solana-big-mod-exp",
  "solana-blake3-hasher",
  "solana-borsh",
@@ -3592,7 +3571,6 @@ dependencies = [
  "solana-pubkey",
  "solana-rent",
  "solana-sdk-ids",
- "solana-sdk-macro",
  "solana-secp256k1-recover",
  "solana-serde-varint",
  "solana-serialize-utils",
@@ -3604,7 +3582,6 @@ dependencies = [
  "solana-system-interface",
  "solana-sysvar",
  "solana-sysvar-id",
- "thiserror 2.0.12",
 ]
 
 [[package]]
@@ -3660,7 +3637,6 @@ dependencies = [
  "curve25519-dalek 4.1.3",
  "five8",
  "five8_const",
- "getrandom 0.2.15",
  "js-sys",
  "num-traits",
  "rand 0.8.5",
@@ -3754,19 +3730,15 @@ version = "2.3.0"
 dependencies = [
  "bincode",
  "bs58",
- "getrandom 0.1.16",
  "serde",
  "solana-account",
- "solana-derivation-path",
  "solana-epoch-info",
  "solana-epoch-rewards-hasher",
  "solana-fee-structure",
  "solana-inflation",
- "solana-instruction",
  "solana-instructions-sysvar",
  "solana-keypair",
  "solana-message",
- "solana-native-token",
  "solana-offchain-message",
  "solana-presigner",
  "solana-program",
@@ -3813,7 +3785,6 @@ version = "1.0.0"
 dependencies = [
  "console_error_panic_hook",
  "console_log",
- "js-sys",
  "log",
  "solana-instruction",
  "solana-program",
@@ -4094,7 +4065,6 @@ dependencies = [
  "solana-program-memory",
  "solana-pubkey",
  "solana-rent",
- "solana-sanitize",
  "solana-sdk-ids",
  "solana-sdk-macro",
  "solana-sha256-hasher",
@@ -4134,7 +4104,6 @@ dependencies = [
  "solana-hash",
  "solana-instruction",
  "solana-keypair",
- "solana-logger",
  "solana-message",
  "solana-nonce",
  "solana-packet",
@@ -4189,7 +4158,6 @@ dependencies = [
  "solana-hash",
  "solana-instruction",
  "solana-instruction-error",
- "solana-logger",
  "solana-pubkey",
  "solana-rent",
  "solana-sdk-ids",

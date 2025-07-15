@@ -63,17 +63,14 @@ bincode = { workspace = true }
 bs58 = { workspace = true }
 serde = { workspace = true }
 solana-account = { workspace = true, features = ["bincode"] }
-solana-derivation-path = { workspace = true }
 solana-epoch-info = { workspace = true, features = ["serde"] }
 solana-epoch-rewards-hasher = { workspace = true }
 solana-fee-structure = { workspace = true, features = ["serde"] }
 solana-inflation = { workspace = true, features = ["serde"] }
-solana-instruction = { workspace = true }
 solana-keypair = { workspace = true, optional = true, features = [
     "seed-derivable",
 ] }
 solana-message = { workspace = true, features = ["serde"] }
-solana-native-token = { workspace = true }
 solana-offchain-message = { workspace = true, optional = true, features = ["verify"] }
 solana-presigner = { workspace = true, optional = true }
 solana-program = { workspace = true }
@@ -107,9 +104,6 @@ solana-transaction-error = { workspace = true, features = [
     "serde",
 ], optional = true }
 thiserror = { workspace = true }
-
-[target.'cfg(target_arch = "wasm32")'.dependencies]
-getrandom = { version = "0.1.1", features = ["wasm-bindgen"] }
 
 [dev-dependencies]
 solana-instructions-sysvar = { workspace = true, features = ["dev-context-only-utils"] }
