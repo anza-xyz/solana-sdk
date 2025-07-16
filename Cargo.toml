@@ -159,7 +159,7 @@ derivation-path = { version = "0.2.0", default-features = false }
 digest = "0.10.7"
 ed25519-dalek = "=1.0.1"
 ed25519-dalek-bip32 = "0.2.0"
-env_logger = "0.9.3"
+env_logger = "0.11.8"
 ff = "0.13.1"
 five8 = "0.2.1"
 five8_const = "0.1.3"
