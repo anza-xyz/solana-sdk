@@ -4,7 +4,7 @@ use {
     super::state::TowerSync,
     crate::state::{
         Vote, VoteAuthorize, VoteAuthorizeCheckedWithSeedArgs, VoteAuthorizeWithSeedArgs, VoteInit,
-        VoteStateUpdate, VoteStateVersions,
+        VoteState1_14_11, VoteStateUpdate,
     },
     solana_clock::{Slot, UnixTimestamp},
     solana_hash::Hash,
@@ -272,7 +272,7 @@ pub struct CreateVoteAccountConfig<'a> {
 impl Default for CreateVoteAccountConfig<'_> {
     fn default() -> Self {
         Self {
-            space: VoteStateVersions::vote_state_size_of(false) as u64,
+            space: VoteState1_14_11::size_of() as u64,
             with_seed: None,
         }
     }
