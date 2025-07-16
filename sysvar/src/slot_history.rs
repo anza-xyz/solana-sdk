@@ -2,11 +2,11 @@
 //!
 //! The _slot history sysvar_ provides access to the [`SlotHistory`] type.
 //!
-//! The [`Sysvar::from_account_info`] and [`Sysvar::get`] methods always return
+//! The [`SysvarSerialize::from_account_info`] and [`Sysvar::get`] methods always return
 //! [`ProgramError::UnsupportedSysvar`] because this sysvar account is too large
 //! to process on-chain. Thus this sysvar cannot be accessed on chain, though
 //! one can still use the [`SysvarId::id`], [`SysvarId::check_id`] and
-//! [`Sysvar::size_of`] methods in an on-chain program, and it can be accessed
+//! [`SysvarSerialize::size_of`] methods in an on-chain program, and it can be accessed
 //! off-chain through RPC.
 //!
 //! [`SysvarId::id`]: https://docs.rs/solana-sysvar-id/latest/solana_sysvar_id/trait.SysvarId.html#tymethod.id
@@ -48,17 +48,18 @@
 //! # Ok::<(), anyhow::Error>(())
 //! ```
 
-#[cfg(feature = "bincode")]
 use crate::Sysvar;
+#[cfg(feature = "bincode")]
+use crate::SysvarSerialize;
 pub use {
     solana_account_info::AccountInfo,
     solana_program_error::ProgramError,
     solana_sdk_ids::sysvar::slot_history::{check_id, id, ID},
     solana_slot_history::SlotHistory,
 };
-
+impl Sysvar for SlotHistory {}
 #[cfg(feature = "bincode")]
-impl Sysvar for SlotHistory {
+impl SysvarSerialize for SlotHistory {
     // override
     fn size_of() -> usize {
         // hard-coded so that we don't have to construct an empty
