@@ -22,10 +22,10 @@ seed-derivable = [
 ]
 
 [dependencies]
-ed25519-dalek = { workspace = true }
+ed25519-dalek = { workspace = true, features = ["rand_core"] }
 ed25519-dalek-bip32 = { workspace = true, optional = true }
 five8 = { workspace = true }
-rand0-7 = { workspace = true }
+rand = { workspace = true }
 solana-derivation-path = { workspace = true, optional = true }
 solana-pubkey = { workspace = true }
 solana-seed-derivable = { workspace = true, optional = true }
