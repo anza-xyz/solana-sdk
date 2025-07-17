@@ -2863,16 +2863,9 @@ name = "solana-blake3-hasher"
 version = "2.2.1"
 dependencies = [
  "blake3",
- "borsh",
- "bs58",
- "serde",
- "serde_derive",
  "solana-blake3-hasher",
  "solana-define-syscall",
- "solana-frozen-abi",
- "solana-frozen-abi-macro",
  "solana-hash",
- "solana-sanitize",
 ]
 
 [[package]]
@@ -3312,15 +3305,9 @@ dependencies = [
 name = "solana-keccak-hasher"
 version = "2.2.1"
 dependencies = [
- "borsh",
- "serde",
- "serde_derive",
  "sha3",
  "solana-define-syscall",
- "solana-frozen-abi",
- "solana-frozen-abi-macro",
  "solana-hash",
- "solana-sanitize",
 ]
 
 [[package]]
@@ -3923,6 +3910,7 @@ dependencies = [
  "sha2 0.10.8",
  "solana-define-syscall",
  "solana-hash",
+ "solana-sha256-hasher",
 ]
 
 [[package]]

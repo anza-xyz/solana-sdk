@@ -1,15 +1,15 @@
 #![no_std]
-#[cfg(any(feature = "sha2", not(target_os = "solana")))]
+#[cfg(all(feature = "offchain", not(target_os = "solana")))]
 use sha2::{Digest, Sha256};
 use solana_hash::Hash;
 
-#[cfg(any(feature = "sha2", not(target_os = "solana")))]
+#[cfg(all(feature = "offchain", not(target_os = "solana")))]
 #[derive(Clone, Default)]
 pub struct Hasher {
     hasher: Sha256,
 }
 
-#[cfg(any(feature = "sha2", not(target_os = "solana")))]
+#[cfg(all(feature = "offchain", not(target_os = "solana")))]
 impl Hasher {
     pub fn hash(&mut self, val: &[u8]) {
         self.hasher.update(val);
