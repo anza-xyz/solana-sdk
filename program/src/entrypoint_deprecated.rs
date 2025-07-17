@@ -14,9 +14,7 @@ use {
     crate::{account_info::AccountInfo, program_error::ProgramError, pubkey::Pubkey},
     alloc::vec::Vec,
     std::{
-        cell::RefCell,
         mem::size_of,
-        rc::Rc,
         result::Result as ResultGeneric,
         slice::{from_raw_parts, from_raw_parts_mut},
     },
@@ -89,16 +87,14 @@ pub unsafe fn deserialize<'a>(input: *mut u8) -> (&'a Pubkey, Vec<AccountInfo<'a
             offset += size_of::<Pubkey>();
 
             #[allow(clippy::cast_ptr_alignment)]
-            let lamports = Rc::new(RefCell::new(&mut *(input.add(offset) as *mut u64)));
+            let lamports = &mut *(input.add(offset) as *mut u64);
             offset += size_of::<u64>();
 
             #[allow(clippy::cast_ptr_alignment)]
             let data_len = *(input.add(offset) as *const u64) as usize;
             offset += size_of::<u64>();
 
-            let data = Rc::new(RefCell::new({
-                from_raw_parts_mut(input.add(offset), data_len)
-            }));
+            let data = from_raw_parts_mut(input.add(offset), data_len);
             offset += data_len;
 
             let owner: &Pubkey = &*(input.add(offset) as *const Pubkey);
@@ -108,11 +104,10 @@ pub unsafe fn deserialize<'a>(input: *mut u8) -> (&'a Pubkey, Vec<AccountInfo<'a
             let executable = *(input.add(offset) as *const u8) != 0;
             offset += size_of::<u8>();
 
-            #[allow(clippy::cast_ptr_alignment)]
-            let rent_epoch = *(input.add(offset) as *const u64);
+            // rent epoch is skipped
             offset += size_of::<u64>();
 
-            accounts.push(AccountInfo {
+            accounts.push(AccountInfo::new(
                 key,
                 is_signer,
                 is_writable,
@@ -120,8 +115,7 @@ pub unsafe fn deserialize<'a>(input: *mut u8) -> (&'a Pubkey, Vec<AccountInfo<'a
                 data,
                 owner,
                 executable,
-                rent_epoch,
-            });
+            ));
         } else {
             // Duplicate account, clone the original
             accounts.push(accounts[dup_info as usize].clone());

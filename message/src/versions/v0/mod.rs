@@ -231,7 +231,6 @@ impl Message {
     ///     #   }.serialize_for_tests().unwrap(),
     ///     #   owner: solana_address_lookup_table_interface::program::id(),
     ///     #   executable: false,
-    ///     #   rent_epoch: 1,
     ///     # });
     ///     let raw_account = client.get_account(&address_lookup_table_key)?;
     ///     let address_lookup_table = AddressLookupTable::deserialize(&raw_account.data)?;

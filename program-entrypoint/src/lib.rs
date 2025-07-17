@@ -7,10 +7,8 @@ use {
     solana_pubkey::Pubkey,
     std::{
         alloc::Layout,
-        cell::RefCell,
         mem::{size_of, MaybeUninit},
         ptr::null_mut,
-        rc::Rc,
         slice::{from_raw_parts, from_raw_parts_mut},
     },
 };
@@ -411,7 +409,7 @@ unsafe fn deserialize_account_info<'a>(
     offset += size_of::<Pubkey>();
 
     #[allow(clippy::cast_ptr_alignment)]
-    let lamports = Rc::new(RefCell::new(&mut *(input.add(offset) as *mut u64)));
+    let lamports = &mut *(input.add(offset) as *mut u64);
     offset += size_of::<u64>();
 
     #[allow(clippy::cast_ptr_alignment)]
@@ -422,18 +420,13 @@ unsafe fn deserialize_account_info<'a>(
     // requires that MAX_PERMITTED_DATA_LENGTH fits in a u32
     *(input.add(original_data_len_offset) as *mut u32) = data_len as u32;
 
-    let data = Rc::new(RefCell::new({
-        from_raw_parts_mut(input.add(offset), data_len)
-    }));
-    offset += data_len + MAX_PERMITTED_DATA_INCREASE;
+    let data = from_raw_parts_mut(input.add(offset), data_len);
+    // rent epoch is not deserialized, so skip it
+    offset += data_len + MAX_PERMITTED_DATA_INCREASE + size_of::<u64>();
     offset += (offset as *const u8).align_offset(BPF_ALIGN_OF_U128); // padding
 
-    #[allow(clippy::cast_ptr_alignment)]
-    let rent_epoch = *(input.add(offset) as *const u64);
-    offset += size_of::<u64>();
-
     (
-        AccountInfo {
+        AccountInfo::new(
             key,
             is_signer,
             is_writable,
@@ -441,8 +434,7 @@ unsafe fn deserialize_account_info<'a>(
             data,
             owner,
             executable,
-            rent_epoch,
-        },
+        ),
         offset,
     )
 }
