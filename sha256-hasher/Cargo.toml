@@ -18,14 +18,14 @@ offchain = ["dep:sha2"]
 [dependencies]
 solana-hash = { workspace = true }
 
-[dev-dependencies]
-solana-sha256-hasher = { path = ".", features = ["offchain"] }
-
 [target.'cfg(not(target_os = "solana"))'.dependencies]
 sha2 = { workspace = true, optional = true }
 
 [target.'cfg(target_os = "solana")'.dependencies]
 solana-define-syscall = { workspace = true }
+
+[dev-dependencies]
+solana-sha256-hasher = { path = ".", features = ["offchain"] }
 
 [lints]
 workspace = true
