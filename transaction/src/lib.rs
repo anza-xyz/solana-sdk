@@ -119,18 +119,18 @@ use {
 };
 #[cfg(feature = "bincode")]
 use {
-    solana_bincode::limited_deserialize,
     solana_hash::Hash,
-    solana_message::compiled_instruction::CompiledInstruction,
-    solana_sdk_ids::system_program,
     solana_signer::{signers::Signers, SignerError},
-    solana_system_interface::instruction::SystemInstruction,
 };
 use {
     solana_instruction::Instruction,
-    solana_message::Message,
+    solana_message::{
+        compiled_instruction::CompiledInstruction, inline_nonce::is_advance_nonce_instruction_data,
+        Message,
+    },
     solana_pubkey::Pubkey,
     solana_sanitize::{Sanitize, SanitizeError},
+    solana_sdk_ids::system_program,
     solana_signature::Signature,
     solana_transaction_error::{TransactionError, TransactionResult as Result},
     std::result,
@@ -154,13 +154,7 @@ static_assertions::const_assert_eq!(
     NONCED_TX_MARKER_IX_INDEX,
     solana_nonce::NONCED_TX_MARKER_IX_INDEX
 );
-#[cfg(feature = "bincode")]
 const NONCED_TX_MARKER_IX_INDEX: u8 = 0;
-// inlined to avoid solana-packet dep
-#[cfg(test)]
-static_assertions::const_assert_eq!(PACKET_DATA_SIZE, solana_packet::PACKET_DATA_SIZE);
-#[cfg(feature = "bincode")]
-const PACKET_DATA_SIZE: usize = 1280 - 40 - 8;
 
 /// An atomically-committed sequence of instructions.
 ///
@@ -1110,7 +1104,6 @@ impl Transaction {
     }
 }
 
-#[cfg(feature = "bincode")]
 /// Returns true if transaction begins with an advance nonce instruction.
 pub fn uses_durable_nonce(tx: &Transaction) -> Option<&CompiledInstruction> {
     let message = tx.message();
@@ -1122,12 +1115,7 @@ pub fn uses_durable_nonce(tx: &Transaction) -> Option<&CompiledInstruction> {
             matches!(
                 message.account_keys.get(instruction.program_id_index as usize),
                 Some(program_id) if system_program::check_id(program_id)
-            )
-            // Is a nonce advance instruction
-            && matches!(
-                limited_deserialize(&instruction.data, PACKET_DATA_SIZE as u64),
-                Ok(SystemInstruction::AdvanceNonceAccount)
-            )
+            ) && is_advance_nonce_instruction_data(&instruction.data)
         })
 }
 

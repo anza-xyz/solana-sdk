@@ -1,20 +1,19 @@
 //! Defines a transaction which supports multiple versions of messages.
 
+#[cfg(feature = "bincode")]
+use solana_signer::{signers::Signers, SignerError};
 use {
-    crate::Transaction, solana_message::VersionedMessage, solana_sanitize::SanitizeError,
-    solana_signature::Signature, std::cmp::Ordering,
+    crate::Transaction,
+    solana_message::{inline_nonce::is_advance_nonce_instruction_data, VersionedMessage},
+    solana_sanitize::SanitizeError,
+    solana_sdk_ids::system_program,
+    solana_signature::Signature,
+    std::cmp::Ordering,
 };
 #[cfg(feature = "serde")]
 use {
     serde_derive::{Deserialize, Serialize},
     solana_short_vec as short_vec,
-};
-#[cfg(feature = "bincode")]
-use {
-    solana_bincode::limited_deserialize,
-    solana_sdk_ids::system_program,
-    solana_signer::{signers::Signers, SignerError},
-    solana_system_interface::instruction::SystemInstruction,
 };
 
 pub mod sanitized;
@@ -204,7 +203,6 @@ impl VersionedTransaction {
             .collect()
     }
 
-    #[cfg(feature = "bincode")]
     /// Returns true if transaction begins with an advance nonce instruction.
     pub fn uses_durable_nonce(&self) -> bool {
         let message = &self.message;
@@ -216,12 +214,7 @@ impl VersionedTransaction {
                 matches!(
                     message.static_account_keys().get(instruction.program_id_index as usize),
                     Some(program_id) if system_program::check_id(program_id)
-                )
-                // Is a nonce advance instruction
-                && matches!(
-                    limited_deserialize(&instruction.data, crate::PACKET_DATA_SIZE as u64,),
-                    Ok(SystemInstruction::AdvanceNonceAccount)
-                )
+                ) && is_advance_nonce_instruction_data(&instruction.data)
             })
             .is_some()
     }

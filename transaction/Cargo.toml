@@ -17,9 +17,7 @@ rustdoc-args = ["--cfg=docsrs"]
 [features]
 bincode = [
     "dep:bincode",
-    "dep:solana-bincode",
     "dep:solana-signer",
-    "dep:solana-system-interface",
     "serde",
     "solana-message/bincode",
 ]
@@ -43,7 +41,6 @@ verify = ["blake3", "solana-signature/verify"]
 bincode = { workspace = true, optional = true }
 serde = { workspace = true, optional = true }
 serde_derive = { workspace = true, optional = true }
-solana-bincode = { workspace = true, optional = true }
 solana-frozen-abi = { workspace = true, optional = true }
 solana-frozen-abi-macro = { workspace = true, optional = true }
 solana-hash = { workspace = true }
@@ -56,7 +53,6 @@ solana-sdk-ids = { workspace = true }
 solana-short-vec = { workspace = true, optional = true }
 solana-signature = { workspace = true }
 solana-signer = { workspace = true, optional = true }
-solana-system-interface = { workspace = true, optional = true, features = ["bincode"] }
 solana-transaction-error = { workspace = true }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
@@ -76,6 +72,7 @@ solana-packet = { workspace = true }
 solana-presigner = { workspace = true }
 solana-pubkey = { workspace = true, features = ["rand"] }
 solana-sha256-hasher = { workspace = true }
+solana-system-interface = { workspace = true, features = ["bincode"] }
 solana-transaction = { path = ".", features = ["dev-context-only-utils"] }
 solana-vote-interface = { workspace = true, features = ["bincode"] }
 static_assertions = { workspace = true }
