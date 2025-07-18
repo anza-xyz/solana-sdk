@@ -66,6 +66,7 @@ pub fn hash(val: &[u8]) -> Hash {
 }
 
 #[cfg(test)]
+#[cfg(feature = "offchain")]
 mod tests {
     use super::*;
 
