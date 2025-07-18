@@ -738,7 +738,7 @@
 //!             hasher.hash(&message);
 //!             hasher.result()
 //!         };
-//!         let secp_message = libsecp256k1::Message::parse(&message_hash.0);
+//!         let secp_message = libsecp256k1::Message::parse(message_hash.as_bytes());
 //!         let (signature, recovery_id) = libsecp256k1::sign(&secp_message, &secret_key);
 //!         let signature = signature.serialize();
 //!         let recovery_id = recovery_id.serialize();
