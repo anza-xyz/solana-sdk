@@ -42,7 +42,7 @@ pub fn hashv(vals: &[&[u8]]) -> Hash {
         #[cfg(not(feature = "offchain"))]
         {
             core::hint::black_box(vals);
-            panic!("hashv is only available on target `solana`")
+            panic!("hashv is only available on target `solana` or with the `offchain` feature enabled on this crate")
         }
     }
     // Call via a system call to perform the calculation
