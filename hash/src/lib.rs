@@ -139,8 +139,12 @@ impl Hash {
         Self::new_from_array(b)
     }
 
-    pub fn to_bytes(self) -> [u8; HASH_BYTES] {
+    pub const fn to_bytes(self) -> [u8; HASH_BYTES] {
         self.0
+    }
+
+    pub const fn as_bytes(&self) -> &[u8; HASH_BYTES] {
+        &self.0
     }
 }
 

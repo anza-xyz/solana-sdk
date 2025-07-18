@@ -19,14 +19,13 @@ sha2 = ["dep:sha2"]
 solana-hash = { workspace = true }
 
 [target.'cfg(not(target_os = "solana"))'.dependencies]
-sha2 = { workspace = true }
+sha2 = { workspace = true, optional = true }
 
 [target.'cfg(target_os = "solana")'.dependencies]
-# sha2 should be removed in the next breaking release,
-# as there's no reason to use the crate instead of the syscall
-# onchain
-sha2 = { workspace = true, optional = true }
 solana-define-syscall = { workspace = true }
+
+[dev-dependencies]
+solana-sha256-hasher = { path = ".", features = ["sha2"] }
 
 [lints]
 workspace = true

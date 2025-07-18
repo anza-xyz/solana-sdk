@@ -1,15 +1,15 @@
 #![no_std]
-#[cfg(any(feature = "sha2", not(target_os = "solana")))]
+#[cfg(all(feature = "sha2", not(target_os = "solana")))]
 use sha2::{Digest, Sha256};
 use solana_hash::Hash;
 
-#[cfg(any(feature = "sha2", not(target_os = "solana")))]
+#[cfg(all(feature = "sha2", not(target_os = "solana")))]
 #[derive(Clone, Default)]
 pub struct Hasher {
     hasher: Sha256,
 }
 
-#[cfg(any(feature = "sha2", not(target_os = "solana")))]
+#[cfg(all(feature = "sha2", not(target_os = "solana")))]
 impl Hasher {
     pub fn hash(&mut self, val: &[u8]) {
         self.hasher.update(val);
@@ -34,9 +34,17 @@ pub fn hashv(vals: &[&[u8]]) -> Hash {
     // not supported
     #[cfg(not(target_os = "solana"))]
     {
-        let mut hasher = Hasher::default();
-        hasher.hashv(vals);
-        hasher.result()
+        #[cfg(feature = "sha2")]
+        {
+            let mut hasher = Hasher::default();
+            hasher.hashv(vals);
+            hasher.result()
+        }
+        #[cfg(not(feature = "sha2"))]
+        {
+            core::hint::black_box(vals);
+            panic!("hashv is only available on target `solana` or with the `sha2` feature enabled on this crate")
+        }
     }
     // Call via a system call to perform the calculation
     #[cfg(target_os = "solana")]
