@@ -3811,10 +3811,13 @@ version = "1.0.0"
 dependencies = [
  "console_error_panic_hook",
  "console_log",
+ "getrandom 0.1.16",
  "log",
+ "solana-hash",
  "solana-instruction",
- "solana-program",
- "solana-sdk",
+ "solana-keypair",
+ "solana-pubkey",
+ "solana-transaction",
  "wasm-bindgen",
 ]
 
