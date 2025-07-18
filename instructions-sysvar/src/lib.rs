@@ -83,18 +83,19 @@ bitflags! {
 }
 
 // First encode the number of instructions:
-// [0..2 - num_instructions
+// 0..2 - num_instructions
 //
 // Then a table of offsets of where to find them in the data
-//  3..2 * num_instructions table of instruction offsets
+// 2..2 + 2 * num_instructions - table of instruction offsets
 //
-// Each instruction is then encoded as:
+// Each instruction is then encoded as (offsets relative to start of each instruction):
 //   0..2 - num_accounts
-//   2 - meta_byte -> (bit 0 signer, bit 1 is_writable)
-//   3..35 - pubkey - 32 bytes
-//   35..67 - program_id
-//   67..69 - data len - u16
-//   69..data_len - data
+//   For each account (offsets relative to start of each account):
+//     0..1 - meta_byte -> (bit 0 signer, bit 1 is_writable)
+//     1..33 - pubkey - 32 bytes
+//   2  + (33 * num_accounts)..34 + (33 * num_accounts) - program_id - 32 bytes
+//   34 + (33 * num_accounts)..36 + (33 * num_accounts) - data_len - 2 bytes
+//   36 + (33 * num_accounts)..36 + (33 * num_accounts) + data_len - data - variable length
 #[cfg(not(target_os = "solana"))]
 #[cfg_attr(feature = "dev-context-only-utils", qualifiers(pub))]
 fn serialize_instructions(instructions: &[BorrowedInstruction]) -> Vec<u8> {
