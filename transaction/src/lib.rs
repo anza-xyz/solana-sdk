@@ -1105,7 +1105,6 @@ impl Transaction {
     }
 }
 
-#[cfg(feature = "bincode")]
 /// Returns true if transaction begins with an advance nonce instruction.
 pub fn uses_durable_nonce(tx: &Transaction) -> Option<&CompiledInstruction> {
     let message = tx.message();

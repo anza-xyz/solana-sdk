@@ -15,7 +15,6 @@ use {
 };
 
 // inlined to avoid solana_nonce dep
-#[cfg(feature = "bincode")]
 const NONCED_TX_MARKER_IX_INDEX: u8 = 0;
 #[cfg(test)]
 static_assertions::const_assert_eq!(
@@ -313,7 +312,6 @@ impl SanitizedMessage {
             })
     }
 
-    #[cfg(feature = "bincode")]
     /// If the message uses a durable nonce, return the pubkey of the nonce account
     pub fn get_durable_nonce(&self) -> Option<&Pubkey> {
         self.instructions()
