@@ -34,9 +34,17 @@ pub fn hashv(vals: &[&[u8]]) -> Hash {
     // not supported
     #[cfg(not(target_os = "solana"))]
     {
-        let mut hasher = Hasher::default();
-        hasher.hashv(vals);
-        hasher.result()
+        #[cfg(feature = "offchain")]
+        {
+            let mut hasher = Hasher::default();
+            hasher.hashv(vals);
+            hasher.result()
+        }
+        #[cfg(not(feature = "offchain"))]
+        {
+            core::hint::black_box(vals)
+            panic!("hashv is only available on target `solana`")
+        }
     }
     // Call via a system call to perform the calculation
     #[cfg(target_os = "solana")]
