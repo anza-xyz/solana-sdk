@@ -1,7 +1,12 @@
 //! The `Instructions` struct is a legacy workaround
 //! from when wasm-bindgen lacked Vec<T> support
 //! (ref: https://github.com/rustwasm/wasm-bindgen/issues/111)
-use {crate::Instruction, wasm_bindgen::prelude::*};
+#![allow(non_snake_case)]
+use {
+    crate::{AccountMeta, Instruction},
+    solana_pubkey::Pubkey,
+    wasm_bindgen::prelude::*,
+};
 
 #[wasm_bindgen]
 #[derive(Default)]
@@ -24,5 +29,32 @@ impl Instructions {
 impl From<Instructions> for std::vec::Vec<Instruction> {
     fn from(instructions: Instructions) -> Self {
         instructions.instructions
+    }
+}
+
+#[wasm_bindgen]
+impl Instruction {
+    /// Create a new `Instruction`
+    #[wasm_bindgen(constructor)]
+    pub fn constructor(program_id: Pubkey, data: &[u8]) -> Self {
+        Instruction::new_with_bytes(program_id, data, std::vec::Vec::new())
+    }
+
+    pub fn pushAccount(mut self, account_meta: AccountMeta) -> Self {
+        self.accounts.push(account_meta);
+        self
+    }
+}
+
+#[wasm_bindgen]
+impl AccountMeta {
+    /// Create a new writable `AccountMeta`
+    pub fn newWritable(pubkey: Pubkey, is_signer: bool) -> Self {
+        AccountMeta::new(pubkey, is_signer)
+    }
+
+    /// Create a new readonly `AccountMeta`
+    pub fn newReadonly(pubkey: Pubkey, is_signer: bool) -> Self {
+        AccountMeta::new_readonly(pubkey, is_signer)
     }
 }
