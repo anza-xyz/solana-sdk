@@ -36,13 +36,16 @@ impl From<Instructions> for std::vec::Vec<Instruction> {
 impl Instruction {
     /// Create a new `Instruction`
     #[wasm_bindgen(constructor)]
-    pub fn constructor(program_id: Pubkey, data: &[u8]) -> Self {
-        Instruction::new_with_bytes(program_id, data, std::vec::Vec::new())
+    pub fn constructor(program_id: Pubkey) -> Self {
+        Instruction::new_with_bytes(program_id, &[], std::vec::Vec::new())
     }
 
-    pub fn pushAccount(mut self, account_meta: AccountMeta) -> Self {
+    pub fn setData(&mut self, data: &[u8]) {
+        self.data = data.to_vec();
+    }
+
+    pub fn addAccount(&mut self, account_meta: AccountMeta) {
         self.accounts.push(account_meta);
-        self
     }
 }
 
