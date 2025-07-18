@@ -1,19 +1,19 @@
 //! Defines a transaction which supports multiple versions of messages.
 
+#[cfg(feature = "bincode")]
+use solana_signer::{signers::Signers, SignerError};
 use {
-    crate::Transaction, solana_message::VersionedMessage, solana_sanitize::SanitizeError,
-    solana_signature::Signature, std::cmp::Ordering,
+    crate::Transaction,
+    solana_message::{inline_nonce::is_advance_nonce_instruction_data, VersionedMessage},
+    solana_sanitize::SanitizeError,
+    solana_sdk_ids::system_program,
+    solana_signature::Signature,
+    std::cmp::Ordering,
 };
 #[cfg(feature = "serde")]
 use {
     serde_derive::{Deserialize, Serialize},
     solana_short_vec as short_vec,
-};
-#[cfg(feature = "bincode")]
-use {
-    solana_message::inline_nonce::is_advance_nonce_instruction_data,
-    solana_sdk_ids::system_program,
-    solana_signer::{signers::Signers, SignerError},
 };
 
 pub mod sanitized;
