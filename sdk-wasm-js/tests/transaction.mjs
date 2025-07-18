@@ -1,17 +1,18 @@
 import { expect } from "chai";
 import {
   solana_program_init,
+  AccountMeta,
   Pubkey,
   Keypair,
   Hash,
-  SystemInstruction,
+  Instruction,
   Instructions,
   Transaction,
 } from "crate";
 solana_program_init();
 
 describe("Transaction", function () {
-  it("SystemInstruction::Transfer", () => {
+  it("Instruction", () => {
     const payer = Keypair.fromBytes(
       new Uint8Array([
         241, 230, 222, 64, 184, 48, 232, 92, 156, 210, 229, 183, 154, 251, 5,
@@ -32,20 +33,24 @@ describe("Transaction", function () {
       ])
     );
 
+    const programId = new Pubkey("11111111111111111111111111111111");
     const dst = new Pubkey("11111111111111111111111111111112");
+    const instructionData = new Uint8Array([2, 0, 0, 0, 123, 0, 0, 0, 0, 0, 0, 0]);
 
-    const recent_blockhash = new Hash(
+    const recentBlockhash = new Hash(
       "EETubP5AKHgjPAhzPAFcb8BAY1hMH639CWCFTqi3hq1k"
     );
 
     let instructions = new Instructions();
-    instructions.push(
-      SystemInstruction.transfer(src.pubkey(), dst, BigInt(123))
-    );
+    let instruction = new Instruction(programId);
+    instruction.setData(instructionData);
+    instruction.addAccount(AccountMeta.newWritable(src.pubkey(), true))
+    instruction.addAccount(AccountMeta.newWritable(dst, false))
+    instructions.push(instruction);
 
     let transaction = new Transaction(instructions, payer.pubkey());
-    transaction.partialSign(payer, recent_blockhash);
-    transaction.partialSign(src, recent_blockhash);
+    transaction.partialSign(payer, recentBlockhash);
+    transaction.partialSign(src, recentBlockhash);
     expect(transaction.isSigned()).to.be.true;
     transaction.verify();
 
