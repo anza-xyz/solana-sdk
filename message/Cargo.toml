@@ -17,8 +17,6 @@ rustdoc-args = ["--cfg=docsrs"]
 [features]
 bincode = [
     "dep:bincode",
-    "dep:solana-bincode",
-    "dep:solana-system-interface",
     "serde",
 ]
 blake3 = ["dep:blake3"]
@@ -45,7 +43,6 @@ blake3 = { workspace = true, features = ["traits-preview"], optional = true }
 lazy_static = { workspace = true }
 serde = { workspace = true, optional = true }
 serde_derive = { workspace = true, optional = true }
-solana-bincode = { workspace = true, optional = true }
 solana-frozen-abi = { workspace = true, optional = true }
 solana-frozen-abi-macro = { workspace = true, optional = true }
 solana-hash = { workspace = true }
@@ -55,9 +52,6 @@ solana-pubkey = { workspace = true }
 solana-sanitize = { workspace = true }
 solana-sdk-ids = { workspace = true }
 solana-short-vec = { workspace = true, optional = true }
-solana-system-interface = { workspace = true, optional = true, features = [
-    "bincode",
-] }
 solana-transaction-error = { workspace = true }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
@@ -70,11 +64,13 @@ borsh = { workspace = true }
 itertools = { workspace = true }
 serde_json = { workspace = true }
 solana-address-lookup-table-interface = { workspace = true, features = ["bincode", "bytemuck"] }
+solana-bincode = { workspace = true }
 solana-example-mocks = { path = "../example-mocks" }
 solana-instruction = { workspace = true, features = ["borsh"] }
 solana-instruction-error = { workspace = true, features = ["std"] }
 solana-message = { path = ".", features = ["dev-context-only-utils"] }
 solana-nonce = { workspace = true }
+solana-system-interface = { workspace = true, features = ["bincode"] }
 static_assertions = { workspace = true }
 
 [lints]

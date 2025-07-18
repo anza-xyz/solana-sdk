@@ -19,7 +19,8 @@ use solana_frozen_abi_macro::{frozen_abi, AbiExample};
 use wasm_bindgen::prelude::wasm_bindgen;
 use {
     crate::{
-        compiled_instruction::CompiledInstruction, compiled_keys::CompiledKeys, MessageHeader,
+        compiled_instruction::CompiledInstruction, compiled_keys::CompiledKeys,
+        inline_nonce::advance_nonce_account_instruction, MessageHeader,
     },
     solana_hash::Hash,
     solana_instruction::Instruction,
@@ -430,17 +431,14 @@ impl Message {
     /// # create_offline_initialize_tx(&client, program_id, &payer)?;
     /// # Ok::<(), anyhow::Error>(())
     /// ```
-    #[cfg(feature = "bincode")]
     pub fn new_with_nonce(
         mut instructions: Vec<Instruction>,
         payer: Option<&Pubkey>,
         nonce_account_pubkey: &Pubkey,
         nonce_authority_pubkey: &Pubkey,
     ) -> Self {
-        let nonce_ix = solana_system_interface::instruction::advance_nonce_account(
-            nonce_account_pubkey,
-            nonce_authority_pubkey,
-        );
+        let nonce_ix =
+            advance_nonce_account_instruction(nonce_account_pubkey, nonce_authority_pubkey);
         instructions.insert(0, nonce_ix);
         Self::new(&instructions, payer)
     }

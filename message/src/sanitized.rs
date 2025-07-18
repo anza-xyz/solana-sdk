@@ -324,14 +324,7 @@ impl SanitizedMessage {
                     _ => false,
                 },
             )
-            .filter(|ix| {
-                matches!(
-                    solana_bincode::limited_deserialize(
-                        &ix.data, 4 /* serialized size of AdvanceNonceAccount */
-                    ),
-                    Ok(solana_system_interface::instruction::SystemInstruction::AdvanceNonceAccount)
-                )
-            })
+            .filter(|ix| crate::inline_nonce::is_advance_nonce_instruction_data(&ix.data))
             .and_then(|ix| {
                 ix.accounts.first().and_then(|idx| {
                     let idx = *idx as usize;

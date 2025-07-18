@@ -11,10 +11,9 @@ use {
 };
 #[cfg(feature = "bincode")]
 use {
-    solana_bincode::limited_deserialize,
+    solana_message::inline_nonce::is_advance_nonce_instruction_data,
     solana_sdk_ids::system_program,
     solana_signer::{signers::Signers, SignerError},
-    solana_system_interface::instruction::SystemInstruction,
 };
 
 pub mod sanitized;
@@ -216,12 +215,7 @@ impl VersionedTransaction {
                 matches!(
                     message.static_account_keys().get(instruction.program_id_index as usize),
                     Some(program_id) if system_program::check_id(program_id)
-                )
-                // Is a nonce advance instruction
-                && matches!(
-                    limited_deserialize(&instruction.data, crate::PACKET_DATA_SIZE as u64,),
-                    Ok(SystemInstruction::AdvanceNonceAccount)
-                )
+                ) && is_advance_nonce_instruction_data(&instruction.data)
             })
             .is_some()
     }
