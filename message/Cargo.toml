@@ -15,10 +15,7 @@ all-features = true
 rustdoc-args = ["--cfg=docsrs"]
 
 [features]
-bincode = [
-    "dep:bincode",
-    "serde",
-]
+bincode = ["dep:bincode", "serde"]
 blake3 = ["dep:blake3"]
 dev-context-only-utils = ["bincode", "blake3"]
 frozen-abi = [
