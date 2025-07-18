@@ -48,7 +48,7 @@ frozen-abi = [
 memoffset = { workspace = true }
 solana-account-info = { workspace = true, features = ["bincode"] }
 solana-big-mod-exp = { workspace = true }
-solana-blake3-hasher = { workspace = true, features = ["offchain"] }
+solana-blake3-hasher = { workspace = true, features = ["blake3"] }
 solana-borsh = { workspace = true, optional = true }
 solana-clock = { workspace = true, features = ["serde", "sysvar"] }
 solana-cpi = { workspace = true }
@@ -70,7 +70,7 @@ solana-instruction = { workspace = true, default-features = false, features = [
 ] }
 solana-instruction-error = { workspace = true, features = ["num-traits"] }
 solana-instructions-sysvar = { workspace = true }
-solana-keccak-hasher = { workspace = true, features = ["offchain"] }
+solana-keccak-hasher = { workspace = true, features = ["sha3"] }
 solana-last-restart-slot = { workspace = true, features = ["serde", "sysvar"] }
 solana-msg = { workspace = true }
 solana-native-token = { workspace = true }
@@ -85,7 +85,7 @@ solana-sdk-ids = { workspace = true }
 solana-secp256k1-recover = { workspace = true }
 solana-serde-varint = { workspace = true }
 solana-serialize-utils = { workspace = true }
-solana-sha256-hasher = { workspace = true, features = ["offchain"] }
+solana-sha256-hasher = { workspace = true, features = ["sha2"] }
 solana-short-vec = { workspace = true }
 solana-slot-hashes = { workspace = true, features = ["serde", "sysvar"] }
 solana-slot-history = { workspace = true, features = ["serde", "sysvar"] }

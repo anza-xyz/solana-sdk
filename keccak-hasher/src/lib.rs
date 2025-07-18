@@ -4,17 +4,17 @@
 #![cfg_attr(docsrs, feature(doc_auto_cfg))]
 #![no_std]
 
-#[cfg(all(feature = "offchain", not(target_os = "solana")))]
+#[cfg(all(feature = "sha3", not(target_os = "solana")))]
 use sha3::{Digest, Keccak256};
 pub use solana_hash::{Hash, ParseHashError, HASH_BYTES, MAX_BASE58_LEN};
 
 #[derive(Clone, Default)]
-#[cfg(all(feature = "offchain", not(target_os = "solana")))]
+#[cfg(all(feature = "sha3", not(target_os = "solana")))]
 pub struct Hasher {
     hasher: Keccak256,
 }
 
-#[cfg(all(feature = "offchain", not(target_os = "solana")))]
+#[cfg(all(feature = "sha3", not(target_os = "solana")))]
 impl Hasher {
     pub fn hash(&mut self, val: &[u8]) {
         self.hasher.update(val);
@@ -35,16 +35,16 @@ pub fn hashv(vals: &[&[u8]]) -> Hash {
     // not supported
     #[cfg(not(target_os = "solana"))]
     {
-        #[cfg(feature = "offchain")]
+        #[cfg(feature = "sha3")]
         {
             let mut hasher = Hasher::default();
             hasher.hashv(vals);
             hasher.result()
         }
-        #[cfg(not(feature = "offchain"))]
+        #[cfg(not(feature = "sha3"))]
         {
             core::hint::black_box(vals);
-            panic!("hashv is only available on target `solana` or with the `offchain` feature enabled on this crate")
+            panic!("hashv is only available on target `solana` or with the `sha3` feature enabled on this crate")
         }
     }
     // Call via a system call to perform the calculation

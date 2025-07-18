@@ -15,7 +15,7 @@ all-features = true
 rustdoc-args = ["--cfg=docsrs"]
 
 [features]
-offchain = ["dep:blake3"]
+blake3 = ["dep:blake3"]
 
 [dependencies]
 solana-hash = { workspace = true }
@@ -27,7 +27,7 @@ blake3 = { workspace = true, optional = true }
 solana-define-syscall = { workspace = true }
 
 [dev-dependencies]
-solana-blake3-hasher = { path = ".", features = ["offchain"] }
+solana-blake3-hasher = { path = ".", features = ["blake3"] }
 
 [lints]
 workspace = true
