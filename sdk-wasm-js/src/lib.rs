@@ -1,17 +1,22 @@
 //! solana-program Javascript interface
 #![cfg(target_arch = "wasm32")]
 
-#[deprecated(since = "2.2.0", note = "Use solana_instruction::wasm instead.")]
-pub use solana_instruction::wasm as instructions;
-use {::log::Level, wasm_bindgen::prelude::*};
+use log::Level;
 pub use {
-    solana_hash::*, solana_instruction::*, solana_keypair::*, solana_pubkey::*,
+    solana_hash::*,
+    solana_instruction::*,
+    solana_keypair::*,
+    solana_pubkey::*,
     solana_transaction::*,
+    wasm_bindgen::prelude::{wasm_bindgen, JsValue},
 };
 
-// This module is intentionally left empty. The wasm system instruction impl can be
-// found in the `solana-system-interface` crate.
-pub mod system_instruction {}
+pub mod hash;
+pub mod instruction;
+pub mod keypair;
+pub mod message;
+pub mod pubkey;
+pub mod transaction;
 
 /// Initialize Javascript logging and panic handler
 #[wasm_bindgen]

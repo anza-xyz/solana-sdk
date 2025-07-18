@@ -10,7 +10,7 @@ license = { workspace = true }
 edition = { workspace = true }
 
 [package.metadata.docs.rs]
-targets = ["x86_64-unknown-linux-gnu", "wasm32-unknown-unknown"]
+targets = ["x86_64-unknown-linux-gnu"]
 all-features = true
 rustdoc-args = ["--cfg=docsrs"]
 
@@ -37,10 +37,6 @@ solana-frozen-abi = { workspace = true, optional = true }
 solana-frozen-abi-macro = { workspace = true, optional = true }
 solana-instruction-error = { workspace = true, features = ["num-traits"] }
 solana-pubkey = { workspace = true, default-features = false }
-
-[target.'cfg(target_arch = "wasm32")'.dependencies]
-getrandom = { workspace = true, features = ["js", "wasm-bindgen"] }
-wasm-bindgen = { workspace = true }
 
 [target.'cfg(target_os = "solana")'.dependencies]
 solana-define-syscall = { workspace = true }

@@ -4,7 +4,7 @@
 #![cfg_attr(feature = "frozen-abi", feature(min_specialization))]
 #![allow(clippy::arithmetic_side_effects)]
 
-#[cfg(any(feature = "std", target_arch = "wasm32"))]
+#[cfg(feature = "std")]
 extern crate std;
 #[cfg(feature = "dev-context-only-utils")]
 use arbitrary::Arbitrary;
@@ -12,7 +12,7 @@ use arbitrary::Arbitrary;
 use bytemuck_derive::{Pod, Zeroable};
 #[cfg(feature = "serde")]
 use serde_derive::{Deserialize, Serialize};
-#[cfg(any(feature = "std", target_arch = "wasm32"))]
+#[cfg(feature = "std")]
 use std::vec::Vec;
 #[cfg(feature = "borsh")]
 use {
@@ -30,11 +30,6 @@ use {
     },
     num_traits::{FromPrimitive, ToPrimitive},
     solana_program_error::ProgramError,
-};
-#[cfg(target_arch = "wasm32")]
-use {
-    js_sys::{Array, Uint8Array},
-    wasm_bindgen::{prelude::wasm_bindgen, JsCast, JsValue},
 };
 
 #[cfg(target_os = "solana")]
@@ -155,7 +150,6 @@ impl From<PubkeyError> for ProgramError {
 /// [ed25519]: https://ed25519.cr.yp.to/
 /// [pdas]: https://solana.com/docs/core/cpi#program-derived-addresses
 /// [`Keypair`]: https://docs.rs/solana-sdk/latest/solana_sdk/signer/keypair/struct.Keypair.html
-#[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
 #[repr(transparent)]
 #[cfg_attr(feature = "frozen-abi", derive(solana_frozen_abi_macro::AbiExample))]
 #[cfg_attr(
@@ -429,7 +423,7 @@ impl TryFrom<&[u8]> for Pubkey {
     }
 }
 
-#[cfg(any(feature = "std", target_arch = "wasm32"))]
+#[cfg(feature = "std")]
 impl TryFrom<Vec<u8>> for Pubkey {
     type Error = Vec<u8>;
 
@@ -483,16 +477,16 @@ impl Pubkey {
         type T = u32;
         const COUNTER_BYTES: usize = mem::size_of::<T>();
         let mut b = [0u8; PUBKEY_BYTES];
-        #[cfg(any(feature = "std", target_arch = "wasm32"))]
+        #[cfg(feature = "std")]
         let mut i = I.fetch_add(1) as T;
-        #[cfg(not(any(feature = "std", target_arch = "wasm32")))]
+        #[cfg(not(feature = "std"))]
         let i = I.fetch_add(1) as T;
         // use big endian representation to ensure that recent unique pubkeys
         // are always greater than less recent unique pubkeys.
         b[0..COUNTER_BYTES].copy_from_slice(&i.to_be_bytes());
         // fill the rest of the pubkey with pseudorandom numbers to make
         // data statistically similar to real pubkeys.
-        #[cfg(any(feature = "std", target_arch = "wasm32"))]
+        #[cfg(feature = "std")]
         {
             let mut hash = std::hash::DefaultHasher::new();
             for slice in b[COUNTER_BYTES..].chunks_mut(COUNTER_BYTES) {
@@ -503,7 +497,7 @@ impl Pubkey {
         }
         // if std is not available, just replicate last byte of the counter.
         // this is not as good as a proper hash, but at least it is uniform
-        #[cfg(not(any(feature = "std", target_arch = "wasm32")))]
+        #[cfg(not(feature = "std"))]
         {
             for b in b[COUNTER_BYTES..].iter_mut() {
                 *b = (i & 0xFF) as u8;
@@ -1005,133 +999,6 @@ impl fmt::Debug for Pubkey {
 impl fmt::Display for Pubkey {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write_as_base58(f, self)
-    }
-}
-
-#[cfg(all(target_arch = "wasm32", feature = "curve25519"))]
-fn js_value_to_seeds_vec(array_of_uint8_arrays: &[JsValue]) -> Result<Vec<Vec<u8>>, JsValue> {
-    let vec_vec_u8 = array_of_uint8_arrays
-        .iter()
-        .filter_map(|u8_array| {
-            u8_array
-                .dyn_ref::<Uint8Array>()
-                .map(|u8_array| u8_array.to_vec())
-        })
-        .collect::<Vec<_>>();
-
-    if vec_vec_u8.len() != array_of_uint8_arrays.len() {
-        Err("Invalid Array of Uint8Arrays".into())
-    } else {
-        Ok(vec_vec_u8)
-    }
-}
-
-#[cfg(target_arch = "wasm32")]
-fn display_to_jsvalue<T: fmt::Display>(display: T) -> JsValue {
-    std::string::ToString::to_string(&display).into()
-}
-
-#[allow(non_snake_case)]
-#[cfg(target_arch = "wasm32")]
-#[wasm_bindgen]
-impl Pubkey {
-    /// Create a new Pubkey object
-    ///
-    /// * `value` - optional public key as a base58 encoded string, `Uint8Array`, `[number]`
-    #[wasm_bindgen(constructor)]
-    pub fn constructor(value: JsValue) -> Result<Pubkey, JsValue> {
-        if let Some(base58_str) = value.as_string() {
-            base58_str.parse::<Pubkey>().map_err(display_to_jsvalue)
-        } else if let Some(uint8_array) = value.dyn_ref::<Uint8Array>() {
-            Pubkey::try_from(uint8_array.to_vec())
-                .map_err(|err| JsValue::from(std::format!("Invalid Uint8Array pubkey: {err:?}")))
-        } else if let Some(array) = value.dyn_ref::<Array>() {
-            let mut bytes = std::vec![];
-            let iterator = js_sys::try_iter(&array.values())?.expect("array to be iterable");
-            for x in iterator {
-                let x = x?;
-
-                if let Some(n) = x.as_f64() {
-                    if n >= 0. && n <= 255. {
-                        bytes.push(n as u8);
-                        continue;
-                    }
-                }
-                return Err(std::format!("Invalid array argument: {:?}", x).into());
-            }
-            Pubkey::try_from(bytes)
-                .map_err(|err| JsValue::from(std::format!("Invalid Array pubkey: {err:?}")))
-        } else if value.is_undefined() {
-            Ok(Pubkey::default())
-        } else {
-            Err("Unsupported argument".into())
-        }
-    }
-
-    /// Return the base58 string representation of the public key
-    pub fn toString(&self) -> std::string::String {
-        std::string::ToString::to_string(self)
-    }
-
-    /// Check if a `Pubkey` is on the ed25519 curve.
-    #[cfg(feature = "curve25519")]
-    pub fn isOnCurve(&self) -> bool {
-        self.is_on_curve()
-    }
-
-    /// Checks if two `Pubkey`s are equal
-    pub fn equals(&self, other: &Pubkey) -> bool {
-        self == other
-    }
-
-    /// Return the `Uint8Array` representation of the public key
-    pub fn toBytes(&self) -> std::boxed::Box<[u8]> {
-        self.0.clone().into()
-    }
-
-    /// Derive a Pubkey from another Pubkey, string seed, and a program id
-    #[cfg(feature = "sha2")]
-    pub fn createWithSeed(base: &Pubkey, seed: &str, owner: &Pubkey) -> Result<Pubkey, JsValue> {
-        Pubkey::create_with_seed(base, seed, owner).map_err(display_to_jsvalue)
-    }
-
-    /// Derive a program address from seeds and a program id
-    #[cfg(feature = "curve25519")]
-    pub fn createProgramAddress(
-        seeds: std::boxed::Box<[JsValue]>,
-        program_id: &Pubkey,
-    ) -> Result<Pubkey, JsValue> {
-        let seeds_vec = js_value_to_seeds_vec(&seeds)?;
-        let seeds_slice = seeds_vec
-            .iter()
-            .map(|seed| seed.as_slice())
-            .collect::<Vec<_>>();
-
-        Pubkey::create_program_address(seeds_slice.as_slice(), program_id)
-            .map_err(display_to_jsvalue)
-    }
-
-    /// Find a valid program address
-    ///
-    /// Returns:
-    /// * `[PubKey, number]` - the program address and bump seed
-    #[cfg(feature = "curve25519")]
-    pub fn findProgramAddress(
-        seeds: std::boxed::Box<[JsValue]>,
-        program_id: &Pubkey,
-    ) -> Result<JsValue, JsValue> {
-        let seeds_vec = js_value_to_seeds_vec(&seeds)?;
-        let seeds_slice = seeds_vec
-            .iter()
-            .map(|seed| seed.as_slice())
-            .collect::<Vec<_>>();
-
-        let (address, bump_seed) = Pubkey::find_program_address(seeds_slice.as_slice(), program_id);
-
-        let result = Array::new_with_length(2);
-        result.set(0, address.into());
-        result.set(1, bump_seed.into());
-        Ok(result.into())
     }
 }
 
