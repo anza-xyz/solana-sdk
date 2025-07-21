@@ -3,15 +3,20 @@
 //! On-chain programs can use this API to retrieve the total stake for the
 //! current epoch or the stake for a specific vote account using the
 //! `sol_get_epoch_stake` syscall.
-//!
-//! This crate is only available for on-chain usage (`target_os = "solana"`).
-//! For off-chain usage, use the epoch stake functionality in `solana-program`.
 
-#![cfg(target_os = "solana")]
 use solana_pubkey::Pubkey;
 
 fn get_epoch_stake(var_addr: *const u8) -> u64 {
-    unsafe { solana_define_syscall::definitions::sol_get_epoch_stake(var_addr) }
+    #[cfg(target_os = "solana")]
+    {
+        unsafe { solana_define_syscall::definitions::sol_get_epoch_stake(var_addr) }
+    }
+
+    #[cfg(not(target_os = "solana"))]
+    {
+        core::hint::black_box(var_addr);
+        0
+    }
 }
 
 /// Get the current epoch's total stake.
