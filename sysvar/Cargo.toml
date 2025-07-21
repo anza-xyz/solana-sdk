@@ -70,7 +70,6 @@ solana-sysvar-id = { workspace = true }
 [target.'cfg(not(target_os = "solana"))'.dependencies]
 base64 = { workspace = true }
 solana-program-memory = { workspace = true }
-solana-program-stubs = { workspace = true }
 
 [target.'cfg(target_os = "solana")'.dependencies]
 solana-define-syscall = { workspace = true }

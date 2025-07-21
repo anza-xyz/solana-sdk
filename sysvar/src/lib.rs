@@ -102,14 +102,7 @@ pub mod epoch_rewards;
 pub mod epoch_schedule;
 pub mod fees;
 pub mod last_restart_slot;
-#[cfg(not(target_os = "solana"))]
-pub use solana_program_stubs as program_stubs;
-#[cfg(target_os = "solana")]
-pub mod program_stubs {
-    // Empty module for backwards compatibility.
-    // Better to stub here than bring the deps from `solana-program-stubs`
-    // when `target_os` != "solana".
-}
+pub mod program_stubs;
 pub mod recent_blockhashes;
 pub mod rent;
 pub mod rewards;
@@ -209,7 +202,7 @@ macro_rules! impl_sysvar_get {
             let result = unsafe { $crate::__private::definitions::$syscall_name(var_addr) };
 
             #[cfg(not(target_os = "solana"))]
-            let result = solana_program_stubs::$syscall_name(var_addr);
+            let result = $crate::program_stubs::$syscall_name(var_addr);
 
             match result {
                 $crate::__private::SUCCESS => Ok(var),
@@ -242,7 +235,7 @@ fn get_sysvar(
     };
 
     #[cfg(not(target_os = "solana"))]
-    let result = solana_program_stubs::sol_get_sysvar(sysvar_id, var_addr, offset, length);
+    let result = crate::program_stubs::sol_get_sysvar(sysvar_id, var_addr, offset, length);
 
     match result {
         solana_program_entrypoint::SUCCESS => Ok(()),
@@ -254,11 +247,11 @@ fn get_sysvar(
 mod tests {
     use {
         super::*,
+        crate::program_stubs::{set_syscall_stubs, SyscallStubs},
         serde_derive::{Deserialize, Serialize},
         solana_clock::Epoch,
         solana_program_entrypoint::SUCCESS,
         solana_program_error::ProgramError,
-        solana_program_stubs::{set_syscall_stubs, SyscallStubs},
         solana_pubkey::Pubkey,
         std::{cell::RefCell, rc::Rc},
     };
