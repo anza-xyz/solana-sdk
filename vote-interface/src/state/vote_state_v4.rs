@@ -4,6 +4,8 @@ use super::VoteStateVersions;
 use arbitrary::Arbitrary;
 #[cfg(feature = "serde")]
 use serde_derive::{Deserialize, Serialize};
+#[cfg(feature = "serde")]
+use serde_with::serde_as;
 #[cfg(feature = "frozen-abi")]
 use solana_frozen_abi_macro::{frozen_abi, AbiExample};
 #[cfg(any(target_os = "solana", feature = "bincode"))]
@@ -21,6 +23,7 @@ use {
     frozen_abi(digest = "6wQjgsg3yTmdwi5SLBzRhGXrGnNMCD8rwxmUSR8mPEe6"),
     derive(AbiExample)
 )]
+#[cfg_attr(feature = "serde", cfg_eval::cfg_eval, serde_as)]
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[derive(Debug, Default, PartialEq, Eq, Clone)]
 #[cfg_attr(feature = "dev-context-only-utils", derive(Arbitrary))]
@@ -46,7 +49,10 @@ pub struct VoteStateV4 {
     pub pending_delegator_rewards: u64,
 
     /// Compressed BLS pubkey for Alpenglow.
-    #[cfg_attr(feature = "serde", serde(with = "serde_bls_pubkey_compressed"))]
+    #[cfg_attr(
+        feature = "serde",
+        serde_as(as = "Option<[_; BLS_PUBKEY_COMPRESSED_BYTES]>")
+    )]
     pub bls_pubkey_compressed: Option<[u8; BLS_PUBKEY_COMPRESSED_BYTES]>,
 
     pub votes: VecDeque<LandedVote>,
@@ -231,110 +237,6 @@ impl VoteStateV4 {
             epoch_credits: vec![(0, 0, 0); MAX_EPOCH_CREDITS_HISTORY],
             authorized_voters,
             ..Self::default()
-        }
-    }
-}
-
-// Based off of serde's array impls. See:
-// https://github.com/serde-rs/serde/blob/babafa54d283fb087fa94f50a2cf82fa9e582a7c/serde/src/de/impls.rs#L1268
-#[cfg(feature = "serde")]
-mod serde_bls_pubkey_compressed {
-    #[cfg(feature = "frozen-abi")]
-    use solana_frozen_abi_macro::AbiExample;
-    use {
-        super::BLS_PUBKEY_COMPRESSED_BYTES,
-        serde::{
-            de::{Error, SeqAccess, Visitor},
-            ser::SerializeTuple,
-            Deserializer, Serialize, Serializer,
-        },
-        std::fmt,
-    };
-
-    pub fn serialize<S>(
-        value: &Option<[u8; BLS_PUBKEY_COMPRESSED_BYTES]>,
-        serializer: S,
-    ) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        match value {
-            Some(array) => serializer.serialize_some(&ArrayWrapper(array)),
-            None => serializer.serialize_none(),
-        }
-    }
-
-    pub fn deserialize<'de, D>(
-        deserializer: D,
-    ) -> Result<Option<[u8; BLS_PUBKEY_COMPRESSED_BYTES]>, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        deserializer.deserialize_option(BLSPubkeyVisitor)
-    }
-
-    #[cfg_attr(feature = "frozen-abi", derive(AbiExample))]
-    struct ArrayWrapper<'a>(&'a [u8; BLS_PUBKEY_COMPRESSED_BYTES]);
-
-    impl<'a> Serialize for ArrayWrapper<'a> {
-        fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-        where
-            S: Serializer,
-        {
-            let mut seq = serializer.serialize_tuple(BLS_PUBKEY_COMPRESSED_BYTES)?;
-            for element in self.0.iter() {
-                seq.serialize_element(element)?;
-            }
-            seq.end()
-        }
-    }
-
-    struct BLSPubkeyVisitor;
-
-    impl<'de> Visitor<'de> for BLSPubkeyVisitor {
-        type Value = Option<[u8; BLS_PUBKEY_COMPRESSED_BYTES]>;
-
-        fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-            formatter.write_str("an optional BLS pubkey")
-        }
-
-        fn visit_none<E>(self) -> Result<Self::Value, E>
-        where
-            E: Error,
-        {
-            Ok(None)
-        }
-
-        fn visit_some<D>(self, deserializer: D) -> Result<Self::Value, D::Error>
-        where
-            D: Deserializer<'de>,
-        {
-            deserializer
-                .deserialize_tuple(BLS_PUBKEY_COMPRESSED_BYTES, ArrayVisitor)
-                .map(Some)
-        }
-    }
-
-    struct ArrayVisitor;
-
-    impl<'de> Visitor<'de> for ArrayVisitor {
-        type Value = [u8; BLS_PUBKEY_COMPRESSED_BYTES];
-
-        fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-            formatter.write_str(&format!("an array of {BLS_PUBKEY_COMPRESSED_BYTES} bytes"))
-        }
-
-        fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
-        where
-            A: SeqAccess<'de>,
-        {
-            let mut array = [0u8; BLS_PUBKEY_COMPRESSED_BYTES];
-            for (i, element) in array.iter_mut().enumerate() {
-                *element = seq
-                    .next_element()?
-                    .ok_or_else(|| Error::invalid_length(i, &self))?;
-            }
-            Ok(array)
         }
     }
 }
