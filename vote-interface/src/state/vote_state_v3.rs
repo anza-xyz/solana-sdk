@@ -203,30 +203,6 @@ impl VoteStateV3 {
             1 => deserialize_vote_state_into_v3(&mut cursor, vote_state, false),
             // V3. the only difference from V1_14_11 is the addition of a slot-latency to each vote
             2 => deserialize_vote_state_into_v3(&mut cursor, vote_state, true),
-            // Current (V4). Convert to V3 through bincode
-            3 => {
-                #[cfg(not(target_os = "solana"))]
-                {
-                    // Safety: vote_state is valid as it comes from `&mut MaybeUninit<VoteStateV3>` or
-                    // `&mut VoteStateV3`. In the first case, the value is uninitialized so we write()
-                    // to avoid dropping invalid data; in the latter case, we `drop_in_place()`
-                    // before writing so the value has already been dropped and we just write a new
-                    // one in place.
-                    unsafe {
-                        vote_state.write(
-                            bincode::deserialize::<VoteStateVersions>(input)
-                                .map_err(|_| InstructionError::InvalidAccountData)
-                                .and_then(|versioned| versioned.try_convert_to_v3())?,
-                        );
-                    }
-                    Ok(())
-                }
-                #[cfg(target_os = "solana")]
-                {
-                    // For SBPF targets, for now we're just going to bail.
-                    Err(InstructionError::InvalidAccountData)
-                }
-            }
             _ => Err(InstructionError::InvalidAccountData),
         }?;
 

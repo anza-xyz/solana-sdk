@@ -53,8 +53,7 @@ pub struct VoteStateV4 {
     pub root_slot: Option<Slot>,
 
     /// The signer for vote transactions.
-    /// Unlike `VoteStateV3`, contains entries for the current epoch and the
-    /// previous epoch.
+    /// Contains entries for the current epoch and the previous epoch.
     pub authorized_voters: AuthorizedVoters,
 
     /// History of credits earned by the end of each epoch.
@@ -212,6 +211,27 @@ impl VoteStateV4 {
     pub fn is_correct_size_and_initialized(data: &[u8]) -> bool {
         data.len() == VoteStateV4::size_of() && data[..4] == [3, 0, 0, 0] // little-endian 3u32
                                                                           // Always initialized
+    }
+
+    #[cfg(test)]
+    pub(crate) fn get_max_sized_vote_state() -> Self {
+        use {
+            super::{MAX_EPOCH_CREDITS_HISTORY, MAX_LOCKOUT_HISTORY},
+            solana_epoch_schedule::MAX_LEADER_SCHEDULE_EPOCH_OFFSET,
+        };
+
+        let mut authorized_voters = AuthorizedVoters::default();
+        for i in 0..=MAX_LEADER_SCHEDULE_EPOCH_OFFSET {
+            authorized_voters.insert(i, Pubkey::new_unique());
+        }
+
+        Self {
+            votes: VecDeque::from(vec![LandedVote::default(); MAX_LOCKOUT_HISTORY]),
+            root_slot: Some(u64::MAX),
+            epoch_credits: vec![(0, 0, 0); MAX_EPOCH_CREDITS_HISTORY],
+            authorized_voters,
+            ..Self::default()
+        }
     }
 }
 

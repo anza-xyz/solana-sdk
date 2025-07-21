@@ -638,7 +638,7 @@ mod tests {
 
             // pure random data will ~never have a valid enum tag, so lets help it out
             if raw_data_length >= 4 && rng.gen::<bool>() {
-                let tag = rng.gen::<u8>() % 3;
+                let tag = rng.gen::<u8>() % 4;
                 raw_data[0] = tag;
                 raw_data[1] = 0;
                 raw_data[2] = 0;
@@ -650,8 +650,7 @@ mod tests {
             let mut test_vote_state = MaybeUninit::uninit();
             let test_res = VoteStateV3::deserialize_into_uninit(&raw_data, &mut test_vote_state);
 
-            // `deserialize_into_uninit` will eventually call into
-            // `try_convert_to_v3`, so we have alignment in the following map.
+            // Test with bincode for consistency.
             let bincode_res = bincode::deserialize::<VoteStateVersions>(&raw_data)
                 .map_err(|_| InstructionError::InvalidAccountData)
                 .and_then(|versioned| versioned.try_convert_to_v3());
@@ -684,7 +683,7 @@ mod tests {
 
             // pure random data will ~never have a valid enum tag, so lets help it out
             if raw_data_length >= 4 && rng.gen::<bool>() {
-                let tag = rng.gen::<u8>() % 3;
+                let tag = rng.gen::<u8>() % 4;
                 raw_data[0] = tag;
                 raw_data[1] = 0;
                 raw_data[2] = 0;
@@ -721,7 +720,7 @@ mod tests {
             let original_buf = bincode::serialize(&original_vote_state_versions).unwrap();
 
             // Skip any v4 since they can't convert to v3.
-            if original_vote_state_versions.try_convert_to_v3().is_ok() {
+            if !matches!(original_vote_state_versions, VoteStateVersions::V4(_)) {
                 let mut truncated_buf = original_buf.clone();
                 let mut expanded_buf = original_buf.clone();
 
@@ -1142,6 +1141,11 @@ mod tests {
         let vote_state = VoteStateVersions::new_v3(vote_state);
         let size = serialized_size(&vote_state).unwrap();
         assert_eq!(VoteStateV3::size_of() as u64, size);
+
+        let vote_state = VoteStateV4::get_max_sized_vote_state();
+        let vote_state = VoteStateVersions::new_v4(vote_state);
+        let size = serialized_size(&vote_state).unwrap();
+        assert!(size < VoteStateV4::size_of() as u64); // v4 is smaller than the max size
     }
 
     #[test]
