@@ -15,13 +15,10 @@ all-features = true
 rustdoc-args = ["--cfg=docsrs"]
 
 [dependencies]
-solana-pubkey = { workspace = true }
-
-[target.'cfg(not(target_os = "solana"))'.dependencies]
-solana-program-stubs = { workspace = true }
 
 [target.'cfg(target_os = "solana")'.dependencies]
 solana-define-syscall = { workspace = true }
+solana-pubkey = { workspace = true }
 
 [lints]
 workspace = true

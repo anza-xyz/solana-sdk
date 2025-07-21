@@ -3053,7 +3053,6 @@ name = "solana-epoch-stake"
 version = "2.2.1"
 dependencies = [
  "solana-define-syscall",
- "solana-program-stubs",
  "solana-pubkey",
 ]
 
