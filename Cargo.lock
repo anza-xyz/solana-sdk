@@ -3426,7 +3426,6 @@ dependencies = [
  "serde_derive",
  "serde_json",
  "solana-address-lookup-table-interface",
- "solana-bincode",
  "solana-example-mocks",
  "solana-frozen-abi",
  "solana-frozen-abi-macro",

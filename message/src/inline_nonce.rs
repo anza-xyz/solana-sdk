@@ -56,11 +56,8 @@ mod test {
 
     #[test]
     fn test_advance_nonce_ix_prefix() {
-        let advance_nonce_ix: SystemInstruction = solana_bincode::limited_deserialize(
-            &ADVANCE_NONCE_DATA[..],
-            4, /* serialized size of AdvanceNonceAccount */
-        )
-        .unwrap();
+        let advance_nonce_ix: SystemInstruction =
+            bincode::deserialize(&ADVANCE_NONCE_DATA).unwrap();
         assert_eq!(advance_nonce_ix, SystemInstruction::AdvanceNonceAccount);
     }
 }
