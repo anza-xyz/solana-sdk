@@ -1,12 +1,17 @@
 //! Error types
-use {
-    solana_msg::msg,
-    solana_program_error::{PrintProgramError, ProgramError},
-};
+use solana_program_error::{ProgramError, ToStr};
 
 /// Errors that may be returned by the spl-pod library.
 #[repr(u32)]
-#[derive(Debug, Clone, PartialEq, Eq, thiserror::Error, num_derive::FromPrimitive)]
+#[derive(
+    Debug,
+    Clone,
+    PartialEq,
+    Eq,
+    thiserror::Error,
+    num_enum::TryFromPrimitive,
+    num_derive::FromPrimitive,
+)]
 pub enum PodSliceError {
     /// Error in checked math operation
     #[error("Error in checked math operation")]
@@ -25,27 +30,12 @@ impl From<PodSliceError> for ProgramError {
     }
 }
 
-impl<T> solana_decode_error::DecodeError<T> for PodSliceError {
-    fn type_of() -> &'static str {
-        "PodSliceError"
-    }
-}
-
-impl PrintProgramError for PodSliceError {
-    fn print<E>(&self)
-    where
-        E: 'static + std::error::Error + PrintProgramError + num_traits::FromPrimitive,
-    {
+impl ToStr for PodSliceError {
+    fn to_str<E>(&self) -> &'static str {
         match self {
-            PodSliceError::CalculationFailure => {
-                msg!("Error in checked math operation")
-            }
-            PodSliceError::BufferTooSmall => {
-                msg!("Provided byte buffer too small for expected type")
-            }
-            PodSliceError::BufferTooLarge => {
-                msg!("Provided byte buffer too large for expected type")
-            }
+            PodSliceError::CalculationFailure => "Error in checked math operation",
+            PodSliceError::BufferTooSmall => "Provided byte buffer too small for expected type",
+            PodSliceError::BufferTooLarge => "Provided byte buffer too large for expected type",
         }
     }
 }

@@ -16,11 +16,10 @@ borsh = { version = "1.5.7", features = ["derive", "unstable__schema"], optional
 bytemuck = { version = "1.23.1" }
 bytemuck_derive = { version = "1.10.0" }
 num-derive = "0.4"
+num_enum = "0.7"
 num-traits = "0.2"
 serde = { version = "1.0.219", optional = true }
-solana-decode-error = "2.2.1"
-solana-msg = "2.2.1"
-solana-program-error = "2.2.1"
+solana-program-error = "2.2.2"
 solana-program-option = "2.2.1"
 solana-pubkey = "2.2.1"
 solana-zk-sdk = "2.2.0"
