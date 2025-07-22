@@ -3,6 +3,10 @@
 use sha2::{Digest, Sha256};
 use solana_hash::Hash;
 
+// Only include x86_shani_single_hash_optimized if we are on x86_64 (and not on chain)
+#[cfg(all(target_arch = "x86_64", not(target_os = "solana")))]
+mod x86_shani_single_hash_optimized;
+
 #[cfg(any(feature = "sha2", not(target_os = "solana")))]
 #[derive(Clone, Default)]
 pub struct Hasher {
@@ -28,8 +32,20 @@ impl Hasher {
 #[cfg(target_os = "solana")]
 pub use solana_define_syscall::definitions::sol_sha256;
 
+#[inline(always)]
 /// Return a Sha256 hash for the given data.
 pub fn hashv(vals: &[&[u8]]) -> Hash {
+
+    #[cfg(all(target_arch = "x86_64", not(target_os = "solana")))]
+    {
+        if vals.len() == 1 && vals[0].len() == 32 {
+            // Since we know the array contains a single block of 32 bytes, we can use the 
+            // optimized version of the hasher
+            let block = unsafe { &*(vals[0].as_ptr() as *const [u8; 32]) };
+            return x86_shani_single_hash_optimized::single_hash_32(block).into();
+        }
+    }
+
     // Perform the calculation inline, calling this from within a program is
     // not supported
     #[cfg(not(target_os = "solana"))]
