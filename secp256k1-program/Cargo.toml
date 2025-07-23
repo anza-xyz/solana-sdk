@@ -43,7 +43,7 @@ solana-account-info = { workspace = true }
 solana-example-mocks = { path = "../example-mocks" }
 solana-instruction = { workspace = true }
 solana-instructions-sysvar = { workspace = true }
-solana-keccak-hasher = { workspace = true }
+solana-keccak-hasher = { workspace = true, features = ["sha3"] }
 solana-msg = { workspace = true }
 solana-program-error = { workspace = true }
 solana-secp256k1-program = { path = ".", features = ["bincode"] }
