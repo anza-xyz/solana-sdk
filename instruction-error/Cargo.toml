@@ -3,6 +3,7 @@ name = "solana-instruction-error"
 description = "Solana InstructionError type."
 documentation = "https://docs.rs/solana-instruction-error"
 version = "1.0.0"
+rust-version = "1.81.0"
 authors = { workspace = true }
 repository = { workspace = true }
 homepage = { workspace = true }

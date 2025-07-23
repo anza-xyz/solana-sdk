@@ -3,6 +3,7 @@ name = "solana-pubkey"
 description = "Solana account addresses"
 documentation = "https://docs.rs/solana-pubkey"
 version = "2.4.0"
+rust-version = "1.81.0"
 authors = { workspace = true }
 repository = { workspace = true }
 homepage = { workspace = true }

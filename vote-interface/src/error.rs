@@ -32,7 +32,7 @@ pub enum VoteError {
     AssertionFailed,
 }
 
-impl std::error::Error for VoteError {}
+impl core::error::Error for VoteError {}
 
 impl fmt::Display for VoteError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {

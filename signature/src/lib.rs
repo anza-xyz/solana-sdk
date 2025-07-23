@@ -12,8 +12,9 @@ use core::{
 extern crate alloc;
 #[cfg(feature = "std")]
 extern crate std;
+use core::error::Error;
 #[cfg(feature = "std")]
-use std::{error::Error, vec::Vec};
+use std::vec::Vec;
 #[cfg(feature = "serde")]
 use {
     serde_big_array::BigArray,
@@ -139,7 +140,6 @@ pub enum ParseSignatureError {
     Invalid,
 }
 
-#[cfg(feature = "std")]
 impl Error for ParseSignatureError {}
 
 impl fmt::Display for ParseSignatureError {

@@ -120,7 +120,7 @@ impl Keypair {
     pub fn write_json_file<F: AsRef<Path>>(
         &self,
         outfile: F,
-    ) -> Result<String, Box<dyn std::error::Error>> {
+    ) -> Result<String, Box<dyn core::error::Error>> {
         let outfile = outfile.as_ref();
 
         if let Some(outdir) = outfile.parent() {

@@ -126,7 +126,7 @@ pub enum ParseCommitmentLevelError {
     Invalid,
 }
 
-impl std::error::Error for ParseCommitmentLevelError {}
+impl core::error::Error for ParseCommitmentLevelError {}
 
 impl fmt::Display for ParseCommitmentLevelError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {

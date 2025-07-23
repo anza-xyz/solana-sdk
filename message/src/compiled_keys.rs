@@ -27,7 +27,7 @@ pub enum CompileError {
     UnknownInstructionKey(Pubkey),
 }
 
-impl std::error::Error for CompileError {}
+impl core::error::Error for CompileError {}
 
 impl fmt::Display for CompileError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
