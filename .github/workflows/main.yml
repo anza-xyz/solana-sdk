@@ -405,8 +405,14 @@ jobs:
       - name: Setup Environment
         uses: ./.github/actions/setup
         with:
-          cargo-cache-key: cargo-stable-doc
-          cargo-cache-fallback-key: cargo-stable
+          nightly-toolchain: true
+          cargo-cache-key: cargo-nightly-doc
+          cargo-cache-fallback-key: cargo-nightly
+
+      - name: Install cargo-hack
+        uses: taiki-e/cache-cargo-install-action@v2
+        with:
+          tool: cargo-hack
 
       - name: Run doc tests
         run: ./scripts/test-doc.sh
