@@ -5,7 +5,7 @@
 pub use solana_instruction::wasm as instructions;
 use {::log::Level, wasm_bindgen::prelude::*};
 pub use {
-    solana_hash::*, solana_instruction::*, solana_keypair::*, solana_pubkey::*,
+    solana_address::*, solana_hash::*, solana_instruction::*, solana_keypair::*,
     solana_transaction::*,
 };
 

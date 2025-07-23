@@ -18,10 +18,10 @@ rustdoc-args = ["--cfg=docsrs"]
 crate-type = ["cdylib"]
 
 [dependencies]
+solana-address = { workspace = true, features = ["curve25519", "sha2", "wasmbind"] }
 solana-hash = { workspace = true }
 solana-instruction = { workspace = true, features = ["std"] }
 solana-keypair = { workspace = true }
-solana-pubkey = { workspace = true, features = ["curve25519", "sha2"] }
 solana-transaction = { workspace = true, features = ["bincode", "verify"] }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]

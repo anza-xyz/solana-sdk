@@ -2,6 +2,7 @@
 members = [
     "account",
     "account-info",
+    "address",
     "address-lookup-table-interface",
     "atomic-u64",
     "base3-encoding",
@@ -209,6 +210,7 @@ signal-hook = "0.3.17"
 siphasher = "0.3.11"
 solana-account = { path = "account", version = "2.2.1" }
 solana-account-info = { path = "account-info", version = "2.2.1" }
+solana-address = { path = "address", version = "0.1.0" }
 solana-address-lookup-table-interface = { path = "address-lookup-table-interface", version = "2.2.2" }
 solana-atomic-u64 = { path = "atomic-u64", version = "2.2.1" }
 solana-base3-encoding = { path = "base3-encoding", version = "0.1.0" }

@@ -2800,6 +2800,42 @@ dependencies = [
 ]
 
 [[package]]
+name = "solana-address"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "arbitrary",
+ "borsh",
+ "bytemuck",
+ "bytemuck_derive",
+ "curve25519-dalek 4.1.3",
+ "five8",
+ "five8_const",
+ "js-sys",
+ "num-traits",
+ "rand 0.8.5",
+ "serde",
+ "serde_derive",
+ "solana-account-info",
+ "solana-address",
+ "solana-atomic-u64",
+ "solana-cpi",
+ "solana-define-syscall",
+ "solana-example-mocks",
+ "solana-frozen-abi",
+ "solana-frozen-abi-macro",
+ "solana-hash",
+ "solana-instruction",
+ "solana-program-error",
+ "solana-sanitize",
+ "solana-sha256-hasher",
+ "solana-system-interface",
+ "strum",
+ "strum_macros",
+ "wasm-bindgen",
+]
+
+[[package]]
 name = "solana-address-lookup-table-interface"
 version = "2.2.2"
 dependencies = [
@@ -3648,37 +3684,7 @@ dependencies = [
 name = "solana-pubkey"
 version = "2.4.0"
 dependencies = [
- "anyhow",
- "arbitrary",
- "borsh",
- "bs58",
- "bytemuck",
- "bytemuck_derive",
- "curve25519-dalek 4.1.3",
- "five8",
- "five8_const",
- "js-sys",
- "num-traits",
- "rand 0.8.5",
- "serde",
- "serde_derive",
- "solana-account-info",
- "solana-atomic-u64",
- "solana-cpi",
- "solana-define-syscall",
- "solana-example-mocks",
- "solana-frozen-abi",
- "solana-frozen-abi-macro",
- "solana-hash",
- "solana-instruction",
- "solana-program-error",
- "solana-pubkey",
- "solana-sanitize",
- "solana-sha256-hasher",
- "solana-system-interface",
- "strum",
- "strum_macros",
- "wasm-bindgen",
+ "solana-address",
 ]
 
 [[package]]
@@ -3808,10 +3814,10 @@ dependencies = [
  "console_log",
  "getrandom 0.1.16",
  "log",
+ "solana-address",
  "solana-hash",
  "solana-instruction",
  "solana-keypair",
- "solana-pubkey",
  "solana-transaction",
  "wasm-bindgen",
 ]
