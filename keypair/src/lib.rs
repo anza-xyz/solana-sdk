@@ -271,7 +271,7 @@ pub fn keypair_from_seed(seed: &[u8]) -> Result<Keypair, Box<dyn error::Error>> 
 pub fn keypair_from_seed_phrase_and_passphrase(
     seed_phrase: &str,
     passphrase: &str,
-) -> Result<Keypair, Box<dyn std::error::Error>> {
+) -> Result<Keypair, Box<dyn core::error::Error>> {
     keypair_from_seed(&generate_seed_from_seed_phrase_and_passphrase(
         seed_phrase,
         passphrase,

@@ -142,7 +142,7 @@ pub enum TransactionError {
     CommitCancelled,
 }
 
-impl std::error::Error for TransactionError {}
+impl core::error::Error for TransactionError {}
 
 impl fmt::Display for TransactionError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -268,7 +268,7 @@ pub enum AddressLoaderError {
 }
 
 #[cfg(not(target_os = "solana"))]
-impl std::error::Error for AddressLoaderError {}
+impl core::error::Error for AddressLoaderError {}
 
 #[cfg(not(target_os = "solana"))]
 impl fmt::Display for AddressLoaderError {
@@ -314,8 +314,8 @@ pub enum SanitizeMessageError {
 }
 
 #[cfg(not(target_os = "solana"))]
-impl std::error::Error for SanitizeMessageError {
-    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+impl core::error::Error for SanitizeMessageError {
+    fn source(&self) -> Option<&(dyn core::error::Error + 'static)> {
         match self {
             Self::IndexOutOfBounds => None,
             Self::ValueOutOfBounds => None,
@@ -365,8 +365,8 @@ pub enum TransportError {
 }
 
 #[cfg(not(target_os = "solana"))]
-impl std::error::Error for TransportError {
-    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+impl core::error::Error for TransportError {
+    fn source(&self) -> Option<&(dyn core::error::Error + 'static)> {
         match self {
             TransportError::IoError(e) => Some(e),
             TransportError::TransactionError(e) => Some(e),

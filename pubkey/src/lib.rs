@@ -103,8 +103,7 @@ impl FromPrimitive for PubkeyError {
     }
 }
 
-#[cfg(feature = "std")]
-impl std::error::Error for PubkeyError {}
+impl core::error::Error for PubkeyError {}
 
 impl fmt::Display for PubkeyError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -368,8 +367,7 @@ impl FromPrimitive for ParsePubkeyError {
     }
 }
 
-#[cfg(feature = "std")]
-impl std::error::Error for ParsePubkeyError {}
+impl core::error::Error for ParsePubkeyError {}
 
 impl fmt::Display for ParsePubkeyError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {

@@ -88,8 +88,7 @@ pub enum ProgramError {
     IncorrectAuthority,
 }
 
-#[cfg(feature = "std")]
-impl std::error::Error for ProgramError {}
+impl core::error::Error for ProgramError {}
 
 impl fmt::Display for ProgramError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {

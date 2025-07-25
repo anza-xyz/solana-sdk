@@ -78,7 +78,7 @@ mod target_arch {
     pub fn sign_message(
         message: &[u8],
         priv_key_bytes_der: &[u8],
-    ) -> Result<[u8; SIGNATURE_SERIALIZED_SIZE], Box<dyn std::error::Error>> {
+    ) -> Result<[u8; SIGNATURE_SERIALIZED_SIZE], Box<dyn core::error::Error>> {
         let signing_key = EcKey::private_key_from_der(priv_key_bytes_der)?;
         if signing_key.group().curve_name() != Some(Nid::X9_62_PRIME256V1) {
             return Err(("Signing key must be on the secp256r1 curve".to_string()).into());

@@ -205,8 +205,7 @@ pub enum InstructionError {
     // conversions must also be added
 }
 
-#[cfg(feature = "std")]
-impl std::error::Error for InstructionError {}
+impl core::error::Error for InstructionError {}
 
 impl fmt::Display for InstructionError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -403,8 +402,7 @@ pub enum LamportsError {
     ArithmeticOverflow,
 }
 
-#[cfg(feature = "std")]
-impl std::error::Error for LamportsError {}
+impl core::error::Error for LamportsError {}
 
 impl fmt::Display for LamportsError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {

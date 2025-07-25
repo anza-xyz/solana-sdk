@@ -15,7 +15,7 @@ pub enum AddressLookupError {
     InvalidLookupIndex,
 }
 
-impl std::error::Error for AddressLookupError {}
+impl core::error::Error for AddressLookupError {}
 
 impl fmt::Display for AddressLookupError {
     fn fmt(&self, f: &mut ::core::fmt::Formatter) -> fmt::Result {
