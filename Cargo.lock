@@ -2856,6 +2856,9 @@ version = "0.1.0"
 dependencies = [
  "bitvec",
  "criterion",
+ "num-derive",
+ "num-traits",
+ "rand 0.8.5",
 ]
 
 [[package]]

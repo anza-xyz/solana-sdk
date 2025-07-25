@@ -1,109 +1,135 @@
-//! Provides a space-efficient encoding scheme for two boolean vectors.
+//! Provides a space-efficient encoding scheme for one or two boolean vectors.
 //!
-//! This module implements a compression algorithm to encode two boolean vectors
-//! of the same length into a single byte vector (`Vec<u8>`). It achieves
-//! this by mapping each pair of corresponding bits from the input vectors into a
-//! single ternary (base-3) digit.
+//! This module implements compression algorithms to encode boolean vectors
+//! into a single byte vector (`Vec<u8>`). It supports two distinct schemes
+//! based on the number of input vectors.
 //!
-//! # Principle
+//! # Encoding Schemes
 //!
-//! The core idea is to treat pairs of booleans as a single unit with three
-//! valid states, which can be represented by the digits 0, 1, and 2.
+//! ## Base2 Encoding (Single Vector)
+//! When a single boolean vector is provided, it is encoded directly.
+//! The format is:
+//! 1.  **Version Byte (1 byte)**: `Version::Base2` as a `u8`.
+//! 2.  **Length Prefix (2 bytes)**: A `u16` in little-endian format storing the
+//!     number of bits in the vector.
+//! 3.  **Data Payload**: The raw byte data of the boolean vector.
 //!
+//! ## Base3 Encoding (Two Vectors)
+//! When two boolean vectors of the same length are provided, they are compressed
+//! together. This scheme assumes that for any given index, the bits in both
+//! vectors will not both be `1`.
+//!
+//! The pairs of booleans are mapped to a single ternary (base-3) digit:
 //! - `(false, false)` -> `0`
 //! - `(true, false)`  -> `1`
 //! - `(false, true)`  -> `2`
 //!
-//! The combination `(true, true)` is considered invalid and will result in an error
-//! during encoding.
+//! The combination `(true, true)` is considered invalid. These ternary digits are
+//! packed five at a time into a single `u8`, since `3^5 < 2^8`.
 //!
-//! These ternary digits are then packed into 8-bit integers (`u8`) for compact
-//! storage. Since `3^5 < 2^8`, each `u8` can hold 5 ternary digits.
-//!
-//! # Encoded Format
-//!
-//! The resulting `Vec<u8>` has a simple structure:
-//! 1.  **Length Prefix (2 bytes)**: A `u16` in little-endian format storing the
+//! The format is:
+//! 1.  **Version Byte (1 byte)**: `Version::Base3` as a `u8`.
+//! 2.  **Length Prefix (2 bytes)**: A `u16` in little-endian format storing the
 //!     original number of bits (i.e., the length of the input vectors).
-//! 2.  **Data Payload (N * 1 byte)**: A sequence of single bytes, where each
-//!     byte is a `u8` value containing 5 encoded ternary digits.
+//! 3.  **Data Payload**: A sequence of bytes containing the packed base-3 digits.
+
+use {
+    bitvec::prelude::*,
+    num_derive::{FromPrimitive, ToPrimitive},
+    num_traits::FromPrimitive,
+};
+
+/// Represents the encoding version, used as the first byte in the output.
+#[derive(Debug, PartialEq, Eq, FromPrimitive, ToPrimitive)]
+#[repr(u8)]
+pub enum Version {
+    Base2 = 0,
+    Base3 = 1,
+}
 
 /// An error that can occur during the encoding process.
 #[derive(Debug, PartialEq, Eq)]
 pub enum EncodeError {
-    /// The provided bit-vectors have unmatching lengths.
+    /// In Base3 encoding, the provided bit-vectors have unmatching lengths.
     MismatchedLengths,
-    /// The combination `(true, true)` was found, which is not allowed.
+    /// In Base3 encoding, the invalid combination `(true, true)` was found.
     InvalidBitCombination,
     /// The length of the input vectors exceeds `u16::MAX` (65,535).
     LengthExceedsLimit,
-    /// Arithmetic overflow.
+    /// An arithmetic operation resulted in an overflow.
     ArithmeticOverflow,
 }
 
-// Each u8 chunk can hold 5 base-3 symbols (3^5 = 243 <= 255).
-const BASE3_SYMBOL_PER_CHUNK: usize = 5;
-const ENCODED_BYTES_PER_CHUNK: usize = 1; // std::mem::size_of::<u8>()
+// Each u8 can hold 5 base-3 symbols (3^5 = 243).
+const BASE3_SYMBOLS_PER_BYTE: usize = 5;
 
-/// Encodes two boolean vectors, provided as byte slices, into a single `Vec<u8>`.
+/// Encodes a single boolean vector using Base2 encoding.
 ///
-/// # Parameters
-/// - `base_bytes`: The byte slice for the base boolean vector.
-/// - `fallback_bytes`: The byte slice for the fallback boolean vector.
-/// - `num_bits`: The exact number of bits from the start of the slices to encode.
-pub fn encode_from_bytes(
-    base_bytes: &[u8],
-    fallback_bytes: &[u8],
-    num_bits: usize,
-) -> Result<Vec<u8>, EncodeError> {
+/// The output `Vec<u8>` is prefixed with the `Version::Base2` byte.
+pub fn encode_base2(bit_vec: &BitVec<u8, Lsb0>) -> Result<Vec<u8>, EncodeError> {
+    let num_bits = bit_vec.len();
     if num_bits > u16::MAX as usize {
         return Err(EncodeError::LengthExceedsLimit);
     }
-    let required_bytes = num_bits
-        .checked_add(7)
-        .ok_or(EncodeError::ArithmeticOverflow)?
-        .checked_div(8)
-        .ok_or(EncodeError::ArithmeticOverflow)?;
 
-    // If `base_bytes.len()` or `fallback_bytes.len()` is greater than `required_bytes`,
-    // the extra bytes will simply be ignored.
-    if base_bytes.len() < required_bytes || fallback_bytes.len() < required_bytes {
+    let raw_slice = bit_vec.as_raw_slice();
+    let capacity = 3usize
+        .checked_add(raw_slice.len())
+        .ok_or(EncodeError::ArithmeticOverflow)?;
+    let mut result = Vec::with_capacity(capacity);
+    result.push(Version::Base2 as u8);
+    result.extend_from_slice(&(num_bits as u16).to_le_bytes());
+    result.extend_from_slice(raw_slice);
+
+    Ok(result)
+}
+
+/// Encodes two boolean vectors using Base3 encoding.
+///
+/// This function assumes that for any given index, `bit_vec_base` and
+/// `bit_vec_fallback` will not both have a bit set to `1`.
+/// The output `Vec<u8>` is prefixed with the `Version::Base3` byte.
+pub fn encode_base3(
+    bit_vec_base: &BitVec<u8, Lsb0>,
+    bit_vec_fallback: &BitVec<u8, Lsb0>,
+) -> Result<Vec<u8>, EncodeError> {
+    if bit_vec_base.len() != bit_vec_fallback.len() {
         return Err(EncodeError::MismatchedLengths);
     }
+    let num_bits = bit_vec_base.len();
+    if num_bits > u16::MAX as usize {
+        return Err(EncodeError::LengthExceedsLimit);
+    }
 
-    let total_u8_length = num_bits
-        .checked_add(BASE3_SYMBOL_PER_CHUNK - 1)
-        .ok_or(EncodeError::ArithmeticOverflow)?
-        .checked_div(BASE3_SYMBOL_PER_CHUNK)
-        .ok_or(EncodeError::ArithmeticOverflow)?;
+    let base_bytes = bit_vec_base.as_raw_slice();
+    let fallback_bytes = bit_vec_fallback.as_raw_slice();
 
-    let total_byte_length = total_u8_length
-        .checked_mul(ENCODED_BYTES_PER_CHUNK)
-        .ok_or(EncodeError::ArithmeticOverflow)?;
-
-    let capacity = total_byte_length
-        .checked_add(2) // we use 2 bytes to hold the bit lengths
+    let num_chunks = num_bits.div_ceil(BASE3_SYMBOLS_PER_BYTE);
+    let capacity = 3usize
+        .checked_add(num_chunks)
         .ok_or(EncodeError::ArithmeticOverflow)?;
     let mut result = Vec::with_capacity(capacity);
 
+    result.push(Version::Base3 as u8);
     result.extend_from_slice(&(num_bits as u16).to_le_bytes());
 
-    for chunk_index in 0..total_u8_length {
+    for chunk_index in 0..num_chunks {
         let mut block_num: u8 = 0;
         let start_bit = chunk_index
-            .checked_mul(BASE3_SYMBOL_PER_CHUNK)
+            .checked_mul(BASE3_SYMBOLS_PER_BYTE)
             .ok_or(EncodeError::ArithmeticOverflow)?;
         let end_bit = start_bit
-            .checked_add(BASE3_SYMBOL_PER_CHUNK)
+            .checked_add(BASE3_SYMBOLS_PER_BYTE)
             .ok_or(EncodeError::ArithmeticOverflow)?
             .min(num_bits);
 
+        // Process bits in reverse order to simplify packing
         for i in (start_bit..end_bit).rev() {
             let byte_idx = i / 8;
             let bit_idx = i % 8;
 
-            let base_bit = (base_bytes[byte_idx] >> bit_idx) & 1 == 1;
-            let fallback_bit = (fallback_bytes[byte_idx] >> bit_idx) & 1 == 1;
+            let base_bit = (base_bytes.get(byte_idx).unwrap_or(&0) >> bit_idx) & 1 == 1;
+            let fallback_bit = (fallback_bytes.get(byte_idx).unwrap_or(&0) >> bit_idx) & 1 == 1;
 
             let chunk_num = match (base_bit, fallback_bit) {
                 (false, false) => 0u8,
@@ -111,85 +137,107 @@ pub fn encode_from_bytes(
                 (false, true) => 2u8,
                 (true, true) => return Err(EncodeError::InvalidBitCombination),
             };
+
             block_num = block_num
                 .checked_mul(3)
-                .ok_or(EncodeError::ArithmeticOverflow)?
-                .checked_add(chunk_num)
+                .and_then(|n| n.checked_add(chunk_num))
                 .ok_or(EncodeError::ArithmeticOverflow)?;
         }
         result.push(block_num);
     }
-
     Ok(result)
+}
+
+/// Represents the result of a decoding operation.
+#[derive(Debug, PartialEq, Eq)]
+pub enum Decoded {
+    /// A single vector from Base2 decoding.
+    Base2(BitVec<u8, Lsb0>),
+    /// Two vectors from Base3 decoding.
+    Base3(BitVec<u8, Lsb0>, BitVec<u8, Lsb0>),
 }
 
 /// An error that can occur during the decoding process.
 #[derive(Debug, PartialEq, Eq)]
 pub enum DecodeError {
-    /// The byte slice is too short to contain a valid 2-byte length prefix.
-    InvalidLengthPrefix,
-    /// The data payload does not have the expected length.
+    /// The input slice is too short to be valid.
+    InputTooShort,
+    /// The encoding version byte is unsupported.
+    UnsupportedEncoding,
+    /// The data payload is not of the expected length.
     CorruptDataPayload,
-    /// Arithmetic overflow.
+    /// An arithmetic operation resulted in an overflow.
     ArithmeticOverflow,
 }
 
-/// Decodes an encoded byte slice back into two byte vectors.
+/// Decodes an encoded byte slice into one or two boolean vectors.
 ///
-/// This function returns a tuple containing the base byte vector, the fallback
-/// byte vector, and the exact number of valid bits in those vectors.
-pub fn decode_to_bytes(
-    bytes: &[u8],
-    max_len: usize,
-) -> Result<(Vec<u8>, Vec<u8>, usize), DecodeError> {
-    if bytes.len() < 2 {
-        return Err(DecodeError::InvalidLengthPrefix);
+/// It reads the first byte to determine the encoding scheme and then decodes
+/// the rest of the data accordingly.
+pub fn decode(bytes: &[u8], max_len: usize) -> Result<Decoded, DecodeError> {
+    if bytes.len() < 3 {
+        // Must have at least version (1) + length (2)
+        return Err(DecodeError::InputTooShort);
     }
+
+    let version_byte = bytes[0];
+    let version = Version::from_u8(version_byte).ok_or(DecodeError::UnsupportedEncoding)?;
+
     let mut len_arr = [0u8; 2];
-    len_arr.copy_from_slice(&bytes[..2]);
+    len_arr.copy_from_slice(&bytes[1..3]);
     let total_bits = u16::from_le_bytes(len_arr) as usize;
 
     if total_bits > max_len {
         return Err(DecodeError::CorruptDataPayload);
     }
 
-    let data_bytes = &bytes[2..];
+    let data_bytes = &bytes[3..];
 
-    let expected_num_chunks = total_bits
-        .checked_add(BASE3_SYMBOL_PER_CHUNK - 1)
-        .and_then(|n| n.checked_div(BASE3_SYMBOL_PER_CHUNK))
-        .ok_or(DecodeError::CorruptDataPayload)?;
+    match version {
+        Version::Base2 => decode_impl_base2(data_bytes, total_bits),
+        Version::Base3 => decode_impl_base3(data_bytes, total_bits),
+    }
+}
 
-    let expected_payload_len = expected_num_chunks
-        .checked_mul(ENCODED_BYTES_PER_CHUNK)
-        .ok_or(DecodeError::CorruptDataPayload)?;
-
-    if data_bytes.len() != expected_payload_len {
+// Internal function to handle Base2 decoding logic
+fn decode_impl_base2(data_bytes: &[u8], total_bits: usize) -> Result<Decoded, DecodeError> {
+    let expected_byte_len = total_bits.div_ceil(8);
+    if data_bytes.len() != expected_byte_len {
         return Err(DecodeError::CorruptDataPayload);
     }
 
-    let decoded_byte_len = total_bits
-        .checked_add(7)
-        .ok_or(DecodeError::ArithmeticOverflow)?
-        .checked_div(8)
-        .ok_or(DecodeError::ArithmeticOverflow)?;
+    let mut bit_vec = BitVec::from_slice(data_bytes);
+    bit_vec.truncate(total_bits);
+
+    Ok(Decoded::Base2(bit_vec))
+}
+
+// Internal function to handle Base3 decoding logic
+fn decode_impl_base3(data_bytes: &[u8], total_bits: usize) -> Result<Decoded, DecodeError> {
+    let expected_num_chunks = total_bits.div_ceil(BASE3_SYMBOLS_PER_BYTE);
+
+    if data_bytes.len() != expected_num_chunks {
+        return Err(DecodeError::CorruptDataPayload);
+    }
+
+    let decoded_byte_len = total_bits.div_ceil(8);
     let mut base_bytes = vec![0u8; decoded_byte_len];
     let mut fallback_bytes = vec![0u8; decoded_byte_len];
 
-    let mut bits_remaining = total_bits;
-    for (i, block_byte) in data_bytes.iter().enumerate() {
-        let mut block_num = *block_byte;
-        let bits_in_this_chunk = bits_remaining.min(BASE3_SYMBOL_PER_CHUNK);
+    for (chunk_index, &block_byte) in data_bytes.iter().enumerate() {
+        let mut block_num = block_byte;
+        let start_bit = chunk_index
+            .checked_mul(BASE3_SYMBOLS_PER_BYTE)
+            .ok_or(DecodeError::ArithmeticOverflow)?;
+        let end_bit = start_bit
+            .checked_add(BASE3_SYMBOLS_PER_BYTE)
+            .ok_or(DecodeError::ArithmeticOverflow)?
+            .min(total_bits);
 
-        for j in 0..bits_in_this_chunk {
+        for bit_index in start_bit..end_bit {
             let remainder = block_num % 3;
             block_num /= 3;
 
-            let bit_index = i
-                .checked_mul(BASE3_SYMBOL_PER_CHUNK)
-                .ok_or(DecodeError::ArithmeticOverflow)?
-                .checked_add(j)
-                .ok_or(DecodeError::ArithmeticOverflow)?;
             let byte_idx = bit_index / 8;
             let bit_idx = bit_index % 8;
 
@@ -197,7 +245,7 @@ pub fn decode_to_bytes(
                 0 => (false, false),
                 1 => (true, false),
                 2 => (false, true),
-                _ => unreachable!(),
+                _ => unreachable!(), // Modulo 3 can't be > 2
             };
 
             if base_bit {
@@ -207,197 +255,158 @@ pub fn decode_to_bytes(
                 fallback_bytes[byte_idx] |= 1 << bit_idx;
             }
         }
-        bits_remaining = bits_remaining
-            .checked_sub(bits_in_this_chunk)
-            .ok_or(DecodeError::ArithmeticOverflow)?;
     }
 
-    Ok((base_bytes, fallback_bytes, total_bits))
-}
+    let mut base_vec = BitVec::from_vec(base_bytes);
+    base_vec.truncate(total_bits);
+    let mut fallback_vec = BitVec::from_vec(fallback_bytes);
+    fallback_vec.truncate(total_bits);
 
-#[cfg(feature = "bitvec")]
-pub use bitvec_support::*;
-
-#[cfg(feature = "bitvec")]
-mod bitvec_support {
-    use {super::*, bitvec::prelude::*};
-
-    /// A wrapper to encode two `BitVec`s into a single `Vec<u8>`.
-    pub fn encode(
-        bit_vec_base: &BitVec<u8, Lsb0>,
-        bit_vec_fallback: &BitVec<u8, Lsb0>,
-    ) -> Result<Vec<u8>, EncodeError> {
-        if bit_vec_base.len() != bit_vec_fallback.len() {
-            return Err(EncodeError::MismatchedLengths);
-        }
-        encode_from_bytes(
-            bit_vec_base.as_raw_slice(),
-            bit_vec_fallback.as_raw_slice(),
-            bit_vec_base.len(),
-        )
-    }
-
-    /// A wrapper to decode a byte vector back into two `BitVec`s.
-    #[allow(clippy::type_complexity)]
-    pub fn decode(
-        bytes: &[u8],
-        max_len: usize,
-    ) -> Result<(BitVec<u8, Lsb0>, BitVec<u8, Lsb0>), DecodeError> {
-        let (base_bytes, fallback_bytes, total_bits) = decode_to_bytes(bytes, max_len)?;
-
-        let mut base_vec = BitVec::from_vec(base_bytes);
-        base_vec.truncate(total_bits);
-
-        let mut fallback_vec = BitVec::from_vec(fallback_bytes);
-        fallback_vec.truncate(total_bits);
-
-        Ok((base_vec, fallback_vec))
-    }
+    Ok(Decoded::Base3(base_vec, fallback_vec))
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
-    #[test]
-    fn test_bytes_round_trip_small() {
-        let num_bits = 10;
-        let base_bytes = vec![0b0100_1001, 0b0000_0001];
-        let fallback_bytes = vec![0b1010_0110, 0b0000_0000];
-
-        let encoded = encode_from_bytes(&base_bytes, &fallback_bytes, num_bits).unwrap();
-        let (decoded_base, decoded_fallback, decoded_bits) =
-            decode_to_bytes(&encoded, num_bits).unwrap();
-
-        assert_eq!(decoded_bits, num_bits);
-        assert_eq!(base_bytes, decoded_base);
-        assert_eq!(fallback_bytes, decoded_fallback);
-    }
-
-    #[cfg(feature = "bitvec")]
-    mod bitvec_tests {
-        use {
-            super::{super::bitvec_support::*, *},
-            bitvec::prelude::*,
-        };
-
-        fn create_test_data(len: usize) -> (BitVec<u8, Lsb0>, BitVec<u8, Lsb0>) {
-            let mut base = BitVec::with_capacity(len);
-            let mut fallback = BitVec::with_capacity(len);
-            for i in 0..len {
-                match i % 3 {
-                    0 => {
-                        base.push(false);
-                        fallback.push(false);
-                    }
-                    1 => {
-                        base.push(true);
-                        fallback.push(false);
-                    }
-                    _ => {
-                        base.push(false);
-                        fallback.push(true);
-                    }
+    fn create_base3_test_data(len: usize) -> (BitVec<u8, Lsb0>, BitVec<u8, Lsb0>) {
+        let mut base = BitVec::with_capacity(len);
+        let mut fallback = BitVec::with_capacity(len);
+        for i in 0..len {
+            match i % 3 {
+                0 => {
+                    // (false, false) -> 0
+                    base.push(false);
+                    fallback.push(false);
+                }
+                1 => {
+                    // (true, false) -> 1
+                    base.push(true);
+                    fallback.push(false);
+                }
+                _ => {
+                    // (false, true) -> 2
+                    base.push(false);
+                    fallback.push(true);
                 }
             }
-            (base, fallback)
         }
+        (base, fallback)
+    }
 
-        #[test]
-        fn test_bitvec_round_trip_empty() {
-            let (base, fallback) = create_test_data(0);
-            let encoded = encode(&base, &fallback).unwrap();
-            assert_eq!(encoded, vec![0, 0]);
-            let (decoded_base, decoded_fallback) = decode(&encoded, 0).unwrap();
+    #[test]
+    fn test_base2_round_trip() {
+        let original = bitvec![u8, Lsb0; 0, 1, 1, 0, 1, 0, 0, 1, 1, 1, 0, 0, 1, 0, 1];
+        let original_len = original.len();
+        let encoded = encode_base2(&original).unwrap();
+
+        // Check header
+        assert_eq!(encoded[0], Version::Base2 as u8); // Version byte
+        assert_eq!(
+            u16::from_le_bytes(encoded[1..3].try_into().unwrap()),
+            original_len as u16
+        );
+
+        let decoded = decode(&encoded, original_len).unwrap();
+        if let Decoded::Base2(decoded_vec) = decoded {
+            assert_eq!(original, decoded_vec);
+        } else {
+            panic!("Decoded into the wrong type");
+        }
+    }
+
+    #[test]
+    fn test_base2_empty() {
+        let original = BitVec::<u8, Lsb0>::new();
+        let encoded = encode_base2(&original).unwrap();
+        assert_eq!(encoded, vec![Version::Base2 as u8, 0, 0]);
+        let decoded = decode(&encoded, 0).unwrap();
+        assert_eq!(decoded, Decoded::Base2(original));
+    }
+
+    #[test]
+    fn test_base3_round_trip() {
+        let (base, fallback) = create_base3_test_data(23); // Not a multiple of 5
+        let original_len = base.len();
+        let encoded = encode_base3(&base, &fallback).unwrap();
+
+        // Check header
+        assert_eq!(encoded[0], Version::Base3 as u8); // Version byte
+        assert_eq!(
+            u16::from_le_bytes(encoded[1..3].try_into().unwrap()),
+            original_len as u16
+        );
+
+        let decoded = decode(&encoded, original_len).unwrap();
+        if let Decoded::Base3(decoded_base, decoded_fallback) = decoded {
             assert_eq!(base, decoded_base);
             assert_eq!(fallback, decoded_fallback);
+        } else {
+            panic!("Decoded into the wrong type");
         }
+    }
 
-        #[test]
-        fn test_bitvec_round_trip_small() {
-            let (base, fallback) = create_test_data(10);
-            let encoded = encode(&base, &fallback).unwrap();
-            let (decoded_base, decoded_fallback) = decode(&encoded, 10).unwrap();
-            assert_eq!(base, decoded_base);
-            assert_eq!(fallback, decoded_fallback);
-        }
+    #[test]
+    fn test_base3_exact_bytes() {
+        let (base, fallback) = create_base3_test_data(10); // 2 full bytes
+        let encoded = encode_base3(&base, &fallback).unwrap();
+        let decoded = decode(&encoded, 10).unwrap();
+        assert_eq!(decoded, Decoded::Base3(base, fallback));
+    }
 
-        #[test]
-        fn test_bitvec_round_trip_exact_chunk() {
-            let len = BASE3_SYMBOL_PER_CHUNK;
-            let (base, fallback) = create_test_data(len); // 5
-            let encoded = encode(&base, &fallback).unwrap();
-            let (decoded_base, decoded_fallback) = decode(&encoded, len).unwrap();
-            assert_eq!(base, decoded_base);
-            assert_eq!(fallback, decoded_fallback);
-        }
+    #[test]
+    fn test_base3_empty() {
+        let (base, fallback) = create_base3_test_data(0);
+        let encoded = encode_base3(&base, &fallback).unwrap();
+        assert_eq!(encoded, vec![Version::Base3 as u8, 0, 0]);
+        let decoded = decode(&encoded, 0).unwrap();
+        assert_eq!(decoded, Decoded::Base3(base, fallback));
+    }
 
-        #[test]
-        fn test_bitvec_round_trip_multi_chunk_partial() {
-            let len = 7; // 1 full chunk, 1 partial
-            let (base, fallback) = create_test_data(len);
-            let encoded = encode(&base, &fallback).unwrap();
-            let (decoded_base, decoded_fallback) = decode(&encoded, len).unwrap();
-            assert_eq!(base, decoded_base);
-            assert_eq!(fallback, decoded_fallback);
-        }
+    #[test]
+    fn test_encode_base3_invalid_combination() {
+        let base = bitvec![u8, Lsb0; 0, 1];
+        let fallback = bitvec![u8, Lsb0; 0, 1];
+        let result = encode_base3(&base, &fallback);
+        assert_eq!(result, Err(EncodeError::InvalidBitCombination));
+    }
 
-        #[test]
-        fn test_bitvec_round_trip_multi_chunk_exact() {
-            let len = 10; // 2 full chunks
-            let (base, fallback) = create_test_data(len);
-            let encoded = encode(&base, &fallback).unwrap();
-            let (decoded_base, decoded_fallback) = decode(&encoded, len).unwrap();
-            assert_eq!(base, decoded_base);
-            assert_eq!(fallback, decoded_fallback);
-        }
+    #[test]
+    fn test_encode_length_limit() {
+        let long_vec = BitVec::repeat(false, (u16::MAX as usize) + 1);
+        let result = encode_base2(&long_vec);
+        assert_eq!(result, Err(EncodeError::LengthExceedsLimit));
+    }
 
-        #[test]
-        fn test_bitvec_encode_error_mismatched_lengths() {
-            let (base, _) = create_test_data(10);
-            let (_, fallback) = create_test_data(11);
-            let result = encode(&base, &fallback);
-            assert_eq!(result, Err(EncodeError::MismatchedLengths));
-        }
+    #[test]
+    fn test_decode_unsupported_encoding() {
+        let bytes = vec![2, 0, 0, 1, 2, 3]; // Invalid version byte '2'
+        let result = decode(&bytes, 10);
+        assert_eq!(result, Err(DecodeError::UnsupportedEncoding));
+    }
 
-        #[test]
-        fn test_bitvec_encode_error_invalid_combination() {
-            let mut base = BitVec::<u8, Lsb0>::new();
-            base.push(false);
-            base.push(true);
+    #[test]
+    fn test_decode_input_too_short() {
+        let bytes = vec![1, 0]; // Only 2 bytes, needs at least 3
+        let result = decode(&bytes, 10);
+        assert_eq!(result, Err(DecodeError::InputTooShort));
+    }
 
-            let mut fallback = BitVec::<u8, Lsb0>::new();
-            fallback.push(false);
-            fallback.push(true);
+    #[test]
+    fn test_decode_max_len_exceeded() {
+        let (base, fallback) = create_base3_test_data(20);
+        let encoded = encode_base3(&base, &fallback).unwrap();
+        // Try to decode with a max_len that is too small
+        let result = decode(&encoded, 19);
+        assert_eq!(result, Err(DecodeError::CorruptDataPayload));
+    }
 
-            let result = encode(&base, &fallback);
-            assert_eq!(result, Err(EncodeError::InvalidBitCombination));
-        }
-
-        #[test]
-        fn test_bitvec_decode_error_invalid_length_prefix() {
-            let bytes = vec![1];
-            let result = decode(&bytes, 0);
-            assert_eq!(result, Err(DecodeError::InvalidLengthPrefix));
-        }
-
-        #[test]
-        fn test_bitvec_decode_error_corrupt_payload() {
-            let len = 10;
-            let (base, fallback) = create_test_data(len);
-            let mut encoded = encode(&base, &fallback).unwrap();
-            encoded.pop(); // Make the payload an invalid length
-            let result = decode(&encoded, len);
-            assert_eq!(result, Err(DecodeError::CorruptDataPayload));
-        }
-
-        #[test]
-        fn test_bitvec_decode_error_length_exceeds_max() {
-            let len = 10;
-            let (base, fallback) = create_test_data(len);
-            let encoded = encode(&base, &fallback).unwrap();
-            let result = decode(&encoded, len - 1);
-            assert_eq!(result, Err(DecodeError::CorruptDataPayload));
-        }
+    #[test]
+    fn test_decode_corrupt_payload() {
+        let (base, fallback) = create_base3_test_data(10);
+        let mut encoded = encode_base3(&base, &fallback).unwrap();
+        encoded.pop(); // Corrupt the payload by removing a byte
+        let result = decode(&encoded, 10);
+        assert_eq!(result, Err(DecodeError::CorruptDataPayload));
     }
 }
