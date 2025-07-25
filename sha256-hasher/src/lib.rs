@@ -65,11 +65,3 @@ pub fn hashv(vals: &[&[u8]]) -> Hash {
 pub fn hash(val: &[u8]) -> Hash {
     hashv(&[val])
 }
-
-/// Return the hash of the given hash extended with the given value.
-#[deprecated(since = "2.3.0", note = "Use `hashv(&[hash.as_ref(), val])` directly")]
-pub fn extend_and_hash(id: &Hash, val: &[u8]) -> Hash {
-    let mut hash_data = id.as_ref().to_vec();
-    hash_data.extend_from_slice(val);
-    hash(&hash_data)
-}
