@@ -110,8 +110,6 @@
 //! # Ok::<(), anyhow::Error>(())
 //! ```
 
-#[cfg(target_arch = "wasm32")]
-use wasm_bindgen::prelude::wasm_bindgen;
 #[cfg(feature = "serde")]
 use {
     serde_derive::{Deserialize, Serialize},
@@ -139,7 +137,6 @@ use {
 pub mod sanitized;
 pub mod simple_vote_transaction_checker;
 pub mod versioned;
-mod wasm;
 
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
 pub enum TransactionVerificationMode {
@@ -176,7 +173,6 @@ const NONCED_TX_MARKER_IX_INDEX: u8 = 0;
 /// if the caller has knowledge that the first account of the constructed
 /// transaction's `Message` is both a signer and the expected fee-payer, then
 /// redundantly specifying the fee-payer is not strictly required.
-#[cfg(not(target_arch = "wasm32"))]
 #[cfg_attr(
     feature = "frozen-abi",
     derive(solana_frozen_abi_macro::AbiExample),
@@ -198,27 +194,6 @@ pub struct Transaction {
     pub signatures: Vec<Signature>,
 
     /// The message to sign.
-    pub message: Message,
-}
-
-/// wasm-bindgen version of the Transaction struct.
-/// This duplication is required until https://github.com/rustwasm/wasm-bindgen/issues/3671
-/// is fixed. This must not diverge from the regular non-wasm Transaction struct.
-#[cfg(target_arch = "wasm32")]
-#[wasm_bindgen]
-#[cfg_attr(
-    feature = "frozen-abi",
-    derive(AbiExample),
-    frozen_abi(digest = "H7xQFcd1MtMv9QKZWGatBAXwhg28tpeX59P3s8ZZLAY4")
-)]
-#[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
-#[derive(Debug, PartialEq, Default, Eq, Clone)]
-pub struct Transaction {
-    #[wasm_bindgen(skip)]
-    #[cfg_attr(feature = "serde", serde(with = "short_vec"))]
-    pub signatures: Vec<Signature>,
-
-    #[wasm_bindgen(skip)]
     pub message: Message,
 }
 

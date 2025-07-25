@@ -6,7 +6,6 @@ import {
   Keypair,
   Hash,
   Instruction,
-  Instructions,
   Transaction,
 } from "crate";
 solana_program_init();
@@ -41,7 +40,7 @@ describe("Transaction", function () {
       "EETubP5AKHgjPAhzPAFcb8BAY1hMH639CWCFTqi3hq1k"
     );
 
-    let instructions = new Instructions();
+    let instructions = [];
     let instruction = new Instruction(programId);
     instruction.setData(instructionData);
     instruction.addAccount(AccountMeta.newWritable(src.pubkey(), true))

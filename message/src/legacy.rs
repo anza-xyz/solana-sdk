@@ -15,8 +15,6 @@
 use serde_derive::{Deserialize, Serialize};
 #[cfg(feature = "frozen-abi")]
 use solana_frozen_abi_macro::{frozen_abi, AbiExample};
-#[cfg(target_arch = "wasm32")]
-use wasm_bindgen::prelude::wasm_bindgen;
 use {
     crate::{
         compiled_instruction::CompiledInstruction, compiled_keys::CompiledKeys,
@@ -66,7 +64,6 @@ fn compile_instructions(ixs: &[Instruction], keys: &[Pubkey]) -> Vec<CompiledIns
 /// redundantly specifying the fee-payer is not strictly required.
 // NOTE: Serialization-related changes must be paired with the custom serialization
 // for versioned messages in the `RemainingLegacyMessage` struct.
-#[cfg(not(target_arch = "wasm32"))]
 #[cfg_attr(
     feature = "frozen-abi",
     frozen_abi(digest = "2THeaWnXSGDTsiadKytJTcbjrk4KjfMww9arRLZcwGnw"),
@@ -92,38 +89,6 @@ pub struct Message {
 
     /// Programs that will be executed in sequence and committed in one atomic transaction if all
     /// succeed.
-    #[cfg_attr(feature = "serde", serde(with = "solana_short_vec"))]
-    pub instructions: Vec<CompiledInstruction>,
-}
-
-/// wasm-bindgen version of the Message struct.
-/// This duplication is required until https://github.com/rustwasm/wasm-bindgen/issues/3671
-/// is fixed. This must not diverge from the regular non-wasm Message struct.
-#[cfg(target_arch = "wasm32")]
-#[wasm_bindgen]
-#[cfg_attr(
-    feature = "frozen-abi",
-    frozen_abi(digest = "2THeaWnXSGDTsiadKytJTcbjrk4KjfMww9arRLZcwGnw"),
-    derive(AbiExample)
-)]
-#[cfg_attr(
-    feature = "serde",
-    derive(Deserialize, Serialize),
-    serde(rename_all = "camelCase")
-)]
-#[derive(Default, Debug, PartialEq, Eq, Clone)]
-pub struct Message {
-    #[wasm_bindgen(skip)]
-    pub header: MessageHeader,
-
-    #[wasm_bindgen(skip)]
-    #[cfg_attr(feature = "serde", serde(with = "solana_short_vec"))]
-    pub account_keys: Vec<Pubkey>,
-
-    /// The id of a recent ledger entry.
-    pub recent_blockhash: Hash,
-
-    #[wasm_bindgen(skip)]
     #[cfg_attr(feature = "serde", serde(with = "solana_short_vec"))]
     pub instructions: Vec<CompiledInstruction>,
 }

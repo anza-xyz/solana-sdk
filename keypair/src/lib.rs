@@ -1,7 +1,5 @@
 //! Concrete implementation of a Solana `Signer` from raw bytes
 #![cfg_attr(docsrs, feature(doc_auto_cfg))]
-#[cfg(target_arch = "wasm32")]
-use wasm_bindgen::prelude::*;
 use {
     ed25519_dalek::Signer as DalekSigner,
     rand::rngs::OsRng,
@@ -21,7 +19,6 @@ pub mod seed_derivable;
 pub mod signable;
 
 /// A vanilla Ed25519 key pair
-#[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
 #[derive(Debug)]
 pub struct Keypair(ed25519_dalek::SigningKey);
 
@@ -96,34 +93,6 @@ impl TryFrom<&[u8]> for Keypair {
                 ))
             })
             .map(Self)
-    }
-}
-
-#[cfg(target_arch = "wasm32")]
-#[allow(non_snake_case)]
-#[wasm_bindgen]
-impl Keypair {
-    /// Create a new `Keypair `
-    #[wasm_bindgen(constructor)]
-    pub fn constructor() -> Keypair {
-        Keypair::new()
-    }
-
-    /// Convert a `Keypair` to a `Uint8Array`
-    pub fn toBytes(&self) -> Box<[u8]> {
-        self.to_bytes().into()
-    }
-
-    /// Recover a `Keypair` from a `Uint8Array`
-    pub fn fromBytes(bytes: &[u8]) -> Result<Keypair, JsValue> {
-        Keypair::try_from(bytes).map_err(|e| e.to_string().into())
-    }
-
-    /// Return the `Pubkey` for this `Keypair`
-    #[wasm_bindgen(js_name = pubkey)]
-    pub fn js_pubkey(&self) -> Pubkey {
-        // `wasm_bindgen` does not support traits (`Signer) yet
-        self.pubkey()
     }
 }
 

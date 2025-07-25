@@ -10,7 +10,7 @@ license = { workspace = true }
 edition = { workspace = true }
 
 [package.metadata.docs.rs]
-targets = ["x86_64-unknown-linux-gnu", "wasm32-unknown-unknown"]
+targets = ["x86_64-unknown-linux-gnu"]
 all-features = true
 rustdoc-args = ["--cfg=docsrs"]
 
@@ -32,9 +32,6 @@ solana-seed-derivable = { workspace = true, optional = true }
 solana-seed-phrase = { workspace = true }
 solana-signature = { workspace = true, features = ["std", "verify"] }
 solana-signer = { workspace = true }
-
-[target.'cfg(target_arch = "wasm32")'.dependencies]
-wasm-bindgen = { workspace = true }
 
 [dev-dependencies]
 serde_json = { workspace = true }
