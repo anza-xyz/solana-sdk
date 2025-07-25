@@ -36,29 +36,70 @@ fn bench_aggregate(c: &mut Criterion) {
         let signatures: Vec<SignatureProjective> =
             keypairs.iter().map(|kp| kp.sign(message)).collect();
 
+        let pubkey_refs: Vec<&PubkeyProjective> = pubkeys.iter().collect();
+        let signature_refs: Vec<&SignatureProjective> = signatures.iter().collect();
+
         // Benchmark for aggregating multiple signatures
         group.bench_function(format!("{num_validators} signature aggregation"), |b| {
-            b.iter(|| black_box(SignatureProjective::aggregate(&signatures)));
+            b.iter(|| black_box(SignatureProjective::aggregate(&signature_refs)));
         });
+
+        #[cfg(feature = "parallel")]
+        group.bench_function(
+            format!("{num_validators} parallel signature aggregation"),
+            |b| {
+                b.iter(|| black_box(SignatureProjective::par_aggregate(&signature_refs)));
+            },
+        );
 
         // Benchmark for aggregating multiple public keys
         group.bench_function(format!("{num_validators} pubkey aggregation"), |b| {
-            b.iter(|| black_box(PubkeyProjective::aggregate(&pubkeys)));
+            b.iter(|| black_box(PubkeyProjective::aggregate(&pubkey_refs)));
         });
 
-        let aggregate_signature = SignatureProjective::aggregate(&signatures).unwrap();
-        let aggregate_pubkey = PubkeyProjective::aggregate(&pubkeys).unwrap();
+        // Benchmark for aggregate verify
+        #[cfg(feature = "parallel")]
+        group.bench_function(
+            format!("{num_validators} parallel pubkey aggregation"),
+            |b| {
+                b.iter(|| black_box(PubkeyProjective::par_aggregate(&pubkey_refs)));
+            },
+        );
 
-        group.bench_function(format!("{num_validators} aggregate verification"), |b| {
-            b.iter(|| {
-                let verification_result = black_box(
-                    aggregate_pubkey
-                        .verify_signature(&aggregate_signature, message)
+        group.bench_function(
+            format!("{num_validators} sequential aggregate verification"),
+            |b| {
+                b.iter(|| {
+                    let verification_result = black_box(
+                        SignatureProjective::aggregate_verify(
+                            &pubkey_refs,
+                            &signature_refs,
+                            message,
+                        )
                         .unwrap(),
-                );
-                assert!(verification_result);
-            });
-        });
+                    );
+                    assert!(verification_result);
+                });
+            },
+        );
+
+        #[cfg(feature = "parallel")]
+        group.bench_function(
+            format!("{num_validators} parallel aggregate verification"),
+            |b| {
+                b.iter(|| {
+                    let verification_result = black_box(
+                        SignatureProjective::par_aggregate_verify(
+                            &pubkey_refs,
+                            &signature_refs,
+                            message,
+                        )
+                        .unwrap(),
+                    );
+                    assert!(verification_result);
+                });
+            },
+        );
     }
     group.finish();
 }

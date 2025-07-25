@@ -1,5 +1,7 @@
 #[cfg(feature = "bytemuck")]
 use bytemuck::{Pod, PodInOption, Zeroable, ZeroableInOption};
+#[cfg(all(feature = "parallel", not(target_os = "solana")))]
+use rayon::prelude::*;
 #[cfg(not(target_os = "solana"))]
 use {
     crate::{
@@ -33,7 +35,7 @@ pub const BLS_SIGNATURE_AFFINE_BASE64_SIZE: usize = 256;
 
 /// A trait for types that can be converted into a `SignatureProjective`.
 #[cfg(not(target_os = "solana"))]
-pub trait AsSignatureProjective {
+pub trait AsSignatureProjective: Send + Sync {
     /// Attempt to convert the type into a `SignatureProjective`.
     fn try_as_projective(&self) -> Result<SignatureProjective, BlsError>;
 }
@@ -66,31 +68,24 @@ impl SignatureProjective {
 
     /// Aggregate a list of signatures into an existing aggregate
     #[allow(clippy::arithmetic_side_effects)]
-    pub fn aggregate_with<'a, S: 'a + AsSignatureProjective + ?Sized, I>(
+    pub fn aggregate_with<S: AsSignatureProjective + ?Sized>(
         &mut self,
-        signatures: I,
-    ) -> Result<(), BlsError>
-    where
-        I: IntoIterator<Item = &'a S>,
-    {
+        signatures: &[&S],
+    ) -> Result<(), BlsError> {
         for signature in signatures {
-            self.0 += &signature.try_as_projective()?.0;
+            self.0 += signature.try_as_projective()?.0;
         }
         Ok(())
     }
 
-    /// Aggregate a list of public keys
+    /// Aggregate a list of signatures
     #[allow(clippy::arithmetic_side_effects)]
-    pub fn aggregate<'a, S: 'a + AsSignatureProjective + ?Sized, I>(
-        signatures: I,
-    ) -> Result<SignatureProjective, BlsError>
-    where
-        I: IntoIterator<Item = &'a S>,
-    {
-        let mut iter = signatures.into_iter();
-        if let Some(first) = iter.next() {
+    pub fn aggregate<S: AsSignatureProjective + ?Sized>(
+        signatures: &[&S],
+    ) -> Result<SignatureProjective, BlsError> {
+        if let Some((first, rest)) = signatures.split_first() {
             let mut aggregate = first.try_as_projective()?;
-            aggregate.aggregate_with(iter)?;
+            aggregate.aggregate_with(rest)?;
             Ok(aggregate)
         } else {
             Err(BlsError::EmptyAggregation)
@@ -98,24 +93,65 @@ impl SignatureProjective {
     }
 
     /// Verify a list of signatures against a message and a list of public keys
-    pub fn aggregate_verify<
-        'a,
-        P: 'a + AsPubkeyProjective + ?Sized,
-        S: 'a + AsSignatureProjective + ?Sized,
-        I,
-        J,
-    >(
-        public_keys: I,
-        signatures: J,
+    pub fn aggregate_verify<P: AsPubkeyProjective + ?Sized, S: AsSignatureProjective + ?Sized>(
+        public_keys: &[&P],
+        signatures: &[&S],
         message: &[u8],
-    ) -> Result<bool, BlsError>
-    where
-        I: IntoIterator<Item = &'a P>,
-        J: IntoIterator<Item = &'a S>,
-    {
+    ) -> Result<bool, BlsError> {
         let aggregate_pubkey = PubkeyProjective::aggregate(public_keys)?;
         let aggregate_signature = SignatureProjective::aggregate(signatures)?;
 
+        Ok(aggregate_pubkey._verify_signature(&aggregate_signature, message))
+    }
+
+    /// Aggregate a list of signatures into an existing aggregate
+    #[allow(clippy::arithmetic_side_effects)]
+    #[cfg(feature = "parallel")]
+    pub fn par_aggregate_with<S: AsSignatureProjective + Sync>(
+        &mut self,
+        signatures: &[&S],
+    ) -> Result<(), BlsError> {
+        let aggregate = SignatureProjective::par_aggregate(signatures)?;
+        self.0 += &aggregate.0;
+        Ok(())
+    }
+
+    /// Aggregate a list of signatures
+    #[allow(clippy::arithmetic_side_effects)]
+    #[cfg(feature = "parallel")]
+    pub fn par_aggregate<S: AsSignatureProjective + Sync>(
+        signatures: &[&S],
+    ) -> Result<SignatureProjective, BlsError> {
+        if signatures.is_empty() {
+            return Err(BlsError::EmptyAggregation);
+        }
+        signatures
+            .into_par_iter()
+            .map(|sig| (*sig).try_as_projective())
+            .reduce(
+                || Ok(SignatureProjective::identity()),
+                |a, b| {
+                    let mut a = a?;
+                    let b = b?;
+                    a.0 += &b.0;
+                    Ok(a)
+                },
+            )
+    }
+
+    /// Verify a list of signatures against a message and a list of public keys
+    #[cfg(feature = "parallel")]
+    pub fn par_aggregate_verify<P: AsPubkeyProjective + Sync, S: AsSignatureProjective + Sync>(
+        public_keys: &[&P],
+        signatures: &[&S],
+        message: &[u8],
+    ) -> Result<bool, BlsError> {
+        let (aggregate_pubkey_res, aggregate_signature_res) = rayon::join(
+            || PubkeyProjective::par_aggregate(public_keys),
+            || SignatureProjective::par_aggregate(signatures),
+        );
+        let aggregate_pubkey = aggregate_pubkey_res?;
+        let aggregate_signature = aggregate_signature_res?;
         Ok(aggregate_pubkey._verify_signature(&aggregate_signature, message))
     }
 }
@@ -277,11 +313,11 @@ mod tests {
         let signature1_affine: Signature = signature1.into();
 
         let aggregate_signature =
-            SignatureProjective::aggregate([&signature0, &signature1]).unwrap();
+            SignatureProjective::aggregate(&[&signature0, &signature1]).unwrap();
 
         let mut aggregate_signature_with = signature0;
         aggregate_signature_with
-            .aggregate_with([&signature1_affine])
+            .aggregate_with(&[&signature1_affine])
             .unwrap();
 
         assert_eq!(aggregate_signature, aggregate_signature_with);
@@ -307,8 +343,8 @@ mod tests {
 
         // basic case
         assert!(SignatureProjective::aggregate_verify(
-            std::vec![&keypair0.public, &keypair1.public],
-            std::vec![&signature0, &signature1],
+            &[&keypair0.public, &keypair1.public],
+            &[&signature0, &signature1],
             test_message,
         )
         .unwrap());
@@ -319,44 +355,44 @@ mod tests {
         let signature0_affine: Signature = signature0.into();
         let signature1_affine: Signature = signature1.into();
         assert!(SignatureProjective::aggregate_verify(
-            std::vec![&pubkey0_affine, &pubkey1_affine],
-            std::vec![&signature0_affine, &signature1_affine],
+            &[&pubkey0_affine, &pubkey1_affine],
+            &[&signature0_affine, &signature1_affine],
             test_message,
         )
         .unwrap());
 
         // pre-aggregate the signatures
         let aggregate_signature =
-            SignatureProjective::aggregate([&signature0, &signature1]).unwrap();
+            SignatureProjective::aggregate(&[&signature0, &signature1]).unwrap();
         assert!(SignatureProjective::aggregate_verify(
-            std::vec![&keypair0.public, &keypair1.public],
-            std::vec![&aggregate_signature],
+            &[&keypair0.public, &keypair1.public],
+            &[&aggregate_signature],
             test_message,
         )
         .unwrap());
 
         // pre-aggregate the public keys
         let aggregate_pubkey =
-            PubkeyProjective::aggregate([&keypair0.public, &keypair1.public]).unwrap();
+            PubkeyProjective::aggregate(&[&keypair0.public, &keypair1.public]).unwrap();
         assert!(SignatureProjective::aggregate_verify(
-            std::vec![&aggregate_pubkey],
-            std::vec![&signature0, &signature1],
+            &[&aggregate_pubkey],
+            &[&signature0, &signature1],
             test_message,
         )
         .unwrap());
 
         // empty set of public keys or signatures
         let err = SignatureProjective::aggregate_verify(
-            std::vec![] as Vec<&PubkeyProjective>,
-            std::vec![&signature0, &signature1],
+            &[] as &[&PubkeyProjective],
+            &[&signature0, &signature1],
             test_message,
         )
         .unwrap_err();
         assert_eq!(err, BlsError::EmptyAggregation);
 
         let err = SignatureProjective::aggregate_verify(
-            std::vec![&keypair0.public, &keypair1.public],
-            std::vec![] as Vec<&SignatureProjective>,
+            &[&keypair0.public, &keypair1.public],
+            &[] as &[&SignatureProjective],
             test_message,
         )
         .unwrap_err();
@@ -364,6 +400,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(not(feature = "parallel"))]
     fn test_aggregate_verify_dyn() {
         let test_message = b"test message for dyn verify";
 
@@ -391,7 +428,7 @@ mod tests {
             std::vec![&signature0, &signature1_affine, &signature2_compressed];
 
         assert!(
-            SignatureProjective::aggregate_verify(dyn_pubkeys, dyn_signatures, test_message)
+            SignatureProjective::aggregate_verify(&dyn_pubkeys, &dyn_signatures, test_message)
                 .unwrap()
         );
 
@@ -401,8 +438,8 @@ mod tests {
         let dyn_signatures_fail: Vec<&dyn AsSignatureProjective> =
             std::vec![&signature0, &signature1_affine, &signature2_compressed];
         assert!(!SignatureProjective::aggregate_verify(
-            dyn_pubkeys_fail,
-            dyn_signatures_fail,
+            &dyn_pubkeys_fail,
+            &dyn_signatures_fail,
             wrong_message
         )
         .unwrap());
@@ -420,5 +457,69 @@ mod tests {
         let signature_compressed_from_string =
             SignatureCompressed::from_str(&signature_compressed_string).unwrap();
         assert_eq!(signature_compressed, signature_compressed_from_string);
+    }
+
+    #[test]
+    #[cfg(feature = "parallel")]
+    fn test_parallel_signature_aggregation() {
+        let keypair0 = Keypair::new();
+        let keypair1 = Keypair::new();
+        let signature0 = keypair0.sign(b"");
+        let signature1 = keypair1.sign(b"");
+
+        // Test `aggregate`
+        let sequential_agg = SignatureProjective::aggregate(&[&signature0, &signature1]).unwrap();
+        let parallel_agg = SignatureProjective::par_aggregate(&[&signature0, &signature1]).unwrap();
+        assert_eq!(sequential_agg, parallel_agg);
+
+        // Test `aggregate_with`
+        let mut parallel_agg_with = signature0;
+        parallel_agg_with
+            .par_aggregate_with(&[&signature1])
+            .unwrap();
+        assert_eq!(sequential_agg, parallel_agg_with);
+
+        // Test empty case
+        let empty_slice: &[&SignatureProjective] = &[];
+        assert_eq!(
+            SignatureProjective::par_aggregate(empty_slice).unwrap_err(),
+            BlsError::EmptyAggregation
+        );
+    }
+
+    #[test]
+    #[cfg(feature = "parallel")]
+    fn test_parallel_aggregate_verify() {
+        let message = b"test message";
+        let keypairs: Vec<_> = (0..5).map(|_| Keypair::new()).collect();
+        let pubkeys: Vec<_> = keypairs.iter().map(|kp| kp.public).collect();
+        let pubkey_refs: Vec<_> = pubkeys.iter().collect();
+        let signatures: Vec<_> = keypairs.iter().map(|kp| kp.sign(message)).collect();
+        let signature_refs: Vec<_> = signatures.iter().collect();
+
+        // Success case
+        assert!(
+            SignatureProjective::par_aggregate_verify(&pubkey_refs, &signature_refs, message)
+                .unwrap()
+        );
+
+        // Failure case (wrong message)
+        assert!(!SignatureProjective::par_aggregate_verify(
+            &pubkey_refs,
+            &signature_refs,
+            b"wrong message"
+        )
+        .unwrap());
+
+        // Failure case (bad signature)
+        let mut bad_signatures = signatures.clone();
+        bad_signatures[0] = keypairs[0].sign(b"a different message");
+        let bad_signature_refs: Vec<_> = bad_signatures.iter().collect();
+        assert!(!SignatureProjective::par_aggregate_verify(
+            &pubkey_refs,
+            &bad_signature_refs,
+            message
+        )
+        .unwrap());
     }
 }
