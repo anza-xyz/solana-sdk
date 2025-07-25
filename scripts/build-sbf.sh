@@ -27,4 +27,5 @@ build_sbf_excludes=(
 
 ./cargo nightly hack --workspace "${build_sbf_excludes[@]}" build-sbf
 
-./cargo nightly build-sbf --manifest-path sdk/Cargo.toml --no-default-features
+# This can be added back in once the SDK upgrades to v2.3 of Agave tools
+#./cargo nightly build-sbf --manifest-path sdk/Cargo.toml --no-default-features
