@@ -5,29 +5,27 @@ here="$(dirname "$0")"
 src_root="$(readlink -f "${here}/..")"
 cd "${src_root}"
 
-exclude_list=(
-  ".github"
-  "scripts"
-  "client-traits"
-  "ed25519-program"
-  "example-mocks"
-  "file-download"
-  "genesis-config"
-  "keypair"
-  "logger"
-  "offchain-message"
-  "presigner"
-  "quic-definitions"
-  "rent-collector"
-  "sdk-wasm-js"
-  "secp256k1-program"
-  "secp256r1-program"
-  "system-transaction"
-  "transaction"
+build_sbf_excludes=(
+  --exclude solana-client-traits
+  --exclude solana-ed25519-program
+  --exclude solana-example-mocks
+  --exclude solana-file-download
+  --exclude solana-genesis-config
+  --exclude solana-keypair
+  --exclude solana-logger
+  --exclude solana-offchain-message
+  --exclude solana-presigner
+  --exclude solana-quic-definitions
+  --exclude solana-rent-collector
+  --exclude solana-sdk-wasm-js
+  --exclude solana-secp256k1-program
+  --exclude solana-secp256r1-program
+  --exclude solana-system-transaction
+  --exclude solana-transaction
+  --exclude solana-sdk
 )
 
-for dir in $(git ls-tree -d --name-only HEAD .); do
-  if [[ ! " ${exclude_list[*]} " =~ [[:space:]]${dir}[[:space:]] ]]; then
-    (cd "$dir" && RUSTFLAGS="-Dwarnings" cargo build-sbf)
-  fi
-done
+./cargo nightly hack --workspace "${build_sbf_excludes[@]}" build-sbf
+
+# This can be added back in once the SDK upgrades to v2.3 of Agave tools
+#./cargo nightly build-sbf --manifest-path sdk/Cargo.toml --no-default-features

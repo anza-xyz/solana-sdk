@@ -377,7 +377,9 @@ jobs:
       - name: Setup Environment
         uses: ./.github/actions/setup
         with:
-          stable-toolchain: true
+          nightly-toolchain: true
+          cargo-cache-key: cargo-sbf-build
+          cargo-cache-fallback-key: cargo-sbf
 
       - name: Determine Solana CLI version
         run: |
@@ -390,6 +392,11 @@ jobs:
         with:
           version: ${{ env.SOLANA_VERSION }}
           cache: true
+
+      - name: Install cargo-hack
+        uses: taiki-e/cache-cargo-install-action@v2
+        with:
+          tool: cargo-hack
 
       - name: Run cargo-build-sbf
         run: ./scripts/build-sbf.sh
