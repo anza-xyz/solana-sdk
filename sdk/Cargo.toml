@@ -20,11 +20,6 @@ rustdoc-args = ["--cfg=docsrs"]
 crate-type = ["rlib"]
 
 [features]
-# "program" feature is a legacy feature retained to support v1.3 and older
-# programs.  New development should not use this feature.  Instead use the
-# solana-program crate
-program = []
-
 default = [
     "borsh",
     "full",  # functionality that is not compatible or needed for on-chain programs
