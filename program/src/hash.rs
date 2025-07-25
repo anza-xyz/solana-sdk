@@ -3,7 +3,9 @@
 //! [SHA-256]: https://en.wikipedia.org/wiki/SHA-2
 //! [`Hash`]: struct@Hash
 
+#[allow(deprecated)]
+pub use solana_sha256_hasher::extend_and_hash;
 pub use {
     solana_hash::{Hash, ParseHashError, HASH_BYTES},
-    solana_sha256_hasher::{extend_and_hash, hash, hashv, Hasher},
+    solana_sha256_hasher::{hash, hashv, Hasher},
 };
