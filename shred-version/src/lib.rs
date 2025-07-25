@@ -2,7 +2,7 @@
 //!
 //! [shred]: https://solana.com/docs/terminology#shred
 
-use {solana_hard_forks::HardForks, solana_hash::Hash, solana_sha256_hasher::extend_and_hash};
+use {solana_hard_forks::HardForks, solana_hash::Hash, solana_sha256_hasher::hashv};
 
 pub fn version_from_hash(hash: &Hash) -> u16 {
     let hash = hash.as_ref();
@@ -27,7 +27,7 @@ pub fn compute_shred_version(genesis_hash: &Hash, hard_forks: Option<&HardForks>
     if let Some(hard_forks) = hard_forks {
         for &(slot, count) in hard_forks.iter() {
             let buf = [slot.to_le_bytes(), (count as u64).to_le_bytes()].concat();
-            hash = extend_and_hash(&hash, &buf);
+            hash = hashv(&[hash.as_ref(), &buf]);
         }
     }
 
