@@ -96,7 +96,7 @@ bitflags! {
 //   [2..2 + 33*A]               accounts ([AccountMeta; A])
 //   [2 + 33*A..34 + 33*A]       program_id (Pubkey)
 //   [34 + 33*A..36 + 33*A]      data_len (u16)
-//   [36 + 33*A..]               data (&[u8])
+//   [36 + 33*A..36 + 33*A + D]  data (&[u8])
 //
 // AccountMeta layout:
 //   [0..1]                      meta (u8: bit 0: is_signer, bit 1: is_writable)
@@ -105,6 +105,7 @@ bitflags! {
 // Where:
 // - N = num_instructions
 // - A = number of accounts in a particular instruction
+// - D = data_len
 #[cfg(not(target_os = "solana"))]
 #[cfg_attr(feature = "dev-context-only-utils", qualifiers(pub))]
 fn serialize_instructions(instructions: &[BorrowedInstruction]) -> Vec<u8> {
