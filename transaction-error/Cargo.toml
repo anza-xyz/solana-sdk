@@ -3,6 +3,7 @@ name = "solana-transaction-error"
 description = "Solana TransactionError type"
 documentation = "https://docs.rs/solana-transaction-error"
 version = "2.2.1"
+rust-version = "1.81.0"
 authors = { workspace = true }
 repository = { workspace = true }
 homepage = { workspace = true }
@@ -16,16 +17,14 @@ rustdoc-args = ["--cfg=docsrs"]
 
 [features]
 frozen-abi = ["dep:solana-frozen-abi", "dep:solana-frozen-abi-macro"]
-serde = ["dep:serde", "dep:serde_derive", "solana-instruction/serde"]
+serde = ["dep:serde", "dep:serde_derive", "solana-instruction-error/serde"]
 
 [dependencies]
 serde = { workspace = true, optional = true }
 serde_derive = { workspace = true, optional = true }
 solana-frozen-abi = { workspace = true, optional = true }
 solana-frozen-abi-macro = { workspace = true, optional = true }
-solana-instruction = { workspace = true, default-features = false, features = [
-    "std",
-] }
+solana-instruction-error = { workspace = true }
 solana-sanitize = { workspace = true }
 
 [lints]

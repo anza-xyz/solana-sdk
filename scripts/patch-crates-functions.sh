@@ -10,6 +10,7 @@ crate_dirs=(
   account-info
   address-lookup-table-interface
   atomic-u64
+  base3-encoding
   big-mod-exp
   bincode
   blake3-hasher
@@ -22,7 +23,6 @@ crate_dirs=(
   commitment-config
   compute-budget-interface
   cpi
-  decode-error
   define-syscall
   derivation-path
   ed25519-program
@@ -30,9 +30,9 @@ crate_dirs=(
   epoch-rewards
   epoch-rewards-hasher
   epoch-schedule
+  epoch-stake
   example-mocks
   feature-gate-interface
-  feature-set
   fee-calculator
   fee-structure
   file-download
@@ -62,7 +62,6 @@ crate_dirs=(
   packet
   poh-config
   precompile-error
-  precompiles
   presigner
   program
   program-entrypoint
@@ -74,8 +73,6 @@ crate_dirs=(
   quic-definitions
   rent
   rent-collector
-  rent-debits
-  reserved-account-keys
   reward-info
   sanitize
   sdk

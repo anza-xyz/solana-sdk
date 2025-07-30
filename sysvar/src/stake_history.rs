@@ -5,7 +5,7 @@
 //! The [`Sysvar::get`] method always returns
 //! [`ProgramError::UnsupportedSysvar`], and in practice the data size of this
 //! sysvar is too large to process on chain. One can still use the
-//! [`SysvarId::id`], [`SysvarId::check_id`] and [`Sysvar::size_of`] methods in
+//! [`SysvarId::id`], [`SysvarId::check_id`] and [`SysvarSerialize::size_of`] methods in
 //! an on-chain program, and it can be accessed off-chain through RPC.
 //!
 //! [`ProgramError::UnsupportedSysvar`]: https://docs.rs/solana-program-error/latest/solana_program_error/enum.ProgramError.html#variant.UnsupportedSysvar
@@ -17,10 +17,9 @@
 //! Calling via the RPC client:
 //!
 //! ```
-//! # use solana_program::example_mocks::solana_sdk;
-//! # use solana_program::example_mocks::solana_rpc_client;
-//! # use solana_program::stake_history::StakeHistory;
-//! # use solana_sdk::account::Account;
+//! # use solana_example_mocks::{solana_account, solana_rpc_client};
+//! # use solana_stake_interface::stake_history::StakeHistory;
+//! # use solana_account::Account;
 //! # use solana_rpc_client::rpc_client::RpcClient;
 //! # use solana_sdk_ids::sysvar::stake_history;
 //! # use anyhow::Result;
@@ -31,7 +30,6 @@
 //! #       data: vec![0, 0, 0, 0, 0, 0, 0, 0],
 //! #       owner: solana_sdk_ids::system_program::ID,
 //! #       executable: false,
-//! #       rent_epoch: 307,
 //! #   });
 //! #
 //!     let stake_history = client.get_account(&stake_history::ID)?;
@@ -47,7 +45,7 @@
 //! ```
 
 #[cfg(feature = "bincode")]
-use crate::Sysvar;
+use crate::SysvarSerialize;
 pub use solana_sdk_ids::sysvar::stake_history::{check_id, id, ID};
 #[deprecated(
     since = "2.2.0",
@@ -56,10 +54,14 @@ pub use solana_sdk_ids::sysvar::stake_history::{check_id, id, ID};
 pub use solana_stake_interface::stake_history::{
     StakeHistory, StakeHistoryEntry, StakeHistoryGetEntry, MAX_ENTRIES,
 };
-use {crate::get_sysvar, solana_clock::Epoch};
+use {
+    crate::{get_sysvar, Sysvar},
+    solana_clock::Epoch,
+};
 
+impl Sysvar for StakeHistory {}
 #[cfg(feature = "bincode")]
-impl Sysvar for StakeHistory {
+impl SysvarSerialize for StakeHistory {
     // override
     fn size_of() -> usize {
         // hard-coded so that we don't have to construct an empty

@@ -2,11 +2,11 @@
 //!
 //! The _slot hashes sysvar_ provides access to the [`SlotHashes`] type.
 //!
-//! The [`Sysvar::from_account_info`] and [`Sysvar::get`] methods always return
+//! The [`SysvarSerialize::from_account_info`] and [`Sysvar::get`] methods always return
 //! [`solana_program_error::ProgramError::UnsupportedSysvar`] because this sysvar account is too large
 //! to process on-chain. Thus this sysvar cannot be accessed on chain, though
 //! one can still use the [`SysvarId::id`], [`SysvarId::check_id`] and
-//! [`Sysvar::size_of`] methods in an on-chain program, and it can be accessed
+//! [`SysvarSerialize::size_of`] methods in an on-chain program, and it can be accessed
 //! off-chain through RPC.
 //!
 //! [`SysvarId::id`]: https://docs.rs/solana-sysvar-id/latest/solana_sysvar_id/trait.SysvarId.html#tymethod.id
@@ -17,9 +17,9 @@
 //! Calling via the RPC client:
 //!
 //! ```
-//! # use solana_program::example_mocks::solana_sdk;
-//! # use solana_program::example_mocks::solana_rpc_client;
-//! # use solana_sdk::account::Account;
+//! # use solana_example_mocks::solana_account;
+//! # use solana_example_mocks::solana_rpc_client;
+//! # use solana_account::Account;
 //! # use solana_rpc_client::rpc_client::RpcClient;
 //! # use solana_sdk_ids::sysvar::slot_hashes;
 //! # use solana_slot_hashes::SlotHashes;
@@ -31,7 +31,6 @@
 //! #       data: vec![1, 0, 0, 0, 0, 0, 0, 0, 86, 190, 235, 7, 0, 0, 0, 0, 133, 242, 94, 158, 223, 253, 207, 184, 227, 194, 235, 27, 176, 98, 73, 3, 175, 201, 224, 111, 21, 65, 73, 27, 137, 73, 229, 19, 255, 192, 193, 126],
 //! #       owner: solana_sdk_ids::system_program::ID,
 //! #       executable: false,
-//! #       rent_epoch: 307,
 //! # });
 //! #
 //!     let slot_hashes = client.get_account(&slot_hashes::ID)?;
@@ -45,12 +44,11 @@
 //! #
 //! # Ok::<(), anyhow::Error>(())
 //! ```
-
 #[cfg(feature = "bytemuck")]
 use bytemuck_derive::{Pod, Zeroable};
+use {crate::Sysvar, solana_clock::Slot, solana_hash::Hash};
 #[cfg(feature = "bincode")]
-use {crate::Sysvar, solana_account_info::AccountInfo};
-use {solana_clock::Slot, solana_hash::Hash};
+use {crate::SysvarSerialize, solana_account_info::AccountInfo};
 
 #[cfg(feature = "bytemuck")]
 const U64_SIZE: usize = std::mem::size_of::<u64>();
@@ -64,8 +62,9 @@ pub use {
     solana_sysvar_id::SysvarId,
 };
 
+impl Sysvar for SlotHashes {}
 #[cfg(feature = "bincode")]
-impl Sysvar for SlotHashes {
+impl SysvarSerialize for SlotHashes {
     // override
     fn size_of() -> usize {
         // hard-coded so that we don't have to construct an empty
@@ -178,55 +177,6 @@ impl PodSlotHashes {
     }
 }
 
-/// API for querying the `SlotHashes` sysvar.
-#[deprecated(since = "2.1.0", note = "Please use `PodSlotHashes` instead")]
-pub struct SlotHashesSysvar;
-
-#[allow(deprecated)]
-impl SlotHashesSysvar {
-    #[cfg(feature = "bytemuck")]
-    /// Get a value from the sysvar entries by its key.
-    /// Returns `None` if the key is not found.
-    pub fn get(slot: &Slot) -> Result<Option<Hash>, solana_program_error::ProgramError> {
-        get_pod_slot_hashes().map(|pod_hashes| {
-            pod_hashes
-                .binary_search_by(|PodSlotHash { slot: this, .. }| slot.cmp(this))
-                .map(|idx| pod_hashes[idx].hash)
-                .ok()
-        })
-    }
-
-    #[cfg(feature = "bytemuck")]
-    /// Get the position of an entry in the sysvar by its key.
-    /// Returns `None` if the key is not found.
-    pub fn position(slot: &Slot) -> Result<Option<usize>, solana_program_error::ProgramError> {
-        get_pod_slot_hashes().map(|pod_hashes| {
-            pod_hashes
-                .binary_search_by(|PodSlotHash { slot: this, .. }| slot.cmp(this))
-                .ok()
-        })
-    }
-}
-
-#[cfg(feature = "bytemuck")]
-fn get_pod_slot_hashes() -> Result<Vec<PodSlotHash>, solana_program_error::ProgramError> {
-    let mut pod_hashes = vec![PodSlotHash::default(); solana_slot_hashes::MAX_ENTRIES];
-    {
-        let data = bytemuck::try_cast_slice_mut::<PodSlotHash, u8>(&mut pod_hashes)
-            .map_err(|_| solana_program_error::ProgramError::InvalidAccountData)?;
-
-        // Ensure the created buffer is aligned to 8.
-        if data.as_ptr().align_offset(8) != 0 {
-            return Err(solana_program_error::ProgramError::InvalidAccountData);
-        }
-
-        let offset = 8; // Vector length as `u64`.
-        let length = (SYSVAR_LEN as u64).saturating_sub(offset);
-        crate::get_sysvar(data, &SlotHashes::id(), offset, length)?;
-    }
-    Ok(pod_hashes)
-}
-
 #[cfg(test)]
 mod tests {
     use {
@@ -324,59 +274,5 @@ mod tests {
             check_slot_hashes.position(&not_a_slot),
         );
         assert_eq!(pod_slot_hashes.position(&not_a_slot).unwrap(), None);
-    }
-
-    #[allow(deprecated)]
-    #[serial]
-    #[test]
-    fn test_slot_hashes_sysvar() {
-        let mut slot_hashes = vec![];
-        for i in 0..MAX_ENTRIES {
-            slot_hashes.push((
-                i as u64,
-                hash(&[(i >> 24) as u8, (i >> 16) as u8, (i >> 8) as u8, i as u8]),
-            ));
-        }
-
-        let check_slot_hashes = SlotHashes::new(&slot_hashes);
-        mock_get_sysvar_syscall(&bincode::serialize(&check_slot_hashes).unwrap());
-
-        // `get`:
-        assert_eq!(
-            SlotHashesSysvar::get(&0).unwrap().as_ref(),
-            check_slot_hashes.get(&0),
-        );
-        assert_eq!(
-            SlotHashesSysvar::get(&256).unwrap().as_ref(),
-            check_slot_hashes.get(&256),
-        );
-        assert_eq!(
-            SlotHashesSysvar::get(&511).unwrap().as_ref(),
-            check_slot_hashes.get(&511),
-        );
-        // `None`.
-        assert_eq!(
-            SlotHashesSysvar::get(&600).unwrap().as_ref(),
-            check_slot_hashes.get(&600),
-        );
-
-        // `position`:
-        assert_eq!(
-            SlotHashesSysvar::position(&0).unwrap(),
-            check_slot_hashes.position(&0),
-        );
-        assert_eq!(
-            SlotHashesSysvar::position(&256).unwrap(),
-            check_slot_hashes.position(&256),
-        );
-        assert_eq!(
-            SlotHashesSysvar::position(&511).unwrap(),
-            check_slot_hashes.position(&511),
-        );
-        // `None`.
-        assert_eq!(
-            SlotHashesSysvar::position(&600).unwrap(),
-            check_slot_hashes.position(&600),
-        );
     }
 }

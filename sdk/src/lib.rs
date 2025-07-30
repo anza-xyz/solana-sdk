@@ -36,10 +36,10 @@ extern crate self as solana_sdk;
 
 #[deprecated(since = "2.2.0", note = "Use `solana-message` crate instead")]
 pub use solana_message as message;
+#[cfg(feature = "borsh")]
+pub use solana_program::borsh1;
 #[cfg(not(target_os = "solana"))]
 pub use solana_program::program_stubs;
-#[cfg(target_arch = "wasm32")]
-pub use solana_program::wasm_bindgen;
 pub use solana_program::{
     account_info, big_mod_exp, blake3, bpf_loader, bpf_loader_deprecated, clock, config,
     custom_heap_default, custom_panic_default, debug_account_data, declare_deprecated_sysvar_id,
@@ -48,8 +48,6 @@ pub use solana_program::{
     program_error, program_option, program_pack, rent, secp256k1_program, serialize_utils,
     slot_hashes, slot_history, stable_layout, syscalls, sysvar, unchecked_div_by_const,
 };
-#[cfg(feature = "borsh")]
-pub use solana_program::{borsh, borsh0_10, borsh1};
 #[cfg(feature = "full")]
 #[deprecated(since = "2.2.0", note = "Use `solana-signer` crate instead")]
 pub use solana_signer::signers;
@@ -67,7 +65,6 @@ pub mod signature;
 pub mod signer;
 pub mod transaction;
 pub mod transport;
-pub mod wasm;
 
 #[deprecated(since = "2.1.0", note = "Use `solana-account` crate instead")]
 pub use solana_account as account;

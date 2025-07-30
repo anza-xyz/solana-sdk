@@ -39,7 +39,7 @@
 //! # let p = EpochSchedule::id();
 //! # let l = &mut 1120560;
 //! # let d = &mut vec![0, 32, 0, 0, 0, 0, 0, 0, 0, 32, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
-//! # let a = AccountInfo::new(&p, false, false, l, d, &p, false, 0);
+//! # let a = AccountInfo::new(&p, false, false, l, d, &p, false);
 //! # let accounts = &[a.clone(), a];
 //! # process_instruction(
 //! #     &Pubkey::new_unique(),
@@ -58,7 +58,7 @@
 //! # use solana_program_error::{ProgramError, ProgramResult};
 //! # use solana_pubkey::Pubkey;
 //! # use solana_sdk_ids::sysvar::epoch_schedule;
-//! # use solana_sysvar::Sysvar;
+//! # use solana_sysvar::{Sysvar, SysvarSerialize};
 //! fn process_instruction(
 //!     program_id: &Pubkey,
 //!     accounts: &[AccountInfo],
@@ -79,7 +79,7 @@
 //! # let p = EpochSchedule::id();
 //! # let l = &mut 1120560;
 //! # let d = &mut vec![0, 32, 0, 0, 0, 0, 0, 0, 0, 32, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
-//! # let a = AccountInfo::new(&p, false, false, l, d, &p, false, 0);
+//! # let a = AccountInfo::new(&p, false, false, l, d, &p, false);
 //! # let accounts = &[a.clone(), a];
 //! # process_instruction(
 //! #     &Pubkey::new_unique(),
@@ -93,10 +93,10 @@
 //!
 //! ```
 //! # use solana_epoch_schedule::EpochSchedule;
-//! # use solana_program::example_mocks::solana_sdk;
-//! # use solana_program::example_mocks::solana_rpc_client;
+//! # use solana_example_mocks::solana_account;
+//! # use solana_example_mocks::solana_rpc_client;
 //! # use solana_rpc_client::rpc_client::RpcClient;
-//! # use solana_sdk::account::Account;
+//! # use solana_account::Account;
 //! # use solana_sdk_ids::sysvar::epoch_schedule;
 //! # use anyhow::Result;
 //! #
@@ -106,7 +106,6 @@
 //! #       data: vec![0, 32, 0, 0, 0, 0, 0, 0, 0, 32, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
 //! #       owner: solana_sdk_ids::system_program::ID,
 //! #       executable: false,
-//! #       rent_epoch: 307,
 //! # });
 //! #
 //!     let epoch_schedule = client.get_account(&epoch_schedule::ID)?;
@@ -121,13 +120,16 @@
 //! # Ok::<(), anyhow::Error>(())
 //! ```
 #[cfg(feature = "bincode")]
+use crate::SysvarSerialize;
 use crate::{impl_sysvar_get, Sysvar};
 pub use {
     solana_epoch_schedule::EpochSchedule,
     solana_sdk_ids::sysvar::epoch_schedule::{check_id, id, ID},
 };
 
-#[cfg(feature = "bincode")]
 impl Sysvar for EpochSchedule {
     impl_sysvar_get!(sol_get_epoch_schedule_sysvar);
 }
+
+#[cfg(feature = "bincode")]
+impl SysvarSerialize for EpochSchedule {}

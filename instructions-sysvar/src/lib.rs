@@ -14,7 +14,7 @@
 //! instruction sysvar is accessed through several free functions within this
 //! module.
 //!
-//! [`Sysvar`]: crate::Sysvar
+//! [`Sysvar`]: https://docs.rs/solana-sysvar/latest/solana_sysvar/trait.Sysvar.html
 //!
 //! See also the Solana [documentation on the instructions sysvar][sdoc].
 //!
@@ -41,7 +41,8 @@ use {
 };
 use {
     solana_account_info::AccountInfo,
-    solana_instruction::{error::InstructionError, AccountMeta, Instruction},
+    solana_instruction::{AccountMeta, Instruction},
+    solana_instruction_error::InstructionError,
     solana_program_error::ProgramError,
     solana_sanitize::SanitizeError,
     solana_serialize_utils::{read_pubkey, read_slice, read_u16, read_u8},
@@ -54,7 +55,7 @@ use {
 /// but does not implement the [`Sysvar`] trait.
 ///
 /// [`SysvarId`]: https://docs.rs/solana-sysvar-id/latest/solana_sysvar_id/trait.SysvarId.html
-/// [`Sysvar`]: crate::Sysvar
+/// [`Sysvar`]: https://docs.rs/solana-sysvar/latest/solana_sysvar/trait.Sysvar.html
 ///
 /// Use the free functions in this module to access the instructions sysvar.
 pub struct Instructions();
@@ -81,19 +82,30 @@ bitflags! {
     }
 }
 
-// First encode the number of instructions:
-// [0..2 - num_instructions
+// Instructions memory layout
 //
-// Then a table of offsets of where to find them in the data
-//  3..2 * num_instructions table of instruction offsets
+// Header layout:
+//   [0..2]                      num_instructions (u16)
+//   [2..2 + 2*N]                instruction_offsets ([u16; N])
 //
-// Each instruction is then encoded as:
-//   0..2 - num_accounts
-//   2 - meta_byte -> (bit 0 signer, bit 1 is_writable)
-//   3..35 - pubkey - 32 bytes
-//   35..67 - program_id
-//   67..69 - data len - u16
-//   69..data_len - data
+// Each instruction starts at an offset specified in `instruction_offsets`.
+// The layout of each instruction is relative to its start offset.
+//
+// Instruction layout:
+//   [0..2]                      num_accounts (u16)
+//   [2..2 + 33*A]               accounts ([AccountMeta; A])
+//   [2 + 33*A..34 + 33*A]       program_id (Pubkey)
+//   [34 + 33*A..36 + 33*A]      data_len (u16)
+//   [36 + 33*A..36 + 33*A + D]  data (&[u8])
+//
+// AccountMeta layout:
+//   [0..1]                      meta (u8: bit 0: is_signer, bit 1: is_writable)
+//   [1..33]                     pubkey (Pubkey)
+//
+// Where:
+// - N = num_instructions
+// - A = number of accounts in a particular instruction
+// - D = data_len
 #[cfg(not(target_os = "solana"))]
 #[cfg_attr(feature = "dev-context-only-utils", qualifiers(pub))]
 fn serialize_instructions(instructions: &[BorrowedInstruction]) -> Vec<u8> {
@@ -158,13 +170,6 @@ pub fn load_current_index_checked(
     let instruction_sysvar = instruction_sysvar_account_info.try_borrow_data()?;
     let index = load_current_index(&instruction_sysvar);
     Ok(index)
-}
-
-/// Store the current `Instruction`'s index in the instructions sysvar data.
-#[deprecated(since = "2.2.1", note = "Use store_current_index_checked instead")]
-pub fn store_current_index(data: &mut [u8], instruction_index: u16) {
-    let last_index = data.len() - 2;
-    data[last_index..last_index + 2].copy_from_slice(&instruction_index.to_le_bytes());
 }
 
 /// Store the current `Instruction`'s index in the instructions sysvar data.
@@ -305,7 +310,6 @@ mod tests {
         let mut data = [4u8; 10];
         let res = store_current_index_checked(&mut data, 3);
         assert!(res.is_ok());
-        #[allow(deprecated)]
         let index = load_current_index(&data);
         assert_eq!(index, 3);
         assert_eq!([4u8; 8], data[0..8]);
@@ -326,7 +330,7 @@ mod tests {
         is_writable: bool,
     }
 
-    fn make_borrowed_instruction(params: &MakeInstructionParams) -> BorrowedInstruction {
+    fn make_borrowed_instruction(params: &MakeInstructionParams) -> BorrowedInstruction<'_> {
         let MakeInstructionParams {
             program_id,
             account_key,
@@ -388,16 +392,8 @@ mod tests {
         let mut lamports = 0;
         let mut data = construct_instructions_data(&[borrowed_instruction0, borrowed_instruction1]);
         let owner = solana_sdk_ids::sysvar::id();
-        let mut account_info = AccountInfo::new(
-            &key,
-            false,
-            false,
-            &mut lamports,
-            &mut data,
-            &owner,
-            false,
-            0,
-        );
+        let mut account_info =
+            AccountInfo::new(&key, false, false, &mut lamports, &mut data, &owner, false);
 
         assert_eq!(
             instruction0,
@@ -447,16 +443,8 @@ mod tests {
         let res = store_current_index_checked(&mut data, 1);
         assert!(res.is_ok());
         let owner = solana_sdk_ids::sysvar::id();
-        let mut account_info = AccountInfo::new(
-            &key,
-            false,
-            false,
-            &mut lamports,
-            &mut data,
-            &owner,
-            false,
-            0,
-        );
+        let mut account_info =
+            AccountInfo::new(&key, false, false, &mut lamports, &mut data, &owner, false);
 
         assert_eq!(1, load_current_index_checked(&account_info).unwrap());
         {
@@ -517,16 +505,8 @@ mod tests {
         let res = store_current_index_checked(&mut data, 1);
         assert!(res.is_ok());
         let owner = solana_sdk_ids::sysvar::id();
-        let mut account_info = AccountInfo::new(
-            &key,
-            false,
-            false,
-            &mut lamports,
-            &mut data,
-            &owner,
-            false,
-            0,
-        );
+        let mut account_info =
+            AccountInfo::new(&key, false, false, &mut lamports, &mut data, &owner, false);
 
         assert_eq!(
             Err(ProgramError::InvalidArgument),

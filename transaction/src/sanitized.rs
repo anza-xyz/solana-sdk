@@ -216,13 +216,13 @@ impl SanitizedTransaction {
     pub fn get_account_locks(
         &self,
         tx_account_lock_limit: usize,
-    ) -> Result<TransactionAccountLocks> {
+    ) -> Result<TransactionAccountLocks<'_>> {
         Self::validate_account_locks(self.message(), tx_account_lock_limit)?;
         Ok(self.get_account_locks_unchecked())
     }
 
     /// Return the list of accounts that must be locked during processing this transaction.
-    pub fn get_account_locks_unchecked(&self) -> TransactionAccountLocks {
+    pub fn get_account_locks_unchecked(&self) -> TransactionAccountLocks<'_> {
         let message = &self.message;
         let account_keys = message.account_keys();
         let num_readonly_accounts = message.num_readonly_accounts();
@@ -282,30 +282,6 @@ impl SanitizedTransaction {
         } else {
             Ok(())
         }
-    }
-
-    #[cfg(feature = "precompiles")]
-    #[deprecated(since = "2.2.3", note = "Use agave-precompiles instead")]
-    #[allow(deprecated)]
-    /// Verify the precompiled programs in this transaction
-    pub fn verify_precompiles(&self, feature_set: &solana_feature_set::FeatureSet) -> Result<()> {
-        for (index, (program_id, instruction)) in
-            self.message.program_instructions_iter().enumerate()
-        {
-            solana_precompiles::verify_if_precompile(
-                program_id,
-                instruction,
-                self.message().instructions(),
-                feature_set,
-            )
-            .map_err(|err| {
-                TransactionError::InstructionError(
-                    index as u8,
-                    solana_instruction::error::InstructionError::Custom(err as u32),
-                )
-            })?;
-        }
-        Ok(())
     }
 
     /// Validate a transaction message against locked accounts

@@ -2,7 +2,10 @@
 use bytemuck::{Pod, PodInOption, Zeroable, ZeroableInOption};
 #[cfg(not(target_os = "solana"))]
 use {
-    crate::{error::BlsError, pubkey::PubkeyProjective},
+    crate::{
+        error::BlsError,
+        pubkey::{AsPubkeyProjective, PubkeyProjective, VerifiablePubkey},
+    },
     blstrs::{G2Affine, G2Projective},
     group::Group,
 };
@@ -28,100 +31,106 @@ pub const BLS_SIGNATURE_AFFINE_SIZE: usize = 192;
 /// Size of a BLS signature in an affine point representation in base64
 pub const BLS_SIGNATURE_AFFINE_BASE64_SIZE: usize = 256;
 
-/// A BLS signature in a projective point representation
+/// A trait for types that can be converted into a `SignatureProjective`.
 #[cfg(not(target_os = "solana"))]
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub struct SignatureProjective(pub(crate) G2Projective);
+pub trait AsSignatureProjective {
+    /// Attempt to convert the type into a `SignatureProjective`.
+    fn try_as_projective(&self) -> Result<SignatureProjective, BlsError>;
+}
 
+/// A trait that provides verification methods to any convertible signature type.
 #[cfg(not(target_os = "solana"))]
-impl Default for SignatureProjective {
-    fn default() -> Self {
-        Self(G2Projective::identity())
+pub trait VerifiableSignature: AsSignatureProjective {
+    /// Verify the signature against any convertible public key type and a message.
+    fn verify<P: VerifiablePubkey>(&self, pubkey: &P, message: &[u8]) -> Result<bool, BlsError> {
+        // The logic is defined once here.
+        let signature_projective = self.try_as_projective()?;
+        pubkey.verify_signature(&signature_projective, message)
     }
 }
 
+/// A BLS signature in a projective point representation
+#[cfg(not(target_os = "solana"))]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct SignatureProjective(pub(crate) G2Projective);
+
 #[cfg(not(target_os = "solana"))]
 impl SignatureProjective {
-    /// Verify a signature against a message and a public key
-    pub fn verify(&self, pubkey: &PubkeyProjective, message: &[u8]) -> bool {
-        pubkey.verify(self, message)
+    /// Creates the identity element, which is the starting point for aggregation
+    ///
+    /// The identity element is not a valid signature and it should only be used
+    /// for the purpose of aggregation
+    pub fn identity() -> Self {
+        Self(G2Projective::identity())
     }
 
     /// Aggregate a list of signatures into an existing aggregate
     #[allow(clippy::arithmetic_side_effects)]
-    pub fn aggregate_with<'a, I>(&mut self, signatures: I)
+    pub fn aggregate_with<'a, S: 'a + AsSignatureProjective + ?Sized, I>(
+        &mut self,
+        signatures: I,
+    ) -> Result<(), BlsError>
     where
-        I: IntoIterator<Item = &'a SignatureProjective>,
+        I: IntoIterator<Item = &'a S>,
     {
-        self.0 = signatures.into_iter().fold(self.0, |mut acc, signature| {
-            acc += &signature.0;
-            acc
-        });
+        for signature in signatures {
+            self.0 += &signature.try_as_projective()?.0;
+        }
+        Ok(())
     }
 
     /// Aggregate a list of public keys
     #[allow(clippy::arithmetic_side_effects)]
-    pub fn aggregate<'a, I>(signatures: I) -> Result<SignatureProjective, BlsError>
+    pub fn aggregate<'a, S: 'a + AsSignatureProjective + ?Sized, I>(
+        signatures: I,
+    ) -> Result<SignatureProjective, BlsError>
     where
-        I: IntoIterator<Item = &'a SignatureProjective>,
+        I: IntoIterator<Item = &'a S>,
     {
         let mut iter = signatures.into_iter();
-        if let Some(acc) = iter.next() {
-            let aggregate_point = iter.fold(acc.0, |mut acc, signature| {
-                acc += &signature.0;
-                acc
-            });
-            Ok(Self(aggregate_point))
+        if let Some(first) = iter.next() {
+            let mut aggregate = first.try_as_projective()?;
+            aggregate.aggregate_with(iter)?;
+            Ok(aggregate)
         } else {
             Err(BlsError::EmptyAggregation)
         }
     }
 
     /// Verify a list of signatures against a message and a list of public keys
-    pub fn aggregate_verify<'a, I, J>(
+    pub fn aggregate_verify<
+        'a,
+        P: 'a + AsPubkeyProjective + ?Sized,
+        S: 'a + AsSignatureProjective + ?Sized,
+        I,
+        J,
+    >(
         public_keys: I,
         signatures: J,
         message: &[u8],
     ) -> Result<bool, BlsError>
     where
-        I: IntoIterator<Item = &'a PubkeyProjective>,
-        J: IntoIterator<Item = &'a SignatureProjective>,
+        I: IntoIterator<Item = &'a P>,
+        J: IntoIterator<Item = &'a S>,
     {
         let aggregate_pubkey = PubkeyProjective::aggregate(public_keys)?;
         let aggregate_signature = SignatureProjective::aggregate(signatures)?;
 
-        Ok(aggregate_pubkey.verify(&aggregate_signature, message))
+        Ok(aggregate_pubkey._verify_signature(&aggregate_signature, message))
     }
 }
 
 #[cfg(not(target_os = "solana"))]
-impl From<SignatureProjective> for Signature {
-    fn from(proof: SignatureProjective) -> Self {
-        Self(proof.0.to_uncompressed())
-    }
-}
+impl<T: AsSignatureProjective> VerifiableSignature for T {}
 
 #[cfg(not(target_os = "solana"))]
-impl TryFrom<Signature> for SignatureProjective {
-    type Error = BlsError;
-
-    fn try_from(proof: Signature) -> Result<Self, Self::Error> {
-        let maybe_uncompressed: Option<G2Affine> = G2Affine::from_uncompressed(&proof.0).into();
-        let uncompressed = maybe_uncompressed.ok_or(BlsError::PointConversion)?;
-        Ok(Self(uncompressed.into()))
-    }
-}
-
-#[cfg(not(target_os = "solana"))]
-impl TryFrom<&Signature> for SignatureProjective {
-    type Error = BlsError;
-
-    fn try_from(proof: &Signature) -> Result<Self, Self::Error> {
-        let maybe_uncompressed: Option<G2Affine> = G2Affine::from_uncompressed(&proof.0).into();
-        let uncompressed = maybe_uncompressed.ok_or(BlsError::PointConversion)?;
-        Ok(Self(uncompressed.into()))
-    }
-}
+impl_bls_conversions!(
+    SignatureProjective,
+    Signature,
+    SignatureCompressed,
+    G2Affine,
+    AsSignatureProjective
+);
 
 /// A serialized BLS signature in a compressed point representation
 #[cfg_attr(feature = "frozen-abi", derive(solana_frozen_abi_macro::AbiExample))]
@@ -204,10 +213,57 @@ mod bytemuck_impls {
 mod tests {
     use {
         super::*,
-        crate::keypair::Keypair,
+        crate::{
+            keypair::Keypair,
+            pubkey::{Pubkey, PubkeyCompressed},
+        },
         core::str::FromStr,
-        std::{string::ToString, vec},
+        std::{string::ToString, vec::Vec},
     };
+
+    #[test]
+    fn test_signature_verification() {
+        let keypair = Keypair::new();
+        let test_message = b"test message";
+        let signature_projective = keypair.sign(test_message);
+
+        let pubkey_projective = keypair.public;
+        let pubkey_affine: Pubkey = pubkey_projective.into();
+        let pubkey_compressed: PubkeyCompressed = pubkey_affine.try_into().unwrap();
+
+        let signature_affine: Signature = signature_projective.into();
+        let signature_compressed: SignatureCompressed = signature_affine.try_into().unwrap();
+
+        assert!(signature_projective
+            .verify(&pubkey_projective, test_message)
+            .unwrap());
+        assert!(signature_affine
+            .verify(&pubkey_projective, test_message)
+            .unwrap());
+        assert!(signature_compressed
+            .verify(&pubkey_projective, test_message)
+            .unwrap());
+
+        assert!(signature_projective
+            .verify(&pubkey_affine, test_message)
+            .unwrap());
+        assert!(signature_affine
+            .verify(&pubkey_affine, test_message)
+            .unwrap());
+        assert!(signature_compressed
+            .verify(&pubkey_affine, test_message)
+            .unwrap());
+
+        assert!(signature_projective
+            .verify(&pubkey_compressed, test_message)
+            .unwrap());
+        assert!(signature_affine
+            .verify(&pubkey_compressed, test_message)
+            .unwrap());
+        assert!(signature_compressed
+            .verify(&pubkey_compressed, test_message)
+            .unwrap());
+    }
 
     #[test]
     fn test_signature_aggregate() {
@@ -218,12 +274,15 @@ mod tests {
         let test_message = b"test message";
         let keypair1 = Keypair::new();
         let signature1 = keypair1.sign(test_message);
+        let signature1_affine: Signature = signature1.into();
 
         let aggregate_signature =
             SignatureProjective::aggregate([&signature0, &signature1]).unwrap();
 
         let mut aggregate_signature_with = signature0;
-        aggregate_signature_with.aggregate_with([&signature1]);
+        aggregate_signature_with
+            .aggregate_with([&signature1_affine])
+            .unwrap();
 
         assert_eq!(aggregate_signature, aggregate_signature_with);
     }
@@ -234,16 +293,34 @@ mod tests {
 
         let keypair0 = Keypair::new();
         let signature0 = keypair0.sign(test_message);
-        assert!(keypair0.public.verify(&signature0, test_message));
+        assert!(keypair0
+            .public
+            .verify_signature(&signature0, test_message)
+            .unwrap());
 
         let keypair1 = Keypair::new();
         let signature1 = keypair1.secret.sign(test_message);
-        assert!(keypair1.public.verify(&signature1, test_message));
+        assert!(keypair1
+            .public
+            .verify_signature(&signature1, test_message)
+            .unwrap());
 
         // basic case
         assert!(SignatureProjective::aggregate_verify(
-            vec![&keypair0.public, &keypair1.public],
-            vec![&signature0, &signature1],
+            std::vec![&keypair0.public, &keypair1.public],
+            std::vec![&signature0, &signature1],
+            test_message,
+        )
+        .unwrap());
+
+        // verify with affine and compressed types
+        let pubkey0_affine: Pubkey = keypair0.public.into();
+        let pubkey1_affine: Pubkey = keypair1.public.into();
+        let signature0_affine: Signature = signature0.into();
+        let signature1_affine: Signature = signature1.into();
+        assert!(SignatureProjective::aggregate_verify(
+            std::vec![&pubkey0_affine, &pubkey1_affine],
+            std::vec![&signature0_affine, &signature1_affine],
             test_message,
         )
         .unwrap());
@@ -252,8 +329,8 @@ mod tests {
         let aggregate_signature =
             SignatureProjective::aggregate([&signature0, &signature1]).unwrap();
         assert!(SignatureProjective::aggregate_verify(
-            vec![&keypair0.public, &keypair1.public],
-            vec![&aggregate_signature],
+            std::vec![&keypair0.public, &keypair1.public],
+            std::vec![&aggregate_signature],
             test_message,
         )
         .unwrap());
@@ -262,28 +339,73 @@ mod tests {
         let aggregate_pubkey =
             PubkeyProjective::aggregate([&keypair0.public, &keypair1.public]).unwrap();
         assert!(SignatureProjective::aggregate_verify(
-            vec![&aggregate_pubkey],
-            vec![&signature0, &signature1],
+            std::vec![&aggregate_pubkey],
+            std::vec![&signature0, &signature1],
             test_message,
         )
         .unwrap());
 
         // empty set of public keys or signatures
         let err = SignatureProjective::aggregate_verify(
-            vec![],
-            vec![&signature0, &signature1],
+            std::vec![] as Vec<&PubkeyProjective>,
+            std::vec![&signature0, &signature1],
             test_message,
         )
         .unwrap_err();
         assert_eq!(err, BlsError::EmptyAggregation);
 
         let err = SignatureProjective::aggregate_verify(
-            vec![&keypair0.public, &keypair1.public],
-            vec![],
+            std::vec![&keypair0.public, &keypair1.public],
+            std::vec![] as Vec<&SignatureProjective>,
             test_message,
         )
         .unwrap_err();
         assert_eq!(err, BlsError::EmptyAggregation);
+    }
+
+    #[test]
+    fn test_aggregate_verify_dyn() {
+        let test_message = b"test message for dyn verify";
+
+        let keypair0 = Keypair::new();
+        let keypair1 = Keypair::new();
+        let keypair2 = Keypair::new();
+
+        let signature0_projective = keypair0.sign(test_message);
+        let signature1_projective = keypair1.sign(test_message);
+        let signature2_projective = keypair2.sign(test_message);
+
+        let pubkey0 = keypair0.public; // Projective
+        let pubkey1_affine: Pubkey = keypair1.public.into(); // Affine
+        let pubkey2_compressed: PubkeyCompressed =
+            Pubkey::from(keypair2.public).try_into().unwrap(); // Compressed
+
+        let signature0 = signature0_projective; // Projective
+        let signature1_affine: Signature = signature1_projective.into(); // Affine
+        let signature2_compressed: SignatureCompressed =
+            Signature::from(signature2_projective).try_into().unwrap(); // Compressed
+
+        let dyn_pubkeys: Vec<&dyn AsPubkeyProjective> =
+            std::vec![&pubkey0, &pubkey1_affine, &pubkey2_compressed];
+        let dyn_signatures: Vec<&dyn AsSignatureProjective> =
+            std::vec![&signature0, &signature1_affine, &signature2_compressed];
+
+        assert!(
+            SignatureProjective::aggregate_verify(dyn_pubkeys, dyn_signatures, test_message)
+                .unwrap()
+        );
+
+        let wrong_message = b"this is not the correct message";
+        let dyn_pubkeys_fail: Vec<&dyn AsPubkeyProjective> =
+            std::vec![&pubkey0, &pubkey1_affine, &pubkey2_compressed];
+        let dyn_signatures_fail: Vec<&dyn AsSignatureProjective> =
+            std::vec![&signature0, &signature1_affine, &signature2_compressed];
+        assert!(!SignatureProjective::aggregate_verify(
+            dyn_pubkeys_fail,
+            dyn_signatures_fail,
+            wrong_message
+        )
+        .unwrap());
     }
 
     #[test]

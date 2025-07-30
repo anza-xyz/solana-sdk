@@ -8,7 +8,7 @@
 //! [`solana-sdk`] crate, which reexports all modules from `solana-program`.
 //!
 //! [std]: https://doc.rust-lang.org/stable/std/
-//! [sstd]: https://solana.com/docs/programs/lang-rust#restrictions
+//! [sstd]: https://solana.com/docs/programs/limitations#rust-libraries
 //! [`solana-sdk`]: https://docs.rs/solana-sdk/latest/solana_sdk/
 //!
 //! This library defines
@@ -94,16 +94,22 @@
 //!
 //! ```toml
 //! [lib]
-//! crate-type = ["cdylib", "rlib"]
+//! crate-type = ["cdylib"]
 //!
 //! [features]
 //! no-entrypoint = []
 //! ```
 //!
-//! Note that a Solana program must specify its crate-type as "cdylib", and
-//! "cdylib" crates will automatically be discovered and built by the `cargo
-//! build-bpf` command. Solana programs also often have crate-type "rlib" so
-//! they can be linked to other Rust crates.
+//! Note that a Solana program must specify its crate-type as "cdylib", to
+//! be discovered and built by the `cargo-build-sbf` command as a deployable program.
+//! Solana programs also often have crate-type "rlib" so they can be linked to other Rust crates.
+//! Avoid using "rlib" and "cdylib" crates together, since their combined usage precludes
+//! compiler optimizations that may decrease program size and CU usage.
+//!
+//! Prefer writing a separate package if it is supposed to be used as a library for other Solana
+//! programs (i.e. a "rlib" only crate). This would be normally the case for defining account
+//! types and helpers that are used by both clients and program. When creating a Rust project
+//! intended to be a program ready for deployment, use only the "cdylib" crate type.
 //!
 //! # On-chain vs. off-chain compilation targets
 //!
@@ -211,7 +217,7 @@
 //!
 //!   Users need to import the [`borsh`] crate themselves &mdash; it is not
 //!   re-exported by `solana-program`, though this crate provides several useful
-//!   utilities in its [`borsh` module][borshmod] that are not available in the
+//!   utilities in its [`borsh1` module][borshmod] that are not available in the
 //!   `borsh` library.
 //!
 //!   The [`Instruction::new_with_borsh`] function creates an `Instruction` by
@@ -222,7 +228,7 @@
 //!   [brust]: https://docs.rs/borsh
 //!   [bjs]: https://github.com/near/borsh-js
 //!   [`borsh`]: https://docs.rs/borsh
-//!   [borshmod]: crate::borsh
+//!   [borshmod]: crate::borsh1
 //!   [`Instruction::new_with_borsh`]: instruction::Instruction::new_with_borsh
 //!
 //! - __[Bincode]__, a compact serialization format that implements the [Serde]
@@ -277,15 +283,12 @@
 //! A simple example of transferring lamports via CPI:
 //!
 //! ```
-//! use solana_program::{
-//!     account_info::{next_account_info, AccountInfo},
-//!     entrypoint,
-//!     entrypoint::ProgramResult,
-//!     program::invoke,
-//!     pubkey::Pubkey,
-//!     system_instruction,
-//!     system_program,
-//! };
+//! use solana_account_info::{next_account_info, AccountInfo};
+//! use solana_program_entrypoint::entrypoint;
+//! use solana_program_error::ProgramResult;
+//! use solana_cpi::invoke;
+//! use solana_pubkey::Pubkey;
+//! use solana_system_interface::instruction::transfer;
 //!
 //! entrypoint!(process_instruction);
 //!
@@ -306,7 +309,7 @@
 //!     let lamports = 1000000;
 //!
 //!     invoke(
-//!         &system_instruction::transfer(payer.key, recipient.key, lamports),
+//!         &transfer(payer.key, recipient.key, lamports),
 //!         &[payer.clone(), recipient.clone()],
 //!     )
 //! }
@@ -325,15 +328,12 @@
 //! A simple example of creating an account for a PDA:
 //!
 //! ```
-//! use solana_program::{
-//!     account_info::{next_account_info, AccountInfo},
-//!     entrypoint,
-//!     entrypoint::ProgramResult,
-//!     program::invoke_signed,
-//!     pubkey::Pubkey,
-//!     system_instruction,
-//!     system_program,
-//! };
+//! use solana_account_info::{next_account_info, AccountInfo};
+//! use solana_program_entrypoint::entrypoint;
+//! use solana_program_error::ProgramResult;
+//! use solana_cpi::invoke_signed;
+//! use solana_pubkey::Pubkey;
+//! use solana_system_interface::instruction::create_account;
 //!
 //! entrypoint!(process_instruction);
 //!
@@ -350,8 +350,8 @@
 //!     assert!(payer.is_writable);
 //!     assert!(payer.is_signer);
 //!     assert!(vault_pda.is_writable);
-//!     assert_eq!(vault_pda.owner, &system_program::ID);
-//!     assert!(system_program::check_id(system_program.key));
+//!     assert_eq!(vault_pda.owner, &solana_system_interface::program::ID);
+//!     assert!(solana_system_interface::program::check_id(system_program.key));
 //!
 //!     let vault_bump_seed = instruction_data[0];
 //!     let vault_seeds = &[b"vault", payer.key.as_ref(), &[vault_bump_seed]];
@@ -363,7 +363,7 @@
 //!     let vault_size = 16;
 //!
 //!     invoke_signed(
-//!         &system_instruction::create_account(
+//!         &create_account(
 //!             &payer.key,
 //!             &vault_pda.key,
 //!             lamports,
@@ -423,42 +423,42 @@
 //! - __System Program__: Creates new accounts, allocates account data, assigns
 //!   accounts to owning programs, transfers lamports from System Program owned
 //!   accounts and pays transaction fees.
-//!   - ID: [`solana_program::system_program`]
-//!   - Instruction: [`solana_program::system_instruction`]
+//!   - ID: [`solana_system_interface::program::ID`](https://docs.rs/solana-system-interface/latest/solana_system_interface/program/constant.ID.html)
+//!   - Instruction: [`solana_system_interface::instruction`](https://docs.rs/solana-system-interface/latest/solana_system_interface/instruction/index.html)
 //!   - Invokable by programs? yes
 //!
 //! - __Compute Budget Program__: Requests additional CPU or memory resources
 //!   for a transaction. This program does nothing when called from another
 //!   program.
-//!   - ID: [`solana_sdk::compute_budget`](https://docs.rs/solana-sdk/latest/solana_sdk/compute_budget/index.html)
-//!   - Instruction: [`solana_sdk::compute_budget`](https://docs.rs/solana-sdk/latest/solana_sdk/compute_budget/index.html)
+//!   - ID: [`solana_compute_budget_interface::ID`](https://docs.rs/solana-compute-budget-interface/latest/solana_compute_budget_interface/constant.ID.html)
+//!   - Instruction: [`solana_compute_budget_interface::ComputeBudgetInstruction`](https://docs.rs/solana-compute-budget-interface/latest/solana_compute_budget_interface/enum.ComputeBudgetInstruction.html)
 //!   - Invokable by programs? no
 //!
 //! - __ed25519 Program__: Verifies an ed25519 signature.
-//!   - ID: [`solana_program::ed25519_program`]
-//!   - Instruction: [`solana_sdk::ed25519_instruction`](https://docs.rs/solana-sdk/latest/solana_sdk/ed25519_instruction/index.html)
+//!   - ID: [`solana_sdk_ids::ed25519_program::ID`](https://docs.rs/solana-sdk-ids/latest/solana_sdk_ids/ed25519_program/constant.ID.html)
+//!   - Instruction: [`solana_ed25519_program::new_ed25519_instruction_with_signature`](https://docs.rs/solana-ed25519-program/latest/solana_ed25519_program/fn.new_ed25519_instruction_with_signature.html)
 //!   - Invokable by programs? no
 //!
 //! - __secp256k1 Program__: Verifies secp256k1 public key recovery operations.
-//!   - ID: [`solana_program::secp256k1_program`]
-//!   - Instruction: [`solana_sdk::secp256k1_instruction`](https://docs.rs/solana-sdk/latest/solana_sdk/secp256k1_instruction/index.html)
+//!   - ID: [`solana_sdk_ids::secp256k1_program::ID`](https://docs.rs/solana-sdk-ids/latest/solana_sdk_ids/secp256k1_program/constant.ID.html)
+//!   - Instruction: [`solana_secp256k1_program::new_secp256k1_instruction_with_signature`](https://docs.rs/solana-secp256k1-program/latest/solana_secp256k1_program/fn.new_secp256k1_instruction_with_signature.html)
 //!   - Invokable by programs? no
 //!
 //! - __BPF Loader__: Deploys, and executes immutable programs on the chain.
-//!   - ID: [`solana_program::bpf_loader`]
-//!   - Instruction: [`solana_program::loader_instruction`]
+//!   - ID: [`solana_sdk_ids::bpf_loader::ID`](https://docs.rs/solana-sdk-ids/latest/solana_sdk_ids/bpf_loader/constant.ID.html)
+//!   - Instruction: [`solana_loader_v2_interface::instruction`](https://docs.rs/solana-loader-v2-interface/latest/solana_loader_v2_interface/instruction/index.html)
 //!   - Invokable by programs? yes
 //!
 //! - __Upgradable BPF Loader__: Deploys, upgrades, and executes upgradable
 //!   programs on the chain.
-//!   - ID: [`solana_program::bpf_loader_upgradeable`]
-//!   - Instruction: [`solana_program::loader_upgradeable_instruction`]
+//!   - ID: [`solana_sdk_ids::bpf_loader_upgradeable::ID`](https://docs.rs/solana-sdk-ids/latest/solana_sdk_ids/bpf_loader_upgradeable/constant.ID.html)
+//!   - Instruction: [`solana_loader_v3_interface::instruction`](https://docs.rs/solana-loader-v3-interface/latest/solana_loader_v3_interface/instruction/index.html)
 //!   - Invokable by programs? yes
 //!
 //! - __Deprecated BPF Loader__: Deploys, and executes immutable programs on the
 //!   chain.
-//!   - ID: [`solana_program::bpf_loader_deprecated`]
-//!   - Instruction: [`solana_program::loader_instruction`]
+//!   - ID: [`solana_sdk_ids::bpf_loader_deprecated::ID`](https://docs.rs/solana-sdk-ids/latest/solana_sdk_ids/bpf_loader_deprecated/constant.ID.html)
+//!   - Instruction: [`solana_loader_v2_interface::instruction`](https://docs.rs/solana-loader-v2-interface/latest/solana_loader_v2_interface/instruction/index.html)
 //!   - Invokable by programs? yes
 //!
 //! [lut]: https://docs.solanalabs.com/proposals/versioned-transactions
@@ -476,7 +476,7 @@ pub mod compute_units;
 pub mod ed25519_program;
 pub mod entrypoint_deprecated;
 pub mod epoch_schedule;
-pub mod epoch_stake;
+pub use solana_epoch_stake as epoch_stake;
 pub mod hash;
 pub mod incinerator;
 pub mod instruction;
@@ -489,18 +489,11 @@ pub mod slot_hashes;
 pub mod slot_history;
 pub mod syscalls;
 pub mod sysvar;
-pub mod wasm;
 
 #[deprecated(since = "2.2.0", note = "Use `solana-big-mod-exp` crate instead")]
 pub use solana_big_mod_exp as big_mod_exp;
 #[deprecated(since = "2.2.0", note = "Use `solana-blake3-hasher` crate instead")]
 pub use solana_blake3_hasher as blake3;
-#[cfg(feature = "borsh")]
-#[deprecated(since = "2.1.0", note = "Use `solana-borsh` crate instead")]
-pub use solana_borsh::deprecated as borsh;
-#[cfg(feature = "borsh")]
-#[deprecated(since = "2.1.0", note = "Use `solana-borsh` crate instead")]
-pub use solana_borsh::v0_10 as borsh0_10;
 #[cfg(feature = "borsh")]
 #[deprecated(since = "2.1.0", note = "Use `solana-borsh` crate instead")]
 pub use solana_borsh::v1 as borsh1;
@@ -528,8 +521,6 @@ pub use solana_short_vec as short_vec;
 pub use solana_stable_layout as stable_layout;
 #[cfg(not(target_os = "solana"))]
 pub use solana_sysvar::program_stubs;
-#[cfg(target_arch = "wasm32")]
-pub use wasm_bindgen::prelude::wasm_bindgen;
 pub use {
     solana_account_info::{self as account_info, debug_account_data},
     solana_clock as clock,

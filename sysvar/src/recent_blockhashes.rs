@@ -19,11 +19,12 @@
 #![allow(deprecated)]
 #![allow(clippy::arithmetic_side_effects)]
 #[cfg(feature = "bincode")]
-use crate::Sysvar;
+use crate::SysvarSerialize;
 #[cfg(feature = "serde")]
 use serde_derive::{Deserialize, Serialize};
 pub use solana_sdk_ids::sysvar::recent_blockhashes::{check_id, id, ID};
 use {
+    crate::Sysvar,
     solana_fee_calculator::FeeCalculator,
     solana_hash::Hash,
     solana_sysvar_id::impl_sysvar_id,
@@ -150,8 +151,10 @@ impl<T: Ord> Iterator for IntoIterSorted<T> {
     }
 }
 
+impl Sysvar for RecentBlockhashes {}
+
 #[cfg(feature = "bincode")]
-impl Sysvar for RecentBlockhashes {
+impl SysvarSerialize for RecentBlockhashes {
     fn size_of() -> usize {
         // hard-coded so that we don't have to construct an empty
         6008 // golden, update if MAX_ENTRIES changes

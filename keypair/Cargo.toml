@@ -3,6 +3,7 @@ name = "solana-keypair"
 description = "Concrete implementation of a Solana `Signer`."
 documentation = "https://docs.rs/solana-keypair"
 version = "2.2.3"
+rust-version = "1.81.0"
 authors = { workspace = true }
 repository = { workspace = true }
 homepage = { workspace = true }
@@ -10,7 +11,7 @@ license = { workspace = true }
 edition = { workspace = true }
 
 [package.metadata.docs.rs]
-targets = ["x86_64-unknown-linux-gnu", "wasm32-unknown-unknown"]
+targets = ["x86_64-unknown-linux-gnu"]
 all-features = true
 rustdoc-args = ["--cfg=docsrs"]
 
@@ -22,19 +23,16 @@ seed-derivable = [
 ]
 
 [dependencies]
-ed25519-dalek = { workspace = true }
+ed25519-dalek = { workspace = true, features = ["rand_core"] }
 ed25519-dalek-bip32 = { workspace = true, optional = true }
 five8 = { workspace = true }
-rand0-7 = { workspace = true }
+rand = { workspace = true }
 solana-derivation-path = { workspace = true, optional = true }
 solana-pubkey = { workspace = true }
 solana-seed-derivable = { workspace = true, optional = true }
 solana-seed-phrase = { workspace = true }
 solana-signature = { workspace = true, features = ["std", "verify"] }
 solana-signer = { workspace = true }
-
-[target.'cfg(target_arch = "wasm32")'.dependencies]
-wasm-bindgen = { workspace = true }
 
 [dev-dependencies]
 serde_json = { workspace = true }

@@ -40,7 +40,7 @@
 //! # let p = Rent::id();
 //! # let l = &mut 1009200;
 //! # let d = &mut vec![152, 13, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 64, 100];
-//! # let a = AccountInfo::new(&p, false, false, l, d, &p, false, 0);
+//! # let a = AccountInfo::new(&p, false, false, l, d, &p, false);
 //! # let accounts = &[a.clone(), a];
 //! # process_instruction(
 //! #     &Pubkey::new_unique(),
@@ -55,7 +55,7 @@
 //! ```
 //! # use solana_account_info::{AccountInfo, next_account_info};
 //! # use solana_msg::msg;
-//! # use solana_sysvar::Sysvar;
+//! # use solana_sysvar::{Sysvar, SysvarSerialize};
 //! # use solana_program_error::{ProgramError, ProgramResult};
 //! # use solana_pubkey::Pubkey;
 //! # use solana_rent::Rent;
@@ -81,7 +81,7 @@
 //! # let p = Rent::id();
 //! # let l = &mut 1009200;
 //! # let d = &mut vec![152, 13, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 64, 100];
-//! # let a = AccountInfo::new(&p, false, false, l, d, &p, false, 0);
+//! # let a = AccountInfo::new(&p, false, false, l, d, &p, false);
 //! # let accounts = &[a.clone(), a];
 //! # process_instruction(
 //! #     &Pubkey::new_unique(),
@@ -94,9 +94,9 @@
 //! Accessing via the RPC client:
 //!
 //! ```
-//! # use solana_program::example_mocks::solana_sdk;
-//! # use solana_program::example_mocks::solana_rpc_client;
-//! # use solana_sdk::account::Account;
+//! # use solana_example_mocks::solana_account;
+//! # use solana_example_mocks::solana_rpc_client;
+//! # use solana_account::Account;
 //! # use solana_rent::Rent;
 //! # use solana_rpc_client::rpc_client::RpcClient;
 //! # use solana_sdk_ids::sysvar::rent;
@@ -108,7 +108,6 @@
 //! #       data: vec![152, 13, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 64, 100],
 //! #       owner: solana_sdk_ids::system_program::ID,
 //! #       executable: false,
-//! #       rent_epoch: 307,
 //! # });
 //! #
 //!     let rent = client.get_account(&rent::ID)?;
@@ -123,13 +122,15 @@
 //! # Ok::<(), anyhow::Error>(())
 //! ```
 #[cfg(feature = "bincode")]
+use crate::SysvarSerialize;
 use crate::{impl_sysvar_get, Sysvar};
 pub use {
     solana_rent::Rent,
     solana_sdk_ids::sysvar::rent::{check_id, id, ID},
 };
-
-#[cfg(feature = "bincode")]
 impl Sysvar for Rent {
     impl_sysvar_get!(sol_get_rent_sysvar);
 }
+
+#[cfg(feature = "bincode")]
+impl SysvarSerialize for Rent {}

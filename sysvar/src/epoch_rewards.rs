@@ -57,7 +57,7 @@
 //! #     ..EpochRewards::default()
 //! # };
 //! # let mut d: Vec<u8> = bincode::serialize(&epoch_rewards).unwrap();
-//! # let a = AccountInfo::new(&p, false, false, l, &mut d, &p, false, 0);
+//! # let a = AccountInfo::new(&p, false, false, l, &mut d, &p, false);
 //! # let accounts = &[a.clone(), a];
 //! # process_instruction(
 //! #     &Pubkey::new_unique(),
@@ -75,7 +75,7 @@
 //! # use solana_msg::msg;
 //! # use solana_program_error::{ProgramError, ProgramResult};
 //! # use solana_pubkey::Pubkey;
-//! # use solana_sysvar::Sysvar;
+//! # use solana_sysvar::{Sysvar, SysvarSerialize};
 //! # use solana_sdk_ids::sysvar::epoch_rewards;
 //! #
 //! fn process_instruction(
@@ -105,7 +105,7 @@
 //! #     ..EpochRewards::default()
 //! # };
 //! # let mut d: Vec<u8> = bincode::serialize(&epoch_rewards).unwrap();
-//! # let a = AccountInfo::new(&p, false, false, l, &mut d, &p, false, 0);
+//! # let a = AccountInfo::new(&p, false, false, l, &mut d, &p, false);
 //! # let accounts = &[a.clone(), a];
 //! # process_instruction(
 //! #     &Pubkey::new_unique(),
@@ -119,10 +119,10 @@
 //!
 //! ```
 //! # use solana_epoch_rewards::EpochRewards;
-//! # use solana_program::example_mocks::solana_sdk;
-//! # use solana_program::example_mocks::solana_rpc_client;
+//! # use solana_example_mocks::solana_account;
+//! # use solana_example_mocks::solana_rpc_client;
 //! # use solana_rpc_client::rpc_client::RpcClient;
-//! # use solana_sdk::account::Account;
+//! # use solana_account::Account;
 //! # use solana_sdk_ids::sysvar::epoch_rewards;
 //! # use anyhow::Result;
 //! #
@@ -140,7 +140,6 @@
 //! #       data,
 //! #       owner: solana_sdk_ids::system_program::ID,
 //! #       executable: false,
-//! #       rent_epoch: 307,
 //! # });
 //! #
 //!     let epoch_rewards = client.get_account(&epoch_rewards::ID)?;
@@ -156,13 +155,16 @@
 //! ```
 
 #[cfg(feature = "bincode")]
+use crate::SysvarSerialize;
 use crate::{impl_sysvar_get, Sysvar};
 pub use {
     solana_epoch_rewards::EpochRewards,
     solana_sdk_ids::sysvar::epoch_rewards::{check_id, id, ID},
 };
 
-#[cfg(feature = "bincode")]
 impl Sysvar for EpochRewards {
     impl_sysvar_get!(sol_get_epoch_rewards_sysvar);
 }
+
+#[cfg(feature = "bincode")]
+impl SysvarSerialize for EpochRewards {}

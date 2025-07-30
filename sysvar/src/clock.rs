@@ -39,7 +39,7 @@
 //! # let p = Clock::id();
 //! # let l = &mut 1169280;
 //! # let d = &mut vec![240, 153, 233, 7, 0, 0, 0, 0, 11, 115, 118, 98, 0, 0, 0, 0, 51, 1, 0, 0, 0, 0, 0, 0, 52, 1, 0, 0, 0, 0, 0, 0, 121, 50, 119, 98, 0, 0, 0, 0];
-//! # let a = AccountInfo::new(&p, false, false, l, d, &p, false, 0);
+//! # let a = AccountInfo::new(&p, false, false, l, d, &p, false);
 //! # let accounts = &[a.clone(), a];
 //! # process_instruction(
 //! #     &Pubkey::new_unique(),
@@ -57,7 +57,7 @@
 //! # use solana_msg::msg;
 //! # use solana_program_error::{ProgramError, ProgramResult};
 //! # use solana_pubkey::Pubkey;
-//! # use solana_sysvar::Sysvar;
+//! # use solana_sysvar::{Sysvar, SysvarSerialize};
 //! # use solana_sdk_ids::sysvar::clock;
 //! #
 //! fn process_instruction(
@@ -80,7 +80,7 @@
 //! # let p = Clock::id();
 //! # let l = &mut 1169280;
 //! # let d = &mut vec![240, 153, 233, 7, 0, 0, 0, 0, 11, 115, 118, 98, 0, 0, 0, 0, 51, 1, 0, 0, 0, 0, 0, 0, 52, 1, 0, 0, 0, 0, 0, 0, 121, 50, 119, 98, 0, 0, 0, 0];
-//! # let a = AccountInfo::new(&p, false, false, l, d, &p, false, 0);
+//! # let a = AccountInfo::new(&p, false, false, l, d, &p, false);
 //! # let accounts = &[a.clone(), a];
 //! # process_instruction(
 //! #     &Pubkey::new_unique(),
@@ -94,10 +94,10 @@
 //!
 //! ```
 //! # use solana_clock::Clock;
-//! # use solana_program::example_mocks::solana_sdk;
-//! # use solana_program::example_mocks::solana_rpc_client;
+//! # use solana_example_mocks::solana_account;
+//! # use solana_example_mocks::solana_rpc_client;
 //! # use solana_rpc_client::rpc_client::RpcClient;
-//! # use solana_sdk::account::Account;
+//! # use solana_account::Account;
 //! # use solana_sdk_ids::sysvar::clock;
 //! # use anyhow::Result;
 //! #
@@ -107,7 +107,6 @@
 //! #       data: vec![240, 153, 233, 7, 0, 0, 0, 0, 11, 115, 118, 98, 0, 0, 0, 0, 51, 1, 0, 0, 0, 0, 0, 0, 52, 1, 0, 0, 0, 0, 0, 0, 121, 50, 119, 98, 0, 0, 0, 0],
 //! #       owner: solana_sdk_ids::system_program::ID,
 //! #       executable: false,
-//! #       rent_epoch: 307,
 //! #   });
 //! #
 //!     let clock = client.get_account(&clock::ID)?;
@@ -123,13 +122,16 @@
 //! ```
 
 #[cfg(feature = "bincode")]
+use crate::SysvarSerialize;
 use crate::{impl_sysvar_get, Sysvar};
 pub use {
     solana_clock::Clock,
     solana_sdk_ids::sysvar::clock::{check_id, id, ID},
 };
 
-#[cfg(feature = "bincode")]
 impl Sysvar for Clock {
     impl_sysvar_get!(sol_get_clock_sysvar);
 }
+
+#[cfg(feature = "bincode")]
+impl SysvarSerialize for Clock {}

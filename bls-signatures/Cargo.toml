@@ -3,6 +3,7 @@ name = "solana-bls-signatures"
 description = "Solana BLS Signatures"
 documentation = "https://docs.rs/solana-bls-signatures"
 version = "0.1.0"
+rust-version = "1.81.0"
 authors = { workspace = true }
 repository = { workspace = true }
 homepage = { workspace = true }
@@ -24,6 +25,7 @@ std = ["dep:serde_json"]
 base64 = { workspace = true }
 bytemuck = { workspace = true, optional = true }
 cfg_eval = { workspace = true, optional = true }
+pairing = { workspace = true }
 serde = { workspace = true, features = ["derive"], optional = true }
 serde_json = { workspace = true, optional = true }
 serde_with = { workspace = true, features = ["macros"], optional = true }
@@ -47,9 +49,14 @@ subtle = { workspace = true, optional = true }
 
 [dev-dependencies]
 bincode = { workspace = true }
+criterion = { workspace = true }
 solana-bls-signatures = { path = ".", features = ["std"] }
 solana-keypair = { workspace = true }
 tempfile = { workspace = true }
 
 [lints]
 workspace = true
+
+[[bench]]
+name = "bls_signatures"
+harness = false

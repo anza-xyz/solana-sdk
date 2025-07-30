@@ -5,8 +5,8 @@
 //! Sysvars are special accounts that contain dynamically-updated data about the
 //! network cluster, the blockchain history, and the executing transaction. Each
 //! sysvar is defined in its own submodule within this module. The [`clock`],
-//! [`epoch_schedule`], [`instructions`], and [`rent`] sysvars are most useful
-//! to on-chain programs.
+//! [`epoch_schedule`], and [`rent`] sysvars are most useful to on-chain
+//! programs.
 //!
 //! Simple sysvars implement the [`Sysvar::get`] method, which loads a sysvar
 //! directly from the runtime, as in this example that logs the `clock` sysvar:
@@ -31,13 +31,13 @@
 //!
 //! Since Solana sysvars are accounts, if the `AccountInfo` is provided to the
 //! program, then the program can deserialize the sysvar with
-//! [`Sysvar::from_account_info`] to access its data, as in this example that
+//! [`SysvarSerialize::from_account_info`] to access its data, as in this example that
 //! again logs the [`clock`] sysvar.
 //!
 //! ```
 //! use solana_account_info::{AccountInfo, next_account_info};
 //! use solana_msg::msg;
-//! use solana_sysvar::Sysvar;
+//! use solana_sysvar::{Sysvar, SysvarSerialize};
 //! use solana_program_error::ProgramResult;
 //! use solana_pubkey::Pubkey;
 //!
@@ -83,19 +83,9 @@ pub mod __private {
     pub use solana_define_syscall::definitions;
     pub use {solana_program_entrypoint::SUCCESS, solana_program_error::ProgramError};
 }
-use solana_pubkey::Pubkey;
-#[allow(deprecated)]
-#[doc(inline)]
-#[deprecated(
-    since = "2.0.0",
-    note = "please use `solana_sdk::reserved_account_keys::ReservedAccountKeys` instead"
-)]
-pub use sysvar_ids::ALL_IDS;
 #[cfg(feature = "bincode")]
-use {
-    solana_account_info::AccountInfo, solana_program_error::ProgramError,
-    solana_sysvar_id::SysvarId,
-};
+use {solana_account_info::AccountInfo, solana_sysvar_id::SysvarId};
+use {solana_program_error::ProgramError, solana_pubkey::Pubkey};
 
 pub mod clock;
 pub mod epoch_rewards;
@@ -110,45 +100,36 @@ pub mod slot_hashes;
 pub mod slot_history;
 pub mod stake_history;
 
-#[deprecated(
-    since = "2.0.0",
-    note = "please use `solana_sdk::reserved_account_keys::ReservedAccountKeys` instead"
-)]
-mod sysvar_ids {
-    use {super::*, lazy_static::lazy_static};
-    lazy_static! {
-        // This will be deprecated and so this list shouldn't be modified
-        pub static ref ALL_IDS: Vec<Pubkey> = vec![
-            clock::id(),
-            epoch_schedule::id(),
-            #[allow(deprecated)]
-            fees::id(),
-            #[allow(deprecated)]
-            recent_blockhashes::id(),
-            rent::id(),
-            rewards::id(),
-            slot_hashes::id(),
-            slot_history::id(),
-            stake_history::id(),
-            solana_sdk_ids::sysvar::instructions::id(),
-        ];
-    }
-}
+/// Return value indicating that the  `offset + length` is greater than the length of
+/// the sysvar data.
+//
+// Defined in the bpf loader as [`OFFSET_LENGTH_EXCEEDS_SYSVAR`](https://github.com/anza-xyz/agave/blob/master/programs/bpf_loader/src/syscalls/sysvar.rs#L172).
+const OFFSET_LENGTH_EXCEEDS_SYSVAR: u64 = 1;
 
-/// Returns `true` of the given `Pubkey` is a sysvar account.
-#[deprecated(
-    since = "2.0.0",
-    note = "please check the account's owner or use solana_sdk::reserved_account_keys::ReservedAccountKeys instead"
-)]
-#[allow(deprecated)]
-pub fn is_sysvar_id(id: &Pubkey) -> bool {
-    ALL_IDS.iter().any(|key| key == id)
+/// Return value indicating that the sysvar was not found.
+//
+// Defined in the bpf loader as [`SYSVAR_NOT_FOUND`](https://github.com/anza-xyz/agave/blob/master/programs/bpf_loader/src/syscalls/sysvar.rs#L171).
+const SYSVAR_NOT_FOUND: u64 = 2;
+
+/// Interface for loading a sysvar.
+pub trait Sysvar: Default + Sized {
+    /// Load the sysvar directly from the runtime.
+    ///
+    /// This is the preferred way to load a sysvar. Calling this method does not
+    /// incur any deserialization overhead, and does not require the sysvar
+    /// account to be passed to the program.
+    ///
+    /// Not all sysvars support this method. If not, it returns
+    /// [`ProgramError::UnsupportedSysvar`].
+    fn get() -> Result<Self, ProgramError> {
+        Err(ProgramError::UnsupportedSysvar)
+    }
 }
 
 #[cfg(feature = "bincode")]
 /// A type that holds sysvar data.
-pub trait Sysvar:
-    SysvarId + Default + Sized + serde::Serialize + serde::de::DeserializeOwned
+pub trait SysvarSerialize:
+    Sysvar + SysvarId + serde::Serialize + serde::de::DeserializeOwned
 {
     /// The size in bytes of the sysvar as serialized account data.
     fn size_of() -> usize {
@@ -176,18 +157,6 @@ pub trait Sysvar:
     fn to_account_info(&self, account_info: &mut AccountInfo) -> Option<()> {
         bincode::serialize_into(&mut account_info.data.borrow_mut()[..], self).ok()
     }
-
-    /// Load the sysvar directly from the runtime.
-    ///
-    /// This is the preferred way to load a sysvar. Calling this method does not
-    /// incur any deserialization overhead, and does not require the sysvar
-    /// account to be passed to the program.
-    ///
-    /// Not all sysvars support this method. If not, it returns
-    /// [`ProgramError::UnsupportedSysvar`].
-    fn get() -> Result<Self, ProgramError> {
-        Err(ProgramError::UnsupportedSysvar)
-    }
 }
 
 /// Implements the [`Sysvar::get`] method for both SBF and host targets.
@@ -206,7 +175,8 @@ macro_rules! impl_sysvar_get {
 
             match result {
                 $crate::__private::SUCCESS => Ok(var),
-                e => Err(e.into()),
+                // Unexpected errors are folded into `UnsupportedSysvar`.
+                _ => Err($crate::__private::ProgramError::UnsupportedSysvar),
             }
         }
     };
@@ -239,7 +209,10 @@ fn get_sysvar(
 
     match result {
         solana_program_entrypoint::SUCCESS => Ok(()),
-        e => Err(e.into()),
+        OFFSET_LENGTH_EXCEEDS_SYSVAR => Err(solana_program_error::ProgramError::InvalidArgument),
+        SYSVAR_NOT_FOUND => Err(solana_program_error::ProgramError::UnsupportedSysvar),
+        // Unexpected errors are folded into `UnsupportedSysvar`.
+        _ => Err(solana_program_error::ProgramError::UnsupportedSysvar),
     }
 }
 
@@ -249,7 +222,6 @@ mod tests {
         super::*,
         crate::program_stubs::{set_syscall_stubs, SyscallStubs},
         serde_derive::{Deserialize, Serialize},
-        solana_clock::Epoch,
         solana_program_entrypoint::SUCCESS,
         solana_program_error::ProgramError,
         solana_pubkey::Pubkey,
@@ -272,6 +244,7 @@ mod tests {
         }
     }
     impl Sysvar for TestSysvar {}
+    impl SysvarSerialize for TestSysvar {}
 
     // NOTE tests that use this mock MUST carry the #[serial] attribute
     struct MockGetSysvarSyscall {
@@ -305,16 +278,8 @@ mod tests {
         let owner = Pubkey::new_unique();
         let mut lamports = 42;
         let mut data = vec![0_u8; TestSysvar::size_of()];
-        let mut account_info = AccountInfo::new(
-            &key,
-            false,
-            true,
-            &mut lamports,
-            &mut data,
-            &owner,
-            false,
-            Epoch::default(),
-        );
+        let mut account_info =
+            AccountInfo::new(&key, false, true, &mut lamports, &mut data, &owner, false);
 
         test_sysvar.to_account_info(&mut account_info).unwrap();
         let new_test_sysvar = TestSysvar::from_account_info(&account_info).unwrap();

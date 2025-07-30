@@ -3,6 +3,7 @@ name = "solana-hash"
 description = "Solana wrapper for the 32-byte output of a hashing algorithm."
 documentation = "https://docs.rs/solana-hash"
 version = "2.3.0"
+rust-version = "1.81.0"
 authors = { workspace = true }
 repository = { workspace = true }
 homepage = { workspace = true }
@@ -37,10 +38,6 @@ solana-frozen-abi-macro = { workspace = true, optional = true, features = [
     "frozen-abi",
 ] }
 solana-sanitize = { workspace = true }
-
-[target.'cfg(target_arch = "wasm32")'.dependencies]
-js-sys = { workspace = true }
-wasm-bindgen = { workspace = true }
 
 [dev-dependencies]
 bs58 = { workspace = true, default-features = false, features = ["alloc"] }

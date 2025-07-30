@@ -4,8 +4,12 @@ use crate::{
     AddressLookupTableAccount,
 };
 use {
-    crate::MessageHeader, core::fmt, solana_instruction::Instruction, solana_pubkey::Pubkey,
-    solana_sdk_ids::system_program, std::collections::BTreeMap,
+    crate::{inline_nonce::is_advance_nonce_instruction_data, MessageHeader},
+    core::fmt,
+    solana_instruction::Instruction,
+    solana_pubkey::Pubkey,
+    solana_sdk_ids::system_program,
+    std::collections::BTreeMap,
 };
 
 /// A helper struct to collect pubkeys compiled for a set of instructions
@@ -23,7 +27,7 @@ pub enum CompileError {
     UnknownInstructionKey(Pubkey),
 }
 
-impl std::error::Error for CompileError {}
+impl core::error::Error for CompileError {}
 
 impl fmt::Display for CompileError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -35,8 +39,7 @@ impl fmt::Display for CompileError {
                 f.write_str("address lookup table index overflowed during compilation")
             }
             CompileError::UnknownInstructionKey(key) => f.write_fmt(format_args!(
-                "encountered unknown account key `{0}` during instruction compilation",
-                key,
+                "encountered unknown account key `{key}` during instruction compilation",
             )),
         }
     }
@@ -204,8 +207,6 @@ impl CompiledKeys {
 
 // inlined to avoid solana_nonce dep
 const NONCED_TX_MARKER_IX_INDEX: usize = 0;
-// inlined to avoid solana_system_interface and bincode deps
-const ADVANCE_NONCE_PREFIX: [u8; 4] = [4, 0, 0, 0];
 
 fn get_nonce_pubkey(instructions: &[Instruction]) -> Option<&Pubkey> {
     let ix = instructions.get(NONCED_TX_MARKER_IX_INDEX)?;
@@ -213,7 +214,7 @@ fn get_nonce_pubkey(instructions: &[Instruction]) -> Option<&Pubkey> {
         return None;
     }
 
-    if ix.data.get(0..4) != Some(&ADVANCE_NONCE_PREFIX[..]) {
+    if !is_advance_nonce_instruction_data(&ix.data) {
         return None;
     }
 
@@ -223,11 +224,9 @@ fn get_nonce_pubkey(instructions: &[Instruction]) -> Option<&Pubkey> {
 #[cfg(test)]
 mod tests {
     use {
-        super::*,
-        bitflags::bitflags,
-        solana_instruction::AccountMeta,
+        super::*, bitflags::bitflags, solana_instruction::AccountMeta,
         solana_sdk_ids::sysvar::recent_blockhashes,
-        solana_system_interface::instruction::{advance_nonce_account, SystemInstruction},
+        solana_system_interface::instruction::advance_nonce_account,
     };
 
     static_assertions::const_assert_eq!(
@@ -254,16 +253,6 @@ mod tests {
                 is_nonce: flags.contains(KeyFlags::NONCE),
             }
         }
-    }
-
-    #[test]
-    fn test_advance_nonce_ix_prefix() {
-        let advance_nonce_ix: SystemInstruction = solana_bincode::limited_deserialize(
-            &ADVANCE_NONCE_PREFIX[..],
-            4, /* serialized size of AdvanceNonceAccount */
-        )
-        .unwrap();
-        assert_eq!(advance_nonce_ix, SystemInstruction::AdvanceNonceAccount);
     }
 
     #[test]

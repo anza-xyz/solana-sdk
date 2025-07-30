@@ -155,12 +155,10 @@ pub(crate) fn sol_get_sysvar(
         .sol_get_sysvar(sysvar_id_addr, var_addr, offset, length)
 }
 
-#[cfg(feature = "bincode")]
 pub(crate) fn sol_get_clock_sysvar(var_addr: *mut u8) -> u64 {
     SYSCALL_STUBS.read().unwrap().sol_get_clock_sysvar(var_addr)
 }
 
-#[cfg(feature = "bincode")]
 pub(crate) fn sol_get_epoch_schedule_sysvar(var_addr: *mut u8) -> u64 {
     SYSCALL_STUBS
         .read()
@@ -168,17 +166,14 @@ pub(crate) fn sol_get_epoch_schedule_sysvar(var_addr: *mut u8) -> u64 {
         .sol_get_epoch_schedule_sysvar(var_addr)
 }
 
-#[cfg(feature = "bincode")]
 pub(crate) fn sol_get_fees_sysvar(var_addr: *mut u8) -> u64 {
     SYSCALL_STUBS.read().unwrap().sol_get_fees_sysvar(var_addr)
 }
 
-#[cfg(feature = "bincode")]
 pub(crate) fn sol_get_rent_sysvar(var_addr: *mut u8) -> u64 {
     SYSCALL_STUBS.read().unwrap().sol_get_rent_sysvar(var_addr)
 }
 
-#[cfg(feature = "bincode")]
 pub(crate) fn sol_get_last_restart_slot(var_addr: *mut u8) -> u64 {
     SYSCALL_STUBS
         .read()
@@ -216,7 +211,6 @@ pub fn sol_get_stack_height() -> u64 {
     SYSCALL_STUBS.read().unwrap().sol_get_stack_height()
 }
 
-#[cfg(feature = "bincode")]
 pub(crate) fn sol_get_epoch_rewards_sysvar(var_addr: *mut u8) -> u64 {
     SYSCALL_STUBS
         .read()

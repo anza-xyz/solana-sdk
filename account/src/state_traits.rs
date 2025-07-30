@@ -3,7 +3,7 @@
 use {
     crate::{Account, AccountSharedData},
     bincode::ErrorKind,
-    solana_instruction::error::InstructionError,
+    solana_instruction_error::InstructionError,
     std::cell::Ref,
 };
 

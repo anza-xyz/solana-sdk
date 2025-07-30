@@ -69,9 +69,9 @@ pub fn get_processed_sibling_instruction(index: usize) -> Option<Instruction> {
 
 /// Get the current stack height.
 ///
-/// Transaction-level instructions are height [`TRANSACTION_LEVEL_STACK_HEIGHT`]`,
-/// fist invoked inner instruction is height `TRANSACTION_LEVEL_STACK_HEIGHT + 1`,
-/// and so forth.
+/// Transaction-level instructions are height
+/// [`crate::TRANSACTION_LEVEL_STACK_HEIGHT`]`, fist invoked inner instruction
+/// is height `TRANSACTION_LEVEL_STACK_HEIGHT + 1`, and so forth.
 #[cfg(feature = "syscalls")]
 pub fn get_stack_height() -> usize {
     #[cfg(target_os = "solana")]

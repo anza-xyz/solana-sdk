@@ -18,13 +18,11 @@ all-features = true
 rustdoc-args = ["--cfg=docsrs"]
 
 [lib]
-crate-type = ["cdylib", "rlib"]
+crate-type = ["rlib"]
 
 [features]
 default = ["borsh"]
 borsh = [
-    "dep:borsh",
-    "dep:borsh0-10",
     "dep:solana-borsh",
     "solana-hash/borsh",
     "solana-instruction/borsh",
@@ -47,28 +45,16 @@ frozen-abi = [
 ]
 
 [dependencies]
-bincode = { workspace = true }
-blake3 = { workspace = true, features = ["traits-preview"] }
-borsh = { workspace = true, optional = true }
-borsh0-10 = { workspace = true, optional = true }
-bytemuck = { workspace = true }
-lazy_static = { workspace = true }
-log = { workspace = true }
 memoffset = { workspace = true }
-num-traits = { workspace = true, features = ["i128"] }
-serde = { workspace = true }
-serde_derive = { workspace = true }
 solana-account-info = { workspace = true, features = ["bincode"] }
-solana-address-lookup-table-interface = { workspace = true, features = ["bincode", "bytemuck"] }
-solana-atomic-u64 = { workspace = true }
 solana-big-mod-exp = { workspace = true }
 solana-blake3-hasher = { workspace = true, features = ["blake3"] }
 solana-borsh = { workspace = true, optional = true }
 solana-clock = { workspace = true, features = ["serde", "sysvar"] }
 solana-cpi = { workspace = true }
-solana-decode-error = { workspace = true }
 solana-epoch-rewards = { workspace = true, features = ["serde", "sysvar"] }
 solana-epoch-schedule = { workspace = true, features = ["serde", "sysvar"] }
+solana-epoch-stake = { workspace = true }
 solana-fee-calculator = { workspace = true, features = ["serde"] }
 solana-frozen-abi = { workspace = true, optional = true, features = ["frozen-abi"] }
 solana-frozen-abi-macro = { workspace = true, optional = true, features = ["frozen-abi"] }
@@ -83,6 +69,7 @@ solana-instruction = { workspace = true, default-features = false, features = [
     "std",
     "syscalls",
 ] }
+solana-instruction-error = { workspace = true, features = ["num-traits"] }
 solana-instructions-sysvar = { workspace = true }
 solana-keccak-hasher = { workspace = true, features = ["sha3"] }
 solana-last-restart-slot = { workspace = true, features = ["serde", "sysvar"] }
@@ -96,7 +83,6 @@ solana-program-pack = { workspace = true }
 solana-pubkey = { workspace = true, features = ["bytemuck", "curve25519", "serde", "std"] }
 solana-rent = { workspace = true, features = ["serde", "sysvar"] }
 solana-sdk-ids = { workspace = true }
-solana-sdk-macro = { workspace = true }
 solana-secp256k1-recover = { workspace = true }
 solana-serde-varint = { workspace = true }
 solana-serialize-utils = { workspace = true }
@@ -107,34 +93,17 @@ solana-slot-history = { workspace = true, features = ["serde", "sysvar"] }
 solana-stable-layout = { workspace = true }
 solana-sysvar = { workspace = true, features = ["bincode", "bytemuck"] }
 solana-sysvar-id = { workspace = true }
-thiserror = { workspace = true }
 
 [target.'cfg(not(target_os = "solana"))'.dependencies]
-num-bigint = { workspace = true }
 solana-example-mocks = { workspace = true }
 
-[target.'cfg(target_arch = "wasm32")'.dependencies]
-console_error_panic_hook = { workspace = true }
-console_log = { workspace = true }
-getrandom = { workspace = true, features = ["js", "wasm-bindgen"] }
-wasm-bindgen = { workspace = true }
-
-# This is currently needed to build on-chain programs reliably.
-# Borsh 0.10 may pull in hashbrown 0.13, which uses ahash 0.8, which uses
-# getrandom 0.2 underneath. This explicit dependency allows for no-std if cargo
-# upgrades Borsh's dependency to hashbrown 0.13.
-# Remove this once borsh 0.11 or 1.0 is released, which correctly declares the
-# hashbrown dependency as optional.
 [target.'cfg(target_os = "solana")'.dependencies]
-getrandom = { workspace = true, features = ["custom"] }
 solana-define-syscall = { workspace = true }
 
 [dev-dependencies]
 solana-pubkey = { workspace = true, features = ["dev-context-only-utils"] }
+solana-system-interface = { workspace = true }
 solana-sysvar = { workspace = true, features = ["dev-context-only-utils"] }
-
-[target.'cfg(not(target_os = "solana"))'.dev-dependencies]
-arbitrary = { workspace = true, features = ["derive"] }
 
 [lints]
 workspace = true

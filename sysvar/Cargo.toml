@@ -17,7 +17,7 @@ rustdoc-args = ["--cfg=docsrs"]
 [features]
 bincode = ["dep:bincode", "serde", "solana-stake-interface/bincode"]
 bytemuck = ["dep:bytemuck", "dep:bytemuck_derive"]
-dev-context-only-utils = ["bincode", "bytemuck", "solana-instructions-sysvar/dev-context-only-utils"]
+dev-context-only-utils = ["bincode", "bytemuck"]
 frozen-abi = [
     "dep:solana-frozen-abi",
     "dep:solana-frozen-abi-macro",
@@ -53,13 +53,11 @@ solana-frozen-abi = { workspace = true, optional = true }
 solana-frozen-abi-macro = { workspace = true, optional = true }
 solana-hash = { workspace = true, features = ["bytemuck"] }
 solana-instruction = { workspace = true }
-solana-instructions-sysvar = { workspace = true }
 solana-last-restart-slot = { workspace = true, features = ["sysvar"] }
 solana-program-entrypoint = { workspace = true }
 solana-program-error = { workspace = true }
 solana-pubkey = { workspace = true }
 solana-rent = { workspace = true, features = ["sysvar"] }
-solana-sanitize = { workspace = true }
 solana-sdk-ids = { workspace = true }
 solana-sdk-macro = { workspace = true }
 solana-slot-hashes = { workspace = true, features = ["sysvar"] }
@@ -77,9 +75,8 @@ solana-define-syscall = { workspace = true }
 [dev-dependencies]
 anyhow = { workspace = true }
 serial_test = { workspace = true }
+solana-example-mocks = { path = "../example-mocks" }
 solana-msg = { workspace = true }
-solana-program = { path = "../program" }
-solana-sdk = { path = "../sdk" }
 solana-sha256-hasher = { workspace = true }
 solana-sysvar = { path = ".", features = ["dev-context-only-utils"] }
 test-case = { workspace = true }

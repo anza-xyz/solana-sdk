@@ -1,4 +1,4 @@
-use thiserror::Error;
+use {core::convert::Infallible, thiserror::Error};
 
 #[derive(Error, Clone, Debug, Eq, PartialEq)]
 pub enum BlsError {
@@ -14,4 +14,10 @@ pub enum BlsError {
     ParseFromString, // TODO: update after more precise error handling
     #[error("Failed to parse from bytes")]
     ParseFromBytes,
+}
+
+impl From<Infallible> for BlsError {
+    fn from(_: Infallible) -> Self {
+        unreachable!()
+    }
 }
