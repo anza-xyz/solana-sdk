@@ -163,7 +163,7 @@ pub use {
 };
 
 impl Sysvar for EpochRewards {
-    impl_sysvar_get!(sol_get_epoch_rewards_sysvar);
+    impl_sysvar_get!();
 }
 
 #[cfg(feature = "bincode")]
