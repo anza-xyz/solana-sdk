@@ -55,7 +55,7 @@
 //! [`anyhow`]: https://docs.rs/anyhow
 //!
 //! ```
-//! # use solana_sdk::example_mocks::solana_rpc_client;
+//! # use solana_example_mocks::{solana_keypair, solana_rpc_client, solana_signer, solana_transaction};
 //! use anyhow::Result;
 //! use borsh::{BorshSerialize, BorshDeserialize};
 //! use solana_instruction::Instruction;
@@ -110,8 +110,6 @@
 //! # Ok::<(), anyhow::Error>(())
 //! ```
 
-#[cfg(target_arch = "wasm32")]
-use wasm_bindgen::prelude::wasm_bindgen;
 #[cfg(feature = "serde")]
 use {
     serde_derive::{Deserialize, Serialize},
@@ -119,18 +117,18 @@ use {
 };
 #[cfg(feature = "bincode")]
 use {
-    solana_bincode::limited_deserialize,
     solana_hash::Hash,
-    solana_message::compiled_instruction::CompiledInstruction,
-    solana_sdk_ids::system_program,
     solana_signer::{signers::Signers, SignerError},
-    solana_system_interface::instruction::SystemInstruction,
 };
 use {
     solana_instruction::Instruction,
-    solana_message::Message,
+    solana_message::{
+        compiled_instruction::CompiledInstruction, inline_nonce::is_advance_nonce_instruction_data,
+        Message,
+    },
     solana_pubkey::Pubkey,
     solana_sanitize::{Sanitize, SanitizeError},
+    solana_sdk_ids::system_program,
     solana_signature::Signature,
     solana_transaction_error::{TransactionError, TransactionResult as Result},
     std::result,
@@ -139,7 +137,6 @@ use {
 pub mod sanitized;
 pub mod simple_vote_transaction_checker;
 pub mod versioned;
-mod wasm;
 
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
 pub enum TransactionVerificationMode {
@@ -154,13 +151,7 @@ static_assertions::const_assert_eq!(
     NONCED_TX_MARKER_IX_INDEX,
     solana_nonce::NONCED_TX_MARKER_IX_INDEX
 );
-#[cfg(feature = "bincode")]
 const NONCED_TX_MARKER_IX_INDEX: u8 = 0;
-// inlined to avoid solana-packet dep
-#[cfg(test)]
-static_assertions::const_assert_eq!(PACKET_DATA_SIZE, solana_packet::PACKET_DATA_SIZE);
-#[cfg(feature = "bincode")]
-const PACKET_DATA_SIZE: usize = 1280 - 40 - 8;
 
 /// An atomically-committed sequence of instructions.
 ///
@@ -182,7 +173,6 @@ const PACKET_DATA_SIZE: usize = 1280 - 40 - 8;
 /// if the caller has knowledge that the first account of the constructed
 /// transaction's `Message` is both a signer and the expected fee-payer, then
 /// redundantly specifying the fee-payer is not strictly required.
-#[cfg(not(target_arch = "wasm32"))]
 #[cfg_attr(
     feature = "frozen-abi",
     derive(solana_frozen_abi_macro::AbiExample),
@@ -204,27 +194,6 @@ pub struct Transaction {
     pub signatures: Vec<Signature>,
 
     /// The message to sign.
-    pub message: Message,
-}
-
-/// wasm-bindgen version of the Transaction struct.
-/// This duplication is required until https://github.com/rustwasm/wasm-bindgen/issues/3671
-/// is fixed. This must not diverge from the regular non-wasm Transaction struct.
-#[cfg(target_arch = "wasm32")]
-#[wasm_bindgen]
-#[cfg_attr(
-    feature = "frozen-abi",
-    derive(AbiExample),
-    frozen_abi(digest = "H7xQFcd1MtMv9QKZWGatBAXwhg28tpeX59P3s8ZZLAY4")
-)]
-#[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
-#[derive(Debug, PartialEq, Default, Eq, Clone)]
-pub struct Transaction {
-    #[wasm_bindgen(skip)]
-    #[cfg_attr(feature = "serde", serde(with = "short_vec"))]
-    pub signatures: Vec<Signature>,
-
-    #[wasm_bindgen(skip)]
     pub message: Message,
 }
 
@@ -251,7 +220,7 @@ impl Transaction {
     /// [`anyhow`]: https://docs.rs/anyhow
     ///
     /// ```
-    /// # use solana_sdk::example_mocks::solana_rpc_client;
+    /// # use solana_example_mocks::{solana_keypair, solana_rpc_client, solana_signer, solana_transaction};
     /// use anyhow::Result;
     /// use borsh::{BorshSerialize, BorshDeserialize};
     /// use solana_instruction::Instruction;
@@ -329,7 +298,7 @@ impl Transaction {
     /// [`anyhow`]: https://docs.rs/anyhow
     ///
     /// ```
-    /// # use solana_sdk::example_mocks::solana_rpc_client;
+    /// # use solana_example_mocks::{solana_keypair, solana_rpc_client, solana_signer, solana_transaction};
     /// use anyhow::Result;
     /// use borsh::{BorshSerialize, BorshDeserialize};
     /// use solana_instruction::Instruction;
@@ -408,7 +377,7 @@ impl Transaction {
     /// [`anyhow`]: https://docs.rs/anyhow
     ///
     /// ```
-    /// # use solana_sdk::example_mocks::solana_rpc_client;
+    /// # use solana_example_mocks::{solana_keypair, solana_rpc_client, solana_signer, solana_transaction};
     /// use anyhow::Result;
     /// use borsh::{BorshSerialize, BorshDeserialize};
     /// use solana_instruction::Instruction;
@@ -483,7 +452,7 @@ impl Transaction {
     /// [`anyhow`]: https://docs.rs/anyhow
     ///
     /// ```
-    /// # use solana_sdk::example_mocks::solana_rpc_client;
+    /// # use solana_example_mocks::{solana_keypair, solana_rpc_client, solana_signer, solana_transaction};
     /// use anyhow::Result;
     /// use borsh::{BorshSerialize, BorshDeserialize};
     /// use solana_instruction::Instruction;
@@ -693,7 +662,7 @@ impl Transaction {
     /// [`anyhow`]: https://docs.rs/anyhow
     ///
     /// ```
-    /// # use solana_sdk::example_mocks::solana_rpc_client;
+    /// # use solana_example_mocks::{solana_keypair, solana_rpc_client, solana_signer, solana_transaction};
     /// use anyhow::Result;
     /// use borsh::{BorshSerialize, BorshDeserialize};
     /// use solana_instruction::Instruction;
@@ -833,7 +802,7 @@ impl Transaction {
     /// [`anyhow`]: https://docs.rs/anyhow
     ///
     /// ```
-    /// # use solana_sdk::example_mocks::solana_rpc_client;
+    /// # use solana_example_mocks::{solana_keypair, solana_rpc_client, solana_signer, solana_transaction};
     /// use anyhow::Result;
     /// use borsh::{BorshSerialize, BorshDeserialize};
     /// use solana_instruction::Instruction;
@@ -1057,29 +1026,6 @@ impl Transaction {
             .collect()
     }
 
-    #[cfg(feature = "precompiles")]
-    #[deprecated(since = "2.2.3", note = "Use agave-precompiles instead")]
-    #[allow(deprecated)]
-    /// Verify the precompiled programs in this transaction.
-    pub fn verify_precompiles(&self, feature_set: &solana_feature_set::FeatureSet) -> Result<()> {
-        for instruction in &self.message().instructions {
-            // The Transaction may not be sanitized at this point
-            if instruction.program_id_index as usize >= self.message().account_keys.len() {
-                return Err(TransactionError::AccountNotFound);
-            }
-            let program_id = &self.message().account_keys[instruction.program_id_index as usize];
-
-            solana_precompiles::verify_if_precompile(
-                program_id,
-                instruction,
-                &self.message().instructions,
-                feature_set,
-            )
-            .map_err(|_| TransactionError::InvalidAccountIndex)?;
-        }
-        Ok(())
-    }
-
     /// Get the positions of the pubkeys in `account_keys` associated with signing keypairs.
     ///
     /// [`account_keys`]: Message::account_keys
@@ -1133,7 +1079,6 @@ impl Transaction {
     }
 }
 
-#[cfg(feature = "bincode")]
 /// Returns true if transaction begins with an advance nonce instruction.
 pub fn uses_durable_nonce(tx: &Transaction) -> Option<&CompiledInstruction> {
     let message = tx.message();
@@ -1145,12 +1090,7 @@ pub fn uses_durable_nonce(tx: &Transaction) -> Option<&CompiledInstruction> {
             matches!(
                 message.account_keys.get(instruction.program_id_index as usize),
                 Some(program_id) if system_program::check_id(program_id)
-            )
-            // Is a nonce advance instruction
-            && matches!(
-                limited_deserialize(&instruction.data, PACKET_DATA_SIZE as u64),
-                Ok(SystemInstruction::AdvanceNonceAccount)
-            )
+            ) && is_advance_nonce_instruction_data(&instruction.data)
         })
 }
 
@@ -1308,12 +1248,15 @@ mod tests {
     }
 
     fn create_sample_transaction() -> Transaction {
-        let keypair = Keypair::from_bytes(&[
-            255, 101, 36, 24, 124, 23, 167, 21, 132, 204, 155, 5, 185, 58, 121, 75, 156, 227, 116,
-            193, 215, 38, 142, 22, 8, 14, 229, 239, 119, 93, 5, 218, 36, 100, 158, 252, 33, 161,
-            97, 185, 62, 89, 99, 195, 250, 249, 187, 189, 171, 118, 241, 90, 248, 14, 68, 219, 231,
-            62, 157, 5, 142, 27, 210, 117,
-        ])
+        let keypair = Keypair::try_from(
+            [
+                255, 101, 36, 24, 124, 23, 167, 21, 132, 204, 155, 5, 185, 58, 121, 75, 156, 227,
+                116, 193, 215, 38, 142, 22, 8, 14, 229, 239, 119, 93, 5, 218, 36, 100, 158, 252,
+                33, 161, 97, 185, 62, 89, 99, 195, 250, 249, 187, 189, 171, 118, 241, 90, 248, 14,
+                68, 219, 231, 62, 157, 5, 142, 27, 210, 117,
+            ]
+            .as_ref(),
+        )
         .unwrap();
         let to = Pubkey::from([
             1, 1, 1, 4, 5, 6, 7, 8, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 8, 7, 6, 5, 4,

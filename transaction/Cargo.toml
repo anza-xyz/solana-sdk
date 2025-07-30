@@ -10,27 +10,24 @@ license = { workspace = true }
 edition = { workspace = true }
 
 [package.metadata.docs.rs]
-targets = ["x86_64-unknown-linux-gnu", "wasm32-unknown-unknown"]
+targets = ["x86_64-unknown-linux-gnu"]
 all-features = true
 rustdoc-args = ["--cfg=docsrs"]
 
 [features]
 bincode = [
     "dep:bincode",
-    "dep:solana-bincode",
     "dep:solana-signer",
-    "dep:solana-system-interface",
     "serde",
     "solana-message/bincode",
 ]
 blake3 = ["bincode", "solana-message/blake3"]
-dev-context-only-utils = ["blake3", "precompiles", "serde", "verify"]
+dev-context-only-utils = ["blake3", "serde", "verify"]
 frozen-abi = [
     "dep:solana-frozen-abi",
     "dep:solana-frozen-abi-macro",
     "dep:solana-logger",
 ]
-precompiles = ["dep:solana-feature-set", "dep:solana-precompiles"]
 serde = [
     "dep:serde",
     "dep:serde_derive",
@@ -44,32 +41,25 @@ verify = ["blake3", "solana-signature/verify"]
 bincode = { workspace = true, optional = true }
 serde = { workspace = true, optional = true }
 serde_derive = { workspace = true, optional = true }
-solana-bincode = { workspace = true, optional = true }
-solana-feature-set = { workspace = true, optional = true }
 solana-frozen-abi = { workspace = true, optional = true }
 solana-frozen-abi-macro = { workspace = true, optional = true }
 solana-hash = { workspace = true }
 solana-instruction = { workspace = true }
 solana-logger = { workspace = true, optional = true }
 solana-message = { workspace = true }
-solana-precompiles = { workspace = true, optional = true }
 solana-pubkey = { workspace = true }
 solana-sanitize = { workspace = true }
 solana-sdk-ids = { workspace = true }
 solana-short-vec = { workspace = true, optional = true }
 solana-signature = { workspace = true }
 solana-signer = { workspace = true, optional = true }
-solana-system-interface = { workspace = true, optional = true, features = ["bincode"] }
 solana-transaction-error = { workspace = true }
-
-[target.'cfg(target_arch = "wasm32")'.dependencies]
-solana-keypair = { workspace = true }
-wasm-bindgen = { workspace = true }
 
 [dev-dependencies]
 anyhow = { workspace = true }
 bincode = { workspace = true }
 borsh = { workspace = true }
+solana-example-mocks = { path = "../example-mocks" }
 solana-hash = { workspace = true }
 solana-instruction = { workspace = true, features = ["borsh"] }
 solana-keypair = { workspace = true }
@@ -77,8 +67,8 @@ solana-nonce = { workspace = true }
 solana-packet = { workspace = true }
 solana-presigner = { workspace = true }
 solana-pubkey = { workspace = true, features = ["rand"] }
-solana-sdk = { path = "../sdk" }
 solana-sha256-hasher = { workspace = true }
+solana-system-interface = { workspace = true, features = ["bincode"] }
 solana-transaction = { path = ".", features = ["dev-context-only-utils"] }
 solana-vote-interface = { workspace = true, features = ["bincode"] }
 static_assertions = { workspace = true }

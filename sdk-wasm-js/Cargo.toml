@@ -1,0 +1,40 @@
+[package]
+name = "solana-sdk-wasm-js"
+description = "Solana SDK Wasm JS"
+documentation = "https://docs.rs/solana-sdk-wasm-js"
+version = "1.0.0"
+authors = { workspace = true }
+repository = { workspace = true }
+homepage = { workspace = true }
+license = { workspace = true }
+edition = { workspace = true }
+
+[package.metadata.docs.rs]
+targets = ["wasm32-unknown-unknown"]
+all-features = true
+rustdoc-args = ["--cfg=docsrs"]
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+bincode = { workspace = true }
+solana-hash = { workspace = true }
+solana-instruction = { workspace = true, features = ["std"] }
+solana-keypair = { workspace = true }
+solana-message = { workspace = true }
+solana-pubkey = { workspace = true, features = ["curve25519", "sha2", "std"] }
+solana-signature = { workspace = true }
+solana-signer = { workspace = true }
+solana-transaction = { workspace = true, features = ["bincode", "verify"] }
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+console_error_panic_hook = { workspace = true }
+console_log = { workspace = true }
+getrandom = { workspace = true, features = ["js"] }
+js-sys = { workspace = true }
+log = { workspace = true }
+wasm-bindgen = { workspace = true }
+
+[lints]
+workspace = true

@@ -46,47 +46,9 @@ pub const DEFAULT_TICKS_PER_SLOT: u64 = 64;
 
 pub const DEFAULT_HASHES_PER_SECOND: u64 = 10_000_000;
 
-// Empirical sampling of mainnet validator hash rate showed the following stake
-// percentages can exceed the designated hash rates as of July 2023:
-// 97.6%
-#[deprecated(since = "2.2.2", note = "Use 'DEFAULT_HASHES_PER_SECOND' instead")]
-pub const UPDATED_HASHES_PER_SECOND_2: u64 = 2_800_000;
-// 96.2%
-#[deprecated(since = "2.2.2", note = "Use 'DEFAULT_HASHES_PER_SECOND' instead")]
-pub const UPDATED_HASHES_PER_SECOND_3: u64 = 4_400_000;
-// 96.2%
-#[deprecated(since = "2.2.2", note = "Use 'DEFAULT_HASHES_PER_SECOND' instead")]
-pub const UPDATED_HASHES_PER_SECOND_4: u64 = 7_600_000;
-// 96.2%
-#[deprecated(since = "2.2.2", note = "Use 'DEFAULT_HASHES_PER_SECOND' instead")]
-pub const UPDATED_HASHES_PER_SECOND_5: u64 = 9_200_000;
-// 96.2%
-#[deprecated(since = "2.2.2", note = "Use 'DEFAULT_HASHES_PER_SECOND' instead")]
-pub const UPDATED_HASHES_PER_SECOND_6: u64 = 10_000_000;
-
 #[cfg(test)]
 static_assertions::const_assert_eq!(DEFAULT_HASHES_PER_TICK, 62_500);
 pub const DEFAULT_HASHES_PER_TICK: u64 = DEFAULT_HASHES_PER_SECOND / DEFAULT_TICKS_PER_SECOND;
-
-#[cfg(test)]
-#[deprecated(since = "2.2.2", note = "Use 'DEFAULT_HASHES_PER_TICK' instead")]
-pub const UPDATED_HASHES_PER_TICK2: u64 = DEFAULT_HASHES_PER_SECOND / DEFAULT_TICKS_PER_SECOND;
-
-#[cfg(test)]
-#[deprecated(since = "2.2.2", note = "Use 'DEFAULT_HASHES_PER_TICK' instead")]
-pub const UPDATED_HASHES_PER_TICK3: u64 = DEFAULT_HASHES_PER_SECOND / DEFAULT_TICKS_PER_SECOND;
-
-#[cfg(test)]
-#[deprecated(since = "2.2.2", note = "Use 'DEFAULT_HASHES_PER_TICK' instead")]
-pub const UPDATED_HASHES_PER_TICK4: u64 = DEFAULT_HASHES_PER_SECOND / DEFAULT_TICKS_PER_SECOND;
-
-#[cfg(test)]
-#[deprecated(since = "2.2.2", note = "Use 'DEFAULT_HASHES_PER_TICK' instead")]
-pub const UPDATED_HASHES_PER_TICK5: u64 = DEFAULT_HASHES_PER_SECOND / DEFAULT_TICKS_PER_SECOND;
-
-#[cfg(test)]
-#[deprecated(since = "2.2.2", note = "Use 'DEFAULT_HASHES_PER_TICK' instead")]
-pub const UPDATED_HASHES_PER_TICK6: u64 = DEFAULT_HASHES_PER_SECOND / DEFAULT_TICKS_PER_SECOND;
 
 // 1 Dev Epoch = 400 ms * 8192 ~= 55 minutes
 pub const DEFAULT_DEV_SLOTS_PER_EPOCH: u64 = 8192;

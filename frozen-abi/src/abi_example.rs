@@ -19,7 +19,7 @@ use {
 //
 // The requirement of AbiExample impls even applies to those types of `#[serde(skip)]`-ed fields.
 // That's because the abi digesting needs a properly initialized object to enter into the
-// serde::serialize() to begin with, even knowning they aren't used for serialization and thus abi
+// serde::serialize() to begin with, even knowing they aren't used for serialization and thus abi
 // digest. Luckily, `#[serde(skip)]`-ed fields' AbiExample impls can just delegate to T::default(),
 // exploiting the nature of this artificial impl requirement as an exception from the usual
 // AbiExample semantics.

@@ -54,14 +54,6 @@ impl CommitmentConfig {
     pub fn is_at_least_confirmed(&self) -> bool {
         self.is_confirmed() || self.is_finalized()
     }
-
-    #[deprecated(
-        since = "2.0.2",
-        note = "Returns self. Please do not use. Will be removed in the future."
-    )]
-    pub fn use_deprecated_commitment(commitment: CommitmentConfig) -> Self {
-        commitment
-    }
 }
 
 impl FromStr for CommitmentConfig {
@@ -134,7 +126,7 @@ pub enum ParseCommitmentLevelError {
     Invalid,
 }
 
-impl std::error::Error for ParseCommitmentLevelError {}
+impl core::error::Error for ParseCommitmentLevelError {}
 
 impl fmt::Display for ParseCommitmentLevelError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {

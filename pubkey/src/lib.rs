@@ -4,7 +4,7 @@
 #![cfg_attr(feature = "frozen-abi", feature(min_specialization))]
 #![allow(clippy::arithmetic_side_effects)]
 
-#[cfg(any(feature = "std", target_arch = "wasm32"))]
+#[cfg(feature = "std")]
 extern crate std;
 #[cfg(feature = "dev-context-only-utils")]
 use arbitrary::Arbitrary;
@@ -12,7 +12,7 @@ use arbitrary::Arbitrary;
 use bytemuck_derive::{Pod, Zeroable};
 #[cfg(feature = "serde")]
 use serde_derive::{Deserialize, Serialize};
-#[cfg(any(feature = "std", target_arch = "wasm32"))]
+#[cfg(feature = "std")]
 use std::vec::Vec;
 #[cfg(feature = "borsh")]
 use {
@@ -29,11 +29,7 @@ use {
         str::{from_utf8_unchecked, FromStr},
     },
     num_traits::{FromPrimitive, ToPrimitive},
-};
-#[cfg(target_arch = "wasm32")]
-use {
-    js_sys::{Array, Uint8Array},
-    wasm_bindgen::{prelude::wasm_bindgen, JsCast, JsValue},
+    solana_program_error::ProgramError,
 };
 
 #[cfg(target_os = "solana")]
@@ -59,7 +55,7 @@ const SUCCESS: u64 = 0;
 // Use strum when testing to ensure our FromPrimitive
 // impl is exhaustive
 #[cfg_attr(test, derive(strum_macros::FromRepr, strum_macros::EnumIter))]
-#[cfg_attr(feature = "serde", derive(Serialize))]
+#[cfg_attr(feature = "serde", derive(serde_derive::Serialize))]
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum PubkeyError {
     /// Length of the seed is too long for address generation
@@ -102,8 +98,7 @@ impl FromPrimitive for PubkeyError {
     }
 }
 
-#[cfg(feature = "std")]
-impl std::error::Error for PubkeyError {}
+impl core::error::Error for PubkeyError {}
 
 impl fmt::Display for PubkeyError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -119,12 +114,6 @@ impl fmt::Display for PubkeyError {
     }
 }
 
-#[allow(deprecated)]
-impl<T> solana_decode_error::DecodeError<T> for PubkeyError {
-    fn type_of() -> &'static str {
-        "PubkeyError"
-    }
-}
 impl From<u64> for PubkeyError {
     fn from(error: u64) -> Self {
         match error {
@@ -132,6 +121,16 @@ impl From<u64> for PubkeyError {
             1 => PubkeyError::InvalidSeeds,
             2 => PubkeyError::IllegalOwner,
             _ => panic!("Unsupported PubkeyError"),
+        }
+    }
+}
+
+impl From<PubkeyError> for ProgramError {
+    fn from(error: PubkeyError) -> Self {
+        match error {
+            PubkeyError::MaxSeedLengthExceeded => Self::MaxSeedLengthExceeded,
+            PubkeyError::InvalidSeeds => Self::InvalidSeeds,
+            PubkeyError::IllegalOwner => Self::IllegalOwner,
         }
     }
 }
@@ -150,7 +149,6 @@ impl From<u64> for PubkeyError {
 /// [ed25519]: https://ed25519.cr.yp.to/
 /// [pdas]: https://solana.com/docs/core/cpi#program-derived-addresses
 /// [`Keypair`]: https://docs.rs/solana-sdk/latest/solana_sdk/signer/keypair/struct.Keypair.html
-#[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
 #[repr(transparent)]
 #[cfg_attr(feature = "frozen-abi", derive(solana_frozen_abi_macro::AbiExample))]
 #[cfg_attr(
@@ -363,8 +361,7 @@ impl FromPrimitive for ParsePubkeyError {
     }
 }
 
-#[cfg(feature = "std")]
-impl std::error::Error for ParsePubkeyError {}
+impl core::error::Error for ParsePubkeyError {}
 
 impl fmt::Display for ParsePubkeyError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -378,13 +375,6 @@ impl fmt::Display for ParsePubkeyError {
 impl From<Infallible> for ParsePubkeyError {
     fn from(_: Infallible) -> Self {
         unreachable!("Infallible uninhabited");
-    }
-}
-
-#[allow(deprecated)]
-impl<T> solana_decode_error::DecodeError<T> for ParsePubkeyError {
-    fn type_of() -> &'static str {
-        "ParsePubkeyError"
     }
 }
 
@@ -431,7 +421,7 @@ impl TryFrom<&[u8]> for Pubkey {
     }
 }
 
-#[cfg(any(feature = "std", target_arch = "wasm32"))]
+#[cfg(feature = "std")]
 impl TryFrom<Vec<u8>> for Pubkey {
     type Error = Vec<u8>;
 
@@ -485,16 +475,16 @@ impl Pubkey {
         type T = u32;
         const COUNTER_BYTES: usize = mem::size_of::<T>();
         let mut b = [0u8; PUBKEY_BYTES];
-        #[cfg(any(feature = "std", target_arch = "wasm32"))]
+        #[cfg(feature = "std")]
         let mut i = I.fetch_add(1) as T;
-        #[cfg(not(any(feature = "std", target_arch = "wasm32")))]
+        #[cfg(not(feature = "std"))]
         let i = I.fetch_add(1) as T;
         // use big endian representation to ensure that recent unique pubkeys
         // are always greater than less recent unique pubkeys.
         b[0..COUNTER_BYTES].copy_from_slice(&i.to_be_bytes());
         // fill the rest of the pubkey with pseudorandom numbers to make
         // data statistically similar to real pubkeys.
-        #[cfg(any(feature = "std", target_arch = "wasm32"))]
+        #[cfg(feature = "std")]
         {
             let mut hash = std::hash::DefaultHasher::new();
             for slice in b[COUNTER_BYTES..].chunks_mut(COUNTER_BYTES) {
@@ -505,7 +495,7 @@ impl Pubkey {
         }
         // if std is not available, just replicate last byte of the counter.
         // this is not as good as a proper hash, but at least it is uniform
-        #[cfg(not(any(feature = "std", target_arch = "wasm32")))]
+        #[cfg(not(feature = "std"))]
         {
             for b in b[COUNTER_BYTES..].iter_mut() {
                 *b = (i & 0xFF) as u8;
@@ -628,16 +618,11 @@ impl Pubkey {
     ///
     /// ```
     /// # use borsh::{BorshSerialize, BorshDeserialize};
+    /// # use solana_account_info::{next_account_info, AccountInfo};
+    /// # use solana_program_error::ProgramResult;
+    /// # use solana_cpi::invoke_signed;
     /// # use solana_pubkey::Pubkey;
-    /// # use solana_program::{
-    /// #     entrypoint::ProgramResult,
-    /// #     program::invoke_signed,
-    /// #     system_instruction,
-    /// #     account_info::{
-    /// #         AccountInfo,
-    /// #         next_account_info,
-    /// #     },
-    /// # };
+    /// # use solana_system_interface::instruction::create_account;
     /// // The custom instruction processed by our program. It includes the
     /// // PDA's bump seed, which is derived by the client program. This
     /// // definition is also imported into the off-chain client program.
@@ -676,7 +661,7 @@ impl Pubkey {
     ///     // Invoke the system program to create an account while virtually
     ///     // signing with the vault PDA, which is owned by this caller program.
     ///     invoke_signed(
-    ///         &system_instruction::create_account(
+    ///         &create_account(
     ///             &payer.key,
     ///             &vault.key,
     ///             lamports,
@@ -708,14 +693,10 @@ impl Pubkey {
     ///
     /// ```
     /// # use borsh::{BorshSerialize, BorshDeserialize};
-    /// # use solana_program::example_mocks::{solana_sdk, solana_rpc_client};
+    /// # use solana_example_mocks::{solana_sdk, solana_rpc_client};
     /// # use solana_pubkey::Pubkey;
-    /// # use solana_program::{
-    /// #     instruction::Instruction,
-    /// #     hash::Hash,
-    /// #     instruction::AccountMeta,
-    /// #     system_program,
-    /// # };
+    /// # use solana_instruction::{AccountMeta, Instruction};
+    /// # use solana_hash::Hash;
     /// # use solana_sdk::{
     /// #     signature::Keypair,
     /// #     signature::{Signer, Signature},
@@ -761,7 +742,7 @@ impl Pubkey {
     ///     let accounts = vec![
     ///         AccountMeta::new(payer.pubkey(), true),
     ///         AccountMeta::new(vault_pubkey, false),
-    ///         AccountMeta::new(system_program::ID, false),
+    ///         AccountMeta::new(solana_system_interface::program::ID, false),
     ///     ];
     ///
     ///     // Create the instruction by serializing our instruction data via borsh
@@ -1016,196 +997,6 @@ impl fmt::Debug for Pubkey {
 impl fmt::Display for Pubkey {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write_as_base58(f, self)
-    }
-}
-
-#[cfg(feature = "borsh")]
-impl borsh0_10::de::BorshDeserialize for Pubkey {
-    fn deserialize_reader<R: borsh0_10::maybestd::io::Read>(
-        reader: &mut R,
-    ) -> Result<Self, borsh0_10::maybestd::io::Error> {
-        Ok(Self(borsh0_10::BorshDeserialize::deserialize_reader(
-            reader,
-        )?))
-    }
-}
-
-#[cfg(feature = "borsh")]
-macro_rules! impl_borsh_schema {
-    ($borsh:ident) => {
-        impl $borsh::BorshSchema for Pubkey
-        where
-            [u8; 32]: $borsh::BorshSchema,
-        {
-            fn declaration() -> $borsh::schema::Declaration {
-                std::string::String::from("Pubkey")
-            }
-            fn add_definitions_recursively(
-                definitions: &mut $borsh::maybestd::collections::HashMap<
-                    $borsh::schema::Declaration,
-                    $borsh::schema::Definition,
-                >,
-            ) {
-                let fields = $borsh::schema::Fields::UnnamedFields(<[_]>::into_vec(
-                    $borsh::maybestd::boxed::Box::new([
-                        <[u8; 32] as $borsh::BorshSchema>::declaration(),
-                    ]),
-                ));
-                let definition = $borsh::schema::Definition::Struct { fields };
-                <Self as $borsh::BorshSchema>::add_definition(
-                    <Self as $borsh::BorshSchema>::declaration(),
-                    definition,
-                    definitions,
-                );
-                <[u8; 32] as $borsh::BorshSchema>::add_definitions_recursively(definitions);
-            }
-        }
-    };
-}
-#[cfg(feature = "borsh")]
-impl_borsh_schema!(borsh0_10);
-
-#[cfg(feature = "borsh")]
-macro_rules! impl_borsh_serialize {
-    ($borsh:ident) => {
-        impl $borsh::ser::BorshSerialize for Pubkey {
-            fn serialize<W: $borsh::maybestd::io::Write>(
-                &self,
-                writer: &mut W,
-            ) -> ::core::result::Result<(), $borsh::maybestd::io::Error> {
-                $borsh::BorshSerialize::serialize(&self.0, writer)?;
-                Ok(())
-            }
-        }
-    };
-}
-#[cfg(feature = "borsh")]
-impl_borsh_serialize!(borsh0_10);
-
-#[cfg(all(target_arch = "wasm32", feature = "curve25519"))]
-fn js_value_to_seeds_vec(array_of_uint8_arrays: &[JsValue]) -> Result<Vec<Vec<u8>>, JsValue> {
-    let vec_vec_u8 = array_of_uint8_arrays
-        .iter()
-        .filter_map(|u8_array| {
-            u8_array
-                .dyn_ref::<Uint8Array>()
-                .map(|u8_array| u8_array.to_vec())
-        })
-        .collect::<Vec<_>>();
-
-    if vec_vec_u8.len() != array_of_uint8_arrays.len() {
-        Err("Invalid Array of Uint8Arrays".into())
-    } else {
-        Ok(vec_vec_u8)
-    }
-}
-
-#[cfg(target_arch = "wasm32")]
-fn display_to_jsvalue<T: fmt::Display>(display: T) -> JsValue {
-    std::string::ToString::to_string(&display).into()
-}
-
-#[allow(non_snake_case)]
-#[cfg(target_arch = "wasm32")]
-#[wasm_bindgen]
-impl Pubkey {
-    /// Create a new Pubkey object
-    ///
-    /// * `value` - optional public key as a base58 encoded string, `Uint8Array`, `[number]`
-    #[wasm_bindgen(constructor)]
-    pub fn constructor(value: JsValue) -> Result<Pubkey, JsValue> {
-        if let Some(base58_str) = value.as_string() {
-            base58_str.parse::<Pubkey>().map_err(display_to_jsvalue)
-        } else if let Some(uint8_array) = value.dyn_ref::<Uint8Array>() {
-            Pubkey::try_from(uint8_array.to_vec())
-                .map_err(|err| JsValue::from(std::format!("Invalid Uint8Array pubkey: {err:?}")))
-        } else if let Some(array) = value.dyn_ref::<Array>() {
-            let mut bytes = std::vec![];
-            let iterator = js_sys::try_iter(&array.values())?.expect("array to be iterable");
-            for x in iterator {
-                let x = x?;
-
-                if let Some(n) = x.as_f64() {
-                    if n >= 0. && n <= 255. {
-                        bytes.push(n as u8);
-                        continue;
-                    }
-                }
-                return Err(std::format!("Invalid array argument: {:?}", x).into());
-            }
-            Pubkey::try_from(bytes)
-                .map_err(|err| JsValue::from(std::format!("Invalid Array pubkey: {err:?}")))
-        } else if value.is_undefined() {
-            Ok(Pubkey::default())
-        } else {
-            Err("Unsupported argument".into())
-        }
-    }
-
-    /// Return the base58 string representation of the public key
-    pub fn toString(&self) -> std::string::String {
-        std::string::ToString::to_string(self)
-    }
-
-    /// Check if a `Pubkey` is on the ed25519 curve.
-    #[cfg(feature = "curve25519")]
-    pub fn isOnCurve(&self) -> bool {
-        self.is_on_curve()
-    }
-
-    /// Checks if two `Pubkey`s are equal
-    pub fn equals(&self, other: &Pubkey) -> bool {
-        self == other
-    }
-
-    /// Return the `Uint8Array` representation of the public key
-    pub fn toBytes(&self) -> std::boxed::Box<[u8]> {
-        self.0.clone().into()
-    }
-
-    /// Derive a Pubkey from another Pubkey, string seed, and a program id
-    #[cfg(feature = "sha2")]
-    pub fn createWithSeed(base: &Pubkey, seed: &str, owner: &Pubkey) -> Result<Pubkey, JsValue> {
-        Pubkey::create_with_seed(base, seed, owner).map_err(display_to_jsvalue)
-    }
-
-    /// Derive a program address from seeds and a program id
-    #[cfg(feature = "curve25519")]
-    pub fn createProgramAddress(
-        seeds: std::boxed::Box<[JsValue]>,
-        program_id: &Pubkey,
-    ) -> Result<Pubkey, JsValue> {
-        let seeds_vec = js_value_to_seeds_vec(&seeds)?;
-        let seeds_slice = seeds_vec
-            .iter()
-            .map(|seed| seed.as_slice())
-            .collect::<Vec<_>>();
-
-        Pubkey::create_program_address(seeds_slice.as_slice(), program_id)
-            .map_err(display_to_jsvalue)
-    }
-
-    /// Find a valid program address
-    ///
-    /// Returns:
-    /// * `[PubKey, number]` - the program address and bump seed
-    #[cfg(feature = "curve25519")]
-    pub fn findProgramAddress(
-        seeds: std::boxed::Box<[JsValue]>,
-        program_id: &Pubkey,
-    ) -> Result<JsValue, JsValue> {
-        let seeds_vec = js_value_to_seeds_vec(&seeds)?;
-        let seeds_slice = seeds_vec
-            .iter()
-            .map(|seed| seed.as_slice())
-            .collect::<Vec<_>>();
-
-        let (address, bump_seed) = Pubkey::find_program_address(seeds_slice.as_slice(), program_id);
-
-        let result = Array::new_with_length(2);
-        result.set(0, address.into());
-        result.set(1, bump_seed.into());
-        Ok(result.into())
     }
 }
 

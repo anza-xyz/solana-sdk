@@ -312,7 +312,7 @@ pub use solana_define_syscall::definitions::sol_secp256k1_recover;
 ///     }
 ///
 ///     let recovered_pubkey = secp256k1_recover(
-///         &message_hash.0,
+///         message_hash.as_bytes(),
 ///         instruction.recovery_id,
 ///         &instruction.signature,
 ///     )
@@ -365,7 +365,7 @@ pub use solana_define_syscall::definitions::sol_secp256k1_recover;
 ///         hasher.result()
 ///     };
 ///
-///     let secp_message = libsecp256k1::Message::parse(&message_hash.0);
+///     let secp_message = libsecp256k1::Message::parse(message_hash.as_bytes());
 ///     let (signature, recovery_id) = libsecp256k1::sign(&secp_message, &secp256k1_secret_key);
 ///
 ///     let signature = signature.serialize();

@@ -3,6 +3,7 @@ name = "solana-vote-interface"
 description = "Solana vote interface."
 documentation = "https://docs.rs/solana-vote-interface"
 version = "2.2.5"
+rust-version = "1.81.0"
 authors = { workspace = true }
 repository = { workspace = true }
 homepage = { workspace = true }
@@ -51,7 +52,6 @@ num-traits = { workspace = true }
 serde = { workspace = true, optional = true }
 serde_derive = { workspace = true, optional = true }
 solana-clock = { workspace = true }
-solana-decode-error = { workspace = true }
 solana-frozen-abi = { workspace = true, features = [
     "frozen-abi",
 ], optional = true }
@@ -60,6 +60,7 @@ solana-frozen-abi-macro = { workspace = true, features = [
 ], optional = true }
 solana-hash = { workspace = true }
 solana-instruction = { workspace = true, features = ["std"] }
+solana-instruction-error = { workspace = true, features = ["num-traits"] }
 solana-pubkey = { workspace = true }
 solana-rent = { workspace = true }
 solana-sdk-ids = { workspace = true }

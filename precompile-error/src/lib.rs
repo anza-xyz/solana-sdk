@@ -53,7 +53,7 @@ impl num_traits::ToPrimitive for PrecompileError {
     }
 }
 
-impl std::error::Error for PrecompileError {}
+impl core::error::Error for PrecompileError {}
 
 impl fmt::Display for PrecompileError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -66,12 +66,5 @@ impl fmt::Display for PrecompileError {
                 f.write_str("instruction is incorrect size")
             }
         }
-    }
-}
-
-#[allow(deprecated)]
-impl<T> solana_decode_error::DecodeError<T> for PrecompileError {
-    fn type_of() -> &'static str {
-        "PrecompileError"
     }
 }

@@ -24,7 +24,7 @@ solana-hash = { workspace = true }
 solana-packet = { workspace = true }
 solana-pubkey = { workspace = true, optional = true }
 solana-sanitize = { workspace = true }
-solana-sha256-hasher = { workspace = true }
+solana-sha256-hasher = { workspace = true, features = ["sha2"] }
 solana-signature = { workspace = true }
 solana-signer = { workspace = true }
 

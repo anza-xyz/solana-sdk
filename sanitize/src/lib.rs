@@ -1,6 +1,6 @@
 //! A trait for sanitizing values and members of over the wire messages.
 
-use {core::fmt, std::error::Error};
+use core::{error::Error, fmt};
 
 #[derive(PartialEq, Debug, Eq, Clone)]
 pub enum SanitizeError {

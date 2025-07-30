@@ -30,7 +30,7 @@ pub enum DerivationPathError {
     Infallible,
 }
 
-impl std::error::Error for DerivationPathError {}
+impl core::error::Error for DerivationPathError {}
 
 impl fmt::Display for DerivationPathError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -224,7 +224,7 @@ const QUERY_KEY_KEY: &str = "key";
 #[derive(Clone, Debug, PartialEq, Eq)]
 struct QueryKeyError(String);
 
-impl std::error::Error for QueryKeyError {}
+impl core::error::Error for QueryKeyError {}
 
 impl fmt::Display for QueryKeyError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {

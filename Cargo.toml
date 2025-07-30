@@ -4,6 +4,7 @@ members = [
     "account-info",
     "address-lookup-table-interface",
     "atomic-u64",
+    "base3-encoding",
     "big-mod-exp",
     "bincode",
     "blake3-hasher",
@@ -16,7 +17,6 @@ members = [
     "commitment-config",
     "compute-budget-interface",
     "cpi",
-    "decode-error",
     "define-syscall",
     "derivation-path",
     "ed25519-program",
@@ -24,10 +24,9 @@ members = [
     "epoch-rewards",
     "epoch-rewards-hasher",
     "epoch-schedule",
+    "epoch-stake",
     "example-mocks",
     "feature-gate-interface",
-    "feature-set",
-    "feature-set-interface",
     "fee-calculator",
     "fee-structure",
     "file-download",
@@ -38,6 +37,7 @@ members = [
     "hash",
     "inflation",
     "instruction",
+    "instruction-error",
     "instructions-sysvar",
     "keccak-hasher",
     "keypair",
@@ -56,7 +56,6 @@ members = [
     "packet",
     "poh-config",
     "precompile-error",
-    "precompiles",
     "presigner",
     "program",
     "program-entrypoint",
@@ -68,13 +67,12 @@ members = [
     "quic-definitions",
     "rent",
     "rent-collector",
-    "rent-debits",
-    "reserved-account-keys",
     "reward-info",
     "sanitize",
     "sdk",
     "sdk-ids",
     "sdk-macro",
+    "sdk-wasm-js",
     "secp256k1-program",
     "secp256k1-recover",
     "secp256r1-program",
@@ -133,16 +131,16 @@ ark-bn254 = "0.4.0"
 ark-ec = "0.4.0"
 ark-ff = "0.4.0"
 ark-serialize = "0.4.0"
-array-bytes = "=1.4.1"
+array-bytes = "1.4.1"
 assert_matches = "1.5.0"
 base64 = "0.22.1"
 bincode = "1.3.3"
 bitflags = { version = "2.8.0" }
+bitvec = "1.0.1"
 blake3 = "1.5.5"
 blst = "0.3.14"
 blstrs = "0.7.1"
 borsh = { version = "1.5.5", features = ["derive", "unstable__schema"] }
-borsh0-10 = { package = "borsh", version = "0.10.3" }
 boxcar = "0.2.12"
 bs58 = { version = "0.5.1", default-features = false }
 bv = "0.11.1"
@@ -159,9 +157,9 @@ curve25519-dalek = { version = "4.1.3", features = ["digest", "rand_core"] }
 dashmap = { version = "5.5.3", features = ["serde"] }
 derivation-path = { version = "0.2.0", default-features = false }
 digest = "0.10.7"
-ed25519-dalek = "=1.0.1"
-ed25519-dalek-bip32 = "0.2.0"
-env_logger = "0.9.3"
+ed25519-dalek = "2.1.1"
+ed25519-dalek-bip32 = "0.3.0"
+env_logger = "0.11.0"
 ff = "0.13.1"
 five8 = "0.2.1"
 five8_const = "0.1.3"
@@ -187,6 +185,7 @@ num-derive = "0.4"
 num-traits = "0.2.18"
 num_enum = "0.7.3"
 openssl = "0.10.72"
+pairing = "0.23.0"
 parking_lot = "0.12"
 pbkdf2 = { version = "0.11.0", default-features = false }
 proc-macro2 = "1.0.93"
@@ -212,6 +211,7 @@ solana-account = { path = "account", version = "2.2.1" }
 solana-account-info = { path = "account-info", version = "2.2.1" }
 solana-address-lookup-table-interface = { path = "address-lookup-table-interface", version = "2.2.2" }
 solana-atomic-u64 = { path = "atomic-u64", version = "2.2.1" }
+solana-base3-encoding = { path = "base3-encoding", version = "0.1.0" }
 solana-big-mod-exp = { path = "big-mod-exp", version = "2.2.1" }
 solana-bincode = { path = "bincode", version = "2.2.1" }
 solana-blake3-hasher = { path = "blake3-hasher", version = "2.2.1" }
@@ -224,7 +224,6 @@ solana-cluster-type = { path = "cluster-type", version = "2.2.1" }
 solana-commitment-config = { path = "commitment-config", version = "2.2.1" }
 solana-compute-budget-interface = { path = "compute-budget-interface", version = "2.2.1" }
 solana-cpi = { path = "cpi", version = "2.2.1" }
-solana-decode-error = { path = "decode-error", version = "2.2.1" }
 solana-define-syscall = { path = "define-syscall", version = "2.2.1" }
 solana-derivation-path = { path = "derivation-path", version = "2.2.1" }
 solana-ed25519-program = { path = "ed25519-program", version = "2.2.1" }
@@ -232,10 +231,9 @@ solana-epoch-info = { path = "epoch-info", version = "2.2.1" }
 solana-epoch-rewards = { path = "epoch-rewards", version = "2.2.1" }
 solana-epoch-rewards-hasher = { path = "epoch-rewards-hasher", version = "2.2.1" }
 solana-epoch-schedule = { path = "epoch-schedule", version = "2.2.1" }
+solana-epoch-stake = { path = "epoch-stake", version = "2.2.1" }
 solana-example-mocks = { path = "example-mocks", version = "2.2.1" }
 solana-feature-gate-interface = { path = "feature-gate-interface", version = "2.2.1" }
-solana-feature-set = { path = "feature-set", version = "2.2.1" }
-solana-feature-set-interface = { path = "feature-set-interface", version = "4.0.1" }
 solana-fee-calculator = { path = "fee-calculator", version = "2.2.1" }
 solana-fee-structure = { path = "fee-structure", version = "2.2.1" }
 solana-file-download = { path = "file-download", version = "2.2.1" }
@@ -246,6 +244,7 @@ solana-hard-forks = { path = "hard-forks", version = "2.2.1", default-features =
 solana-hash = { path = "hash", version = "2.2.1", default-features = false }
 solana-inflation = { path = "inflation", version = "2.2.1" }
 solana-instruction = { path = "instruction", version = "2.3.0", default-features = false }
+solana-instruction-error = { path = "instruction-error", version = "1.0.0" }
 solana-instructions-sysvar = { path = "instructions-sysvar", version = "2.2.1" }
 solana-keccak-hasher = { path = "keccak-hasher", version = "2.2.1" }
 solana-keypair = { path = "keypair", version = "2.2.1" }
@@ -265,7 +264,6 @@ solana-package-metadata-macro = { path = "package-metadata-macro", version = "2.
 solana-packet = { path = "packet", version = "2.2.1" }
 solana-poh-config = { path = "poh-config", version = "2.2.1" }
 solana-precompile-error = { path = "precompile-error", version = "2.2.1" }
-solana-precompiles = { path = "precompiles", version = "2.2.1" }
 solana-presigner = { path = "presigner", version = "2.2.1" }
 solana-program = { path = "program", version = "2.2.1", default-features = false }
 solana-program-entrypoint = { path = "program-entrypoint", version = "2.2.1" }
@@ -277,8 +275,6 @@ solana-pubkey = { path = "pubkey", version = "2.2.1", default-features = false }
 solana-quic-definitions = { path = "quic-definitions", version = "2.2.1" }
 solana-rent = { path = "rent", version = "2.2.1", default-features = false }
 solana-rent-collector = { path = "rent-collector", version = "2.2.1" }
-solana-rent-debits = { path = "rent-debits", version = "2.2.1" }
-solana-reserved-account-keys = { path = "reserved-account-keys", version = "2.2.1", default-features = false }
 solana-reward-info = { path = "reward-info", version = "2.2.1" }
 solana-sanitize = { path = "sanitize", version = "2.2.1" }
 solana-sdk = { path = "sdk", version = "2.2.1" }
@@ -361,7 +357,6 @@ opt-level = 1
 solana-account = { path = "account" }
 solana-clock = { path = "clock" }
 solana-cpi = { path = "cpi" }
-solana-decode-error = { path = "decode-error" }
 solana-frozen-abi = { path = "frozen-abi" }
 solana-frozen-abi-macro = { path = "frozen-abi-macro" }
 solana-instruction = { path = "instruction" }

@@ -2,7 +2,7 @@
 use bytemuck::{Pod, PodInOption, Zeroable, ZeroableInOption};
 #[cfg(not(target_os = "solana"))]
 use {
-    crate::{error::BlsError, pubkey::PubkeyProjective},
+    crate::{error::BlsError, pubkey::VerifiablePubkey},
     blstrs::{G2Affine, G2Projective},
 };
 use {
@@ -16,8 +16,8 @@ use {
 };
 
 /// Domain separation tag used when hashing public keys to G2 in the proof of
-/// possession signing and verification functions. See
-/// https://datatracker.ietf.org/doc/html/draft-irtf-cfrg-bls-signature-05#section-4.2.3.
+/// possession signing and verification functions. See the
+/// [standard](https://datatracker.ietf.org/doc/html/draft-irtf-cfrg-bls-signature-05#section-4.2.3).
 pub const POP_DST: &[u8] = b"BLS_SIG_BLS12381G1_XMD:SHA-256_SSWU_RO_POP_";
 
 /// Size of a BLS proof of possession in a compressed point representation
@@ -30,46 +30,41 @@ pub const BLS_PROOF_OF_POSSESSION_COMPRESSED_BASE64_SIZE: usize = 128;
 pub const BLS_PROOF_OF_POSSESSION_AFFINE_SIZE: usize = 192;
 
 /// Size of a BLS proof of possession in an affine point representation in base64
-pub const BLS_PROOF_OF_POSSESSKON_AFFINE_BASE64_SIZE: usize = 256;
+pub const BLS_PROOF_OF_POSSESSION_AFFINE_BASE64_SIZE: usize = 256;
+
+/// A trait for types that can be converted into a `ProofOfPossessionProjective`.
+#[cfg(not(target_os = "solana"))]
+pub trait AsProofOfPossessionProjective {
+    /// Attempt to convert the type into a `ProofOfPossessionProjective`.
+    fn try_as_projective(&self) -> Result<ProofOfPossessionProjective, BlsError>;
+}
+
+/// A trait that provides verification methods to any convertible proof of possession type.
+#[cfg(not(target_os = "solana"))]
+pub trait VerifiableProofOfPossession: AsProofOfPossessionProjective {
+    /// Verifies the proof of possession against any convertible public key type.
+    fn verify<P: VerifiablePubkey>(&self, pubkey: &P) -> Result<bool, BlsError> {
+        let proof_projective = self.try_as_projective()?;
+        pubkey.verify_proof_of_possession(&proof_projective)
+    }
+}
 
 /// A BLS proof of possession in a projective point representation
 #[cfg(not(target_os = "solana"))]
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct ProofOfPossessionProjective(pub(crate) G2Projective);
-#[cfg(not(target_os = "solana"))]
-impl ProofOfPossessionProjective {
-    /// Verify a proof of possession against a public key
-    pub fn verify(&self, public_key: &PubkeyProjective) -> bool {
-        public_key.verify_proof_of_possession(self)
-    }
-}
 
 #[cfg(not(target_os = "solana"))]
-impl From<ProofOfPossessionProjective> for ProofOfPossession {
-    fn from(proof: ProofOfPossessionProjective) -> Self {
-        Self(proof.0.to_uncompressed())
-    }
-}
+impl<T: AsProofOfPossessionProjective> VerifiableProofOfPossession for T {}
 
 #[cfg(not(target_os = "solana"))]
-impl TryFrom<ProofOfPossession> for ProofOfPossessionProjective {
-    type Error = BlsError;
-
-    fn try_from(proof: ProofOfPossession) -> Result<Self, Self::Error> {
-        (&proof).try_into()
-    }
-}
-
-#[cfg(not(target_os = "solana"))]
-impl TryFrom<&ProofOfPossession> for ProofOfPossessionProjective {
-    type Error = BlsError;
-
-    fn try_from(proof: &ProofOfPossession) -> Result<Self, Self::Error> {
-        let maybe_uncompressed: Option<G2Affine> = G2Affine::from_uncompressed(&proof.0).into();
-        let uncompressed = maybe_uncompressed.ok_or(BlsError::PointConversion)?;
-        Ok(Self(uncompressed.into()))
-    }
-}
+impl_bls_conversions!(
+    ProofOfPossessionProjective,
+    ProofOfPossession,
+    ProofOfPossessionCompressed,
+    G2Affine,
+    AsProofOfPossessionProjective
+);
 
 /// A serialized BLS signature in a compressed point representation
 #[cfg_attr(feature = "frozen-abi", derive(solana_frozen_abi_macro::AbiExample))]
@@ -132,7 +127,7 @@ impl fmt::Display for ProofOfPossession {
 impl_from_str!(
     TYPE = ProofOfPossession,
     BYTES_LEN = BLS_PROOF_OF_POSSESSION_AFFINE_SIZE,
-    BASE64_LEN = BLS_PROOF_OF_POSSESSKON_AFFINE_BASE64_SIZE
+    BASE64_LEN = BLS_PROOF_OF_POSSESSION_AFFINE_BASE64_SIZE
 );
 
 // Byte arrays are both `Pod` and `Zeraoble`, but the traits `bytemuck::Pod` and
@@ -156,13 +151,39 @@ mod bytemuck_impls {
 
 #[cfg(test)]
 mod tests {
-    use {super::*, crate::keypair::Keypair, core::str::FromStr, std::string::ToString};
+    use {
+        super::*,
+        crate::{
+            keypair::Keypair,
+            pubkey::{Pubkey, PubkeyCompressed},
+        },
+        core::str::FromStr,
+        std::string::ToString,
+    };
 
     #[test]
     fn test_proof_of_possession() {
         let keypair = Keypair::new();
-        let proof = keypair.proof_of_possession();
-        assert!(keypair.public.verify_proof_of_possession(&proof));
+        let proof_projective = keypair.proof_of_possession();
+
+        let pubkey_projective = keypair.public;
+        let pubkey_affine: Pubkey = pubkey_projective.into();
+        let pubkey_compressed: PubkeyCompressed = pubkey_affine.try_into().unwrap();
+
+        let proof_affine: ProofOfPossession = proof_projective.into();
+        let proof_compressed: ProofOfPossessionCompressed = proof_affine.try_into().unwrap();
+
+        assert!(proof_projective.verify(&pubkey_projective).unwrap());
+        assert!(proof_affine.verify(&pubkey_projective).unwrap());
+        assert!(proof_compressed.verify(&pubkey_projective).unwrap());
+
+        assert!(proof_projective.verify(&pubkey_affine).unwrap());
+        assert!(proof_affine.verify(&pubkey_affine).unwrap());
+        assert!(proof_compressed.verify(&pubkey_affine).unwrap());
+
+        assert!(proof_projective.verify(&pubkey_compressed).unwrap());
+        assert!(proof_affine.verify(&pubkey_compressed).unwrap());
+        assert!(proof_compressed.verify(&pubkey_compressed).unwrap());
     }
 
     #[test]

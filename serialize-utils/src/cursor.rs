@@ -1,5 +1,5 @@
 use {
-    solana_instruction::error::InstructionError,
+    solana_instruction_error::InstructionError,
     solana_pubkey::{Pubkey, PUBKEY_BYTES},
     std::{
         io::{BufRead as _, Cursor, Read},

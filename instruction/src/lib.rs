@@ -11,7 +11,6 @@
 //! [`AccountMeta`] values. The runtime uses this information to efficiently
 //! schedule execution of transactions.
 #![cfg_attr(docsrs, feature(doc_auto_cfg))]
-#![cfg_attr(feature = "frozen-abi", feature(min_specialization))]
 #![allow(clippy::arithmetic_side_effects)]
 #![no_std]
 
@@ -23,11 +22,9 @@ use std::vec::Vec;
 pub mod account_meta;
 #[cfg(feature = "std")]
 pub use account_meta::AccountMeta;
-pub mod error;
+pub use solana_instruction_error as error;
 #[cfg(any(feature = "syscalls", target_os = "solana"))]
 pub mod syscalls;
-#[cfg(all(feature = "std", target_arch = "wasm32"))]
-pub mod wasm;
 
 /// A directive for a single invocation of a Solana program.
 ///
@@ -88,7 +85,7 @@ pub mod wasm;
 /// Programs may require signatures from some accounts, in which case they
 /// should be specified as signers during `Instruction` construction. The
 /// program must still validate during execution that the account is a signer.
-#[cfg(all(feature = "std", not(target_arch = "wasm32")))]
+#[cfg(feature = "std")]
 #[cfg_attr(
     feature = "serde",
     derive(serde_derive::Serialize, serde_derive::Deserialize)
@@ -100,25 +97,6 @@ pub struct Instruction {
     /// Metadata describing accounts that should be passed to the program.
     pub accounts: Vec<AccountMeta>,
     /// Opaque data passed to the program for its own interpretation.
-    pub data: Vec<u8>,
-}
-
-/// wasm-bindgen version of the Instruction struct.
-/// This duplication is required until https://github.com/rustwasm/wasm-bindgen/issues/3671
-/// is fixed. This must not diverge from the regular non-wasm Instruction struct.
-#[cfg(all(feature = "std", target_arch = "wasm32"))]
-#[wasm_bindgen::prelude::wasm_bindgen]
-#[cfg_attr(
-    feature = "serde",
-    derive(serde_derive::Serialize, serde_derive::Deserialize)
-)]
-#[derive(Debug, PartialEq, Eq, Clone)]
-pub struct Instruction {
-    #[wasm_bindgen(skip)]
-    pub program_id: Pubkey,
-    #[wasm_bindgen(skip)]
-    pub accounts: Vec<AccountMeta>,
-    #[wasm_bindgen(skip)]
     pub data: Vec<u8>,
 }
 
