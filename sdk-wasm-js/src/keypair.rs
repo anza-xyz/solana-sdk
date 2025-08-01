@@ -1,4 +1,4 @@
-use {crate::pubkey::Pubkey, solana_signer::Signer, wasm_bindgen::prelude::*};
+use {crate::address::Address, solana_signer::Signer, wasm_bindgen::prelude::*};
 
 #[wasm_bindgen]
 #[derive(Debug)]
@@ -25,9 +25,9 @@ impl Keypair {
             .map_err(|e| e.to_string().into())
     }
 
-    /// Return the `Pubkey` for this `Keypair`
+    /// Return the `Address` for this `Keypair`
     #[wasm_bindgen(js_name = pubkey)]
-    pub fn js_pubkey(&self) -> Pubkey {
-        Pubkey(self.0.pubkey())
+    pub fn js_pubkey(&self) -> Address {
+        Address(self.0.pubkey())
     }
 }

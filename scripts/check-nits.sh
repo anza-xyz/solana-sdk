@@ -17,10 +17,11 @@ declare prints=(
 # Parts of the tree that are expected to be print free
 declare print_free_tree=(
   ':**.rs'
+  ':^address/src/hasher.rs'
+  ':^address/src/syscalls.rs'
   ':^logger/src/lib.rs'
   ':^msg/src/lib.rs'
   ':^program-option/src/lib.rs'
-  ':^pubkey/src/lib.rs'
   ':^sysvar/src/program_stubs.rs'
   ':^**bin**.rs'
   ':^**bench**.rs'

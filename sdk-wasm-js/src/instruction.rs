@@ -3,7 +3,7 @@
 //! (ref: https://github.com/rustwasm/wasm-bindgen/issues/111)
 #![allow(non_snake_case)]
 
-use {crate::pubkey::Pubkey, wasm_bindgen::prelude::*};
+use {crate::address::Address, wasm_bindgen::prelude::*};
 
 /// wasm-bindgen version of the Instruction struct.
 /// This duplication is required until https://github.com/rustwasm/wasm-bindgen/issues/3671
@@ -16,7 +16,7 @@ pub struct Instruction(pub(crate) solana_instruction::Instruction);
 impl Instruction {
     /// Create a new `Instruction`
     #[wasm_bindgen(constructor)]
-    pub fn constructor(program_id: Pubkey) -> Self {
+    pub fn constructor(program_id: Address) -> Self {
         Instruction(solana_instruction::Instruction::new_with_bytes(
             program_id.0,
             &[],
@@ -40,14 +40,14 @@ pub struct AccountMeta(pub(crate) solana_instruction::AccountMeta);
 #[wasm_bindgen]
 impl AccountMeta {
     /// Create a new writable `AccountMeta`
-    pub fn newWritable(pubkey: Pubkey, is_signer: bool) -> Self {
-        AccountMeta(solana_instruction::AccountMeta::new(pubkey.0, is_signer))
+    pub fn newWritable(address: Address, is_signer: bool) -> Self {
+        AccountMeta(solana_instruction::AccountMeta::new(address.0, is_signer))
     }
 
     /// Create a new readonly `AccountMeta`
-    pub fn newReadonly(pubkey: Pubkey, is_signer: bool) -> Self {
+    pub fn newReadonly(address: Address, is_signer: bool) -> Self {
         AccountMeta(solana_instruction::AccountMeta::new_readonly(
-            pubkey.0, is_signer,
+            address.0, is_signer,
         ))
     }
 }

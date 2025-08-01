@@ -16,65 +16,20 @@ all-features = true
 rustdoc-args = ["--cfg=docsrs"]
 
 [features]
-borsh = ["dep:borsh", "std"]
-bytemuck = ["dep:bytemuck", "dep:bytemuck_derive"]
-curve25519 = ["dep:curve25519-dalek", "sha2"]
+borsh = ["solana-address/borsh"]
+bytemuck = ["solana-address/bytemuck"]
+curve25519 = ["solana-address/curve25519"]
 default = ["std"]
-dev-context-only-utils = ["dep:arbitrary", "rand"]
-frozen-abi = ["dep:solana-frozen-abi", "dep:solana-frozen-abi-macro", "std"]
-rand = ["dep:rand", "std"]
-serde = ["dep:serde", "dep:serde_derive"]
-sha2 = ["dep:solana-sha256-hasher", "solana-sha256-hasher/sha2"]
-std = []
+dev-context-only-utils = ["solana-address/dev-context-only-utils"]
+frozen-abi = ["solana-address/frozen-abi"]
+rand = ["dep:rand", "solana-address/rand"]
+serde = ["solana-address/serde"]
+sha2 = ["solana-address/sha2"]
+std = ["solana-address/std"]
 
 [dependencies]
-arbitrary = { workspace = true, features = ["derive"], optional = true }
-borsh = { workspace = true, optional = true }
-bytemuck = { workspace = true, optional = true }
-bytemuck_derive = { workspace = true, optional = true }
-five8 = { workspace = true }
-five8_const = { workspace = true }
-num-traits = { workspace = true }
 rand = { workspace = true, optional = true }
-serde = { workspace = true, optional = true }
-serde_derive = { workspace = true, optional = true }
-solana-atomic-u64 = { workspace = true }
-solana-frozen-abi = { workspace = true, optional = true, features = [
-    "frozen-abi",
-] }
-solana-frozen-abi-macro = { workspace = true, optional = true, features = [
-    "frozen-abi",
-] }
-solana-program-error = { workspace = true }
-solana-sanitize = { workspace = true }
-
-[target.'cfg(not(target_os = "solana"))'.dependencies]
-curve25519-dalek = { workspace = true, optional = true }
-solana-sha256-hasher = { workspace = true, optional = true }
-
-[target.'cfg(target_os = "solana")'.dependencies]
-solana-define-syscall = { workspace = true }
-solana-sha256-hasher = { workspace = true }
-
-[dev-dependencies]
-anyhow = { workspace = true }
-arbitrary = { workspace = true, features = ["derive"] }
-bs58 = { workspace = true, features = ["alloc"] }
-solana-account-info = { path = "../account-info" }
-solana-cpi = { path = "../cpi" }
-solana-example-mocks = { path = "../example-mocks" }
-solana-hash = { workspace = true }
-solana-instruction = { path = "../instruction", features = ["borsh"] }
-solana-program-error = { workspace = true, features = ["borsh"] }
-solana-pubkey = { path = ".", features = [
-    "borsh",
-    "curve25519",
-    "dev-context-only-utils",
-    "std",
-] }
-solana-system-interface = { workspace = true, features = ["bincode"] }
-strum = { workspace = true }
-strum_macros = { workspace = true }
+solana-address = { workspace = true, features = ["atomic", "decode", "error", "sanitize", "sha2", "syscalls"] }
 
 [lints]
 workspace = true

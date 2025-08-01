@@ -2,7 +2,7 @@
 #![allow(non_snake_case)]
 use {
     crate::{
-        hash::Hash, instruction::Instruction, keypair::Keypair, message::Message, pubkey::Pubkey,
+        address::Address, hash::Hash, instruction::Instruction, keypair::Keypair, message::Message,
     },
     wasm_bindgen::prelude::{wasm_bindgen, JsValue},
 };
@@ -18,7 +18,7 @@ pub struct Transaction(pub(crate) solana_transaction::Transaction);
 impl Transaction {
     /// Create a new `Transaction`
     #[wasm_bindgen(constructor)]
-    pub fn constructor(instructions: Vec<Instruction>, payer: Option<Pubkey>) -> Self {
+    pub fn constructor(instructions: Vec<Instruction>, payer: Option<Address>) -> Self {
         let instructions = instructions.into_iter().map(|x| x.0).collect::<Vec<_>>();
         Transaction(solana_transaction::Transaction::new_with_payer(
             &instructions,
