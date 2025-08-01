@@ -426,6 +426,10 @@ pub fn secp256k1_recover(
 
     #[cfg(not(target_os = "solana"))]
     {
+        const HASH_SIZE: usize = 32;
+        if hash.len() != HASH_SIZE {
+            return Err(Secp256k1RecoverError::InvalidHash);
+        }
         let recovery_id = k256::ecdsa::RecoveryId::try_from(recovery_id)
             .map_err(|_| Secp256k1RecoverError::InvalidRecoveryId)?;
         let signature = k256::ecdsa::Signature::from_slice(signature)
