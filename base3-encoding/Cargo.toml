@@ -9,25 +9,18 @@ homepage = { workspace = true }
 license = { workspace = true }
 edition = { workspace = true }
 
-[features]
-bitvec = ["dep:bitvec"]
-default = []
-
 [dependencies]
-bitvec = { version = "1.0.1", optional = true }
+bitvec = { workspace = true }
+num-derive = { workspace = true }
+num-traits = { workspace = true }
 
 [dev-dependencies]
-bitvec = "1.0.1"
 criterion = { workspace = true }
+rand = { workspace = true }
 
 [lints]
 workspace = true
 
 [[bench]]
-name = "bytes"
+name = "encoding"
 harness = false
-
-[[bench]]
-name = "bitvec"
-harness = false
-required-features = ["bitvec"]
