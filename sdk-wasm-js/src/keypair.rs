@@ -2,7 +2,7 @@ use {crate::address::Address, solana_signer::Signer, wasm_bindgen::prelude::*};
 
 #[wasm_bindgen]
 #[derive(Debug)]
-pub struct Keypair(pub(crate) solana_keypair::Keypair);
+pub struct Keypair(pub solana_keypair::Keypair);
 
 #[allow(non_snake_case)]
 #[wasm_bindgen]
