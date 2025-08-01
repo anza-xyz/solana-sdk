@@ -10,44 +10,72 @@ use {crate::pubkey::Pubkey, wasm_bindgen::prelude::*};
 /// is fixed. This must not diverge from the regular non-wasm Instruction struct.
 #[wasm_bindgen]
 #[derive(Debug, PartialEq, Eq, Clone)]
-pub struct Instruction(pub(crate) solana_instruction::Instruction);
+pub struct Instruction {
+    pub(crate) inner: solana_instruction::Instruction,
+}
+
+impl Instruction {
+    pub fn new(inner: solana_instruction::Instruction) -> Self {
+        Self { inner }
+    }
+
+    pub fn inner(&self) -> &solana_instruction::Instruction {
+        &self.inner
+    }
+}
 
 #[wasm_bindgen]
 impl Instruction {
     /// Create a new `Instruction`
     #[wasm_bindgen(constructor)]
     pub fn constructor(program_id: Pubkey) -> Self {
-        Instruction(solana_instruction::Instruction::new_with_bytes(
-            program_id.0,
+        Self::new(solana_instruction::Instruction::new_with_bytes(
+            program_id.inner,
             &[],
             std::vec::Vec::new(),
         ))
     }
 
     pub fn setData(&mut self, data: &[u8]) {
-        self.0.data = data.to_vec();
+        self.inner.data = data.to_vec();
     }
 
     pub fn addAccount(&mut self, account_meta: AccountMeta) {
-        self.0.accounts.push(account_meta.0);
+        self.inner.accounts.push(account_meta.inner);
     }
 }
 
 #[wasm_bindgen]
 #[derive(Debug, PartialEq, Eq, Clone)]
-pub struct AccountMeta(pub(crate) solana_instruction::AccountMeta);
+pub struct AccountMeta {
+    pub(crate) inner: solana_instruction::AccountMeta,
+}
+
+impl AccountMeta {
+    pub fn new(inner: solana_instruction::AccountMeta) -> Self {
+        Self { inner }
+    }
+
+    pub fn inner(&self) -> &solana_instruction::AccountMeta {
+        &self.inner
+    }
+}
 
 #[wasm_bindgen]
 impl AccountMeta {
     /// Create a new writable `AccountMeta`
     pub fn newWritable(pubkey: Pubkey, is_signer: bool) -> Self {
-        AccountMeta(solana_instruction::AccountMeta::new(pubkey.0, is_signer))
+        Self::new(solana_instruction::AccountMeta::new(
+            pubkey.inner,
+            is_signer,
+        ))
     }
 
     /// Create a new readonly `AccountMeta`
     pub fn newReadonly(pubkey: Pubkey, is_signer: bool) -> Self {
-        AccountMeta(solana_instruction::AccountMeta::new_readonly(
-            pubkey.0, is_signer,
+        Self::new(solana_instruction::AccountMeta::new_readonly(
+            pubkey.inner,
+            is_signer,
         ))
     }
 }
