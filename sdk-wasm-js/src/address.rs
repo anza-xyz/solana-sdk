@@ -8,11 +8,17 @@ use {
 
 #[wasm_bindgen]
 #[derive(Debug, PartialEq, Eq, Clone)]
-pub struct Address(pub(crate) solana_address::Address);
+pub struct Address {
+    pub(crate) inner: solana_address::Address,
+}
 
 impl Pubkey {
     pub fn new(inner: solana_pubkey::Pubkey) -> Self {
-        Self(inner)
+        Self { inner }
+    }
+
+    pub fn inner(&self) -> &solana_pubkey::Pubkey {
+        &self.inner
     }
 }
 
@@ -44,11 +50,11 @@ impl Address {
         if let Some(base58_str) = value.as_string() {
             base58_str
                 .parse::<solana_address::Address>()
-                .map(Self)
+                .map(Self::new)
                 .map_err(display_to_jsvalue)
         } else if let Some(uint8_array) = value.dyn_ref::<Uint8Array>() {
             solana_address::Address::try_from(uint8_array.to_vec())
-                .map(Self)
+                .map(Self::new)
                 .map_err(|err| JsValue::from(std::format!("Invalid Uint8Array address: {err:?}")))
         } else if let Some(array) = value.dyn_ref::<Array>() {
             let mut bytes = std::vec![];
@@ -65,10 +71,10 @@ impl Address {
                 return Err(std::format!("Invalid array argument: {:?}", x).into());
             }
             solana_address::Address::try_from(bytes)
-                .map(Self)
+                .map(Self::new)
                 .map_err(|err| JsValue::from(std::format!("Invalid Array address: {err:?}")))
         } else if value.is_undefined() {
-            Ok(Self(solana_address::Address::default()))
+            Ok(Self::new(solana_address::Address::default()))
         } else {
             Err("Unsupported argument".into())
         }
@@ -76,28 +82,28 @@ impl Address {
 
     /// Return the base58 string representation of the public key
     pub fn toString(&self) -> std::string::String {
-        std::string::ToString::to_string(&self.0)
+        std::string::ToString::to_string(&self.inner)
     }
 
     /// Check if a `Address` is on the ed25519 curve.
     pub fn isOnCurve(&self) -> bool {
-        self.0.is_on_curve()
+        self.inner.is_on_curve()
     }
 
     /// Checks if two `Address`s are equal
     pub fn equals(&self, other: &Self) -> bool {
-        self.0 == other.0
+        self.inner == other.inner
     }
 
     /// Return the `Uint8Array` representation of the public key
     pub fn toBytes(&self) -> std::boxed::Box<[u8]> {
-        self.0.to_bytes().into()
+        self.inner.to_bytes().into()
     }
 
     /// Derive an Address from anothern Address, string seed, and a program id
     pub fn createWithSeed(base: &Self, seed: &str, owner: &Self) -> Result<Self, JsValue> {
-        solana_address::Address::create_with_seed(&base.0, seed, &owner.0)
-            .map(Self)
+        solana_address::Address::create_with_seed(&base.inner, seed, &owner.inner)
+            .map(Self::new)
             .map_err(display_to_jsvalue)
     }
 
@@ -112,8 +118,8 @@ impl Address {
             .map(|seed| seed.as_slice())
             .collect::<Vec<_>>();
 
-        solana_address::Address::create_program_address(seeds_slice.as_slice(), &program_id.0)
-            .map(Self)
+        solana_address::Address::create_program_address(seeds_slice.as_slice(), &program_id.inner)
+            .map(Self::new)
             .map_err(display_to_jsvalue)
     }
 
@@ -132,10 +138,10 @@ impl Address {
             .collect::<Vec<_>>();
 
         let (address, bump_seed) =
-            solana_address::Address::find_program_address(seeds_slice.as_slice(), &program_id.0);
+            solana_address::Address::find_program_address(seeds_slice.as_slice(), &program_id.inner);
 
         let result = Array::new_with_length(2);
-        result.set(0, Self(address).into());
+        result.set(0, Self::new(address).into());
         result.set(1, bump_seed.into());
         Ok(result.into())
     }

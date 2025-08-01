@@ -12,11 +12,17 @@ use {
 /// is fixed. This must not diverge from the regular non-wasm Transaction struct.
 #[wasm_bindgen]
 #[derive(Debug, PartialEq, Default, Eq, Clone)]
-pub struct Transaction(pub(crate) solana_transaction::Transaction);
+pub struct Transaction {
+    pub(crate) inner: solana_transaction::Transaction,
+}
 
 impl Transaction {
     pub fn new(inner: solana_transaction::Transaction) -> Self {
-        Self(inner)
+        Self { inner }
+    }
+
+    pub fn inner(&self) -> &solana_transaction::Transaction {
+        &self.inner
     }
 }
 
@@ -25,47 +31,51 @@ impl Transaction {
     /// Create a new `Transaction`
     #[wasm_bindgen(constructor)]
     pub fn constructor(instructions: Vec<Instruction>, payer: Option<Address>) -> Self {
-        let instructions = instructions.into_iter().map(|x| x.0).collect::<Vec<_>>();
-        Transaction(solana_transaction::Transaction::new_with_payer(
+        let instructions = instructions
+            .into_iter()
+            .map(|x| x.inner)
+            .collect::<Vec<_>>();
+        Self::new(solana_transaction::Transaction::new_with_payer(
             &instructions,
-            payer.map(|x| x.0).as_ref(),
+            payer.map(|x| x.inner).as_ref(),
         ))
     }
 
     /// Return a message containing all data that should be signed.
     #[wasm_bindgen(js_name = message)]
     pub fn js_message(&self) -> Message {
-        Message(self.0.message.clone())
+        Message::new(self.inner.message.clone())
     }
 
     /// Return the serialized message data to sign.
     pub fn messageData(&self) -> Box<[u8]> {
-        self.0.message_data().into()
+        self.inner.message_data().into()
     }
 
     /// Verify the transaction
     #[wasm_bindgen(js_name = verify)]
     pub fn js_verify(&self) -> Result<(), JsValue> {
-        self.0
+        self.inner
             .verify()
             .map_err(|x| std::string::ToString::to_string(&x).into())
     }
 
     pub fn partialSign(&mut self, keypair: &Keypair, recent_blockhash: &Hash) {
-        self.0.partial_sign(&[&keypair.0], recent_blockhash.0);
+        self.inner
+            .partial_sign(&[&keypair.inner], recent_blockhash.inner);
     }
 
     pub fn isSigned(&self) -> bool {
-        self.0.is_signed()
+        self.inner.is_signed()
     }
 
     pub fn toBytes(&self) -> Box<[u8]> {
-        bincode::serialize(&self.0).unwrap().into()
+        bincode::serialize(&self.inner).unwrap().into()
     }
 
     pub fn fromBytes(bytes: &[u8]) -> Result<Self, JsValue> {
         bincode::deserialize::<solana_transaction::Transaction>(bytes)
-            .map(Self)
+            .map(Self::new)
             .map_err(|x| std::string::ToString::to_string(&x).into())
     }
 }
