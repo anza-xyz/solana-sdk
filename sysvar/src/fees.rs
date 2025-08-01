@@ -56,7 +56,7 @@ impl Fees {
 }
 
 impl Sysvar for Fees {
-    impl_sysvar_get!(sol_get_fees_sysvar);
+    impl_sysvar_get!();
 }
 
 #[cfg(feature = "bincode")]
