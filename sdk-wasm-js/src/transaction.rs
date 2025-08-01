@@ -14,6 +14,12 @@ use {
 #[derive(Debug, PartialEq, Default, Eq, Clone)]
 pub struct Transaction(pub(crate) solana_transaction::Transaction);
 
+impl Transaction {
+    pub fn new(inner: solana_transaction::Transaction) -> Self {
+        Self(inner)
+    }
+}
+
 #[wasm_bindgen]
 impl Transaction {
     /// Create a new `Transaction`

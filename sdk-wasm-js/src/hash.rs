@@ -9,6 +9,12 @@ use {
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Hash(pub(crate) solana_hash::Hash);
 
+impl Hash {
+    pub fn new(inner: solana_hash::Hash) -> Self {
+        Self(inner)
+    }
+}
+
 #[allow(non_snake_case)]
 #[wasm_bindgen]
 impl Hash {

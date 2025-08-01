@@ -10,6 +10,12 @@ use {
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Address(pub(crate) solana_address::Address);
 
+impl Pubkey {
+    pub fn new(inner: solana_pubkey::Pubkey) -> Self {
+        Self(inner)
+    }
+}
+
 fn js_value_to_seeds_vec(array_of_uint8_arrays: &[JsValue]) -> Result<Vec<Vec<u8>>, JsValue> {
     let vec_vec_u8 = array_of_uint8_arrays
         .iter()

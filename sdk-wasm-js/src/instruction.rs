@@ -12,6 +12,12 @@ use {crate::address::Address, wasm_bindgen::prelude::*};
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Instruction(pub(crate) solana_instruction::Instruction);
 
+impl Instruction {
+    pub fn new(inner: solana_instruction::Instruction) -> Self {
+        Self(inner)
+    }
+}
+
 #[wasm_bindgen]
 impl Instruction {
     /// Create a new `Instruction`
@@ -36,6 +42,12 @@ impl Instruction {
 #[wasm_bindgen]
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct AccountMeta(pub(crate) solana_instruction::AccountMeta);
+
+impl AccountMeta {
+    pub fn new(inner: solana_instruction::AccountMeta) -> Self {
+        Self(inner)
+    }
+}
 
 #[wasm_bindgen]
 impl AccountMeta {
