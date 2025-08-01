@@ -7,7 +7,7 @@ use {
 
 #[wasm_bindgen]
 #[derive(Debug, PartialEq, Eq, Clone)]
-pub struct Hash(pub solana_hash::Hash);
+pub struct Hash(pub(crate) solana_hash::Hash);
 
 #[allow(non_snake_case)]
 #[wasm_bindgen]

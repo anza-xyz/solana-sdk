@@ -12,7 +12,7 @@ use {
 /// is fixed. This must not diverge from the regular non-wasm Transaction struct.
 #[wasm_bindgen]
 #[derive(Debug, PartialEq, Default, Eq, Clone)]
-pub struct Transaction(pub solana_transaction::Transaction);
+pub struct Transaction(pub(crate) solana_transaction::Transaction);
 
 #[wasm_bindgen]
 impl Transaction {

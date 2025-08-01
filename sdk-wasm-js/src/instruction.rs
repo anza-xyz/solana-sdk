@@ -10,7 +10,7 @@ use {crate::address::Address, wasm_bindgen::prelude::*};
 /// is fixed. This must not diverge from the regular non-wasm Instruction struct.
 #[wasm_bindgen]
 #[derive(Debug, PartialEq, Eq, Clone)]
-pub struct Instruction(pub solana_instruction::Instruction);
+pub struct Instruction(pub(crate) solana_instruction::Instruction);
 
 #[wasm_bindgen]
 impl Instruction {
@@ -35,7 +35,7 @@ impl Instruction {
 
 #[wasm_bindgen]
 #[derive(Debug, PartialEq, Eq, Clone)]
-pub struct AccountMeta(pub solana_instruction::AccountMeta);
+pub struct AccountMeta(pub(crate) solana_instruction::AccountMeta);
 
 #[wasm_bindgen]
 impl AccountMeta {
