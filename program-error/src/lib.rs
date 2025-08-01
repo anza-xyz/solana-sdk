@@ -3,8 +3,6 @@
 #![allow(clippy::arithmetic_side_effects)]
 #![cfg_attr(docsrs, feature(doc_auto_cfg))]
 #![no_std]
-#[cfg(feature = "std")]
-extern crate std;
 #[cfg(feature = "borsh")]
 use borsh::io::Error as BorshIoError;
 use core::{convert::TryFrom, fmt};

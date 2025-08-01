@@ -18,7 +18,6 @@ rustdoc-args = ["--cfg=docsrs"]
 [features]
 borsh = ["dep:borsh"]
 serde = ["dep:serde", "dep:serde_derive"]
-std = []
 
 [dependencies]
 borsh = { workspace = true, optional = true }
