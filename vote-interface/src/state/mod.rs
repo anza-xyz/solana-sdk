@@ -23,8 +23,13 @@ pub mod vote_state_versions;
 pub use vote_state_versions::*;
 pub mod vote_state_v3;
 pub use vote_state_v3::VoteStateV3;
+pub mod vote_state_v4;
+pub use vote_state_v4::VoteStateV4;
 mod vote_instruction_data;
 pub use vote_instruction_data::*;
+
+/// Size of a BLS public key in a compressed point representation
+pub const BLS_PUBLIC_KEY_COMPRESSED_SIZE: usize = 48;
 
 // Maximum number of votes to keep around, tightly coupled with epoch_schedule::MINIMUM_SLOTS_PER_EPOCH
 pub const MAX_LOCKOUT_HISTORY: usize = 31;
