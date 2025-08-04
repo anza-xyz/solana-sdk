@@ -1,6 +1,10 @@
 //! Calculate and collect rent from accounts.
 #![cfg_attr(docsrs, feature(doc_auto_cfg))]
 #![cfg_attr(feature = "frozen-abi", feature(min_specialization))]
+#![deprecated(
+    since = "2.3.0",
+    note = "Use Rent directly, or solana_runtime::rent_collector"
+)]
 
 use {
     solana_account::{AccountSharedData, ReadableAccount, WritableAccount},
