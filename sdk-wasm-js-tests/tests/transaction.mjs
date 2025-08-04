@@ -1,7 +1,7 @@
 import { expect } from "chai";
 import {
   solana_program_init,
-  Pubkey,
+  Address,
   Keypair,
   Hash,
   MyProgramInstruction,
@@ -21,7 +21,7 @@ describe("Transaction", function () {
       ])
     );
 
-    const programId = new Pubkey("11111111111111111111111111111111");
+    const programId = new Address("11111111111111111111111111111111");
     const recentBlockhash = new Hash(
       "EETubP5AKHgjPAhzPAFcb8BAY1hMH639CWCFTqi3hq1k"
     );

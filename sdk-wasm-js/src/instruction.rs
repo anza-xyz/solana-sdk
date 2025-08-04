@@ -46,11 +46,11 @@ crate::conversion::impl_inner_conversion!(AccountMeta, solana_instruction::Accou
 impl AccountMeta {
     /// Create a new writable `AccountMeta`
     pub fn newWritable(address: Address, is_signer: bool) -> Self {
-        solana_instruction::AccountMeta::new(pubkey.inner, is_signer).into()
+        solana_instruction::AccountMeta::new(address.inner, is_signer).into()
     }
 
     /// Create a new readonly `AccountMeta`
     pub fn newReadonly(address: Address, is_signer: bool) -> Self {
-        solana_instruction::AccountMeta::new_readonly(pubkey.inner, is_signer).into()
+        solana_instruction::AccountMeta::new_readonly(address.inner, is_signer).into()
     }
 }

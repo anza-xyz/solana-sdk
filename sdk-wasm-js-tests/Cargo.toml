@@ -14,8 +14,8 @@ edition = { workspace = true }
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
+solana-address = { workspace = true }
 solana-instruction = { workspace = true, features = ["std"] }
-solana-pubkey = { workspace = true }
 solana-sdk-wasm-js = { workspace = true }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]

@@ -12,7 +12,7 @@ pub struct Address {
     pub(crate) inner: solana_address::Address,
 }
 
-crate::conversion::impl_inner_conversion!(Pubkey, solana_pubkey::Pubkey);
+crate::conversion::impl_inner_conversion!(Address, solana_address::Address);
 
 fn js_value_to_seeds_vec(array_of_uint8_arrays: &[JsValue]) -> Result<Vec<Vec<u8>>, JsValue> {
     let vec_vec_u8 = array_of_uint8_arrays
@@ -47,7 +47,7 @@ impl Address {
         } else if let Some(uint8_array) = value.dyn_ref::<Uint8Array>() {
             solana_address::Address::try_from(uint8_array.to_vec())
                 .map(Into::into)
-                .map_err(|err| JsValue::from(std::format!("Invalid Uint8Array pubkey: {err:?}")))
+                .map_err(|err| JsValue::from(std::format!("Invalid Uint8Array address: {err:?}")))
         } else if let Some(array) = value.dyn_ref::<Array>() {
             let mut bytes = std::vec![];
             let iterator = js_sys::try_iter(&array.values())?.expect("array to be iterable");
@@ -64,7 +64,7 @@ impl Address {
             }
             solana_address::Address::try_from(bytes)
                 .map(Into::into)
-                .map_err(|err| JsValue::from(std::format!("Invalid Array pubkey: {err:?}")))
+                .map_err(|err| JsValue::from(std::format!("Invalid Array address: {err:?}")))
         } else if value.is_undefined() {
             Ok(solana_address::Address::default().into())
         } else {
@@ -129,11 +129,13 @@ impl Address {
             .map(|seed| seed.as_slice())
             .collect::<Vec<_>>();
 
-        let (address, bump_seed) =
-            solana_address::Address::find_program_address(seeds_slice.as_slice(), &program_id.inner);
+        let (address, bump_seed) = solana_address::Address::find_program_address(
+            seeds_slice.as_slice(),
+            &program_id.inner,
+        );
 
         let result = Array::new_with_length(2);
-        result.set(0, Pubkey::from(address).into());
+        result.set(0, Address::from(address).into());
         result.set(1, bump_seed.into());
         Ok(result.into())
     }

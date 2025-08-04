@@ -3751,8 +3751,8 @@ name = "solana-sdk-wasm-js-tests"
 version = "1.0.0"
 dependencies = [
  "js-sys",
+ "solana-address",
  "solana-instruction",
- "solana-pubkey",
  "solana-sdk-wasm-js",
  "wasm-bindgen",
 ]
