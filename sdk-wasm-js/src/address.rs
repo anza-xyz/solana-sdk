@@ -12,15 +12,7 @@ pub struct Address {
     pub(crate) inner: solana_address::Address,
 }
 
-impl Pubkey {
-    pub fn new(inner: solana_pubkey::Pubkey) -> Self {
-        Self { inner }
-    }
-
-    pub fn inner(&self) -> &solana_pubkey::Pubkey {
-        &self.inner
-    }
-}
+crate::conversion::impl_inner_conversion!(Pubkey, solana_pubkey::Pubkey);
 
 fn js_value_to_seeds_vec(array_of_uint8_arrays: &[JsValue]) -> Result<Vec<Vec<u8>>, JsValue> {
     let vec_vec_u8 = array_of_uint8_arrays
@@ -50,12 +42,12 @@ impl Address {
         if let Some(base58_str) = value.as_string() {
             base58_str
                 .parse::<solana_address::Address>()
-                .map(Self::new)
+                .map(Into::into)
                 .map_err(display_to_jsvalue)
         } else if let Some(uint8_array) = value.dyn_ref::<Uint8Array>() {
             solana_address::Address::try_from(uint8_array.to_vec())
-                .map(Self::new)
-                .map_err(|err| JsValue::from(std::format!("Invalid Uint8Array address: {err:?}")))
+                .map(Into::into)
+                .map_err(|err| JsValue::from(std::format!("Invalid Uint8Array pubkey: {err:?}")))
         } else if let Some(array) = value.dyn_ref::<Array>() {
             let mut bytes = std::vec![];
             let iterator = js_sys::try_iter(&array.values())?.expect("array to be iterable");
@@ -71,10 +63,10 @@ impl Address {
                 return Err(std::format!("Invalid array argument: {:?}", x).into());
             }
             solana_address::Address::try_from(bytes)
-                .map(Self::new)
-                .map_err(|err| JsValue::from(std::format!("Invalid Array address: {err:?}")))
+                .map(Into::into)
+                .map_err(|err| JsValue::from(std::format!("Invalid Array pubkey: {err:?}")))
         } else if value.is_undefined() {
-            Ok(Self::new(solana_address::Address::default()))
+            Ok(solana_address::Address::default().into())
         } else {
             Err("Unsupported argument".into())
         }
@@ -103,7 +95,7 @@ impl Address {
     /// Derive an Address from anothern Address, string seed, and a program id
     pub fn createWithSeed(base: &Self, seed: &str, owner: &Self) -> Result<Self, JsValue> {
         solana_address::Address::create_with_seed(&base.inner, seed, &owner.inner)
-            .map(Self::new)
+            .map(Into::into)
             .map_err(display_to_jsvalue)
     }
 
@@ -119,7 +111,7 @@ impl Address {
             .collect::<Vec<_>>();
 
         solana_address::Address::create_program_address(seeds_slice.as_slice(), &program_id.inner)
-            .map(Self::new)
+            .map(Into::into)
             .map_err(display_to_jsvalue)
     }
 
@@ -141,7 +133,7 @@ impl Address {
             solana_address::Address::find_program_address(seeds_slice.as_slice(), &program_id.inner);
 
         let result = Array::new_with_length(2);
-        result.set(0, Self::new(address).into());
+        result.set(0, Pubkey::from(address).into());
         result.set(1, bump_seed.into());
         Ok(result.into())
     }

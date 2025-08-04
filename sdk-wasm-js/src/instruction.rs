@@ -14,26 +14,15 @@ pub struct Instruction {
     pub(crate) inner: solana_instruction::Instruction,
 }
 
-impl Instruction {
-    pub fn new(inner: solana_instruction::Instruction) -> Self {
-        Self { inner }
-    }
-
-    pub fn inner(&self) -> &solana_instruction::Instruction {
-        &self.inner
-    }
-}
+crate::conversion::impl_inner_conversion!(Instruction, solana_instruction::Instruction);
 
 #[wasm_bindgen]
 impl Instruction {
     /// Create a new `Instruction`
     #[wasm_bindgen(constructor)]
     pub fn constructor(program_id: Address) -> Self {
-        Self::new(solana_instruction::Instruction::new_with_bytes(
-            program_id.inner,
-            &[],
-            std::vec::Vec::new(),
-        ))
+        solana_instruction::Instruction::new_with_bytes(program_id.inner, &[], std::vec::Vec::new())
+            .into()
     }
 
     pub fn setData(&mut self, data: &[u8]) {
@@ -51,31 +40,17 @@ pub struct AccountMeta {
     pub(crate) inner: solana_instruction::AccountMeta,
 }
 
-impl AccountMeta {
-    pub fn new(inner: solana_instruction::AccountMeta) -> Self {
-        Self { inner }
-    }
-
-    pub fn inner(&self) -> &solana_instruction::AccountMeta {
-        &self.inner
-    }
-}
+crate::conversion::impl_inner_conversion!(AccountMeta, solana_instruction::AccountMeta);
 
 #[wasm_bindgen]
 impl AccountMeta {
     /// Create a new writable `AccountMeta`
     pub fn newWritable(address: Address, is_signer: bool) -> Self {
-        Self::new(solana_instruction::AccountMeta::new(
-            address.inner,
-            is_signer,
-        ))
+        solana_instruction::AccountMeta::new(pubkey.inner, is_signer).into()
     }
 
     /// Create a new readonly `AccountMeta`
     pub fn newReadonly(address: Address, is_signer: bool) -> Self {
-        Self::new(solana_instruction::AccountMeta::new_readonly(
-            address.inner,
-            is_signer,
-        ))
+        solana_instruction::AccountMeta::new_readonly(pubkey.inner, is_signer).into()
     }
 }

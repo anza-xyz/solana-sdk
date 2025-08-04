@@ -16,15 +16,7 @@ pub struct Transaction {
     pub(crate) inner: solana_transaction::Transaction,
 }
 
-impl Transaction {
-    pub fn new(inner: solana_transaction::Transaction) -> Self {
-        Self { inner }
-    }
-
-    pub fn inner(&self) -> &solana_transaction::Transaction {
-        &self.inner
-    }
-}
+crate::conversion::impl_inner_conversion!(Transaction, solana_transaction::Transaction);
 
 #[wasm_bindgen]
 impl Transaction {
@@ -35,16 +27,17 @@ impl Transaction {
             .into_iter()
             .map(|x| x.inner)
             .collect::<Vec<_>>();
-        Self::new(solana_transaction::Transaction::new_with_payer(
+        solana_transaction::Transaction::new_with_payer(
             &instructions,
             payer.map(|x| x.inner).as_ref(),
-        ))
+        )
+        .into()
     }
 
     /// Return a message containing all data that should be signed.
     #[wasm_bindgen(js_name = message)]
     pub fn js_message(&self) -> Message {
-        Message::new(self.inner.message.clone())
+        self.inner.message.clone().into()
     }
 
     /// Return the serialized message data to sign.
@@ -75,7 +68,7 @@ impl Transaction {
 
     pub fn fromBytes(bytes: &[u8]) -> Result<Self, JsValue> {
         bincode::deserialize::<solana_transaction::Transaction>(bytes)
-            .map(Self::new)
+            .map(Into::into)
             .map_err(|x| std::string::ToString::to_string(&x).into())
     }
 }

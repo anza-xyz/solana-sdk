@@ -6,15 +6,7 @@ pub struct Keypair {
     pub(crate) inner: solana_keypair::Keypair,
 }
 
-impl Keypair {
-    pub fn new(inner: solana_keypair::Keypair) -> Self {
-        Self { inner }
-    }
-
-    pub fn inner(&self) -> &solana_keypair::Keypair {
-        &self.inner
-    }
-}
+crate::conversion::impl_inner_conversion!(Keypair, solana_keypair::Keypair);
 
 #[allow(non_snake_case)]
 #[wasm_bindgen]
@@ -22,7 +14,7 @@ impl Keypair {
     /// Create a new `Keypair `
     #[wasm_bindgen(constructor)]
     pub fn constructor() -> Self {
-        Self::new(solana_keypair::Keypair::new())
+        solana_keypair::Keypair::new().into()
     }
 
     /// Convert a `Keypair` to a `Uint8Array`
@@ -33,13 +25,13 @@ impl Keypair {
     /// Recover a `Keypair` from a `Uint8Array`
     pub fn fromBytes(bytes: &[u8]) -> Result<Self, JsValue> {
         solana_keypair::Keypair::try_from(bytes)
-            .map(Self::new)
+            .map(Into::into)
             .map_err(|e| e.to_string().into())
     }
 
     /// Return the `Address` for this `Keypair`
     #[wasm_bindgen(js_name = pubkey)]
     pub fn js_pubkey(&self) -> Address {
-        Address::new(self.inner.pubkey())
+        self.inner.pubkey().into()
     }
 }

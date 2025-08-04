@@ -11,15 +11,7 @@ pub struct Hash {
     pub(crate) inner: solana_hash::Hash,
 }
 
-impl Hash {
-    pub fn new(inner: solana_hash::Hash) -> Self {
-        Self { inner }
-    }
-
-    pub fn inner(&self) -> &solana_hash::Hash {
-        &self.inner
-    }
-}
+crate::conversion::impl_inner_conversion!(Hash, solana_hash::Hash);
 
 #[allow(non_snake_case)]
 #[wasm_bindgen]
@@ -32,12 +24,12 @@ impl Hash {
         if let Some(base58_str) = value.as_string() {
             base58_str
                 .parse::<solana_hash::Hash>()
-                .map(Self::new)
+                .map(Into::into)
                 .map_err(|x| JsValue::from(x.to_string()))
         } else if let Some(uint8_array) = value.dyn_ref::<Uint8Array>() {
             <[u8; solana_hash::HASH_BYTES]>::try_from(uint8_array.to_vec())
                 .map(solana_hash::Hash::new_from_array)
-                .map(Self::new)
+                .map(Into::into)
                 .map_err(|err| format!("Invalid Hash value: {err:?}").into())
         } else if let Some(array) = value.dyn_ref::<Array>() {
             let mut bytes = vec![];
@@ -55,10 +47,10 @@ impl Hash {
             }
             <[u8; solana_hash::HASH_BYTES]>::try_from(bytes)
                 .map(solana_hash::Hash::new_from_array)
-                .map(Self::new)
+                .map(Into::into)
                 .map_err(|err| format!("Invalid Hash value: {err:?}").into())
         } else if value.is_undefined() {
-            Ok(Self::new(solana_hash::Hash::default()))
+            Ok(solana_hash::Hash::default().into())
         } else {
             Err("Unsupported argument".into())
         }

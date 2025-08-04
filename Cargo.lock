@@ -3747,6 +3747,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "solana-sdk-wasm-js-tests"
+version = "1.0.0"
+dependencies = [
+ "js-sys",
+ "solana-instruction",
+ "solana-pubkey",
+ "solana-sdk-wasm-js",
+ "wasm-bindgen",
+]
+
+[[package]]
 name = "solana-secp256k1-program"
 version = "2.2.3"
 dependencies = [

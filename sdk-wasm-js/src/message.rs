@@ -6,12 +6,4 @@ pub struct Message {
     pub(crate) inner: solana_message::Message,
 }
 
-impl Message {
-    pub fn new(inner: solana_message::Message) -> Self {
-        Self { inner }
-    }
-
-    pub fn inner(&self) -> &solana_message::Message {
-        &self.inner
-    }
-}
+crate::conversion::impl_inner_conversion!(Message, solana_message::Message);
