@@ -75,7 +75,7 @@ solana-example-mocks = { path = "../example-mocks" }
 solana-hash = { workspace = true }
 solana-instruction = { path = "../instruction", features = ["borsh"] }
 solana-program-error = { workspace = true, features = ["borsh"] }
-solana-system-interface = { workspace = true, features = ["bincode"] }
+solana-system-interface = { path = "../system-interface", features = ["bincode"] }
 strum = { workspace = true }
 strum_macros = { workspace = true }
 
