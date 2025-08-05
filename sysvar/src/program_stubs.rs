@@ -184,3 +184,7 @@ pub fn sol_get_processed_sibling_instruction(index: usize) -> Option<Instruction
 pub fn sol_get_stack_height() -> u64 {
     SYSCALL_STUBS.read().unwrap().sol_get_stack_height()
 }
+
+pub(crate) fn sol_get_fees_sysvar(var_addr: *mut u8) -> u64 {
+    SYSCALL_STUBS.read().unwrap().sol_get_fees_sysvar(var_addr)
+}

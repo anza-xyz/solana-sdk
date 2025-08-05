@@ -180,6 +180,27 @@ macro_rules! impl_sysvar_get {
             Ok(var)
         }
     };
+    // DEPRECATED: This variant is only for the deprecated Fees sysvar and should be
+    // removed once Fees is no longer in use. It uses the old-style direct syscall
+    // approach instead of the new sol_get_sysvar syscall.
+    ($syscall_name:ident) => {
+        fn get() -> Result<Self, $crate::__private::ProgramError> {
+            let mut var = Self::default();
+            let var_addr = &mut var as *mut _ as *mut u8;
+
+            #[cfg(target_os = "solana")]
+            let result = unsafe { $crate::__private::definitions::$syscall_name(var_addr) };
+
+            #[cfg(not(target_os = "solana"))]
+            let result = $crate::program_stubs::$syscall_name(var_addr);
+
+            match result {
+                $crate::__private::SUCCESS => Ok(var),
+                // Unexpected errors are folded into `UnsupportedSysvar`.
+                _ => Err($crate::__private::ProgramError::UnsupportedSysvar),
+            }
+        }
+    };
 }
 
 /// Handler for retrieving a slice of sysvar data from the `sol_get_sysvar`
