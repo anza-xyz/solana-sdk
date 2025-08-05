@@ -1,5 +1,8 @@
 //! Error types
-use solana_program_error::{ProgramError, ToStr};
+use {
+    solana_program_error::{ProgramError, ToStr},
+    std::num::TryFromIntError,
+};
 
 /// Errors that may be returned by the spl-pod library.
 #[repr(u32)]
@@ -22,6 +25,9 @@ pub enum PodSliceError {
     /// Provided byte buffer too large for expected type
     #[error("Provided byte buffer too large for expected type")]
     BufferTooLarge,
+    /// An integer conversion failed because the value was out of range for the target type
+    #[error("An integer conversion failed because the value was out of range for the target type")]
+    ValueOutOfRange,
 }
 
 impl From<PodSliceError> for ProgramError {
@@ -36,6 +42,13 @@ impl ToStr for PodSliceError {
             PodSliceError::CalculationFailure => "Error in checked math operation",
             PodSliceError::BufferTooSmall => "Provided byte buffer too small for expected type",
             PodSliceError::BufferTooLarge => "Provided byte buffer too large for expected type",
+            PodSliceError::ValueOutOfRange => "An integer conversion failed because the value was out of range for the target type"
         }
+    }
+}
+
+impl From<TryFromIntError> for PodSliceError {
+    fn from(_: TryFromIntError) -> Self {
+        PodSliceError::ValueOutOfRange
     }
 }
