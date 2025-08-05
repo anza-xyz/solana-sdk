@@ -50,6 +50,7 @@ frozen-abi = [
     "dep:solana-frozen-abi",
     "dep:solana-frozen-abi-macro",
     "dep:solana-logger",
+    "serde",
     "solana-pubkey/frozen-abi",
     "solana-pubkey/std"
 ]
