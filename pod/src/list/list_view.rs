@@ -187,7 +187,7 @@ mod tests {
         super::*,
         crate::{
             list::List,
-            primitives::{PodU16, PodU32, PodU64},
+            primitives::{PodU128, PodU16, PodU32, PodU64},
         },
         bytemuck_derive::{Pod as DerivePod, Zeroable},
     };
@@ -436,38 +436,6 @@ mod tests {
     }
 
     #[test]
-    fn test_unpack_success_different_length_type() {
-        // T = u64 (align 8), L = PodU16 (size 2, align 2). Needs 6 bytes padding.
-        let padding = ListView::<u64, PodU16>::header_padding().unwrap();
-        assert_eq!(padding, 6);
-
-        let length: u16 = 1;
-        let capacity: usize = 1;
-        let item_size = size_of::<u64>();
-        let len_size = size_of::<PodU16>();
-        let buf_size = len_size + padding + capacity * item_size;
-        let mut buf = vec![0u8; buf_size];
-
-        let pod_len: PodU16 = length.into();
-        buf[0..len_size].copy_from_slice(bytemuck::bytes_of(&pod_len));
-
-        let data_start = len_size + padding;
-        let items = [12345u64];
-        let items_bytes = bytemuck::cast_slice(&items);
-        buf[data_start..].copy_from_slice(items_bytes);
-
-        let view_ro = ListView::<u64, PodU16>::unpack(&buf).unwrap();
-        assert_eq!(view_ro.len(), length as usize);
-        assert_eq!(view_ro.capacity(), capacity);
-        assert_eq!(view_ro.as_slice(), &items[..]);
-
-        let view_mut = ListView::<u64, PodU16>::unpack_mut(&mut buf).unwrap();
-        assert_eq!(view_mut.len(), length as usize);
-        assert_eq!(view_mut.capacity(), capacity);
-        assert_eq!(view_mut.as_slice(), &items[..]);
-    }
-
-    #[test]
     fn test_unpack_fail_buffer_too_small_for_header() {
         // T = u64 (align 8), L = PodU32 (size 4). Header size is 8.
         let header_size = ListView::<u64, PodU32>::size_of(0).unwrap();
@@ -621,4 +589,57 @@ mod tests {
         let length_bytes = &buf[0..len_size];
         assert_eq!(length_bytes, &[0u8; 4]);
     }
+
+    macro_rules! test_list_view_for_length_type {
+        ($test_name:ident, $LengthType:ty) => {
+            #[test]
+            fn $test_name() {
+                type T = u64;
+
+                let padding = ListView::<T, $LengthType>::header_padding().unwrap();
+                let length_usize = 2usize;
+                let capacity = 3;
+
+                let item_size = size_of::<T>();
+                let len_size = size_of::<$LengthType>();
+                let buf_size = len_size + padding + capacity * item_size;
+                let mut buf = vec![0u8; buf_size];
+
+                // Write length
+                let pod_len = <$LengthType>::try_from(length_usize).unwrap();
+                buf[0..len_size].copy_from_slice(bytemuck::bytes_of(&pod_len));
+
+                // Write data
+                let data_start = len_size + padding;
+                let items = [1000 as T, 2000 as T];
+                let items_bytes = bytemuck::cast_slice(&items);
+                buf[data_start..(data_start + items_bytes.len())].copy_from_slice(items_bytes);
+
+                // Test read-only view
+                let view_ro = ListView::<T, $LengthType>::unpack(&buf).unwrap();
+                assert_eq!(view_ro.len(), length_usize);
+                assert_eq!(view_ro.capacity(), capacity);
+                assert_eq!(view_ro.as_slice(), &items[..]);
+
+                // Test mutable view
+                let mut buf_mut = buf.clone();
+                let view_mut = ListView::<T, $LengthType>::unpack_mut(&mut buf_mut).unwrap();
+                assert_eq!(view_mut.len(), length_usize);
+                assert_eq!(view_mut.capacity(), capacity);
+                assert_eq!(view_mut.as_slice(), &items[..]);
+
+                // Test init
+                let mut init_buf = vec![0xFFu8; buf_size];
+                let init_view = ListView::<T, $LengthType>::init(&mut init_buf).unwrap();
+                assert_eq!(init_view.len(), 0);
+                assert_eq!(init_view.capacity(), capacity);
+                assert_eq!(<$LengthType>::try_from(0usize).unwrap(), *init_view.length);
+            }
+        };
+    }
+
+    test_list_view_for_length_type!(list_view_with_pod_u16, PodU16);
+    test_list_view_for_length_type!(list_view_with_pod_u32, PodU32);
+    test_list_view_for_length_type!(list_view_with_pod_u64, PodU64);
+    test_list_view_for_length_type!(list_view_with_pod_u128, PodU128);
 }
