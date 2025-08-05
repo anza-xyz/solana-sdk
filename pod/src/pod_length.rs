@@ -1,7 +1,7 @@
 use {
     crate::{
         error::PodSliceError,
-        primitives::{PodU16, PodU32, PodU64},
+        primitives::{PodU128, PodU16, PodU32, PodU64},
     },
     bytemuck::Pod,
 };
@@ -38,3 +38,4 @@ macro_rules! impl_pod_length_for {
 impl_pod_length_for!(PodU16, u16);
 impl_pod_length_for!(PodU32, u32);
 impl_pod_length_for!(PodU64, u64);
+impl_pod_length_for!(PodU128, u128);
