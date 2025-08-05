@@ -6,7 +6,7 @@
 
 # Solana System Interface
 
-This crate contains instructions and constructors for interacting with the [System program](https://docs.solanalabs.com/runtime/programs#system-program).
+This crate contains instructions and constructors for interacting with the [System program](https://solana.com/docs/core/programs#core-programs).
 
 The System program can be used to create new accounts, allocate account data, assign accounts to owning programs, transfer lamports from System Program owned accounts and pay transaction fees.
 
