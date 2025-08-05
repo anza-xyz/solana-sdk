@@ -47,7 +47,6 @@ solana-fee-calculator = { workspace = true }
 solana-frozen-abi = { workspace = true, optional = true }
 solana-frozen-abi-macro = { workspace = true, optional = true }
 solana-hash = { workspace = true, features = ["bytemuck"] }
-solana-instruction = { workspace = true, features = ["std"] }
 solana-last-restart-slot = { workspace = true, features = ["sysvar"] }
 solana-program-entrypoint = { workspace = true }
 solana-program-error = { workspace = true }
@@ -61,6 +60,7 @@ solana-sysvar-id = { workspace = true }
 
 [target.'cfg(not(target_os = "solana"))'.dependencies]
 base64 = { workspace = true }
+solana-instruction = { workspace = true, features = ["std"] }
 solana-program-memory = { workspace = true }
 
 [target.'cfg(target_os = "solana")'.dependencies]
