@@ -98,7 +98,6 @@ pub mod rent;
 pub mod rewards;
 pub mod slot_hashes;
 pub mod slot_history;
-pub mod stake_history;
 
 /// Return value indicating that the  `offset + length` is greater than the length of
 /// the sysvar data.
@@ -184,7 +183,7 @@ macro_rules! impl_sysvar_get {
 
 /// Handler for retrieving a slice of sysvar data from the `sol_get_sysvar`
 /// syscall.
-fn get_sysvar(
+pub fn get_sysvar(
     dst: &mut [u8],
     sysvar_id: &Pubkey,
     offset: u64,

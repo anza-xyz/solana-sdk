@@ -15,13 +15,12 @@ all-features = true
 rustdoc-args = ["--cfg=docsrs"]
 
 [features]
-bincode = ["dep:bincode", "serde", "solana-stake-interface/bincode"]
+bincode = ["dep:bincode", "serde"]
 bytemuck = ["dep:bytemuck", "dep:bytemuck_derive"]
 dev-context-only-utils = ["bincode", "bytemuck"]
 frozen-abi = [
     "dep:solana-frozen-abi",
     "dep:solana-frozen-abi-macro",
-    "solana-stake-interface/frozen-abi",
 ]
 serde = [
     "dep:serde",
@@ -34,7 +33,6 @@ serde = [
     "solana-rent/serde",
     "solana-slot-hashes/serde",
     "solana-slot-history/serde",
-    "solana-stake-interface/serde",
 ]
 
 [dependencies]
@@ -62,7 +60,6 @@ solana-sdk-ids = { workspace = true }
 solana-sdk-macro = { workspace = true }
 solana-slot-hashes = { workspace = true, features = ["sysvar"] }
 solana-slot-history = { workspace = true, features = ["sysvar"] }
-solana-stake-interface = { workspace = true }
 solana-sysvar-id = { workspace = true }
 
 [target.'cfg(not(target_os = "solana"))'.dependencies]
