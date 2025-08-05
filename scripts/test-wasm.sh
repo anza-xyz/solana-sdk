@@ -16,3 +16,8 @@ cd "${src_root}"
   npm install
   npm test
 )
+
+(
+  cd system-wasm-js
+  npm install
+)

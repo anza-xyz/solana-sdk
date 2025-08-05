@@ -3996,6 +3996,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "solana-system-wasm-js"
+version = "1.0.0"
+dependencies = [
+ "js-sys",
+ "solana-sdk-wasm-js",
+ "solana-system-interface",
+ "wasm-bindgen",
+]
+
+[[package]]
 name = "solana-sysvar"
 version = "3.0.0"
 dependencies = [

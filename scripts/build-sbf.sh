@@ -22,6 +22,7 @@ build_sbf_excludes=(
   --exclude solana-secp256k1-program
   --exclude solana-secp256r1-program
   --exclude solana-system-transaction
+  --exclude solana-system-wasm-js
   --exclude solana-transaction
   --exclude solana-sdk
 )

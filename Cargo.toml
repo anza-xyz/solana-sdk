@@ -91,7 +91,9 @@ members = [
     "slot-hashes",
     "slot-history",
     "stable-layout",
+    "system-interface",
     "system-transaction",
+    "system-wasm-js",
     "sysvar",
     "sysvar-id",
     "time-utils",
@@ -299,6 +301,7 @@ solana-slot-history = { path = "slot-history", version = "3.0.0" }
 solana-stable-layout = { path = "stable-layout", version = "3.0.0" }
 solana-system-interface = { path = "system-interface", version = "2.0" }
 solana-system-transaction = { path = "system-transaction", version = "2.2.1" }
+solana-system-wasm-js = { path = "system-wasm-js", version = "1.0" }
 solana-sysvar = { path = "sysvar", version = "3.0.0" }
 solana-sysvar-id = { path = "sysvar-id", version = "3.0.0" }
 solana-time-utils = { path = "time-utils", version = "3.0.0" }

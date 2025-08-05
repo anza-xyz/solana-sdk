@@ -1,0 +1,6 @@
+{
+  "scripts": {
+    "postinstall": "npm run build",
+    "build": "wasm-pack build --target nodejs --dev --out-dir node_modules/crate --out-name crate"
+  }
+}
