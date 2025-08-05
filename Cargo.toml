@@ -297,7 +297,7 @@ solana-signer-store = { path = "signer-store", version = "0.1.0" }
 solana-slot-hashes = { path = "slot-hashes", version = "2.2.1" }
 solana-slot-history = { path = "slot-history", version = "2.2.1" }
 solana-stable-layout = { path = "stable-layout", version = "2.2.1" }
-solana-system-interface = "1.0"
+solana-system-interface = { path = "system-interface" , version = "1.0" }
 solana-system-transaction = { path = "system-transaction", version = "2.2.1" }
 solana-sysvar = { path = "sysvar", version = "2.2.1" }
 solana-sysvar-id = { path = "sysvar-id", version = "2.2.1" }
@@ -330,38 +330,3 @@ opt-level = 1
 # Enable optimizations for procmacros for faster recompile
 [profile.dev.build-override]
 opt-level = 1
-
-[patch.crates-io]
-# We include the following crates as our dependencies above from crates.io:
-#
-#  * solana-system-interface
-#
-# They, in turn, depend on a number of crates that we also include directly
-# using `path` specifications.  For example, `solana-system-interface` depends
-# on `solana-instruction`.  And we explicitly specify `solana-instruction` above
-# as a local path dependency:
-#
-#     solana-instruction = { path = "instruction", version = "2.2.1" }
-#
-# Unfortunately, Cargo will try to resolve the `solana-system-interface`
-# `solana-instruction` dependency only using what is available on crates.io.
-# Crates.io normally contains a previous version of these crates, and we end up
-# with two versions of `solana-instruction` and all of their dependencies in our
-# build tree.
-#
-# If you are developing downstream using non-crates-io solana-program (local or
-# forked repo, or from github rev, eg), duplicate the following patch statements
-# in your Cargo.toml. If you still hit duplicate-type errors with the patch
-# statements in place, run `cargo update -p solana-program` to remove extraneous
-# versions from your Cargo.lock file.
-solana-account = { path = "account" }
-solana-clock = { path = "clock" }
-solana-cpi = { path = "cpi" }
-solana-frozen-abi = { path = "frozen-abi" }
-solana-frozen-abi-macro = { path = "frozen-abi-macro" }
-solana-instruction = { path = "instruction" }
-solana-program-error = { path = "program-error" }
-solana-pubkey = { path = "pubkey" }
-solana-rent = { path = "rent" }
-solana-signature = { path = "signature" }
-solana-sysvar-id = { path = "sysvar-id" }
