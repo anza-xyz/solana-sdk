@@ -1,8 +1,6 @@
 use {
     num_traits::{FromPrimitive, ToPrimitive},
-    solana_decode_error::DecodeError,
-    solana_msg::msg,
-    solana_program_error::{PrintProgramError, ProgramError},
+    solana_program_error::{ProgramError, ToStr},
 };
 
 // Use strum when testing to ensure our FromPrimitive
@@ -86,45 +84,35 @@ impl ToPrimitive for SystemError {
     }
 }
 
-impl std::error::Error for SystemError {}
+impl core::error::Error for SystemError {}
 
-impl core::fmt::Display for SystemError {
-    fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+impl ToStr for SystemError {
+    fn to_str(&self) -> &'static str {
         match self {
-            SystemError::AccountAlreadyInUse => {
-                f.write_str("an account with the same address already exists")
-            }
+            SystemError::AccountAlreadyInUse => "an account with the same address already exists",
             SystemError::ResultWithNegativeLamports => {
-                f.write_str("account does not have enough SOL to perform the operation")
+                "account does not have enough SOL to perform the operation"
             }
-            SystemError::InvalidProgramId => {
-                f.write_str("cannot assign account to this program id")
-            }
-            SystemError::InvalidAccountDataLength => {
-                f.write_str("cannot allocate account data of this length")
-            }
-            SystemError::MaxSeedLengthExceeded => {
-                f.write_str("length of requested seed is too long")
-            }
+            SystemError::InvalidProgramId => "cannot assign account to this program id",
+            SystemError::InvalidAccountDataLength => "cannot allocate account data of this length",
+            SystemError::MaxSeedLengthExceeded => "length of requested seed is too long",
             SystemError::AddressWithSeedMismatch => {
-                f.write_str("provided address does not match addressed derived from seed")
+                "provided address does not match addressed derived from seed"
             }
             SystemError::NonceNoRecentBlockhashes => {
-                f.write_str("advancing stored nonce requires a populated RecentBlockhashes sysvar")
+                "advancing stored nonce requires a populated RecentBlockhashes sysvar"
             }
-            SystemError::NonceBlockhashNotExpired => {
-                f.write_str("stored nonce is still in recent_blockhashes")
-            }
+            SystemError::NonceBlockhashNotExpired => "stored nonce is still in recent_blockhashes",
             SystemError::NonceUnexpectedBlockhashValue => {
-                f.write_str("specified nonce does not match stored nonce")
+                "specified nonce does not match stored nonce"
             }
         }
     }
 }
 
-impl PrintProgramError for SystemError {
-    fn print<E>(&self) {
-        msg!(&self.to_string());
+impl core::fmt::Display for SystemError {
+    fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+        f.write_str(self.to_str())
     }
 }
 
@@ -134,26 +122,27 @@ impl From<SystemError> for ProgramError {
     }
 }
 
-impl<T> DecodeError<T> for SystemError {
-    fn type_of() -> &'static str {
-        "SystemError"
+impl TryFrom<u32> for SystemError {
+    type Error = ProgramError;
+    fn try_from(error: u32) -> Result<Self, Self::Error> {
+        match error {
+            0 => Ok(SystemError::AccountAlreadyInUse),
+            1 => Ok(SystemError::ResultWithNegativeLamports),
+            2 => Ok(SystemError::InvalidProgramId),
+            3 => Ok(SystemError::InvalidAccountDataLength),
+            4 => Ok(SystemError::MaxSeedLengthExceeded),
+            5 => Ok(SystemError::AddressWithSeedMismatch),
+            6 => Ok(SystemError::NonceNoRecentBlockhashes),
+            7 => Ok(SystemError::NonceBlockhashNotExpired),
+            8 => Ok(SystemError::NonceUnexpectedBlockhashValue),
+            _ => Err(ProgramError::InvalidArgument),
+        }
     }
 }
 
 impl From<u64> for SystemError {
     fn from(error: u64) -> Self {
-        match error {
-            0 => SystemError::AccountAlreadyInUse,
-            1 => SystemError::ResultWithNegativeLamports,
-            2 => SystemError::InvalidProgramId,
-            3 => SystemError::InvalidAccountDataLength,
-            4 => SystemError::MaxSeedLengthExceeded,
-            5 => SystemError::AddressWithSeedMismatch,
-            6 => SystemError::NonceNoRecentBlockhashes,
-            7 => SystemError::NonceBlockhashNotExpired,
-            8 => SystemError::NonceUnexpectedBlockhashValue,
-            _ => panic!("Unsupported SystemError"),
-        }
+        SystemError::from_u64(error).unwrap()
     }
 }
 

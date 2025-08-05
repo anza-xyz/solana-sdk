@@ -1669,8 +1669,7 @@ pub fn upgrade_nonce_account(nonce_pubkey: Pubkey) -> Instruction {
 #[cfg(feature = "bincode")]
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use solana_sysvar_id::SysvarId;
+    use {super::*, solana_sysvar_id::SysvarId};
 
     fn get_keys(instruction: &Instruction) -> Vec<Pubkey> {
         instruction.accounts.iter().map(|x| x.pubkey).collect()
