@@ -1,21 +1,16 @@
 //! solana-program Javascript interface
 #![cfg(target_arch = "wasm32")]
 
-use log::Level;
-pub use {
-    solana_hash::*,
-    solana_instruction::*,
-    solana_keypair::*,
-    solana_pubkey::*,
-    solana_transaction::*,
+use {
+    log::Level,
     wasm_bindgen::prelude::{wasm_bindgen, JsValue},
 };
 
+pub mod address;
 pub mod hash;
 pub mod instruction;
 pub mod keypair;
 pub mod message;
-pub mod pubkey;
 pub mod transaction;
 
 /// Initialize Javascript logging and panic handler
@@ -32,4 +27,25 @@ pub fn solana_program_init() {
 
 pub fn display_to_jsvalue<T: std::fmt::Display>(display: T) -> JsValue {
     display.to_string().into()
+}
+
+/// Simple macro for implementing conversion functions between wrapper types and
+/// wrapped types.
+mod conversion {
+    macro_rules! impl_inner_conversion {
+        ($Wrapper:ty, $Inner:ty) => {
+            impl From<$Inner> for $Wrapper {
+                fn from(inner: $Inner) -> Self {
+                    Self { inner }
+                }
+            }
+            impl std::ops::Deref for $Wrapper {
+                type Target = $Inner;
+                fn deref(&self) -> &Self::Target {
+                    &self.inner
+                }
+            }
+        };
+    }
+    pub(crate) use impl_inner_conversion;
 }

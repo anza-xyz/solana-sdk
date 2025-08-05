@@ -23,7 +23,7 @@ use {
 
 #[cfg_attr(
     feature = "frozen-abi",
-    frozen_abi(digest = "4cUA9matKNYX1R9TceL4D14w23AfLXVjhZaStwuermQX"),
+    frozen_abi(digest = "pZqasQc6duzMYzpzU7eriHH9cMXmubuUP4NmCrkWZjt"),
     derive(AbiExample)
 )]
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]

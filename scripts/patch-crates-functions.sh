@@ -10,7 +10,6 @@ crate_dirs=(
   account-info
   address-lookup-table-interface
   atomic-u64
-  base3-encoding
   big-mod-exp
   bincode
   blake3-hasher
@@ -91,6 +90,7 @@ crate_dirs=(
   shred-version
   signature
   signer
+  signer-store
   slot-hashes
   slot-history
   stable-layout

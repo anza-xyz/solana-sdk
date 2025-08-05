@@ -7,7 +7,11 @@ use {
 
 #[wasm_bindgen]
 #[derive(Debug, PartialEq, Eq, Clone)]
-pub struct Hash(pub(crate) solana_hash::Hash);
+pub struct Hash {
+    pub(crate) inner: solana_hash::Hash,
+}
+
+crate::conversion::impl_inner_conversion!(Hash, solana_hash::Hash);
 
 #[allow(non_snake_case)]
 #[wasm_bindgen]
@@ -20,12 +24,12 @@ impl Hash {
         if let Some(base58_str) = value.as_string() {
             base58_str
                 .parse::<solana_hash::Hash>()
-                .map(Hash)
+                .map(Into::into)
                 .map_err(|x| JsValue::from(x.to_string()))
         } else if let Some(uint8_array) = value.dyn_ref::<Uint8Array>() {
             <[u8; solana_hash::HASH_BYTES]>::try_from(uint8_array.to_vec())
                 .map(solana_hash::Hash::new_from_array)
-                .map(Hash)
+                .map(Into::into)
                 .map_err(|err| format!("Invalid Hash value: {err:?}").into())
         } else if let Some(array) = value.dyn_ref::<Array>() {
             let mut bytes = vec![];
@@ -43,10 +47,10 @@ impl Hash {
             }
             <[u8; solana_hash::HASH_BYTES]>::try_from(bytes)
                 .map(solana_hash::Hash::new_from_array)
-                .map(Hash)
+                .map(Into::into)
                 .map_err(|err| format!("Invalid Hash value: {err:?}").into())
         } else if value.is_undefined() {
-            Ok(Hash(solana_hash::Hash::default()))
+            Ok(solana_hash::Hash::default().into())
         } else {
             Err("Unsupported argument".into())
         }
@@ -54,16 +58,16 @@ impl Hash {
 
     /// Return the base58 string representation of the hash
     pub fn toString(&self) -> String {
-        self.0.to_string()
+        self.inner.to_string()
     }
 
     /// Checks if two `Hash`s are equal
     pub fn equals(&self, other: &Self) -> bool {
-        self.0 == other.0
+        self.inner == other.inner
     }
 
     /// Return the `Uint8Array` representation of the hash
     pub fn toBytes(&self) -> Box<[u8]> {
-        self.0.to_bytes().into()
+        self.inner.to_bytes().into()
     }
 }

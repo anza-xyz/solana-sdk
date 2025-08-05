@@ -67,7 +67,7 @@
 //!
 //! - In the client:
 //!   - Sign the [`keccak`]-hashed messages with a secp256k1 ECDSA library,
-//!     like the [`libsecp256k1`] crate.
+//!     like the [`k256`] crate.
 //!   - Build any custom instruction data that contains signature, message, or
 //!     Ethereum address data that will be used by the secp256k1 instruction.
 //!   - Build the secp256k1 program instruction data, specifying the number of
@@ -102,9 +102,10 @@
 //! the secp256k1 instruction data. It must be done manually.
 //!
 //! The secp256k1 program is implemented with the [`libsecp256k1`] crate,
-//! which clients may also want to use.
+//! but clients may want to use the [`k256`] crate.
 //!
 //! [`libsecp256k1`]: https://docs.rs/libsecp256k1/latest/libsecp256k1
+//! [`k256`]: https://docs.rs/k256/latest/k256
 //!
 //! # Layout and interpretation of the secp256k1 instruction data
 //!
@@ -269,8 +270,8 @@
 //! and the Solana program will introspect the secp256k1 instruction to verify
 //! that the signer matches a known authorized public key.
 //!
-//! The Solana program. Note that it uses `libsecp256k1` version 0.7.0 to parse
-//! the secp256k1 signature to prevent malleability.
+//! The Solana program. Note that it uses `k256` version 0.13.0 to parse the
+//! secp256k1 signature to prevent malleability.
 //!
 //! ```no_run
 //! # mod secp256k1_defs {
@@ -322,6 +323,7 @@
 //! #             }))
 //! #     }
 //! # }
+//! use k256::elliptic_curve::scalar::IsHigh;
 //! use solana_account_info::{next_account_info, AccountInfo};
 //! use solana_msg::msg;
 //! use solana_program_error::{ProgramError, ProgramResult};
@@ -388,10 +390,10 @@
 //!     {
 //!         let signature = &secp256k1_instr.data[offsets.signature_offset as usize
 //!             ..offsets.signature_offset as usize + secp256k1_defs::SIGNATURE_SERIALIZED_SIZE];
-//!         let signature = libsecp256k1::Signature::parse_standard_slice(signature)
+//!         let signature = k256::ecdsa::Signature::from_slice(signature)
 //!             .map_err(|_| ProgramError::InvalidArgument)?;
 //!
-//!         if signature.s.is_high() {
+//!         if bool::from(signature.s().is_high()) {
 //!             msg!("signature with high-s value");
 //!             return Err(ProgramError::InvalidArgument);
 //!         }
@@ -432,16 +434,16 @@
 //!
 //! fn demo_secp256k1_verify_basic(
 //!     payer_keypair: &Keypair,
-//!     secp256k1_secret_key: &libsecp256k1::SecretKey,
+//!     secp256k1_secret_key: &k256::ecdsa::SigningKey,
 //!     client: &RpcClient,
 //!     program_keypair: &Keypair,
 //! ) -> Result<()> {
 //!     // Internally to `sign_message` and `secp256k_instruction::verify`
 //!     // (the secp256k1 program), this message is keccak-hashed before signing.
 //!     let msg = b"hello world";
-//!     let secp_pubkey = libsecp256k1::PublicKey::from_secret_key(secp256k1_secret_key);
-//!     let eth_address = eth_address_from_pubkey(&secp_pubkey.serialize()[1..].try_into().unwrap());
-//!     let (signature, recovery_id) = sign_message(&secp256k1_secret_key.serialize(), msg).unwrap();
+//!     let secp_pubkey = secp256k1_secret_key.verifying_key();
+//!     let eth_address = eth_address_from_pubkey(&secp_pubkey.to_encoded_point(false).as_bytes()[1..].try_into().unwrap());
+//!     let (signature, recovery_id) = sign_message(&secp256k1_secret_key.to_bytes().into(), msg).unwrap();
 //!    let secp256k1_instr = new_secp256k1_instruction_with_signature(msg, &signature, recovery_id, &eth_address);
 //!
 //!     let program_instr = Instruction::new_with_bytes(
@@ -731,21 +733,21 @@
 //!     // Sign some messages.
 //!     let mut signatures = vec![];
 //!     for idx in 0..2 {
-//!         let secret_key = libsecp256k1::SecretKey::random(&mut rand0_7::thread_rng());
+//!         let secret_key = k256::ecdsa::SigningKey::random(&mut rand::thread_rng());
 //!         let message = format!("hello world {}", idx).into_bytes();
 //!         let message_hash = {
 //!             let mut hasher = solana_keccak_hasher::Hasher::default();
 //!             hasher.hash(&message);
 //!             hasher.result()
 //!         };
-//!         let secp_message = libsecp256k1::Message::parse(message_hash.as_bytes());
-//!         let (signature, recovery_id) = libsecp256k1::sign(&secp_message, &secret_key);
-//!         let signature = signature.serialize();
-//!         let recovery_id = recovery_id.serialize();
+//!         let (signature, recovery_id) =
+//!             secret_key.sign_prehash_recoverable(message_hash.as_bytes()).unwrap();
+//!         let signature = signature.to_bytes().into();
+//!         let recovery_id = recovery_id.to_byte();
 //!
-//!         let public_key = libsecp256k1::PublicKey::from_secret_key(&secret_key);
+//!         let public_key = secret_key.verifying_key();
 //!         let eth_address =
-//!             eth_address_from_pubkey(&public_key.serialize()[1..].try_into().unwrap());
+//!             eth_address_from_pubkey(&public_key.to_encoded_point(false).as_bytes()[1..].try_into().unwrap());
 //!
 //!         signatures.push(SecpSignature {
 //!             signature,
@@ -827,17 +829,17 @@ pub fn sign_message(
     priv_key_bytes: &[u8; SECP256K1_PRIVATE_KEY_SIZE],
     message: &[u8],
 ) -> Result<([u8; SIGNATURE_SERIALIZED_SIZE], u8), Error> {
-    let priv_key = libsecp256k1::SecretKey::parse(priv_key_bytes)
+    let priv_key = k256::ecdsa::SigningKey::from_slice(priv_key_bytes)
         .map_err(|e| Error::from_source(format!("{e}")))?;
     let mut hasher = sha3::Keccak256::new();
     hasher.update(message);
     let message_hash = hasher.finalize();
     let mut message_hash_arr = [0u8; 32];
     message_hash_arr.copy_from_slice(message_hash.as_slice());
-    let message = libsecp256k1::Message::parse(&message_hash_arr);
-    let (signature, recovery_id) = libsecp256k1::sign(&message, &priv_key);
-    let signature_arr = signature.serialize();
-    Ok((signature_arr, recovery_id.serialize()))
+    let (signature, recovery_id) = priv_key
+        .sign_prehash_recoverable(&message_hash_arr)
+        .map_err(|e| Error::from_source(format!("{e}")))?;
+    Ok((signature.to_bytes().into(), recovery_id.to_byte()))
 }
 
 #[cfg(feature = "bincode")]

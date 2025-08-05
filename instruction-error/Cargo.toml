@@ -20,11 +20,9 @@ frozen-abi = [
     "dep:solana-frozen-abi",
     "dep:solana-frozen-abi-macro",
     "serde",
-    "std",
 ]
 num-traits = ["dep:num-traits"]
 serde = ["dep:serde", "dep:serde_derive"]
-std = []
 
 [dependencies]
 num-traits = { workspace = true, optional = true }
