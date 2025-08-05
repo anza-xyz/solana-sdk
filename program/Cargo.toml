@@ -102,7 +102,7 @@ solana-define-syscall = { workspace = true }
 
 [dev-dependencies]
 solana-pubkey = { workspace = true, features = ["dev-context-only-utils"] }
-solana-system-interface = { workspace = true }
+solana-system-interface = { workspace = true, features = ["bincode"] }
 solana-sysvar = { workspace = true, features = ["dev-context-only-utils"] }
 
 [lints]

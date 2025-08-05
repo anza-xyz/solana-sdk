@@ -36,6 +36,8 @@
 //! [`invoke`]: https://docs.rs/solana-cpi/latest/solana_cpi/fn.invoke.html
 //! [`invoke_signed`]: https://docs.rs/solana-cpi/latest/solana_cpi/fn.invoke_signed.html
 //! [`AccountInfo`]: https://docs.rs/solana-account-info/latest/solana_account_info/struct.AccountInfo.html
+//! [`Instruction`]:
+//! https://docs.rs/solana-instruction/latest/solana_instruction/struct.Instruction.html
 
 use solana_pubkey::Pubkey;
 #[cfg(feature = "bincode")]
@@ -66,7 +68,7 @@ const NONCE_STATE_SIZE: usize = 80;
 /// An instruction to the system program.
 #[cfg_attr(
     feature = "frozen-abi",
-    solana_frozen_abi_macro::frozen_abi(digest = "2LnVTnJg7LxB1FawNZLoQEY8yiYx3MT3paTdx4s5kAXU"),
+    solana_frozen_abi_macro::frozen_abi(digest = "8M189WgLE19cw1iYDAFLNJKoAUKyqF9jsKYennJi5BfK"),
     derive(
         solana_frozen_abi_macro::AbiExample,
         solana_frozen_abi_macro::AbiEnumVisitor
@@ -1449,7 +1451,6 @@ pub fn create_nonce_account(
 ///     #   data: vec![0],
 ///     #   owner: solana_sdk::system_program::ID,
 ///     #   executable: false,
-///     #   rent_epoch: 1,
 ///     # });
 ///     let nonce_account = client.get_account(nonce_account_pubkey)?;
 ///     let nonce_data = solana_rpc_client_nonce_utils::data_from_account(&nonce_account)?;
