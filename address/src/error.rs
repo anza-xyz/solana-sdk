@@ -1,9 +1,6 @@
 #[cfg(feature = "serde")]
 use serde_derive::Serialize;
-use {
-    core::{convert::Infallible, fmt},
-    solana_program_error::ProgramError,
-};
+use {core::fmt, solana_program_error::ProgramError};
 
 #[cfg_attr(feature = "serde", derive(serde_derive::Serialize))]
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -52,14 +49,17 @@ impl From<AddressError> for ProgramError {
 }
 
 #[cfg_attr(feature = "serde", derive(Serialize))]
+#[cfg(feature = "decode")]
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ParseAddressError {
     WrongSize,
     Invalid,
 }
 
+#[cfg(feature = "decode")]
 impl core::error::Error for ParseAddressError {}
 
+#[cfg(feature = "decode")]
 impl fmt::Display for ParseAddressError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
@@ -69,8 +69,9 @@ impl fmt::Display for ParseAddressError {
     }
 }
 
-impl From<Infallible> for ParseAddressError {
-    fn from(_: Infallible) -> Self {
+#[cfg(feature = "decode")]
+impl From<core::convert::Infallible> for ParseAddressError {
+    fn from(_: core::convert::Infallible) -> Self {
         unreachable!("Infallible uninhabited");
     }
 }
