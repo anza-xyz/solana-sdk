@@ -3,6 +3,7 @@
 use {
     crate::{list::list_trait::List, pod_length::PodLength, primitives::PodU32},
     bytemuck::Pod,
+    std::ops::Deref,
 };
 
 #[derive(Debug)]
@@ -16,16 +17,17 @@ impl<T: Pod, L: PodLength> List for ListViewReadOnly<'_, T, L> {
     type Item = T;
     type Length = L;
 
-    fn len(&self) -> usize {
-        (*self.length).into()
-    }
-
     fn capacity(&self) -> usize {
         self.capacity
     }
+}
 
-    fn as_slice(&self) -> &[Self::Item] {
-        &self.data[..self.len()]
+impl<T: Pod, L: PodLength> Deref for ListViewReadOnly<'_, T, L> {
+    type Target = [T];
+
+    fn deref(&self) -> &Self::Target {
+        let len = (*self.length).into();
+        &self.data[..len]
     }
 }
 
@@ -89,8 +91,7 @@ mod tests {
         let view = ListView::<u32, PodU32>::unpack(&buffer).unwrap();
 
         // `as_slice()` should only return the first `len` items.
-        assert_eq!(view.as_slice(), &items[..]);
-        assert_eq!(view.as_slice().len(), view.len());
+        assert_eq!(*view, items[..]);
     }
 
     #[test]
@@ -138,7 +139,7 @@ mod tests {
         assert_eq!(view.len(), 0);
         assert_eq!(view.capacity(), 0);
         assert!(view.is_empty());
-        assert_eq!(view.as_slice(), &[]);
+        assert_eq!(*view, []);
     }
 
     #[test]
@@ -156,7 +157,7 @@ mod tests {
         // Check if the public API works as expected despite internal padding
         assert_eq!(view.len(), 2);
         assert_eq!(view.capacity(), 4);
-        assert_eq!(view.as_slice(), &items[..]);
+        assert_eq!(*view, items[..]);
     }
 
     #[test]
@@ -172,5 +173,30 @@ mod tests {
 
         assert_eq!(view.bytes_used().unwrap(), expected_used);
         assert_eq!(view.bytes_allocated().unwrap(), expected_cap);
+    }
+
+    #[test]
+    fn test_get() {
+        let items = [10u32, 20, 30];
+        let buffer = build_test_buffer::<u32, PodU32>(items.len(), 5, &items);
+        let view = ListView::<u32>::unpack(&buffer).unwrap();
+
+        // Get in-bounds elements
+        assert_eq!(view.first(), Some(&10u32));
+        assert_eq!(view.get(1), Some(&20u32));
+        assert_eq!(view.get(2), Some(&30u32));
+
+        // Get out-of-bounds element (index == len)
+        assert_eq!(view.get(3), None);
+
+        // Get way out-of-bounds
+        assert_eq!(view.get(100), None);
+    }
+
+    #[test]
+    fn test_get_on_empty_list() {
+        let buffer = build_test_buffer::<u32, PodU32>(0, 5, &[]);
+        let view = ListView::<u32, PodU32>::unpack(&buffer).unwrap();
+        assert_eq!(view.first(), None);
     }
 }

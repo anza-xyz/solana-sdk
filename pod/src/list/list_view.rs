@@ -342,12 +342,12 @@ mod tests {
         let view_ro = ListView::<u32, PodU32>::unpack(&buf).unwrap();
         assert_eq!(view_ro.len(), length as usize);
         assert_eq!(view_ro.capacity(), capacity);
-        assert_eq!(view_ro.as_slice(), &items[..]);
+        assert_eq!(*view_ro, items[..]);
 
         let view_mut = ListView::<u32, PodU32>::unpack_mut(&mut buf).unwrap();
         assert_eq!(view_mut.len(), length as usize);
         assert_eq!(view_mut.capacity(), capacity);
-        assert_eq!(view_mut.as_slice(), &items[..]);
+        assert_eq!(*view_mut, items[..]);
     }
 
     #[test]
@@ -375,12 +375,12 @@ mod tests {
         let view_ro = ListView::<u64, PodU32>::unpack(&buf).unwrap();
         assert_eq!(view_ro.len(), length as usize);
         assert_eq!(view_ro.capacity(), capacity);
-        assert_eq!(view_ro.as_slice(), &items[..]);
+        assert_eq!(*view_ro, items[..]);
 
         let view_mut = ListView::<u64, PodU32>::unpack_mut(&mut buf).unwrap();
         assert_eq!(view_mut.len(), length as usize);
         assert_eq!(view_mut.capacity(), capacity);
-        assert_eq!(view_mut.as_slice(), &items[..]);
+        assert_eq!(*view_mut, items[..]);
     }
 
     #[test]
@@ -398,13 +398,13 @@ mod tests {
         assert_eq!(view_ro.len(), 0);
         assert_eq!(view_ro.capacity(), capacity);
         assert!(view_ro.is_empty());
-        assert_eq!(view_ro.as_slice(), &[] as &[u32]);
+        assert_eq!(&*view_ro, &[] as &[u32]);
 
         let view_mut = ListView::<u32, PodU32>::unpack_mut(&mut buf).unwrap();
         assert_eq!(view_mut.len(), 0);
         assert_eq!(view_mut.capacity(), capacity);
         assert!(view_mut.is_empty());
-        assert_eq!(view_mut.as_slice(), &[] as &[u32]);
+        assert_eq!(&*view_mut, &[] as &[u32]);
     }
 
     #[test]
@@ -427,12 +427,12 @@ mod tests {
         let view_ro = ListView::<u64>::unpack(&buf).unwrap();
         assert_eq!(view_ro.len(), length as usize);
         assert_eq!(view_ro.capacity(), capacity);
-        assert_eq!(view_ro.as_slice(), &items[..]);
+        assert_eq!(*view_ro, items[..]);
 
         let view_mut = ListView::<u64>::unpack_mut(&mut buf).unwrap();
         assert_eq!(view_mut.len(), length as usize);
         assert_eq!(view_mut.capacity(), capacity);
-        assert_eq!(view_mut.as_slice(), &items[..]);
+        assert_eq!(*view_mut, items[..]);
     }
 
     #[test]
@@ -619,14 +619,14 @@ mod tests {
                 let view_ro = ListView::<T, $LengthType>::unpack(&buf).unwrap();
                 assert_eq!(view_ro.len(), length_usize);
                 assert_eq!(view_ro.capacity(), capacity);
-                assert_eq!(view_ro.as_slice(), &items[..]);
+                assert_eq!(*view_ro, items[..]);
 
                 // Test mutable view
                 let mut buf_mut = buf.clone();
                 let view_mut = ListView::<T, $LengthType>::unpack_mut(&mut buf_mut).unwrap();
                 assert_eq!(view_mut.len(), length_usize);
                 assert_eq!(view_mut.capacity(), capacity);
-                assert_eq!(view_mut.as_slice(), &items[..]);
+                assert_eq!(*view_mut, items[..]);
 
                 // Test init
                 let mut init_buf = vec![0xFFu8; buf_size];
