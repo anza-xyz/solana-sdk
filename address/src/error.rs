@@ -1,5 +1,3 @@
-#[cfg(feature = "serde")]
-use serde_derive::Serialize;
 use {core::fmt, solana_program_error::ProgramError};
 
 #[cfg_attr(feature = "serde", derive(serde_derive::Serialize))]
@@ -48,7 +46,7 @@ impl From<AddressError> for ProgramError {
     }
 }
 
-#[cfg_attr(feature = "serde", derive(Serialize))]
+#[cfg_attr(feature = "serde", derive(serde_derive::Serialize))]
 #[cfg(feature = "decode")]
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ParseAddressError {
