@@ -3085,6 +3085,8 @@ dependencies = [
  "solana-rent",
  "solana-sdk-ids",
  "solana-system-interface",
+ "strum",
+ "strum_macros",
 ]
 
 [[package]]

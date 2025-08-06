@@ -8,6 +8,7 @@ repository = { workspace = true }
 homepage = { workspace = true }
 license = { workspace = true }
 edition = { workspace = true }
+rust-version = "1.81.0"
 
 [package.metadata.docs.rs]
 targets = ["x86_64-unknown-linux-gnu"]
@@ -43,6 +44,8 @@ solana-system-interface = { workspace = true, optional = true, features = [
 
 [dev-dependencies]
 solana-feature-gate-interface = { path = ".", features = ["dev-context-only-utils"] }
+strum = { workspace = true }
+strum_macros = { workspace = true }
 
 [lints]
 workspace = true
