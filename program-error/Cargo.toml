@@ -2,7 +2,7 @@
 name = "solana-program-error"
 description = "Solana ProgramError type and related definitions."
 documentation = "https://docs.rs/solana-program-error"
-version = "2.2.2"
+version = "3.0.0"
 rust-version = "1.81.0"
 authors = { workspace = true }
 repository = { workspace = true }
@@ -18,7 +18,6 @@ rustdoc-args = ["--cfg=docsrs"]
 [features]
 borsh = ["dep:borsh"]
 serde = ["dep:serde", "dep:serde_derive"]
-std = []
 
 [dependencies]
 borsh = { workspace = true, optional = true }

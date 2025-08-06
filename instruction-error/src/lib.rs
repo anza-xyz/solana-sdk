@@ -1,13 +1,11 @@
 #![no_std]
 #![cfg_attr(feature = "frozen-abi", feature(min_specialization))]
-use core::fmt;
 #[cfg(feature = "num-traits")]
 use num_traits::ToPrimitive;
 #[cfg(feature = "frozen-abi")]
 use solana_frozen_abi_macro::{AbiEnumVisitor, AbiExample};
-#[cfg(feature = "std")]
+#[cfg(feature = "frozen-abi")]
 extern crate std;
-use solana_program_error::ProgramError;
 pub use solana_program_error::{
     ACCOUNT_ALREADY_INITIALIZED, ACCOUNT_BORROW_FAILED, ACCOUNT_DATA_TOO_SMALL,
     ACCOUNT_NOT_RENT_EXEMPT, ARITHMETIC_OVERFLOW, BORSH_IO_ERROR,
@@ -18,6 +16,7 @@ pub use solana_program_error::{
     MAX_INSTRUCTION_TRACE_LENGTH_EXCEEDED, MAX_SEED_LENGTH_EXCEEDED, MISSING_REQUIRED_SIGNATURES,
     NOT_ENOUGH_ACCOUNT_KEYS, UNINITIALIZED_ACCOUNT, UNSUPPORTED_SYSVAR,
 };
+use {core::fmt, solana_program_error::ProgramError};
 
 /// Reasons the runtime might have rejected an instruction.
 ///

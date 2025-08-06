@@ -2,9 +2,9 @@
 members = [
     "account",
     "account-info",
+    "address",
     "address-lookup-table-interface",
     "atomic-u64",
-    "base3-encoding",
     "big-mod-exp",
     "bincode",
     "blake3-hasher",
@@ -73,6 +73,7 @@ members = [
     "sdk-ids",
     "sdk-macro",
     "sdk-wasm-js",
+    "sdk-wasm-js-tests",
     "secp256k1-program",
     "secp256k1-recover",
     "secp256r1-program",
@@ -86,6 +87,7 @@ members = [
     "shred-version",
     "signature",
     "signer",
+    "signer-store",
     "slot-hashes",
     "slot-history",
     "stable-layout",
@@ -171,12 +173,9 @@ im = "15.1.0"
 indicatif = "0.17.9"
 itertools = "0.12.1"
 js-sys = "0.3.77"
+k256 = "0.13.0"
 lazy_static = "1.5.0"
 libc = "0.2.170"
-libsecp256k1 = { version = "0.6.0", default-features = false, features = [
-    "std",
-    "static-context",
-] }
 log = "0.4.25"
 memmap2 = "0.5.10"
 memoffset = "0.9"
@@ -194,7 +193,7 @@ qstring = "0.7.2"
 qualifier_attr = { version = "0.2.2", default-features = false }
 quote = "1.0.35"
 rand = "0.8.5"
-rand0-7 = { package = "rand", version = "0.7" }
+rayon = "1.10.0"
 reqwest = { version = "0.11.27", default-features = false }
 serde = "1.0.217" # must match the serde_derive version, see https://github.com/serde-rs/serde/issues/2584#issuecomment-1685252251
 serde-big-array = "0.5.1"
@@ -209,9 +208,9 @@ signal-hook = "0.3.17"
 siphasher = "0.3.11"
 solana-account = { path = "account", version = "2.2.1" }
 solana-account-info = { path = "account-info", version = "2.2.1" }
+solana-address = { path = "address", version = "0.1.0" }
 solana-address-lookup-table-interface = { path = "address-lookup-table-interface", version = "2.2.2" }
 solana-atomic-u64 = { path = "atomic-u64", version = "2.2.1" }
-solana-base3-encoding = { path = "base3-encoding", version = "0.1.0" }
 solana-big-mod-exp = { path = "big-mod-exp", version = "2.2.1" }
 solana-bincode = { path = "bincode", version = "2.2.1" }
 solana-blake3-hasher = { path = "blake3-hasher", version = "2.2.1" }
@@ -267,7 +266,7 @@ solana-precompile-error = { path = "precompile-error", version = "2.2.1" }
 solana-presigner = { path = "presigner", version = "2.2.1" }
 solana-program = { path = "program", version = "2.2.1", default-features = false }
 solana-program-entrypoint = { path = "program-entrypoint", version = "2.2.1" }
-solana-program-error = { path = "program-error", version = "2.2.1" }
+solana-program-error = { path = "program-error", version = "3.0.0" }
 solana-program-memory = { path = "program-memory", version = "2.2.1" }
 solana-program-option = { path = "program-option", version = "2.2.1" }
 solana-program-pack = { path = "program-pack", version = "2.2.1" }
@@ -280,6 +279,7 @@ solana-sanitize = { path = "sanitize", version = "2.2.1" }
 solana-sdk = { path = "sdk", version = "2.2.1" }
 solana-sdk-ids = { path = "sdk-ids", version = "2.2.1" }
 solana-sdk-macro = { path = "sdk-macro", version = "2.2.1" }
+solana-sdk-wasm-js = { path = "sdk-wasm-js", version = "1.0.0" }
 solana-secp256k1-program = { path = "secp256k1-program", version = "2.2.1" }
 solana-secp256k1-recover = { path = "secp256k1-recover", version = "2.2.1" }
 solana-secp256r1-program = { path = "secp256r1-program", version = "2.2.1", default-features = false }
@@ -293,6 +293,7 @@ solana-short-vec = { path = "short-vec", version = "2.2.1" }
 solana-shred-version = { path = "shred-version", version = "2.2.1" }
 solana-signature = { path = "signature", version = "2.3.0", default-features = false }
 solana-signer = { path = "signer", version = "2.2.1" }
+solana-signer-store = { path = "signer-store", version = "0.1.0" }
 solana-slot-hashes = { path = "slot-hashes", version = "2.2.1" }
 solana-slot-history = { path = "slot-history", version = "2.2.1" }
 solana-stable-layout = { path = "stable-layout", version = "2.2.1" }
@@ -314,7 +315,7 @@ syn = "2.0.87"
 tempfile = "3.20.0"
 test-case = "3.3.1"
 thiserror = "2.0.11"
-tiny-bip39 = "0.8.2"
+tiny-bip39 = "2.0.0"
 toml = "0.8.23"
 uriparse = "0.6.4"
 wasm-bindgen = "0.2.100"

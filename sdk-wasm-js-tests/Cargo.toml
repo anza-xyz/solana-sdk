@@ -1,0 +1,26 @@
+[package]
+name = "solana-sdk-wasm-js-tests"
+description = "Tests for using the Solana SDK Wasm JS crate"
+documentation = "https://docs.rs/solana-system-interface-wasm-js"
+publish = false
+version = "1.0.0"
+authors = { workspace = true }
+repository = { workspace = true }
+homepage = { workspace = true }
+license = { workspace = true }
+edition = { workspace = true }
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+solana-address = { workspace = true }
+solana-instruction = { workspace = true, features = ["std"] }
+solana-sdk-wasm-js = { workspace = true }
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+js-sys = { workspace = true }
+wasm-bindgen = { workspace = true }
+
+[lints]
+workspace = true

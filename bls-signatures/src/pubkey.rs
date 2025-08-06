@@ -1,5 +1,7 @@
 #[cfg(feature = "bytemuck")]
 use bytemuck::{Pod, PodInOption, Zeroable, ZeroableInOption};
+#[cfg(all(feature = "parallel", not(target_os = "solana")))]
+use rayon::prelude::*;
 #[cfg(all(not(target_os = "solana"), feature = "std"))]
 use std::sync::LazyLock;
 #[cfg(not(target_os = "solana"))]
@@ -155,35 +157,69 @@ impl PubkeyProjective {
 
     /// Aggregate a list of public keys into an existing aggregate
     #[allow(clippy::arithmetic_side_effects)]
-    pub fn aggregate_with<'a, P: 'a + AsPubkeyProjective + ?Sized, I>(
+    pub fn aggregate_with<P: AsPubkeyProjective + ?Sized>(
         &mut self,
-        pubkeys: I,
-    ) -> Result<(), BlsError>
-    where
-        I: IntoIterator<Item = &'a P>,
-    {
+        pubkeys: &[&P],
+    ) -> Result<(), BlsError> {
         for pubkey in pubkeys {
-            self.0 += &pubkey.try_as_projective()?.0;
+            self.0 += pubkey.try_as_projective()?.0;
         }
         Ok(())
     }
 
     /// Aggregate a list of public keys
     #[allow(clippy::arithmetic_side_effects)]
-    pub fn aggregate<'a, P: 'a + AsPubkeyProjective + ?Sized, I>(
-        pubkeys: I,
-    ) -> Result<PubkeyProjective, BlsError>
-    where
-        I: IntoIterator<Item = &'a P>,
-    {
-        let mut iter = pubkeys.into_iter();
-        if let Some(first) = iter.next() {
+    pub fn aggregate<P: AsPubkeyProjective + ?Sized>(
+        pubkeys: &[&P],
+    ) -> Result<PubkeyProjective, BlsError> {
+        if pubkeys.is_empty() {
+            return Err(BlsError::EmptyAggregation);
+        }
+        if let Some((first, rest)) = pubkeys.split_first() {
             let mut aggregate = first.try_as_projective()?;
-            aggregate.aggregate_with(iter)?;
+            aggregate.aggregate_with(rest)?;
             Ok(aggregate)
         } else {
             Err(BlsError::EmptyAggregation)
         }
+    }
+
+    /// Aggregate a list of public keys into an existing aggregate
+    #[allow(clippy::arithmetic_side_effects)]
+    #[cfg(feature = "parallel")]
+    pub fn par_aggregate_with<P: AsPubkeyProjective + Sync>(
+        &mut self,
+        pubkeys: &[&P],
+    ) -> Result<(), BlsError> {
+        if pubkeys.is_empty() {
+            return Ok(());
+        }
+        let aggregate = PubkeyProjective::par_aggregate(pubkeys)?;
+        self.0 += &aggregate.0;
+        Ok(())
+    }
+
+    /// Aggregate a list of public keys
+    #[allow(clippy::arithmetic_side_effects)]
+    #[cfg(feature = "parallel")]
+    pub fn par_aggregate<P: AsPubkeyProjective + Sync>(
+        pubkeys: &[&P],
+    ) -> Result<PubkeyProjective, BlsError> {
+        if pubkeys.is_empty() {
+            return Err(BlsError::EmptyAggregation);
+        }
+        pubkeys
+            .into_par_iter()
+            .map(|key| key.try_as_projective())
+            .reduce(
+                || Ok(PubkeyProjective::identity()),
+                |a, b| {
+                    let mut a = a?;
+                    let b = b?;
+                    a.0 += &b.0;
+                    Ok(a)
+                },
+            )
     }
 }
 
@@ -310,7 +346,7 @@ mod tests {
             signature::{Signature, SignatureCompressed},
         },
         core::str::FromStr,
-        std::{string::ToString, vec::Vec},
+        std::string::ToString,
     };
 
     #[test]
@@ -409,11 +445,11 @@ mod tests {
         let pubkey_affine: Pubkey = keypair1.public.into();
         let pubkey_compressed: PubkeyCompressed = Pubkey::from(keypair1.public).try_into().unwrap();
 
-        let dyn_pubkeys: Vec<&dyn AsPubkeyProjective> =
+        let dyn_pubkeys: std::vec::Vec<&dyn AsPubkeyProjective> =
             std::vec![&pubkey_projective, &pubkey_affine, &pubkey_compressed];
 
-        let aggregate_from_dyn = PubkeyProjective::aggregate(dyn_pubkeys).unwrap();
-        let pubkeys_for_baseline = [keypair0.public, keypair1.public, keypair1.public];
+        let aggregate_from_dyn = PubkeyProjective::aggregate(&dyn_pubkeys).unwrap();
+        let pubkeys_for_baseline = [&keypair0.public, &keypair1.public, &keypair1.public];
         let baseline_aggregate = PubkeyProjective::aggregate(&pubkeys_for_baseline).unwrap();
 
         assert_eq!(aggregate_from_dyn, baseline_aggregate);
@@ -460,5 +496,31 @@ mod tests {
         let serialized = bincode::serialize(&original).unwrap();
         let deserialized: PubkeyCompressed = bincode::deserialize(&serialized).unwrap();
         assert_eq!(original, deserialized);
+    }
+
+    #[test]
+    #[cfg(feature = "parallel")]
+    fn test_parallel_pubkey_aggregation() {
+        let keypair0 = Keypair::new();
+        let keypair1 = Keypair::new();
+        let pubkey0 = keypair0.public;
+        let pubkey1 = keypair1.public;
+
+        // Test `aggregate`
+        let sequential_agg = PubkeyProjective::aggregate(&[&pubkey0, &pubkey1]).unwrap();
+        let parallel_agg = PubkeyProjective::par_aggregate(&[&pubkey0, &pubkey1]).unwrap();
+        assert_eq!(sequential_agg, parallel_agg);
+
+        // Test `aggregate_with`
+        let mut parallel_agg_with = pubkey0;
+        parallel_agg_with.par_aggregate_with(&[&pubkey1]).unwrap();
+        assert_eq!(sequential_agg, parallel_agg_with);
+
+        // Test empty case
+        let empty_slice: &[&PubkeyProjective] = &[];
+        assert_eq!(
+            PubkeyProjective::par_aggregate(empty_slice).unwrap_err(),
+            BlsError::EmptyAggregation
+        );
     }
 }

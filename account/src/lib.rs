@@ -33,7 +33,7 @@ pub mod state_traits;
 #[cfg_attr(
     feature = "frozen-abi",
     derive(AbiExample),
-    frozen_abi(digest = "2SUJNHbXMPWrsSXmDTFc4VHx2XQ85fT5Leabefh5Nwe7")
+    frozen_abi(digest = "62EqVoynUFvuui7DVfqWCvZP7bxKGJGioeSBnWrdjRME")
 )]
 #[cfg_attr(
     feature = "serde",
@@ -70,7 +70,7 @@ mod account_serialize {
     #[cfg_attr(
         feature = "frozen-abi",
         derive(AbiExample),
-        frozen_abi(digest = "2SUJNHbXMPWrsSXmDTFc4VHx2XQ85fT5Leabefh5Nwe7")
+        frozen_abi(digest = "62EqVoynUFvuui7DVfqWCvZP7bxKGJGioeSBnWrdjRME")
     )]
     #[derive(serde_derive::Serialize)]
     #[serde(rename_all = "camelCase")]

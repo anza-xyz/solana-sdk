@@ -27,7 +27,7 @@ solana-frozen-abi-macro = { workspace = true, optional = true, features = [
 thiserror = { workspace = true }
 
 [target.'cfg(not(target_os = "solana"))'.dependencies]
-libsecp256k1 = { workspace = true }
+k256 = { workspace = true }
 
 [target.'cfg(target_os = "solana")'.dependencies]
 solana-define-syscall = { workspace = true }
@@ -35,10 +35,11 @@ solana-define-syscall = { workspace = true }
 [dev-dependencies]
 anyhow = { workspace = true }
 borsh = { workspace = true }
+rand = { workspace = true }
 solana-program = { path = "../program" }
 
 [target.'cfg(not(target_os = "solana"))'.dev-dependencies]
-libsecp256k1 = { workspace = true, features = ["hmac"] }
+k256 = { workspace = true, features = ["ecdsa-core"] }
 
 [lints]
 workspace = true

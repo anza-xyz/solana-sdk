@@ -1,0 +1,26 @@
+[package]
+name = "solana-signer-store"
+description = "Solana Signer Store"
+documentation = "https://docs.rs/solana-signer-store"
+version = "0.1.0"
+authors = { workspace = true }
+repository = { workspace = true }
+homepage = { workspace = true }
+license = { workspace = true }
+edition = { workspace = true }
+
+[dependencies]
+bitvec = { workspace = true }
+num-derive = { workspace = true }
+num-traits = { workspace = true }
+
+[dev-dependencies]
+criterion = { workspace = true }
+rand = { workspace = true }
+
+[lints]
+workspace = true
+
+[[bench]]
+name = "encoding"
+harness = false

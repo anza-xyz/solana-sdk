@@ -130,9 +130,11 @@ pub use solana_define_syscall::definitions::sol_secp256k1_recover;
 /// [sp]: https://docs.rs/solana-program/latest/solana_program/secp256k1_program/
 ///
 /// The `secp256k1_recover` syscall is implemented with the [`libsecp256k1`]
-/// crate, which clients may also want to use.
+/// crate, but clients may want to use [`k256`] for an up-to-date pure Rust
+/// implementation.
 ///
 /// [`libsecp256k1`]: https://docs.rs/libsecp256k1/latest/libsecp256k1
+/// [`k256`]: https://docs.rs/k256/latest/k256
 ///
 /// # Hashing messages
 ///
@@ -166,6 +168,7 @@ pub use solana_define_syscall::definitions::sol_secp256k1_recover;
 /// this:
 ///
 /// ```rust
+/// # use k256::elliptic_curve::scalar::IsHigh;
 /// # use solana_program::program_error::ProgramError;
 /// # let signature_bytes = [
 /// #     0x83, 0x55, 0x81, 0xDF, 0xB1, 0x02, 0xA7, 0xD2,
@@ -177,20 +180,14 @@ pub use solana_define_syscall::definitions::sol_secp256k1_recover;
 /// #     0x1E, 0xBF, 0x06, 0x8E, 0x8A, 0x9F, 0xA9, 0xC3,
 /// #     0xA5, 0xEA, 0x21, 0xAC, 0xED, 0x5B, 0x22, 0x13,
 /// # ];
-/// let signature = libsecp256k1::Signature::parse_standard_slice(&signature_bytes)
+/// let signature = k256::ecdsa::Signature::from_slice(&signature_bytes)
 ///     .map_err(|_| ProgramError::InvalidArgument)?;
 ///
-/// if signature.s.is_high() {
+/// if bool::from(signature.s().is_high()) {
 ///     return Err(ProgramError::InvalidArgument);
 /// }
 /// # Ok::<_, ProgramError>(())
 /// ```
-///
-/// This has the downside that the program must link to the [`libsecp256k1`]
-/// crate and parse the signature just for this check. Note that `libsecp256k1`
-/// version 0.7.0 or greater is required for running on the Solana SBF target.
-///
-/// [`libsecp256k1`]: https://docs.rs/libsecp256k1/latest/libsecp256k1
 ///
 /// For the most accurate description of signature malleability, and its
 /// prevention in secp256k1, refer to comments in [`secp256k1.h`] in the Bitcoin
@@ -258,10 +255,11 @@ pub use solana_define_syscall::definitions::sol_secp256k1_recover;
 /// }
 /// ```
 ///
-/// The Solana program. Note that it uses `libsecp256k1` version 0.7.0 to parse
+/// The Solana program. Note that it uses `k256` version 0.13.0 to parse
 /// the secp256k1 signature to prevent malleability.
 ///
-/// ```rust,no_run
+/// ```rust
+/// use k256::elliptic_curve::scalar::IsHigh;
 /// use solana_program::{
 ///     entrypoint::ProgramResult,
 ///     keccak, msg,
@@ -269,14 +267,6 @@ pub use solana_define_syscall::definitions::sol_secp256k1_recover;
 /// };
 /// use solana_secp256k1_recover::secp256k1_recover;
 ///
-/// /// The key we expect to sign secp256k1 messages,
-/// /// as serialized by `libsecp256k1::PublicKey::serialize`.
-/// const AUTHORIZED_PUBLIC_KEY: [u8; 64] = [
-///     0x8C, 0xD6, 0x47, 0xF8, 0xA5, 0xBF, 0x59, 0xA0, 0x4F, 0x77, 0xFA, 0xFA, 0x6C, 0xA0, 0xE6, 0x4D,
-///     0x94, 0x5B, 0x46, 0x55, 0xA6, 0x2B, 0xB0, 0x6F, 0x10, 0x4C, 0x9E, 0x2C, 0x6F, 0x42, 0x0A, 0xBE,
-///     0x18, 0xDF, 0x0B, 0xF0, 0x87, 0x42, 0xBA, 0x88, 0xB4, 0xCF, 0x87, 0x5A, 0x35, 0x27, 0xBE, 0x0F,
-///     0x45, 0xAE, 0xFC, 0x66, 0x9C, 0x2C, 0x6B, 0xF3, 0xEF, 0xCA, 0x5C, 0x32, 0x11, 0xF7, 0x2A, 0xC7,
-/// ];
 /// # pub struct DemoSecp256k1RecoverInstruction {
 /// #     pub message: Vec<u8>,
 /// #     pub signature: [u8; 64],
@@ -285,6 +275,7 @@ pub use solana_define_syscall::definitions::sol_secp256k1_recover;
 ///
 /// pub fn process_secp256k1_recover(
 ///     instruction: DemoSecp256k1RecoverInstruction,
+///     expected_public_key: [u8; 64],
 /// ) -> ProgramResult {
 ///     // The secp256k1 recovery operation accepts a cryptographically-hashed
 ///     // message only. Passing it anything else is insecure and allows signatures
@@ -302,10 +293,10 @@ pub use solana_define_syscall::definitions::sol_secp256k1_recover;
 ///     // Solana does not do this itself.
 ///     // This may or may not be necessary depending on use case.
 ///     {
-///         let signature = libsecp256k1::Signature::parse_standard_slice(&instruction.signature)
+///         let signature = k256::ecdsa::Signature::from_slice(&instruction.signature)
 ///             .map_err(|_| ProgramError::InvalidArgument)?;
 ///
-///         if signature.s.is_high() {
+///         if bool::from(signature.s().is_high()) {
 ///             msg!("signature with high-s value");
 ///             return Err(ProgramError::InvalidArgument);
 ///         }
@@ -321,17 +312,34 @@ pub use solana_define_syscall::definitions::sol_secp256k1_recover;
 ///     // If we're using this function for signature verification then we
 ///     // need to check the pubkey is an expected value.
 ///     // Here we are checking the secp256k1 pubkey against a known authorized pubkey.
-///     if recovered_pubkey.0 != AUTHORIZED_PUBLIC_KEY {
+///     if recovered_pubkey.0 != expected_public_key {
 ///         return Err(ProgramError::InvalidArgument);
 ///     }
 ///
 ///     Ok(())
 /// }
+///
+/// let secret_key = k256::ecdsa::SigningKey::random(&mut rand::thread_rng());
+/// let public_key = &secret_key.verifying_key().to_encoded_point(false);
+/// let message = b"hello world!";
+/// let message_hash = {
+///     let mut hasher = keccak::Hasher::default();
+///     hasher.hash(message);
+///     hasher.result()
+/// };
+/// let (signature, recovery_id) = secret_key.sign_prehash_recoverable(message_hash.as_bytes()).unwrap();
+/// let signature = signature.to_bytes().into();
+/// let instruction = DemoSecp256k1RecoverInstruction {
+///     message: message.to_vec(),
+///     signature,
+///     recovery_id: recovery_id.to_byte(),
+/// };
+/// process_secp256k1_recover(instruction, public_key.as_bytes()[1..65].try_into().unwrap()).unwrap();
 /// ```
 ///
 /// The RPC client program:
 ///
-/// ```rust,no_run
+/// ```rust
 /// # use solana_program::example_mocks::solana_rpc_client;
 /// # use solana_program::example_mocks::solana_sdk;
 /// use anyhow::Result;
@@ -354,7 +362,7 @@ pub use solana_define_syscall::definitions::sol_secp256k1_recover;
 ///
 /// pub fn demo_secp256k1_recover(
 ///     payer_keypair: &Keypair,
-///     secp256k1_secret_key: &libsecp256k1::SecretKey,
+///     secp256k1_secret_key: &k256::ecdsa::SigningKey,
 ///     client: &RpcClient,
 ///     program_keypair: &Keypair,
 /// ) -> Result<()> {
@@ -365,15 +373,14 @@ pub use solana_define_syscall::definitions::sol_secp256k1_recover;
 ///         hasher.result()
 ///     };
 ///
-///     let secp_message = libsecp256k1::Message::parse(message_hash.as_bytes());
-///     let (signature, recovery_id) = libsecp256k1::sign(&secp_message, &secp256k1_secret_key);
+///     let (signature, recovery_id) = secp256k1_secret_key.sign_prehash_recoverable(message_hash.as_bytes()).unwrap();
 ///
-///     let signature = signature.serialize();
+///     let signature = signature.to_bytes().into();
 ///
 ///     let instr = DemoSecp256k1RecoverInstruction {
 ///         message: message.to_vec(),
 ///         signature,
-///         recovery_id: recovery_id.serialize(),
+///         recovery_id: recovery_id.to_byte(),
 ///     };
 ///     let instr = Instruction::new_with_borsh(
 ///         program_keypair.pubkey(),
@@ -419,14 +426,19 @@ pub fn secp256k1_recover(
 
     #[cfg(not(target_os = "solana"))]
     {
-        let message = libsecp256k1::Message::parse_slice(hash)
-            .map_err(|_| Secp256k1RecoverError::InvalidHash)?;
-        let recovery_id = libsecp256k1::RecoveryId::parse(recovery_id)
+        const HASH_SIZE: usize = 32;
+        if hash.len() != HASH_SIZE {
+            return Err(Secp256k1RecoverError::InvalidHash);
+        }
+        let recovery_id = k256::ecdsa::RecoveryId::try_from(recovery_id)
             .map_err(|_| Secp256k1RecoverError::InvalidRecoveryId)?;
-        let signature = libsecp256k1::Signature::parse_standard_slice(signature)
+        let signature = k256::ecdsa::Signature::from_slice(signature)
             .map_err(|_| Secp256k1RecoverError::InvalidSignature)?;
-        let secp256k1_key = libsecp256k1::recover(&message, &signature, &recovery_id)
-            .map_err(|_| Secp256k1RecoverError::InvalidSignature)?;
-        Ok(Secp256k1Pubkey::new(&secp256k1_key.serialize()[1..65]))
+        let secp256k1_key =
+            k256::ecdsa::VerifyingKey::recover_from_prehash(hash, &signature, recovery_id)
+                .map_err(|_| Secp256k1RecoverError::InvalidSignature)?;
+        Ok(Secp256k1Pubkey::new(
+            &secp256k1_key.to_encoded_point(false).as_bytes()[1..65],
+        ))
     }
 }
