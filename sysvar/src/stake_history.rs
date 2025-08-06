@@ -48,6 +48,10 @@
 
 #[cfg(feature = "bincode")]
 use crate::Sysvar;
+#[deprecated(
+    since = "2.3.0",
+    note = "Use solana_sdk_ids::sysvar::stake_history instead"
+)]
 pub use solana_sdk_ids::sysvar::stake_history::{check_id, id, ID};
 #[deprecated(
     since = "2.2.0",
@@ -68,12 +72,17 @@ impl Sysvar for StakeHistory {
 }
 
 // we do not provide Default because this requires the real current epoch
+#[deprecated(
+    since = "2.3.0",
+    note = "Use solana_stake_interface::sysvar::stake_history::StakeHistorySysvar in solana-stake-interface v2 instead"
+)]
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct StakeHistorySysvar(pub Epoch);
 
 // precompute so we can statically allocate buffer
 const EPOCH_AND_ENTRY_SERIALIZED_SIZE: u64 = 32;
 
+#[allow(deprecated)]
 impl StakeHistoryGetEntry for StakeHistorySysvar {
     fn get_entry(&self, target_epoch: Epoch) -> Option<StakeHistoryEntry> {
         let current_epoch = self.0;
@@ -127,6 +136,7 @@ impl StakeHistoryGetEntry for StakeHistorySysvar {
 }
 
 #[cfg(test)]
+#[allow(deprecated)]
 mod tests {
     use {super::*, crate::tests::mock_get_sysvar_syscall, serial_test::serial};
 
