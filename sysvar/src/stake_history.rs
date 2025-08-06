@@ -74,7 +74,7 @@ impl Sysvar for StakeHistory {
 // we do not provide Default because this requires the real current epoch
 #[deprecated(
     since = "2.3.0",
-    note = "Use solana_stake_interface::sysvar::stake_history::StakeHistorySysvar in v2 instead"
+    note = "Use solana_stake_interface::sysvar::stake_history::StakeHistorySysvar in solana-stake-interface v2 instead"
 )]
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct StakeHistorySysvar(pub Epoch);
