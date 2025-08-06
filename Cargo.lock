@@ -2752,7 +2752,6 @@ dependencies = [
  "curve25519-dalek",
  "five8",
  "five8_const",
- "num-traits",
  "rand",
  "serde",
  "serde_derive",
