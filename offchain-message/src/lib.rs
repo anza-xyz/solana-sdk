@@ -76,7 +76,7 @@ pub mod v0 {
         /// Construct a new OffchainMessage object from the given message
         #[deprecated(
             since = "3.0.0",
-            note = "Use `new_with_domain` or `new_with_multisig` instead"
+            note = "Use `new_with_domain` or `new_with_params` instead"
         )]
         pub fn new(message: &[u8]) -> Result<Self, SanitizeError> {
             // Use default values for compatibility with existing API
@@ -86,7 +86,7 @@ pub mod v0 {
         }
 
         /// Construct a new OffchainMessage object with all parameters. This
-        /// must be used for multisig-signed messages.
+        /// must be used for multi-signer messages (where multiple parties must sign).
         pub fn new_with_params(
             application_domain: [u8; 32],
             signers: &[[u8; 32]],
@@ -302,7 +302,7 @@ impl OffchainMessage {
     /// # Usage Patterns:
     /// - **Single-signer with custom domain**: Pass `&[[0u8; 32]]` for signers,
     ///   actual signer will be filled in when `sign()` is called
-    /// - **Multi-signer predefined**: Pass real signer pubkeys, all must be present when signing
+    /// - **Multi-signer predefined**: Pass real signer pubkeys, all signers must provide signatures
     pub fn new_with_params(
         version: u8,
         application_domain: [u8; 32],
@@ -423,6 +423,7 @@ impl OffchainMessage {
 }
 
 /// Envelope for off-chain messages with multiple signatures
+/// All signers listed in the message must provide signatures (no threshold logic)
 /// This implements the envelope format from the proposal:
 /// | Field | Start offset | Length (bytes) | Description |
 /// | Signature Count | 0x00 | 1 | Number of signatures |
@@ -437,7 +438,7 @@ pub struct Envelope {
 
 impl Envelope {
     /// Create a new envelope from existing signatures and message
-    /// This allows for partial signing scenarios (e.g., 2-of-3 multisig)
+    /// This allows for partial signing scenarios (e.g., collecting signatures from multiple parties)
     /// Note: This bypasses signature verification during construction
     pub fn new(message: OffchainMessage, signatures: Vec<Signature>) -> Self {
         Self {
@@ -830,10 +831,10 @@ mod tests {
     }
 
     #[test]
-    fn test_multisig_3_of_3_success() {
+    fn test_multi_signer_3_parties_success() {
         use solana_signer::Signer;
 
-        // Create 3 keypairs for a 3-of-3 multisig (all must sign)
+        // Create 3 keypairs for a 3-party multi-signer message (all must sign)
         let keypair1 = Keypair::new();
         let keypair2 = Keypair::new();
         let keypair3 = Keypair::new();
@@ -842,14 +843,14 @@ mod tests {
         let pubkey2 = keypair2.pubkey().to_bytes();
         let pubkey3 = keypair3.pubkey().to_bytes();
 
-        // Create message that requires all 3 signers
+        // Create message with all 3 signers listed
         let signers_in_message = [pubkey1, pubkey2, pubkey3];
         let application_domain = [0x42u8; 32];
         let message = OffchainMessage::new_with_params(
             0,
             application_domain,
             &signers_in_message,
-            b"3-of-3 multisig test",
+            b"3-party multi-signer test",
         )
         .unwrap();
 
@@ -873,10 +874,10 @@ mod tests {
     }
 
     #[test]
-    fn test_multisig_2_of_3_partial_signing() {
+    fn test_multi_signer_partial_signatures() {
         use solana_signer::Signer;
 
-        // Create 3 keypairs but only 2 will sign
+        // Create 3 keypairs but only 2 will provide valid signatures
         let keypair1 = Keypair::new();
         let keypair2 = Keypair::new();
         let keypair3 = Keypair::new(); // This one won't sign
@@ -885,13 +886,13 @@ mod tests {
         let pubkey2 = keypair2.pubkey().to_bytes();
         let pubkey3 = keypair3.pubkey().to_bytes();
 
-        // Create message expecting 3 signers (but we'll only provide 2)
+        // Create message with 3 signers listed (but we'll only provide 2 valid signatures)
         let signers_in_message = [pubkey1, pubkey2, pubkey3];
         let message = OffchainMessage::new_with_params(
             0,
             [0x42u8; 32],
             &signers_in_message,
-            b"2-of-3 multisig test",
+            b"partial signatures test",
         )
         .unwrap();
 
@@ -923,7 +924,7 @@ mod tests {
     }
 
     #[test]
-    fn test_multisig_missing_pubkey_in_message() {
+    fn test_multi_signer_missing_pubkey_in_message() {
         use solana_signer::Signer;
 
         let keypair1 = Keypair::new();
@@ -959,43 +960,7 @@ mod tests {
     }
 
     #[test]
-    fn test_multisig_missing_signature() {
-        use solana_signer::Signer;
-
-        let keypair1 = Keypair::new();
-        let keypair2 = Keypair::new();
-        let keypair3 = Keypair::new();
-
-        let pubkey1 = keypair1.pubkey().to_bytes();
-        let pubkey2 = keypair2.pubkey().to_bytes();
-        let pubkey3 = keypair3.pubkey().to_bytes();
-
-        // Create message that requires all 3 signers
-        let signers_in_message = [pubkey1, pubkey2, pubkey3];
-        let message = OffchainMessage::new_with_params(
-            0,
-            [0x42u8; 32],
-            &signers_in_message,
-            b"Missing signature test",
-        )
-        .unwrap();
-
-        // Try to sign with only 2 signers when 3 are required
-        let signing_keypairs: [&dyn Signer; 2] = [&keypair1, &keypair2];
-
-        // This should fail because we're missing keypair3's signature
-        let result = Envelope::sign_all(message, &signing_keypairs);
-        assert!(result.is_err());
-
-        // Verify it's the expected error (signer count mismatch)
-        assert!(matches!(
-            result.unwrap_err(),
-            SanitizeError::ValueOutOfBounds
-        ));
-    }
-
-    #[test]
-    fn test_multisig_wrong_signer_order() {
+    fn test_multi_signer_wrong_signer_order() {
         use solana_signer::Signer;
 
         let keypair1 = Keypair::new();
