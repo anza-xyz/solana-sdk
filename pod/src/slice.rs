@@ -2,7 +2,7 @@
 
 use {
     crate::{
-        list::{List, ListView, ListViewMut, ListViewReadOnly},
+        list::{ListView, ListViewMut, ListViewReadOnly},
         primitives::PodU32,
     },
     bytemuck::Pod,
