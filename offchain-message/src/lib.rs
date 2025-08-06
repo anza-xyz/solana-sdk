@@ -278,7 +278,12 @@ impl OffchainMessage {
 
     /// Construct a new OffchainMessage object from the given version and message.
     ///
+    #[deprecated(
+        since = "3.0.0",
+        note = "Use `new_with_domain` or `new_with_params` instead"
+    )]
     pub fn new(version: u8, message: &[u8]) -> Result<Self, SanitizeError> {
+        #[allow(deprecated)]
         match version {
             0 => Ok(Self::V0(v0::OffchainMessage::new(message)?)),
             _ => Err(SanitizeError::ValueOutOfBounds),
