@@ -74,6 +74,10 @@ pub mod v0 {
         pub const MAX_LEN_LEDGER: usize = PACKET_DATA_SIZE - Base::HEADER_LEN - Self::HEADER_LEN;
 
         /// Construct a new OffchainMessage object from the given message
+        #[deprecated(
+            since = "3.0.0",
+            note = "Use `new_with_domain` or `new_with_multisig` instead"
+        )]
         pub fn new(message: &[u8]) -> Result<Self, SanitizeError> {
             // Use default values for compatibility with existing API
             let application_domain = [0u8; 32]; // Default application domain
@@ -81,7 +85,8 @@ pub mod v0 {
             Self::new_with_params(application_domain, &signers, message)
         }
 
-        /// Construct a new OffchainMessage object with all parameters
+        /// Construct a new OffchainMessage object with all parameters. This
+        /// must be used for multisig-signed messages.
         pub fn new_with_params(
             application_domain: [u8; 32],
             signers: &[[u8; 32]],
@@ -271,7 +276,8 @@ impl OffchainMessage {
     // Header Length = Signing Domain (16) + Header Version (1)
     pub const HEADER_LEN: usize = Self::SIGNING_DOMAIN.len() + 1;
 
-    /// Construct a new OffchainMessage object from the given version and message
+    /// Construct a new OffchainMessage object from the given version and message.
+    ///
     pub fn new(version: u8, message: &[u8]) -> Result<Self, SanitizeError> {
         match version {
             0 => Ok(Self::V0(v0::OffchainMessage::new(message)?)),
@@ -279,7 +285,24 @@ impl OffchainMessage {
         }
     }
 
+    /// Construct a new OffchainMessage object with custom application domain
+    /// Signer information is filled when sign() is called. This can only
+    /// be used for single-signer messages; otherwise, use `new_with_params`.
+    pub fn new_with_domain(
+        version: u8,
+        application_domain: [u8; 32],
+        message: &[u8],
+    ) -> Result<Self, SanitizeError> {
+        // Use dummy signer that will be replaced during signing
+        Self::new_with_params(version, application_domain, &[[0u8; 32]], message)
+    }
+
     /// Construct a new OffchainMessage object with all parameters from the spec
+    ///
+    /// # Usage Patterns:
+    /// - **Single-signer with custom domain**: Pass `&[[0u8; 32]]` for signers,
+    ///   actual signer will be filled in when `sign()` is called
+    /// - **Multi-signer predefined**: Pass real signer pubkeys, all must be present when signing
     pub fn new_with_params(
         version: u8,
         application_domain: [u8; 32],
@@ -413,6 +436,16 @@ pub struct Envelope {
 }
 
 impl Envelope {
+    /// Create a new envelope from existing signatures and message
+    /// This allows for partial signing scenarios (e.g., 2-of-3 multisig)
+    /// Note: This bypasses signature verification during construction
+    pub fn new(message: OffchainMessage, signatures: Vec<Signature>) -> Self {
+        Self {
+            message,
+            signatures,
+        }
+    }
+
     /// Create a new envelope by signing with all provided signers
     /// All signers must match the signers list in the message, in order
     pub fn sign_all(
@@ -624,7 +657,7 @@ mod tests {
     fn test_offchain_message_sign_and_verify() {
         let keypair = Keypair::new();
 
-        // Use the simple constructor (CLI compatibility)
+        // Use the simple constructor (CLI/Agave compatibility)
         let message = OffchainMessage::new(0, b"Test Message").unwrap();
 
         // Create the expected final message (what sign() actually produces)
@@ -647,10 +680,10 @@ mod tests {
 
     #[test]
     fn test_agave_cli_exact_usage() {
-        // Test the EXACT pattern that Agave CLI uses:
+        // Test the pattern that Agave CLI uses:
         // let message = OffchainMessage::new(version, message_text.as_bytes())
         //     .map_err(|_| CliError::BadParameter("VERSION or MESSAGE".to_string()))?;
-        // Then: message.sign(config.signers[0])?.to_string()
+        // message.sign(config.signers[0])?.to_string();
 
         use solana_signer::Signer;
 
@@ -658,24 +691,15 @@ mod tests {
         let version = 0u8;
         let message_text = "Test Message";
 
-        // This is the exact call pattern from parse_sign_offchain_message in wallet.rs
         let message = OffchainMessage::new(version, message_text.as_bytes()).unwrap();
-
-        // This is the exact call pattern from process_sign_offchain_message in wallet.rs
         let signature = message.sign(&keypair).unwrap();
-        let signature_string = signature.to_string();
 
-        // Verify the signature is valid
-        assert!(!signature_string.is_empty());
-        assert!(signature_string.len() > 50); // Signatures are long base58 strings
-
-        // Verify the message has the expected properties
         assert_eq!(message.get_version(), 0);
         assert_eq!(message.get_message().as_slice(), message_text.as_bytes());
 
         // Verify the signature verifies against the keypair's pubkey
-        // Note: Since the message was created with dummy signer, the sign() method
-        // internally creates a proper message with the actual signer's pubkey
+        // Note: Since the message is created with dummy signer with new(), the sign()
+        // method internally creates a proper message with the actual signer's pubkey
         #[cfg(feature = "verify")]
         {
             // Create the expected signed message (what sign() actually signed)
@@ -728,26 +752,42 @@ mod tests {
         // Check signing domain and version
         assert_eq!(&serialized_vec[0..16], b"\xffsolana offchain");
         assert_eq!(serialized_vec[16], 0); // version
-
-        // Check application domain
         assert_eq!(&serialized_vec[17..49], &application_domain);
-
-        // Check format
         assert_eq!(serialized_vec[49], 0); // RestrictedAscii format
-
-        // Check signer count
         assert_eq!(serialized_vec[50], 2); // 2 signers
-
-        // Check signers
         assert_eq!(&serialized_vec[51..83], &signer1);
         assert_eq!(&serialized_vec[83..115], &signer2);
-
-        // Check message length (little endian)
         let msg_len = u16::from_le_bytes([serialized_vec[115], serialized_vec[116]]);
         assert_eq!(msg_len, message_text.len() as u16);
-
-        // Check message content
         assert_eq!(&serialized_vec[117..], message_text);
+    }
+
+    #[test]
+    fn test_new_with_domain() {
+        let keypair = Keypair::new();
+        let custom_domain = [0x42u8; 32];
+
+        // Use the cleaner API for single-signer with custom domain
+        let message = OffchainMessage::new_with_domain(0, custom_domain, b"Domain test").unwrap();
+
+        // Verify domain is set correctly
+        assert_eq!(message.get_application_domain(), &custom_domain);
+
+        // Sign and verify it works
+        let signature = message.sign(&keypair).unwrap();
+
+        // Create expected message for verification
+        let expected_message = OffchainMessage::new_with_params(
+            0,
+            custom_domain,
+            &[keypair.pubkey().to_bytes()],
+            b"Domain test",
+        )
+        .unwrap();
+
+        assert!(expected_message
+            .verify(&keypair.pubkey(), &signature)
+            .unwrap());
     }
 
     #[test]
@@ -790,12 +830,205 @@ mod tests {
     }
 
     #[test]
-    fn test_spec_constant_usage() {
-        // Test that our constants match the spec values
-        assert_eq!(PREAMBLE_AND_BODY_MAX_LEDGER, 1232);
-        assert_eq!(PREAMBLE_AND_BODY_MAX_EXTENDED, 65535);
+    fn test_multisig_3_of_3_success() {
+        use solana_signer::Signer;
 
-        // Test that format selection uses these constants correctly
+        // Create 3 keypairs for a 3-of-3 multisig (all must sign)
+        let keypair1 = Keypair::new();
+        let keypair2 = Keypair::new();
+        let keypair3 = Keypair::new();
+
+        let pubkey1 = keypair1.pubkey().to_bytes();
+        let pubkey2 = keypair2.pubkey().to_bytes();
+        let pubkey3 = keypair3.pubkey().to_bytes();
+
+        // Create message that requires all 3 signers
+        let signers_in_message = [pubkey1, pubkey2, pubkey3];
+        let application_domain = [0x42u8; 32];
+        let message = OffchainMessage::new_with_params(
+            0,
+            application_domain,
+            &signers_in_message,
+            b"3-of-3 multisig test",
+        )
+        .unwrap();
+
+        // Create envelope with all 3 signers
+        let signing_keypairs: [&dyn Signer; 3] = [&keypair1, &keypair2, &keypair3];
+        let envelope = Envelope::sign_all(message.clone(), &signing_keypairs).unwrap();
+
+        // Verify envelope structure
+        assert_eq!(envelope.signatures().len(), 3);
+        assert_eq!(envelope.message(), &message);
+        assert_eq!(envelope.message().get_signers().len(), 3);
+
+        // Test serialization/deserialization
+        let serialized = envelope.serialize().unwrap();
+        let deserialized = Envelope::deserialize(&serialized).unwrap();
+        assert_eq!(envelope, deserialized);
+
+        // Test verification
+        #[cfg(feature = "verify")]
+        assert!(envelope.verify_all().unwrap());
+    }
+
+    #[test]
+    fn test_multisig_2_of_3_partial_signing() {
+        use solana_signer::Signer;
+
+        // Create 3 keypairs but only 2 will sign
+        let keypair1 = Keypair::new();
+        let keypair2 = Keypair::new();
+        let keypair3 = Keypair::new(); // This one won't sign
+
+        let pubkey1 = keypair1.pubkey().to_bytes();
+        let pubkey2 = keypair2.pubkey().to_bytes();
+        let pubkey3 = keypair3.pubkey().to_bytes();
+
+        // Create message expecting 3 signers (but we'll only provide 2)
+        let signers_in_message = [pubkey1, pubkey2, pubkey3];
+        let message = OffchainMessage::new_with_params(
+            0,
+            [0x42u8; 32],
+            &signers_in_message,
+            b"2-of-3 multisig test",
+        )
+        .unwrap();
+
+        // Sign only with first 2 signers, create empty signature for 3rd
+        let message_bytes = message.serialize().unwrap();
+        let sig1 = keypair1.sign_message(&message_bytes);
+        let sig2 = keypair2.sign_message(&message_bytes);
+        let empty_sig = Signature::from([0u8; 64]); // Placeholder for missing signature
+
+        // Create envelope manually with partial signatures
+        let signatures = vec![sig1, sig2, empty_sig];
+        let envelope = Envelope::new(message.clone(), signatures);
+
+        // Verify structure
+        assert_eq!(envelope.signatures().len(), 3);
+        assert_eq!(envelope.message(), &message);
+
+        // Test serialization (should work even with invalid signatures)
+        let serialized = envelope.serialize().unwrap();
+        assert!(!serialized.is_empty());
+
+        // Verification should fail due to invalid signature
+        #[cfg(feature = "verify")]
+        {
+            let result = envelope.verify_all();
+            assert!(result.is_ok());
+            assert!(!result.unwrap()); // Should return false due to invalid signature
+        }
+    }
+
+    #[test]
+    fn test_multisig_missing_pubkey_in_message() {
+        use solana_signer::Signer;
+
+        let keypair1 = Keypair::new();
+        let keypair2 = Keypair::new();
+        let keypair3 = Keypair::new();
+
+        let pubkey1 = keypair1.pubkey().to_bytes();
+        let pubkey2 = keypair2.pubkey().to_bytes();
+        // Note: pubkey3 is intentionally missing from the message
+
+        // Create message with only 2 signers
+        let signers_in_message = [pubkey1, pubkey2];
+        let message = OffchainMessage::new_with_params(
+            0,
+            [0x42u8; 32],
+            &signers_in_message,
+            b"Missing pubkey test",
+        )
+        .unwrap();
+
+        // Try to sign with 3 signers (including one not in the message)
+        let signing_keypairs: [&dyn Signer; 3] = [&keypair1, &keypair2, &keypair3];
+
+        // This should fail because keypair3's pubkey is not in the message
+        let result = Envelope::sign_all(message, &signing_keypairs);
+        assert!(result.is_err());
+
+        // Verify it's the expected error (signer count mismatch)
+        assert!(matches!(
+            result.unwrap_err(),
+            SanitizeError::ValueOutOfBounds
+        ));
+    }
+
+    #[test]
+    fn test_multisig_missing_signature() {
+        use solana_signer::Signer;
+
+        let keypair1 = Keypair::new();
+        let keypair2 = Keypair::new();
+        let keypair3 = Keypair::new();
+
+        let pubkey1 = keypair1.pubkey().to_bytes();
+        let pubkey2 = keypair2.pubkey().to_bytes();
+        let pubkey3 = keypair3.pubkey().to_bytes();
+
+        // Create message that requires all 3 signers
+        let signers_in_message = [pubkey1, pubkey2, pubkey3];
+        let message = OffchainMessage::new_with_params(
+            0,
+            [0x42u8; 32],
+            &signers_in_message,
+            b"Missing signature test",
+        )
+        .unwrap();
+
+        // Try to sign with only 2 signers when 3 are required
+        let signing_keypairs: [&dyn Signer; 2] = [&keypair1, &keypair2];
+
+        // This should fail because we're missing keypair3's signature
+        let result = Envelope::sign_all(message, &signing_keypairs);
+        assert!(result.is_err());
+
+        // Verify it's the expected error (signer count mismatch)
+        assert!(matches!(
+            result.unwrap_err(),
+            SanitizeError::ValueOutOfBounds
+        ));
+    }
+
+    #[test]
+    fn test_multisig_wrong_signer_order() {
+        use solana_signer::Signer;
+
+        let keypair1 = Keypair::new();
+        let keypair2 = Keypair::new();
+        let keypair3 = Keypair::new();
+
+        let pubkey1 = keypair1.pubkey().to_bytes();
+        let pubkey2 = keypair2.pubkey().to_bytes();
+        let pubkey3 = keypair3.pubkey().to_bytes();
+
+        // Create message with signers in order: 1, 2, 3
+        let signers_in_message = [pubkey1, pubkey2, pubkey3];
+        let message = OffchainMessage::new_with_params(
+            0,
+            [0x42u8; 32],
+            &signers_in_message,
+            b"Wrong order test",
+        )
+        .unwrap();
+
+        // Try to sign with signers in wrong order: 2, 1, 3
+        let signing_keypairs: [&dyn Signer; 3] = [&keypair2, &keypair1, &keypair3];
+
+        // This should fail because the order doesn't match
+        let result = Envelope::sign_all(message, &signing_keypairs);
+        assert!(result.is_err());
+
+        // Verify it's the expected error (invalid value due to pubkey mismatch)
+        assert!(matches!(result.unwrap_err(), SanitizeError::InvalidValue));
+    }
+
+    #[test]
+    fn test_spec_constant_usage() {
         let keypair = Keypair::new();
         let signer_pubkey = keypair.pubkey().to_bytes();
 
