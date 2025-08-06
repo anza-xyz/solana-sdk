@@ -19,7 +19,6 @@ bincode = [
     "dep:solana-account",
     "dep:solana-account-info",
     "dep:solana-instruction",
-    "dep:solana-program-error",
     "dep:solana-rent",
     "dep:solana-system-interface",
     "serde",
@@ -34,7 +33,7 @@ serde_derive = { workspace = true, optional = true }
 solana-account = { workspace = true, optional = true }
 solana-account-info = { workspace = true, optional = true }
 solana-instruction = { workspace = true, optional = true }
-solana-program-error = { workspace = true, optional = true }
+solana-program-error = { workspace = true }
 solana-pubkey = { workspace = true }
 solana-rent = { workspace = true, optional = true }
 solana-sdk-ids = { workspace = true }
