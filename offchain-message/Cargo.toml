@@ -20,13 +20,13 @@ verify = ["dep:solana-pubkey", "solana-signature/verify"]
 
 [dependencies]
 num_enum = { workspace = true }
-solana-hash = { workspace = true }
-solana-packet = { workspace = true }
-solana-pubkey = { workspace = true, optional = true }
-solana-sanitize = { workspace = true }
-solana-sha256-hasher = { workspace = true, features = ["sha2"] }
-solana-signature = { workspace = true }
-solana-signer = { workspace = true }
+solana-hash = "2.2.1"
+solana-packet = "2.2.1"
+solana-pubkey = { version = "2.4.0", optional = true }
+solana-sanitize = "2.2.1"
+solana-sha256-hasher = { version = "2.2.1", features = ["sha2"] }
+solana-signature = "2.3.0"
+solana-signer = "2.2.1"
 
 [dev-dependencies]
 solana-keypair = { workspace = true }
