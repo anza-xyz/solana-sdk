@@ -3885,6 +3885,8 @@ version = "3.0.0"
 dependencies = [
  "bincode",
  "bs58",
+ "bytemuck",
+ "bytemuck_derive",
  "curve25519-dalek",
  "ed25519-dalek",
  "five8",
