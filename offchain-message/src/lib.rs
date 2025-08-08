@@ -62,10 +62,10 @@ pub mod v0 {
 
     #[derive(Debug, PartialEq, Eq, Clone)]
     pub struct OffchainMessage {
-        pub application_domain: [u8; 32],
-        pub format: MessageFormat,
-        pub signers: Vec<[u8; 32]>,
-        pub message: Vec<u8>,
+        pub(crate) application_domain: [u8; 32],
+        pub(crate) format: MessageFormat,
+        pub(crate) signers: Vec<[u8; 32]>,
+        pub(crate) message: Vec<u8>,
     }
 
     impl OffchainMessage {
