@@ -16,6 +16,57 @@ use {
     std::{collections::VecDeque, io::Cursor, ptr::addr_of_mut},
 };
 
+// This is to reset vote_state to T::default() if deserialize fails or panics.
+struct DropGuard<T: Default> {
+    vote_state: *mut T,
+}
+
+impl<T: Default> Drop for DropGuard<T> {
+    fn drop(&mut self) {
+        // Safety:
+        //
+        // Deserialize failed or panicked so at this point vote_state is uninitialized. We
+        // must write a new _valid_ value into it or after returning (or unwinding) from
+        // this function the caller is left with an uninitialized `&mut T`, which is UB
+        // (references must always be valid).
+        //
+        // This is always safe and doesn't leak memory because deserialize_into_ptr() writes
+        // into the fields that heap alloc only when it returns Ok().
+        unsafe {
+            self.vote_state.write(T::default());
+        }
+    }
+}
+
+pub(crate) fn deserialize_into<T: Default>(
+    input: &[u8],
+    vote_state: &mut T,
+    deserialize_fn: impl FnOnce(&[u8], *mut T) -> Result<(), InstructionError>,
+) -> Result<(), InstructionError> {
+    // Rebind vote_state to *mut T so that the &mut binding isn't accessible
+    // anymore, preventing accidental use after this point.
+    //
+    // NOTE: switch to ptr::from_mut() once platform-tools moves to rustc >= 1.76
+    let vote_state = vote_state as *mut T;
+
+    // Safety: vote_state is valid to_drop (see drop_in_place() docs). After
+    // dropping, the pointer is treated as uninitialized and only accessed
+    // through ptr::write, which is safe as per drop_in_place docs.
+    unsafe {
+        std::ptr::drop_in_place(vote_state);
+    }
+
+    // This is to reset vote_state to T::default() if deserialize fails or panics.
+    let guard = DropGuard { vote_state };
+
+    let res = deserialize_fn(input, vote_state);
+    if res.is_ok() {
+        std::mem::forget(guard);
+    }
+
+    res
+}
+
 pub(super) fn deserialize_vote_state_into(
     cursor: &mut Cursor<&[u8]>,
     vote_state: *mut VoteStateV3,

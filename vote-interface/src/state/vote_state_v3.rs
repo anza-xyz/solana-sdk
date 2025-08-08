@@ -145,49 +145,8 @@ impl VoteStateV3 {
         input: &[u8],
         vote_state: &mut VoteStateV3,
     ) -> Result<(), InstructionError> {
-        // Rebind vote_state to *mut VoteStateV3 so that the &mut binding isn't
-        // accessible anymore, preventing accidental use after this point.
-        //
-        // NOTE: switch to ptr::from_mut() once platform-tools moves to rustc >= 1.76
-        let vote_state = vote_state as *mut VoteStateV3;
-
-        // Safety: vote_state is valid to_drop (see drop_in_place() docs). After
-        // dropping, the pointer is treated as uninitialized and only accessed
-        // through ptr::write, which is safe as per drop_in_place docs.
-        unsafe {
-            std::ptr::drop_in_place(vote_state);
-        }
-
-        // This is to reset vote_state to VoteStateV3::default() if deserialize fails or panics.
-        struct DropGuard {
-            vote_state: *mut VoteStateV3,
-        }
-
-        impl Drop for DropGuard {
-            fn drop(&mut self) {
-                // Safety:
-                //
-                // Deserialize failed or panicked so at this point vote_state is uninitialized. We
-                // must write a new _valid_ value into it or after returning (or unwinding) from
-                // this function the caller is left with an uninitialized `&mut VoteStateV3`, which is
-                // UB (references must always be valid).
-                //
-                // This is always safe and doesn't leak memory because deserialize_into_ptr() writes
-                // into the fields that heap alloc only when it returns Ok().
-                unsafe {
-                    self.vote_state.write(VoteStateV3::default());
-                }
-            }
-        }
-
-        let guard = DropGuard { vote_state };
-
-        let res = VoteStateV3::deserialize_into_ptr(input, vote_state);
-        if res.is_ok() {
-            std::mem::forget(guard);
-        }
-
-        res
+        use super::vote_state_deserialize;
+        vote_state_deserialize::deserialize_into(input, vote_state, Self::deserialize_into_ptr)
     }
 
     /// Deserializes the input `VoteStateVersions` buffer directly into the provided
