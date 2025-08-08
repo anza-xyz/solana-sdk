@@ -1,5 +1,6 @@
 //! Envelope for off-chain messages with multiple signatures.
-//! Matches the format from the [proposal spec here](https://github.com/anza-xyz/agave/blob/master/docs/src/proposals/off-chain-message-signing.md).
+//! Matches the format from the specification at:
+//! https://github.com/anza-xyz/agave/blob/master/docs/src/proposals/off-chain-message-signing.md).
 
 use {
     crate::OffchainMessage,
