@@ -161,6 +161,27 @@ pub trait SysvarSerialize:
 /// Implements the [`Sysvar::get`] method for both SBF and host targets.
 #[macro_export]
 macro_rules! impl_sysvar_get {
+    () => {
+        fn get() -> Result<Self, $crate::__private::ProgramError> {
+            // Allocate uninitialized memory for the sysvar struct
+            let mut uninit = core::mem::MaybeUninit::<Self>::uninit();
+            let size = core::mem::size_of::<Self>() as u64;
+            // Safety: we build a mutable slice pointing to the uninitialized
+            // buffer.  The `get_sysvar` syscall will fill exactly `size`
+            // bytes, after which the buffer is fully initialised.
+            let dst = unsafe {
+                core::slice::from_raw_parts_mut(uninit.as_mut_ptr() as *mut u8, size as usize)
+            };
+            // Attempt to load the sysvar data.
+            $crate::get_sysvar(dst, &id(), 0, size)?;
+            // Safety: `get_sysvar` succeeded and initialised the buffer.
+            let var = unsafe { uninit.assume_init() };
+            Ok(var)
+        }
+    };
+    // DEPRECATED: This variant is only for the deprecated Fees sysvar and should be
+    // removed once Fees is no longer in use. It uses the old-style direct syscall
+    // approach instead of the new sol_get_sysvar syscall.
     ($syscall_name:ident) => {
         fn get() -> Result<Self, $crate::__private::ProgramError> {
             let mut var = Self::default();
