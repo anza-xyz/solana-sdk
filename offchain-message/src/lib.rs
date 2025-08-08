@@ -1,4 +1,4 @@
-//! Off-chain message container for storing non-transaction messages.
+//! Off-chain message container for non-transaction messages.
 #![cfg_attr(docsrs, feature(doc_auto_cfg))]
 use {
     num_enum::{IntoPrimitive, TryFromPrimitive},
