@@ -42,7 +42,7 @@ pub fn detect_format(total_size: usize, message: &[u8]) -> Result<MessageFormat,
     }
 }
 
-/// Parse application domain from data at given offset
+/// Parse application domain from data at given offset.
 pub fn parse_application_domain(
     data: &[u8],
     offset: &mut usize,
@@ -53,7 +53,7 @@ pub fn parse_application_domain(
     Ok(application_domain)
 }
 
-/// Parse message format from data at given offset
+/// Parse message format from data at given offset.
 pub fn parse_message_format(
     data: &[u8],
     offset: &mut usize,
@@ -62,7 +62,7 @@ pub fn parse_message_format(
     MessageFormat::try_from(format_byte).map_err(|_| SanitizeError::InvalidValue)
 }
 
-/// Parse signer count from data at given offset
+/// Parse signer count from data at given offset.
 pub fn parse_signer_count(data: &[u8], offset: &mut usize) -> Result<usize, SanitizeError> {
     let signer_count = read_u8(offset, data).map_err(|_| SanitizeError::ValueOutOfBounds)? as usize;
     if signer_count == 0 {
@@ -71,7 +71,7 @@ pub fn parse_signer_count(data: &[u8], offset: &mut usize) -> Result<usize, Sani
     Ok(signer_count)
 }
 
-/// Parse signers from data at given offset
+/// Parse signers from data at given offset.
 pub fn parse_signers(
     data: &[u8],
     offset: &mut usize,
@@ -88,7 +88,7 @@ pub fn parse_signers(
     Ok(signers)
 }
 
-/// Parse message length from data at given offset
+/// Parse message length from data at given offset.
 pub fn parse_message_length(data: &[u8], offset: &mut usize) -> Result<usize, SanitizeError> {
     let message_len = read_u16(offset, data).map_err(|_| SanitizeError::ValueOutOfBounds)? as usize;
     if message_len == 0 {
@@ -97,7 +97,7 @@ pub fn parse_message_length(data: &[u8], offset: &mut usize) -> Result<usize, Sa
     Ok(message_len)
 }
 
-/// Parse message body from data at given offset
+/// Parse message body from data at given offset.
 pub fn parse_message_body(
     data: &[u8],
     offset: &mut usize,
@@ -110,7 +110,7 @@ pub fn parse_message_body(
     read_slice(offset, data, expected_len).map_err(|_| SanitizeError::ValueOutOfBounds)
 }
 
-/// Validate format constraints against parsed data
+/// Validate format constraints against parsed data.
 pub fn validate_format_constraints(
     format: MessageFormat,
     total_size: usize,
@@ -131,7 +131,7 @@ pub fn validate_format_constraints(
     is_valid.then_some(()).ok_or(SanitizeError::InvalidValue)
 }
 
-/// Serialize a v0 message to bytes, including the full header
+/// Serialize a v0 message to bytes, including the full header.
 pub fn serialize_v0(
     application_domain: &[u8; 32],
     format: MessageFormat,
@@ -158,7 +158,7 @@ pub fn serialize_v0(
     Ok(())
 }
 
-/// Deserialize a v0 message from bytes that include a full header
+/// Deserialize a v0 message from bytes that include a full header.
 pub fn deserialize_v0(data: &[u8]) -> Result<V0MessageComponents, SanitizeError> {
     if data.len() < super::v0::OffchainMessage::HEADER_LEN {
         return Err(SanitizeError::ValueOutOfBounds);
@@ -178,7 +178,7 @@ pub fn deserialize_v0(data: &[u8]) -> Result<V0MessageComponents, SanitizeError>
     Ok((application_domain, format, signers, message))
 }
 
-/// Construct a new v0 message with validation
+/// Construct a new v0 message with validation.
 pub fn new_v0_with_params(
     application_domain: [u8; 32],
     signers: &[[u8; 32]],

@@ -12,7 +12,7 @@ use {
 
 /// Envelope for off-chain messages with multiple signatures.
 /// All signers listed in the message must provide signatures.
-/// This implements the envelope format from the spec:
+/// Implements the envelope format from the spec:
 /// | Field | Start offset | Length (bytes) | Description |
 /// | Signature Count | 0x00 | 1 | Number of signatures |
 /// | Signatures | 0x01 | `SIG_COUNT` * 64 | ed25519 signatures |
@@ -36,8 +36,6 @@ impl Envelope {
     /// All signers must match the signers list in the message, in order
     pub fn new(message: OffchainMessage, signers: &[&dyn Signer]) -> Result<Self, SanitizeError> {
         let message_signers = Self::message_signers(&message);
-
-        // Verify signer count and validate each signer's pubkey in one pass
         if signers.len() != message_signers.len() {
             return Err(SanitizeError::ValueOutOfBounds);
         }
@@ -46,7 +44,7 @@ impl Envelope {
                 return Err(SanitizeError::InvalidValue);
             }
         }
-        // Serialize the message once for all signatures
+        // Serialize the message for all signatures
         let message_bytes = message.serialize()?;
         let signatures: Vec<_> = signers
             .iter()
@@ -66,7 +64,6 @@ impl Envelope {
         }
         let message_bytes = self.message.serialize()?;
         let signers = message_signers;
-        // Verify each signature matches the corresponding pubkey
         for (signature, signer_bytes) in self.signatures.iter().zip(signers.iter()) {
             let pubkey = ::solana_pubkey::Pubkey::try_from(signer_bytes.as_slice())
                 .map_err(|_| SanitizeError::InvalidValue)?;
@@ -74,8 +71,7 @@ impl Envelope {
                 return Ok(false);
             }
         }
-        // Post-verification: re-deserialize to ensure message compliance
-        let _verified_message = OffchainMessage::deserialize(&message_bytes)?;
+        let _validated_message = OffchainMessage::deserialize(&message_bytes)?;
         Ok(true)
     }
 
@@ -87,13 +83,10 @@ impl Envelope {
                 .saturating_add(self.signatures.len().saturating_mul(64))
                 .saturating_add(message_bytes.len()),
         );
-        // Signature count (1 byte)
         append_u8(&mut data, self.signatures.len() as u8);
-        // Signatures (64 bytes each)
         for signature in &self.signatures {
             append_slice(&mut data, signature.as_ref());
         }
-        // Message preamble and body
         append_slice(&mut data, &message_bytes);
         Ok(data)
     }
@@ -104,15 +97,13 @@ impl Envelope {
             return Err(SanitizeError::ValueOutOfBounds);
         }
         let mut offset = 0;
-        // Parse signature count
-        let sig_count =
+        let signature_count =
             read_u8(&mut offset, data).map_err(|_| SanitizeError::ValueOutOfBounds)? as usize;
-        if sig_count == 0 {
+        if signature_count == 0 {
             return Err(SanitizeError::InvalidValue);
         }
-        // Parse signatures
-        let mut signatures = Vec::with_capacity(sig_count);
-        for _ in 0..sig_count {
+        let mut signatures = Vec::with_capacity(signature_count);
+        for _ in 0..signature_count {
             let signature_bytes =
                 read_slice(&mut offset, data, 64).map_err(|_| SanitizeError::ValueOutOfBounds)?;
             let signature_array: [u8; 64] = signature_bytes
@@ -121,10 +112,8 @@ impl Envelope {
             signatures.push(Signature::from(signature_array));
         }
 
-        // Parse message
         let message_data = &data[offset..];
         let message = OffchainMessage::deserialize(message_data)?;
-        // Verify signature count matches message signer count
         let message_signers = Self::message_signers(&message);
         if signatures.len() != message_signers.len() {
             return Err(SanitizeError::InvalidValue);

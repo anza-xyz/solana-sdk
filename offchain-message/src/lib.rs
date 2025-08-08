@@ -99,7 +99,7 @@ pub mod v0 {
             })
         }
 
-        /// Serialize the message to bytes, including the full header
+        /// Serialize the message to bytes, including the full header.
         pub fn serialize(&self, data: &mut Vec<u8>) -> Result<(), SanitizeError> {
             serialization::serialize_v0(
                 &self.application_domain,
@@ -110,7 +110,7 @@ pub mod v0 {
             )
         }
 
-        /// Deserialize the message from bytes that include a full header
+        /// Deserialize the message from bytes that include a full header.
         pub fn deserialize(data: &[u8]) -> Result<Self, SanitizeError> {
             let (application_domain, format, signers, message) =
                 serialization::deserialize_v0(data)?;
@@ -122,7 +122,7 @@ pub mod v0 {
             })
         }
 
-        /// Compute the SHA256 hash of the serialized off-chain message
+        /// Compute the SHA256 hash of the serialized off-chain message.
         pub fn hash(serialized_message: &[u8]) -> Result<Hash, SanitizeError> {
             let mut hasher = Hasher::default();
             hasher.hash(serialized_message);
@@ -142,7 +142,6 @@ impl OffchainMessage {
     pub const HEADER_LEN: usize = Self::SIGNING_DOMAIN.len() + 1;
 
     /// Construct a new OffchainMessage object from the given version and message.
-    ///
     #[deprecated(
         since = "3.0.0",
         note = "Use `new_with_domain` or `new_with_params` instead"
@@ -156,8 +155,8 @@ impl OffchainMessage {
     }
 
     /// Construct a new OffchainMessage object with custom application domain.
-    /// Signer information is filled when sign() is called. This can only
-    /// be used for single-signer messages; otherwise, use `new_with_params`.
+    /// Signer information is filled when `sign()` is called. This can only
+    /// be used for single-signer messages; otherwise, use `new_with_params()`.
     pub fn new_with_domain(
         version: u8,
         application_domain: [u8; 32],
@@ -189,7 +188,7 @@ impl OffchainMessage {
         }
     }
 
-    /// Serialize the off-chain message to bytes including full header
+    /// Serialize the off-chain message to bytes including full header.
     pub fn serialize(&self) -> Result<Vec<u8>, SanitizeError> {
         let mut data = Self::SIGNING_DOMAIN.to_vec();
         match self {
@@ -201,7 +200,7 @@ impl OffchainMessage {
         Ok(data)
     }
 
-    /// Deserialize the off-chain message from bytes that include full header
+    /// Deserialize the off-chain message from bytes that include full header.
     pub fn deserialize(data: &[u8]) -> Result<Self, SanitizeError> {
         if data.len() <= Self::HEADER_LEN {
             return Err(SanitizeError::ValueOutOfBounds);
@@ -214,7 +213,7 @@ impl OffchainMessage {
         }
     }
 
-    /// Compute the hash of the off-chain message
+    /// Compute the hash of the off-chain message.
     pub fn hash(&self) -> Result<Hash, SanitizeError> {
         match self {
             Self::V0(_) => v0::OffchainMessage::hash(&self.serialize()?),
@@ -227,9 +226,9 @@ impl OffchainMessage {
         }
     }
 
-    /// Sign the message with provided keypair
-    /// For CLI compatibility: if message was created with default signer, update it with actual signer
-    /// For spec compliance: verify signer matches expected pubkey in message
+    /// Sign the message with provided keypair.
+    /// If message was created with dummy signer, update it with actual signer.
+    /// For spec compliance, verify signer matches expected pubkey in message.
     pub fn sign(&self, signer: &dyn Signer) -> Result<Signature, SanitizeError> {
         let signer_pubkey = signer.pubkey().to_bytes();
         let message_signers = match self {
@@ -238,17 +237,16 @@ impl OffchainMessage {
         if Self::is_single_dummy_signer_message(message_signers) {
             return Self::sign_with_rebuilt_message(self, signer, signer_pubkey);
         }
-        // Spec compliance: verify signer is authorized
         Self::verify_signer_authorized(message_signers, &signer_pubkey)?;
         Ok(signer.sign_message(&self.serialize()?))
     }
 
-    /// Check if message has single dummy/default signer
+    /// Check if message has single dummy/default signer.
     fn is_single_dummy_signer_message(signers: &[[u8; 32]]) -> bool {
         signers.len() == 1 && signers[0] == [0u8; 32]
     }
 
-    /// Create proper message with actual signer and sign it
+    /// Create proper message with actual signer and sign it.
     fn sign_with_rebuilt_message(
         original: &Self,
         signer: &dyn Signer,
@@ -266,7 +264,7 @@ impl OffchainMessage {
         Ok(signer.sign_message(&proper_message.serialize()?))
     }
 
-    /// Verify that the signer is authorized to sign this message
+    /// Verify that the signer is authorized to sign this message.
     fn verify_signer_authorized(
         message_signers: &[[u8; 32]],
         signer_pubkey: &[u8; 32],
@@ -278,7 +276,7 @@ impl OffchainMessage {
         }
     }
 
-    /// Verify that the message signature is valid for the given public key
+    /// Verify that the message signature is valid for the given public key.
     pub fn verify(
         &self,
         signer: &solana_pubkey::Pubkey,
