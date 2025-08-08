@@ -163,23 +163,19 @@ mod tests {
             b"3-party multi-signer test",
         )
         .unwrap();
-
-        // Create envelope with all 3 signers
+        // envelope with all 3 signers
         let signing_keypairs: [&dyn Signer; 3] = [&keypair1, &keypair2, &keypair3];
         let envelope = Envelope::new(message.clone(), &signing_keypairs).unwrap();
-        // Verify envelope structure
         assert_eq!(envelope.signatures.len(), 3);
         assert_eq!(envelope.message, message);
         assert!(
             matches!(envelope.message, crate::OffchainMessage::V0(ref msg) if msg.signers.len() == 3)
         );
 
-        // Test serialization/deserialization
+        // Test serialization/deserialization and verification
         let serialized = envelope.serialize().unwrap();
         let deserialized = Envelope::deserialize(&serialized).unwrap();
         assert_eq!(envelope, deserialized);
-        // Test verification
-        #[cfg(feature = "verify")]
         assert!(envelope.verify_all().unwrap());
     }
 
