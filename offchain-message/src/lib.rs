@@ -139,7 +139,7 @@ pub enum OffchainMessage {
 impl OffchainMessage {
     pub const SIGNING_DOMAIN: &'static [u8] = b"\xffsolana offchain";
     // Header Length = Signing Domain (16) + Header Version (1)
-    pub const HEADER_LEN: usize = Self::SIGNING_DOMAIN.len() + 1;
+    pub const HEADER_LEN: usize = Self::SIGNING_DOMAIN.len().saturating_add(1);
 
     /// Construct a new OffchainMessage object from the given version and message.
     #[deprecated(
@@ -214,7 +214,7 @@ impl OffchainMessage {
             .copied()
             .ok_or(SanitizeError::ValueOutOfBounds)?;
         let payload = data
-            .get(domain_len + 1..)
+            .get(domain_len.saturating_add(1)..)
             .ok_or(SanitizeError::ValueOutOfBounds)?;
         match version {
             0 => Ok(Self::V0(v0::OffchainMessage::deserialize(payload)?)),
