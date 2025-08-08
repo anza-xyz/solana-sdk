@@ -201,14 +201,23 @@ impl OffchainMessage {
     }
 
     /// Deserialize the off-chain message from bytes that include full header.
+    /// Fails if data does not start with the signing domain.
     pub fn deserialize(data: &[u8]) -> Result<Self, SanitizeError> {
-        if data.len() <= Self::HEADER_LEN {
-            return Err(SanitizeError::ValueOutOfBounds);
+        let domain_len = Self::SIGNING_DOMAIN.len();
+        match data.get(..domain_len) {
+            Some(prefix) if prefix == Self::SIGNING_DOMAIN => {}
+            Some(_) => return Err(SanitizeError::InvalidValue),
+            None => return Err(SanitizeError::ValueOutOfBounds),
         }
-        let version = data[Self::SIGNING_DOMAIN.len()];
-        let data = &data[Self::SIGNING_DOMAIN.len().saturating_add(1)..];
+        let version = data
+            .get(domain_len)
+            .copied()
+            .ok_or(SanitizeError::ValueOutOfBounds)?;
+        let payload = data
+            .get(domain_len + 1..)
+            .ok_or(SanitizeError::ValueOutOfBounds)?;
         match version {
-            0 => Ok(Self::V0(v0::OffchainMessage::deserialize(data)?)),
+            0 => Ok(Self::V0(v0::OffchainMessage::deserialize(payload)?)),
             _ => Err(SanitizeError::ValueOutOfBounds),
         }
     }
