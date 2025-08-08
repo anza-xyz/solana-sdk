@@ -8,6 +8,7 @@ repository = { workspace = true }
 homepage = { workspace = true }
 license = { workspace = true }
 edition = { workspace = true }
+rust-version = "1.81.0"
 
 [package.metadata.docs.rs]
 targets = ["x86_64-unknown-linux-gnu"]
@@ -18,7 +19,6 @@ bincode = [
     "dep:solana-account",
     "dep:solana-account-info",
     "dep:solana-instruction",
-    "dep:solana-program-error",
     "dep:solana-rent",
     "dep:solana-system-interface",
     "serde",
@@ -33,7 +33,7 @@ serde_derive = { workspace = true, optional = true }
 solana-account = { workspace = true, optional = true }
 solana-account-info = { workspace = true, optional = true }
 solana-instruction = { workspace = true, optional = true }
-solana-program-error = { workspace = true, optional = true }
+solana-program-error = { workspace = true }
 solana-pubkey = { workspace = true }
 solana-rent = { workspace = true, optional = true }
 solana-sdk-ids = { workspace = true }
@@ -43,6 +43,8 @@ solana-system-interface = { workspace = true, optional = true, features = [
 
 [dev-dependencies]
 solana-feature-gate-interface = { path = ".", features = ["dev-context-only-utils"] }
+strum = { workspace = true }
+strum_macros = { workspace = true }
 
 [lints]
 workspace = true

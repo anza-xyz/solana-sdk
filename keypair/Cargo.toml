@@ -2,7 +2,7 @@
 name = "solana-keypair"
 description = "Concrete implementation of a Solana `Signer`."
 documentation = "https://docs.rs/solana-keypair"
-version = "2.2.3"
+version = "3.0.0"
 rust-version = "1.81.0"
 authors = { workspace = true }
 repository = { workspace = true }

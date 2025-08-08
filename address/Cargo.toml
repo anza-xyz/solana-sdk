@@ -2,7 +2,7 @@
 name = "solana-address"
 description = "Solana account addresses"
 documentation = "https://docs.rs/solana-address"
-version = "0.1.0"
+version = "1.0.0"
 rust-version = "1.81.0"
 authors = { workspace = true }
 repository = { workspace = true }
@@ -17,7 +17,7 @@ bytemuck = ["dep:bytemuck", "dep:bytemuck_derive"]
 curve25519 = ["dep:curve25519-dalek", "error", "sha2"]
 decode = ["dep:five8", "dep:five8_const", "error"]
 dev-context-only-utils = ["dep:arbitrary", "rand"]
-error = ["dep:num-traits", "dep:solana-program-error"]
+error = ["dep:solana-program-error"]
 frozen-abi = [
     "dep:solana-frozen-abi",
     "dep:solana-frozen-abi-macro",
@@ -38,7 +38,6 @@ bytemuck = { workspace = true, optional = true }
 bytemuck_derive = { workspace = true, optional = true }
 five8 = { workspace = true, optional = true }
 five8_const = { workspace = true, optional = true }
-num-traits = { workspace = true, optional = true }
 rand = { workspace = true, optional = true }
 serde = { workspace = true, optional = true }
 serde_derive = { workspace = true, optional = true }
@@ -75,7 +74,7 @@ solana-example-mocks = { path = "../example-mocks" }
 solana-hash = { workspace = true }
 solana-instruction = { path = "../instruction", features = ["borsh"] }
 solana-program-error = { workspace = true, features = ["borsh"] }
-solana-system-interface = { workspace = true, features = ["bincode"] }
+solana-system-interface = { path = "../system-interface", features = ["bincode"] }
 strum = { workspace = true }
 strum_macros = { workspace = true }
 

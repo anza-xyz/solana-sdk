@@ -2,7 +2,7 @@
 name = "solana-package-metadata-macro"
 description = "Solana Package Metadata Macro"
 documentation = "https://docs.rs/solana-package-metadata-macro"
-version = "2.2.1"
+version = "3.0.0"
 authors = { workspace = true }
 repository = { workspace = true }
 homepage = { workspace = true }

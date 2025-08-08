@@ -40,6 +40,7 @@ full = [
 borsh = ["solana-program/borsh"]
 dev-context-only-utils = [
     "solana-account/dev-context-only-utils",
+    "solana-program/dev-context-only-utils",
     "solana-transaction/dev-context-only-utils",
 ]
 frozen-abi = [

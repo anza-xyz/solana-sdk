@@ -331,10 +331,7 @@ macro_rules! address {
 
 #[cfg(test)]
 mod tests {
-    use {
-        super::*, core::str::from_utf8, num_traits::FromPrimitive, std::string::String,
-        strum::IntoEnumIterator,
-    };
+    use {super::*, core::str::from_utf8, std::string::String};
 
     fn encode_address(address: &[u8; 32]) -> String {
         let mut buffer = [0u8; 44];
@@ -587,29 +584,6 @@ mod tests {
             Err(AddressError::IllegalOwner)
         );
         assert!(address_from_seed_by_marker(&PDA_MARKER[1..]).is_ok());
-    }
-
-    #[test]
-    fn test_address_error_from_primitive_exhaustive() {
-        for variant in AddressError::iter() {
-            let variant_i64 = variant.clone() as i64;
-            assert_eq!(
-                AddressError::from_repr(variant_i64 as usize),
-                AddressError::from_i64(variant_i64)
-            );
-            assert_eq!(AddressError::from(variant_i64 as u64), variant);
-        }
-    }
-
-    #[test]
-    fn test_parse_address_error_from_primitive_exhaustive() {
-        for variant in ParseAddressError::iter() {
-            let variant_i64 = variant as i64;
-            assert_eq!(
-                ParseAddressError::from_repr(variant_i64 as usize),
-                ParseAddressError::from_i64(variant_i64)
-            );
-        }
     }
 
     #[test]
