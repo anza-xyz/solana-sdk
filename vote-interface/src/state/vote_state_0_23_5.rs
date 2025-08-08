@@ -82,7 +82,7 @@ mod tests {
         let test_vote_state = unsafe { test_vote_state.assume_init() };
 
         assert_eq!(
-            target_vote_state_versions.convert_to_current(),
+            target_vote_state_versions.try_convert_to_v3().unwrap(),
             test_vote_state
         );
 
@@ -98,7 +98,7 @@ mod tests {
                 VoteStateVersions::V0_23_5(Box::new(arbitrary_vote_state));
 
             let vote_state_buf = bincode::serialize(&target_vote_state_versions).unwrap();
-            let target_vote_state = target_vote_state_versions.convert_to_current();
+            let target_vote_state = target_vote_state_versions.try_convert_to_v3().unwrap();
 
             let mut test_vote_state = MaybeUninit::uninit();
             VoteStateV3::deserialize_into_uninit(&vote_state_buf, &mut test_vote_state).unwrap();
