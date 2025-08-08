@@ -128,7 +128,7 @@ pub use {
 };
 
 impl Sysvar for EpochSchedule {
-    impl_sysvar_get!(sol_get_epoch_schedule_sysvar);
+    impl_sysvar_get!();
 }
 
 #[cfg(feature = "bincode")]

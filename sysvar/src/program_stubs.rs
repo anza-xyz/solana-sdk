@@ -155,32 +155,6 @@ pub(crate) fn sol_get_sysvar(
         .sol_get_sysvar(sysvar_id_addr, var_addr, offset, length)
 }
 
-pub(crate) fn sol_get_clock_sysvar(var_addr: *mut u8) -> u64 {
-    SYSCALL_STUBS.read().unwrap().sol_get_clock_sysvar(var_addr)
-}
-
-pub(crate) fn sol_get_epoch_schedule_sysvar(var_addr: *mut u8) -> u64 {
-    SYSCALL_STUBS
-        .read()
-        .unwrap()
-        .sol_get_epoch_schedule_sysvar(var_addr)
-}
-
-pub(crate) fn sol_get_fees_sysvar(var_addr: *mut u8) -> u64 {
-    SYSCALL_STUBS.read().unwrap().sol_get_fees_sysvar(var_addr)
-}
-
-pub(crate) fn sol_get_rent_sysvar(var_addr: *mut u8) -> u64 {
-    SYSCALL_STUBS.read().unwrap().sol_get_rent_sysvar(var_addr)
-}
-
-pub(crate) fn sol_get_last_restart_slot(var_addr: *mut u8) -> u64 {
-    SYSCALL_STUBS
-        .read()
-        .unwrap()
-        .sol_get_last_restart_slot(var_addr)
-}
-
 pub fn sol_get_epoch_stake(vote_address: *const u8) -> u64 {
     SYSCALL_STUBS
         .read()
@@ -211,9 +185,6 @@ pub fn sol_get_stack_height() -> u64 {
     SYSCALL_STUBS.read().unwrap().sol_get_stack_height()
 }
 
-pub(crate) fn sol_get_epoch_rewards_sysvar(var_addr: *mut u8) -> u64 {
-    SYSCALL_STUBS
-        .read()
-        .unwrap()
-        .sol_get_epoch_rewards_sysvar(var_addr)
+pub(crate) fn sol_get_fees_sysvar(var_addr: *mut u8) -> u64 {
+    SYSCALL_STUBS.read().unwrap().sol_get_fees_sysvar(var_addr)
 }
