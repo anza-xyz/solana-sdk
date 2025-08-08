@@ -414,7 +414,7 @@ mod tests {
         VoteStateV3::serialize(&versioned, &mut buffer).unwrap();
         assert_eq!(
             VoteStateV3::deserialize(&buffer).unwrap(),
-            versioned.convert_to_v3()
+            versioned.try_convert_to_v3().unwrap()
         );
     }
 
@@ -440,7 +440,7 @@ mod tests {
             let target_vote_state_versions =
                 VoteStateVersions::arbitrary(&mut unstructured).unwrap();
             let vote_state_buf = bincode::serialize(&target_vote_state_versions).unwrap();
-            let target_vote_state = target_vote_state_versions.convert_to_v3();
+            let target_vote_state = target_vote_state_versions.try_convert_to_v3().unwrap();
 
             let mut test_vote_state = VoteStateV3::default();
             VoteStateV3::deserialize_into(&vote_state_buf, &mut test_vote_state).unwrap();
@@ -485,7 +485,7 @@ mod tests {
             let target_vote_state_versions =
                 VoteStateVersions::arbitrary(&mut unstructured).unwrap();
             let vote_state_buf = bincode::serialize(&target_vote_state_versions).unwrap();
-            let target_vote_state = target_vote_state_versions.convert_to_v3();
+            let target_vote_state = target_vote_state_versions.try_convert_to_v3().unwrap();
 
             let mut test_vote_state = MaybeUninit::uninit();
             VoteStateV3::deserialize_into_uninit(&vote_state_buf, &mut test_vote_state).unwrap();
@@ -523,7 +523,7 @@ mod tests {
             let mut test_vote_state = MaybeUninit::uninit();
             let test_res = VoteStateV3::deserialize_into_uninit(&raw_data, &mut test_vote_state);
             let bincode_res = bincode::deserialize::<VoteStateVersions>(&raw_data)
-                .map(|versioned| versioned.convert_to_v3());
+                .map(|versioned| versioned.try_convert_to_v3().unwrap());
 
             if test_res.is_err() {
                 assert!(bincode_res.is_err());
@@ -557,7 +557,7 @@ mod tests {
             let test_res =
                 VoteStateV3::deserialize_into_uninit(&truncated_buf, &mut test_vote_state);
             let bincode_res = bincode::deserialize::<VoteStateVersions>(&truncated_buf)
-                .map(|versioned| versioned.convert_to_v3());
+                .map(|versioned| versioned.try_convert_to_v3().unwrap());
 
             assert!(test_res.is_err());
             assert!(bincode_res.is_err());
@@ -566,7 +566,7 @@ mod tests {
             let mut test_vote_state = MaybeUninit::uninit();
             VoteStateV3::deserialize_into_uninit(&expanded_buf, &mut test_vote_state).unwrap();
             let bincode_res = bincode::deserialize::<VoteStateVersions>(&expanded_buf)
-                .map(|versioned| versioned.convert_to_v3());
+                .map(|versioned| versioned.try_convert_to_v3().unwrap());
 
             let test_vote_state = unsafe { test_vote_state.assume_init() };
             assert_eq!(test_vote_state, bincode_res.unwrap());
@@ -912,7 +912,7 @@ mod tests {
 
             let versioned = VoteStateVersions::new_v3(vote_state.take().unwrap());
             VoteStateV3::serialize(&versioned, &mut max_sized_data).unwrap();
-            vote_state = Some(versioned.convert_to_v3());
+            vote_state = Some(versioned.try_convert_to_v3().unwrap());
         }
     }
 

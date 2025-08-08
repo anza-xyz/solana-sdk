@@ -5,9 +5,10 @@ use {
         authorized_voters::AuthorizedVoters,
         state::{
             vote_state_0_23_5::VoteState0_23_5, vote_state_1_14_11::VoteState1_14_11, CircBuf,
-            LandedVote, Lockout, VoteStateV3,
+            LandedVote, Lockout, VoteStateV3, VoteStateV4,
         },
     },
+    solana_instruction::error::InstructionError,
     solana_pubkey::Pubkey,
     std::collections::VecDeque,
 };
@@ -21,6 +22,7 @@ pub enum VoteStateVersions {
     V0_23_5(Box<VoteState0_23_5>),
     V1_14_11(Box<VoteState1_14_11>),
     V3(Box<VoteStateV3>),
+    V4(Box<VoteStateV4>),
 }
 
 impl VoteStateVersions {
@@ -28,13 +30,17 @@ impl VoteStateVersions {
         Self::V3(Box::new(vote_state))
     }
 
-    pub fn convert_to_v3(self) -> VoteStateV3 {
+    /// Convert from vote state `V0_23_5`, `V1_14_11`, or `V3` to `V3`.
+    ///
+    /// NOTE: Does not support conversion from `V4`. Attempting to convert from
+    /// v4 to v3 will throw an error.
+    pub fn try_convert_to_v3(self) -> Result<VoteStateV3, InstructionError> {
         match self {
             VoteStateVersions::V0_23_5(state) => {
                 let authorized_voters =
                     AuthorizedVoters::new(state.authorized_voter_epoch, state.authorized_voter);
 
-                VoteStateV3 {
+                Ok(VoteStateV3 {
                     node_pubkey: state.node_pubkey,
 
                     authorized_withdrawer: state.authorized_withdrawer,
@@ -52,10 +58,10 @@ impl VoteStateVersions {
                     epoch_credits: state.epoch_credits.clone(),
 
                     last_timestamp: state.last_timestamp.clone(),
-                }
+                })
             }
 
-            VoteStateVersions::V1_14_11(state) => VoteStateV3 {
+            VoteStateVersions::V1_14_11(state) => Ok(VoteStateV3 {
                 node_pubkey: state.node_pubkey,
                 authorized_withdrawer: state.authorized_withdrawer,
                 commission: state.commission,
@@ -71,10 +77,77 @@ impl VoteStateVersions {
                 epoch_credits: state.epoch_credits,
 
                 last_timestamp: state.last_timestamp,
+            }),
+
+            VoteStateVersions::V3(state) => Ok(*state),
+
+            // Cannot convert V4 to V3.
+            VoteStateVersions::V4(_) => Err(InstructionError::InvalidArgument),
+        }
+    }
+
+    // Currently, all versions can be converted to v4 without data loss, so
+    // this function returns `Ok(..)`. However, future versions may not be
+    // convertible to v4 without data loss, so this function returns a `Result`
+    // for forward compatibility.
+    pub fn try_convert_to_v4(self, vote_pubkey: &Pubkey) -> Result<VoteStateV4, InstructionError> {
+        Ok(match self {
+            VoteStateVersions::V0_23_5(state) => {
+                let authorized_voters =
+                    AuthorizedVoters::new(state.authorized_voter_epoch, state.authorized_voter);
+
+                VoteStateV4 {
+                    node_pubkey: state.node_pubkey,
+                    authorized_withdrawer: state.authorized_withdrawer,
+                    inflation_rewards_collector: *vote_pubkey,
+                    block_revenue_collector: state.node_pubkey,
+                    inflation_rewards_commission_bps: u16::from(state.commission)
+                        .saturating_mul(100),
+                    block_revenue_commission_bps: 10_000u16,
+                    pending_delegator_rewards: 0,
+                    bls_pubkey_compressed: None,
+                    votes: Self::landed_votes_from_lockouts(state.votes),
+                    root_slot: state.root_slot,
+                    authorized_voters,
+                    epoch_credits: state.epoch_credits.clone(),
+                    last_timestamp: state.last_timestamp.clone(),
+                }
+            }
+
+            VoteStateVersions::V1_14_11(state) => VoteStateV4 {
+                node_pubkey: state.node_pubkey,
+                authorized_withdrawer: state.authorized_withdrawer,
+                inflation_rewards_collector: *vote_pubkey,
+                block_revenue_collector: state.node_pubkey,
+                inflation_rewards_commission_bps: u16::from(state.commission).saturating_mul(100),
+                block_revenue_commission_bps: 10_000u16,
+                pending_delegator_rewards: 0,
+                bls_pubkey_compressed: None,
+                votes: Self::landed_votes_from_lockouts(state.votes),
+                root_slot: state.root_slot,
+                authorized_voters: state.authorized_voters.clone(),
+                epoch_credits: state.epoch_credits,
+                last_timestamp: state.last_timestamp,
             },
 
-            VoteStateVersions::V3(state) => *state,
-        }
+            VoteStateVersions::V3(state) => VoteStateV4 {
+                node_pubkey: state.node_pubkey,
+                authorized_withdrawer: state.authorized_withdrawer,
+                inflation_rewards_collector: *vote_pubkey,
+                block_revenue_collector: state.node_pubkey,
+                inflation_rewards_commission_bps: u16::from(state.commission).saturating_mul(100),
+                block_revenue_commission_bps: 10_000u16,
+                pending_delegator_rewards: 0,
+                bls_pubkey_compressed: None,
+                votes: state.votes,
+                root_slot: state.root_slot,
+                authorized_voters: state.authorized_voters,
+                epoch_credits: state.epoch_credits,
+                last_timestamp: state.last_timestamp,
+            },
+
+            VoteStateVersions::V4(state) => *state,
+        })
     }
 
     fn landed_votes_from_lockouts(lockouts: VecDeque<Lockout>) -> VecDeque<LandedVote> {
@@ -90,6 +163,9 @@ impl VoteStateVersions {
             VoteStateVersions::V1_14_11(vote_state) => vote_state.authorized_voters.is_empty(),
 
             VoteStateVersions::V3(vote_state) => vote_state.authorized_voters.is_empty(),
+
+            // As per SIMD-0185, v4 is always initialized.
+            VoteStateVersions::V4(_) => false,
         }
     }
 
