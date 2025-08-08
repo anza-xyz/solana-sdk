@@ -139,9 +139,12 @@ pub fn serialize_v0(
     message: &[u8],
     data: &mut Vec<u8>,
 ) -> Result<(), SanitizeError> {
-    assert!(!message.is_empty());
-    assert!(!signers.is_empty() && signers.len() <= u8::MAX as usize);
-
+    if message.is_empty() {
+        return Err(SanitizeError::InvalidValue);
+    }
+    if signers.is_empty() || signers.len() > u8::MAX as usize {
+        return Err(SanitizeError::ValueOutOfBounds);
+    }
     let reserve_size = super::v0::OffchainMessage::HEADER_LEN
         .saturating_add(signers.len().saturating_mul(32))
         .saturating_add(message.len());
