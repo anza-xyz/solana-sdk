@@ -21,11 +21,11 @@ default = ["verify"]
 
 [dependencies]
 num_enum = { workspace = true }
-solana-serialize-utils = { version = "3.0.0", path = "../serialize-utils" }
 solana-hash = { workspace = true }
 solana-packet = { workspace = true }
 solana-pubkey = { workspace = true }
 solana-sanitize = { workspace = true }
+solana-serialize-utils = { version = "3.0.0", path = "../serialize-utils" }
 solana-sha256-hasher = { workspace = true, features = ["sha2"] }
 solana-signature = { workspace = true }
 solana-signer = { workspace = true }
