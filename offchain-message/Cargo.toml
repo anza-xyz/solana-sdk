@@ -16,13 +16,15 @@ rustdoc-args = ["--cfg=docsrs"]
 
 [features]
 dev-context-only-utils = ["verify"]
-verify = ["dep:solana-pubkey", "solana-signature/verify"]
+verify = ["solana-signature/verify"]
+default = ["verify"]
 
 [dependencies]
 num_enum = { workspace = true }
+solana-serialize-utils = { version = "3.0.0", path = "../serialize-utils" }
 solana-hash = { workspace = true }
 solana-packet = { workspace = true }
-solana-pubkey = { workspace = true, optional = true }
+solana-pubkey = { workspace = true }
 solana-sanitize = { workspace = true }
 solana-sha256-hasher = { workspace = true, features = ["sha2"] }
 solana-signature = { workspace = true }
