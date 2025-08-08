@@ -65,3 +65,16 @@ pub struct VoteStateV4 {
     /// Most recent timestamp submitted with a vote.
     pub last_timestamp: BlockTimestamp,
 }
+
+impl VoteStateV4 {
+    /// Upper limit on the size of the Vote State
+    /// when votes.len() is MAX_LOCKOUT_HISTORY.
+    pub const fn size_of() -> usize {
+        3762 // Same size as V3 to avoid account resizing
+    }
+
+    pub fn is_correct_size_and_initialized(data: &[u8]) -> bool {
+        data.len() == VoteStateV4::size_of() && data[..4] == [3, 0, 0, 0] // little-endian 3u32
+                                                                          // Always initialized
+    }
+}
