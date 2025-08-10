@@ -114,10 +114,6 @@ impl Envelope {
 
         let message_data = &data[offset..];
         let message = OffchainMessage::deserialize(message_data)?;
-        let message_signers = Self::message_signers(&message);
-        if signatures.len() != message_signers.len() {
-            return Err(SanitizeError::InvalidValue);
-        }
         let envelope = Self {
             signatures,
             message,
