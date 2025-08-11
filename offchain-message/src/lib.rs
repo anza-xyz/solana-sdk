@@ -20,9 +20,9 @@ static_assertions::const_assert_eq!(v0::OffchainMessage::MAX_LEN, 65482);
 static_assertions::const_assert_eq!(v0::OffchainMessage::MAX_LEN_LEDGER, 1179);
 
 /// Hardware-wallet safe limit (from spec: formats 0 and 1 are limited to 1232 bytes total)
-pub const PREAMBLE_AND_BODY_MAX_LEDGER: usize = 1232;
+pub const TOTAL_MAX_LEDGER: usize = 1232;
 /// Extended format hard limit (u16::MAX total message size)
-pub const PREAMBLE_AND_BODY_MAX_EXTENDED: usize = u16::MAX as usize;
+pub const TOTAL_MAX_EXTENDED: usize = u16::MAX as usize;
 
 #[repr(u8)]
 #[derive(Debug, PartialEq, Eq, Copy, Clone, TryFromPrimitive, IntoPrimitive)]

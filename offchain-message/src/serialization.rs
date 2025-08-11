@@ -1,7 +1,7 @@
 //! Serialization, deserialization, validation, and parsing logic for off-chain messages.
 
 use {
-    super::{MessageFormat, PREAMBLE_AND_BODY_MAX_EXTENDED, PREAMBLE_AND_BODY_MAX_LEDGER},
+    super::{MessageFormat, TOTAL_MAX_EXTENDED, TOTAL_MAX_LEDGER},
     crate::total_message_size,
     solana_sanitize::SanitizeError,
     solana_serialize_utils::{append_slice, append_u16, append_u8, read_slice, read_u16, read_u8},
@@ -10,11 +10,24 @@ use {
 /// Components of a v0 message: (application_domain, format, signers, message)
 pub type V0MessageComponents = ([u8; 32], MessageFormat, Vec<[u8; 32]>, Vec<u8>);
 
+pub(crate) fn reject_zero_pubkey_in_multi_signer(
+    signers: &[[u8; 32]],
+) -> Result<(), SanitizeError> {
+    if signers.len() > 1 && signers.iter().any(|s| s == &[0u8; 32]) {
+        return Err(SanitizeError::InvalidValue);
+    }
+    Ok(())
+}
+
 /// Validate message components
-pub fn validate_components(signers: &[[u8; 32]], message: &[u8]) -> Result<(), SanitizeError> {
+pub(crate) fn validate_components(
+    signers: &[[u8; 32]],
+    message: &[u8],
+) -> Result<(), SanitizeError> {
     if signers.is_empty() || signers.len() > u8::MAX as usize {
         return Err(SanitizeError::ValueOutOfBounds);
     }
+    reject_zero_pubkey_in_multi_signer(signers)?;
     if message.is_empty() {
         return Err(SanitizeError::InvalidValue);
     }
@@ -22,8 +35,11 @@ pub fn validate_components(signers: &[[u8; 32]], message: &[u8]) -> Result<(), S
 }
 
 /// Detect appropriate message format based on size and content
-pub fn detect_format(total_size: usize, message: &[u8]) -> Result<MessageFormat, SanitizeError> {
-    if total_size <= PREAMBLE_AND_BODY_MAX_LEDGER {
+pub(crate) fn detect_format(
+    total_size: usize,
+    message: &[u8],
+) -> Result<MessageFormat, SanitizeError> {
+    if total_size <= TOTAL_MAX_LEDGER {
         if super::is_printable_ascii(message) {
             Ok(MessageFormat::RestrictedAscii)
         } else if super::is_utf8(message) {
@@ -31,7 +47,7 @@ pub fn detect_format(total_size: usize, message: &[u8]) -> Result<MessageFormat,
         } else {
             Err(SanitizeError::InvalidValue)
         }
-    } else if total_size <= PREAMBLE_AND_BODY_MAX_EXTENDED {
+    } else if total_size <= TOTAL_MAX_EXTENDED {
         if super::is_utf8(message) {
             Ok(MessageFormat::ExtendedUtf8)
         } else {
@@ -43,7 +59,7 @@ pub fn detect_format(total_size: usize, message: &[u8]) -> Result<MessageFormat,
 }
 
 /// Parse application domain from data at given offset.
-pub fn parse_application_domain(
+pub(crate) fn parse_application_domain(
     data: &[u8],
     offset: &mut usize,
 ) -> Result<[u8; 32], SanitizeError> {
@@ -54,7 +70,7 @@ pub fn parse_application_domain(
 }
 
 /// Parse message format from data at given offset.
-pub fn parse_message_format(
+pub(crate) fn parse_message_format(
     data: &[u8],
     offset: &mut usize,
 ) -> Result<MessageFormat, SanitizeError> {
@@ -63,7 +79,7 @@ pub fn parse_message_format(
 }
 
 /// Parse signer count from data at given offset.
-pub fn parse_signer_count(data: &[u8], offset: &mut usize) -> Result<usize, SanitizeError> {
+pub(crate) fn parse_signer_count(data: &[u8], offset: &mut usize) -> Result<usize, SanitizeError> {
     let signer_count = read_u8(offset, data).map_err(|_| SanitizeError::ValueOutOfBounds)? as usize;
     if signer_count == 0 {
         return Err(SanitizeError::InvalidValue);
@@ -72,7 +88,7 @@ pub fn parse_signer_count(data: &[u8], offset: &mut usize) -> Result<usize, Sani
 }
 
 /// Parse signers from data at given offset.
-pub fn parse_signers(
+pub(crate) fn parse_signers(
     data: &[u8],
     offset: &mut usize,
     signer_count: usize,
@@ -89,7 +105,10 @@ pub fn parse_signers(
 }
 
 /// Parse message length from data at given offset.
-pub fn parse_message_length(data: &[u8], offset: &mut usize) -> Result<usize, SanitizeError> {
+pub(crate) fn parse_message_length(
+    data: &[u8],
+    offset: &mut usize,
+) -> Result<usize, SanitizeError> {
     let message_len = read_u16(offset, data).map_err(|_| SanitizeError::ValueOutOfBounds)? as usize;
     if message_len == 0 {
         return Err(SanitizeError::InvalidValue);
@@ -98,7 +117,7 @@ pub fn parse_message_length(data: &[u8], offset: &mut usize) -> Result<usize, Sa
 }
 
 /// Parse message body from data at given offset.
-pub fn parse_message_body(
+pub(crate) fn parse_message_body(
     data: &[u8],
     offset: &mut usize,
     expected_len: usize,
@@ -110,41 +129,15 @@ pub fn parse_message_body(
     read_slice(offset, data, expected_len).map_err(|_| SanitizeError::ValueOutOfBounds)
 }
 
-/// Validate format constraints against parsed data.
-pub fn validate_format_constraints(
-    format: MessageFormat,
-    total_size: usize,
-    message: &[u8],
-) -> Result<(), SanitizeError> {
-    let is_valid = match format {
-        MessageFormat::RestrictedAscii => {
-            total_size <= PREAMBLE_AND_BODY_MAX_LEDGER && super::is_printable_ascii(message)
-        }
-        MessageFormat::LimitedUtf8 => {
-            total_size <= PREAMBLE_AND_BODY_MAX_LEDGER && super::is_utf8(message)
-        }
-        MessageFormat::ExtendedUtf8 => {
-            total_size <= PREAMBLE_AND_BODY_MAX_EXTENDED && super::is_utf8(message)
-        }
-    };
-
-    is_valid.then_some(()).ok_or(SanitizeError::InvalidValue)
-}
-
 /// Serialize a v0 message to bytes, including the full header.
-pub fn serialize_v0(
+pub(crate) fn serialize_v0(
     application_domain: &[u8; 32],
     format: MessageFormat,
     signers: &[[u8; 32]],
     message: &[u8],
     data: &mut Vec<u8>,
 ) -> Result<(), SanitizeError> {
-    if message.is_empty() {
-        return Err(SanitizeError::InvalidValue);
-    }
-    if signers.is_empty() || signers.len() > u8::MAX as usize {
-        return Err(SanitizeError::ValueOutOfBounds);
-    }
+    validate_components(signers, message)?;
     let reserve_size = super::v0::OffchainMessage::PREAMBLE_LEN
         .saturating_add(signers.len().saturating_mul(32))
         .saturating_add(message.len());
@@ -162,7 +155,7 @@ pub fn serialize_v0(
 }
 
 /// Deserialize a v0 message from bytes that include a full header.
-pub fn deserialize_v0(data: &[u8]) -> Result<V0MessageComponents, SanitizeError> {
+pub(crate) fn deserialize_v0(data: &[u8]) -> Result<V0MessageComponents, SanitizeError> {
     if data.len() < super::v0::OffchainMessage::PREAMBLE_LEN {
         return Err(SanitizeError::ValueOutOfBounds);
     }
@@ -172,17 +165,21 @@ pub fn deserialize_v0(data: &[u8]) -> Result<V0MessageComponents, SanitizeError>
     let format = parse_message_format(data, &mut offset)?;
     let signer_count = parse_signer_count(data, &mut offset)?;
     let signers = parse_signers(data, &mut offset, signer_count)?;
+    reject_zero_pubkey_in_multi_signer(&signers)?;
     let message_len = parse_message_length(data, &mut offset)?;
     let message = parse_message_body(data, &mut offset, message_len)?;
 
     let total_size = total_message_size(signers.len(), message_len);
-    validate_format_constraints(format, total_size, &message)?;
+    let expected_format = detect_format(total_size, &message)?;
+    if expected_format != format {
+        return Err(SanitizeError::InvalidValue);
+    }
 
     Ok((application_domain, format, signers, message))
 }
 
 /// Construct a new v0 message with validation.
-pub fn new_v0_with_params(
+pub(crate) fn new_v0_with_params(
     application_domain: [u8; 32],
     signers: &[[u8; 32]],
     message: &[u8],
@@ -231,7 +228,7 @@ mod tests {
             Ok(MessageFormat::LimitedUtf8)
         );
         assert_eq!(
-            detect_format(PREAMBLE_AND_BODY_MAX_LEDGER + 100, b"Hello World!"),
+            detect_format(TOTAL_MAX_LEDGER + 100, b"Hello World!"),
             Ok(MessageFormat::ExtendedUtf8)
         );
         assert_eq!(
@@ -239,7 +236,7 @@ mod tests {
             Err(SanitizeError::InvalidValue)
         );
         assert_eq!(
-            detect_format(PREAMBLE_AND_BODY_MAX_EXTENDED + 1, b"Hello"),
+            detect_format(TOTAL_MAX_EXTENDED + 1, b"Hello"),
             Err(SanitizeError::ValueOutOfBounds)
         );
     }
