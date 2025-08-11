@@ -67,7 +67,7 @@ pub(crate) mod v0 {
 
     #[inline]
     pub(crate) const fn preamble_and_body_size(signer_count: usize, message_len: usize) -> usize {
-        V0OffchainMessage::PREAMBLE_LEN
+        V0OffchainMessage::HEADER_LEN
             .saturating_add(signer_count.saturating_mul(32))
             .saturating_add(message_len)
     }
@@ -152,7 +152,7 @@ pub(crate) mod v0 {
         data: &mut Vec<u8>,
     ) -> Result<(), SanitizeError> {
         serialization::validate_components(signers, message)?;
-        let reserve_size = V0OffchainMessage::PREAMBLE_LEN
+        let reserve_size = V0OffchainMessage::HEADER_LEN
             .saturating_add(signers.len().saturating_mul(32))
             .saturating_add(message.len());
         data.reserve(reserve_size);
@@ -170,7 +170,7 @@ pub(crate) mod v0 {
 
     /// Deserialize the v0 preamble+body (expects no signing domain).
     pub(crate) fn deserialize(data: &[u8]) -> Result<V0MessageComponents, SanitizeError> {
-        if data.len() < V0OffchainMessage::PREAMBLE_LEN {
+        if data.len() < V0OffchainMessage::HEADER_LEN {
             return Err(SanitizeError::ValueOutOfBounds);
         }
 

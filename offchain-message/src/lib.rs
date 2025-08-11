@@ -62,9 +62,9 @@ pub mod v0 {
     }
 
     impl OffchainMessage {
-        pub const PREAMBLE_LEN: usize = 36;
-        pub const MAX_LEN: usize = u16::MAX as usize - Base::HEADER_LEN - Self::PREAMBLE_LEN;
-        pub const MAX_LEN_LEDGER: usize = PACKET_DATA_SIZE - Base::HEADER_LEN - Self::PREAMBLE_LEN;
+        pub const HEADER_LEN: usize = 36;
+        pub const MAX_LEN: usize = u16::MAX as usize - Base::HEADER_LEN - Self::HEADER_LEN;
+        pub const MAX_LEN_LEDGER: usize = PACKET_DATA_SIZE - Base::HEADER_LEN - Self::HEADER_LEN;
 
         /// Compute the SHA256 hash of the serialized off-chain message
         pub fn hash(serialized_message: &[u8]) -> Result<Hash, SanitizeError> {
