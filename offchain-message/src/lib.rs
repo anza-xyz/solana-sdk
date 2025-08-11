@@ -1,4 +1,7 @@
 //! Off-chain message container for non-transaction messages.
+//! Follows the format from the specification at:
+//! <https://github.com/anza-xyz/agave/blob/master/docs/src/proposals/off-chain-message-signing.md>.
+
 #![cfg_attr(docsrs, feature(doc_auto_cfg))]
 use {
     num_enum::{IntoPrimitive, TryFromPrimitive},
@@ -10,12 +13,24 @@ use {
 
 pub mod serialization;
 
-#[cfg(test)]
-static_assertions::const_assert_eq!(OffchainMessage::HEADER_LEN, 17);
+// Assertions to prevent accidental drift
 #[cfg(test)]
 static_assertions::const_assert_eq!(v0::OffchainMessage::MAX_LEN, 65482);
 #[cfg(test)]
 static_assertions::const_assert_eq!(v0::OffchainMessage::MAX_LEN_LEDGER, 1179);
+
+/// Hardware-wallet safe limit (from spec: formats 0 and 1 are limited to 1232 bytes total)
+pub const PREAMBLE_AND_BODY_MAX_LEDGER: usize = 1232;
+/// Extended format hard limit (u16::MAX total message size)
+pub const PREAMBLE_AND_BODY_MAX_EXTENDED: usize = u16::MAX as usize;
+
+#[repr(u8)]
+#[derive(Debug, PartialEq, Eq, Copy, Clone, TryFromPrimitive, IntoPrimitive)]
+pub enum MessageFormat {
+    RestrictedAscii,
+    LimitedUtf8,
+    ExtendedUtf8,
+}
 
 /// Check if given bytes contain only printable ASCII characters
 pub fn is_printable_ascii(data: &[u8]) -> bool {
@@ -27,25 +42,12 @@ pub fn is_utf8(data: &[u8]) -> bool {
     std::str::from_utf8(data).is_ok()
 }
 
-/// Hardware-wallet safe limit (from spec: formats 0 and 1 are limited to 1232 bytes total)
-pub const PREAMBLE_AND_BODY_MAX_LEDGER: usize = 1232;
-
-/// Extended format hard limit (u16::MAX total message size)
-pub const PREAMBLE_AND_BODY_MAX_EXTENDED: usize = u16::MAX as usize;
 pub const fn total_message_size(signer_count: usize, message_len: usize) -> usize {
     OffchainMessage::SIGNING_DOMAIN
         .len()
         .saturating_add(37) // version + app_domain + format + signer_count + msg_len
         .saturating_add(signer_count.saturating_mul(32))
         .saturating_add(message_len)
-}
-
-#[repr(u8)]
-#[derive(Debug, PartialEq, Eq, Copy, Clone, TryFromPrimitive, IntoPrimitive)]
-pub enum MessageFormat {
-    RestrictedAscii,
-    LimitedUtf8,
-    ExtendedUtf8,
 }
 
 #[allow(clippy::arithmetic_side_effects)]
@@ -67,9 +69,9 @@ pub mod v0 {
     }
 
     impl OffchainMessage {
-        pub const HEADER_LEN: usize = 36;
-        pub const MAX_LEN: usize = u16::MAX as usize - Base::HEADER_LEN - Self::HEADER_LEN;
-        pub const MAX_LEN_LEDGER: usize = PACKET_DATA_SIZE - Base::HEADER_LEN - Self::HEADER_LEN;
+        pub const PREAMBLE_LEN: usize = 36;
+        pub const MAX_LEN: usize = u16::MAX as usize - Base::HEADER_LEN - Self::PREAMBLE_LEN;
+        pub const MAX_LEN_LEDGER: usize = PACKET_DATA_SIZE - Base::HEADER_LEN - Self::PREAMBLE_LEN;
 
         /// Construct a new OffchainMessage object from the given message
         #[deprecated(
@@ -136,7 +138,7 @@ pub enum OffchainMessage {
 
 impl OffchainMessage {
     pub const SIGNING_DOMAIN: &'static [u8] = b"\xffsolana offchain";
-    // Header Length = Signing Domain (16) + Header Version (1)
+    // Header length = Signing Domain (16) + Header Version (1)
     pub const HEADER_LEN: usize = Self::SIGNING_DOMAIN.len() + 1;
 
     /// Construct a new OffchainMessage object from the given version and message.
@@ -154,7 +156,6 @@ impl OffchainMessage {
 
     /// Construct a new single-signer OffchainMessage with custom application domain.
     /// The actual signer will be determined when `sign()` is called.
-    /// For multi-signer scenarios, use `Envelope` instead.
     pub fn new_with_domain(
         version: u8,
         application_domain: [u8; 32],

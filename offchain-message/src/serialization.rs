@@ -145,7 +145,7 @@ pub fn serialize_v0(
     if signers.is_empty() || signers.len() > u8::MAX as usize {
         return Err(SanitizeError::ValueOutOfBounds);
     }
-    let reserve_size = super::v0::OffchainMessage::HEADER_LEN
+    let reserve_size = super::v0::OffchainMessage::PREAMBLE_LEN
         .saturating_add(signers.len().saturating_mul(32))
         .saturating_add(message.len());
     data.reserve(reserve_size);
@@ -163,7 +163,7 @@ pub fn serialize_v0(
 
 /// Deserialize a v0 message from bytes that include a full header.
 pub fn deserialize_v0(data: &[u8]) -> Result<V0MessageComponents, SanitizeError> {
-    if data.len() < super::v0::OffchainMessage::HEADER_LEN {
+    if data.len() < super::v0::OffchainMessage::PREAMBLE_LEN {
         return Err(SanitizeError::ValueOutOfBounds);
     }
 
