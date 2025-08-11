@@ -168,8 +168,8 @@ impl OffchainMessage {
     /// Construct a new OffchainMessage object with all parameters from the spec
     ///
     /// # Usage Patterns:
-    /// - **Single-signer with custom domain**: Pass `&[[0u8; 32]]` for signers,
-    ///   actual signer will be filled in when `sign()` is called
+    /// - **Single-signer with custom domain**: You may pass`&[[0u8; 32]]` for signers,
+    ///   in which case actual signer will be filled in when `sign()` is called
     /// - **Multi-signer predefined**: Pass real signer pubkeys, all signers must provide signatures
     pub fn new_with_params(
         version: u8,
@@ -228,12 +228,6 @@ impl OffchainMessage {
         }
     }
 
-    pub fn get_version(&self) -> u8 {
-        match self {
-            Self::V0(_) => 0,
-        }
-    }
-
     /// Sign the message with provided keypair.
     /// If message was created with dummy signer, update it with actual signer.
     /// For spec compliance, verify signer matches expected pubkey in message.
@@ -263,12 +257,8 @@ impl OffchainMessage {
         let (application_domain, message) = match original {
             Self::V0(msg) => (msg.application_domain, &msg.message),
         };
-        let proper_message = Self::new_with_params(
-            original.get_version(),
-            application_domain,
-            &[signer_pubkey],
-            message,
-        )?;
+        let proper_message =
+            Self::new_with_params(0, application_domain, &[signer_pubkey], message)?;
         Ok(signer.sign_message(&proper_message.serialize()?))
     }
 
@@ -302,7 +292,6 @@ mod tests {
     fn test_offchain_message_ascii() {
         #[allow(deprecated)]
         let message = OffchainMessage::new(0, b"Test Message").unwrap();
-        assert_eq!(message.get_version(), 0);
         assert!(
             matches!(message, OffchainMessage::V0(ref msg) if msg.format == MessageFormat::RestrictedAscii)
         );
@@ -313,7 +302,6 @@ mod tests {
     fn test_offchain_message_utf8() {
         #[allow(deprecated)]
         let message = OffchainMessage::new(0, "Тестовое сообщение".as_bytes()).unwrap();
-        assert_eq!(message.get_version(), 0);
         assert!(
             matches!(message, OffchainMessage::V0(ref msg) if msg.format == MessageFormat::LimitedUtf8)
         );
@@ -335,7 +323,6 @@ mod tests {
         #[allow(deprecated)]
         let message = OffchainMessage::new(0, message_text.as_bytes()).unwrap();
         let signature = message.sign(&keypair).unwrap();
-        assert_eq!(message.get_version(), 0);
         assert!(
             matches!(message, OffchainMessage::V0(ref msg) if msg.message == message_text.as_bytes())
         );
