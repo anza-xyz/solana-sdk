@@ -1,6 +1,6 @@
 [package]
 name = "spl-pod"
-version = "0.6.0"
+version = "0.7.0"
 description = "Solana Program Library Plain Old Data (Pod)"
 authors = ["Anza Maintainers <maintainers@anza.xyz>"]
 repository = "https://github.com/solana-program/libraries"
