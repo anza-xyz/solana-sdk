@@ -302,7 +302,7 @@ solana-system-transaction = { path = "system-transaction", version = "2.2.1" }
 solana-sysvar = { path = "sysvar", version = "3.0.0" }
 solana-sysvar-id = { path = "sysvar-id", version = "3.0.0" }
 solana-time-utils = { path = "time-utils", version = "3.0.0" }
-solana-transaction = { path = "transaction", version = "2.2.1" }
+solana-transaction = { path = "transaction", version = "3.0.0" }
 solana-transaction-error = { path = "transaction-error", version = "3.0.0" }
 solana-validator-exit = { path = "validator-exit", version = "3.0.0" }
 solana-vote-interface = { path = "vote-interface", version = "2.2.1" }
