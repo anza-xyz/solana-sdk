@@ -7,6 +7,7 @@ use {
     num_enum::{IntoPrimitive, TryFromPrimitive},
     solana_hash::Hash,
     solana_sanitize::SanitizeError,
+    solana_sha256_hasher::Hasher,
     solana_signature::Signature,
     solana_signer::Signer,
 };
@@ -54,10 +55,8 @@ pub const fn total_message_size(signer_count: usize, message_len: usize) -> usiz
 pub mod v0 {
     use {
         super::{MessageFormat, OffchainMessage as Base},
-        solana_hash::Hash,
         solana_packet::PACKET_DATA_SIZE,
         solana_sanitize::SanitizeError,
-        solana_sha256_hasher::Hasher,
     };
 
     #[derive(Debug, PartialEq, Eq, Clone)]
@@ -79,14 +78,7 @@ pub mod v0 {
             signers: &[[u8; 32]],
             message: &[u8],
         ) -> Result<Self, SanitizeError> {
-            let (application_domain, format, signers, message) =
-                serialization::new_with_params(application_domain, signers, message)?;
-            Ok(Self {
-                application_domain,
-                format,
-                signers,
-                message,
-            })
+            serialization::new_with_params(application_domain, signers, message).map(Into::into)
         }
 
         /// Serialize the message to bytes, including the full header.
@@ -99,23 +91,17 @@ pub mod v0 {
                 data,
             )
         }
+    }
 
-        /// Deserialize the message from bytes that include a full header.
-        pub(crate) fn deserialize(data: &[u8]) -> Result<Self, SanitizeError> {
-            let (application_domain, format, signers, message) = serialization::deserialize(data)?;
-            Ok(Self {
+    impl From<crate::serialization::V0MessageComponents> for OffchainMessage {
+        fn from(components: crate::serialization::V0MessageComponents) -> Self {
+            let (application_domain, format, signers, message) = components;
+            Self {
                 application_domain,
                 format,
                 signers,
                 message,
-            })
-        }
-
-        /// Compute the SHA256 hash of the serialized off-chain message.
-        pub(crate) fn hash(serialized_message: &[u8]) -> Result<Hash, SanitizeError> {
-            let mut hasher = Hasher::default();
-            hasher.hash(serialized_message);
-            Ok(hasher.result())
+            }
         }
     }
 
@@ -205,16 +191,19 @@ impl OffchainMessage {
             .get(domain_len.saturating_add(1)..)
             .ok_or(SanitizeError::ValueOutOfBounds)?;
         match version {
-            0 => Ok(Self::V0(v0::OffchainMessage::deserialize(payload)?)),
+            0 => {
+                let components = crate::serialization::v0::deserialize(payload)?;
+                Ok(Self::V0(components.into()))
+            }
             _ => Err(SanitizeError::ValueOutOfBounds),
         }
     }
 
     /// Compute the hash of the off-chain message.
     pub fn hash(&self) -> Result<Hash, SanitizeError> {
-        match self {
-            Self::V0(_) => v0::OffchainMessage::hash(&self.serialize()?),
-        }
+        let mut hasher = Hasher::default();
+        hasher.hash(&self.serialize()?);
+        Ok(hasher.result())
     }
 
     /// Sign the message with provided keypair.
@@ -225,42 +214,18 @@ impl OffchainMessage {
         let message_signers = match self {
             Self::V0(msg) => &msg.signers,
         };
-        if Self::is_single_dummy_signer_message(message_signers) {
-            return Self::sign_with_rebuilt_message(self, signer, signer_pubkey);
+        if message_signers.len() == 1 && message_signers[0] == [0u8; 32] {
+            let (application_domain, message) = match self {
+                Self::V0(msg) => (msg.application_domain, &msg.message),
+            };
+            let rebuilt_message =
+                Self::new_with_params(0, application_domain, &[signer_pubkey], message)?;
+            return Ok(signer.sign_message(&rebuilt_message.serialize()?));
         }
-        Self::verify_signer_authorized(message_signers, &signer_pubkey)?;
+        if !message_signers.contains(&signer_pubkey) {
+            return Err(SanitizeError::InvalidValue);
+        }
         Ok(signer.sign_message(&self.serialize()?))
-    }
-
-    /// Check if message has single dummy/default signer.
-    fn is_single_dummy_signer_message(signers: &[[u8; 32]]) -> bool {
-        signers.len() == 1 && signers[0] == [0u8; 32]
-    }
-
-    /// Create proper message with actual signer and sign it.
-    fn sign_with_rebuilt_message(
-        original: &Self,
-        signer: &dyn Signer,
-        signer_pubkey: [u8; 32],
-    ) -> Result<Signature, SanitizeError> {
-        let (application_domain, message) = match original {
-            Self::V0(msg) => (msg.application_domain, &msg.message),
-        };
-        let proper_message =
-            Self::new_with_params(0, application_domain, &[signer_pubkey], message)?;
-        Ok(signer.sign_message(&proper_message.serialize()?))
-    }
-
-    /// Verify that the signer is authorized to sign this message.
-    fn verify_signer_authorized(
-        message_signers: &[[u8; 32]],
-        signer_pubkey: &[u8; 32],
-    ) -> Result<(), SanitizeError> {
-        if message_signers.contains(signer_pubkey) {
-            Ok(())
-        } else {
-            Err(SanitizeError::InvalidValue)
-        }
     }
 
     /// Verify that the message signature is valid for the given public key.
