@@ -7,7 +7,6 @@ use {
     num_enum::{IntoPrimitive, TryFromPrimitive},
     solana_hash::Hash,
     solana_sanitize::SanitizeError,
-    solana_sha256_hasher::Hasher,
     solana_signature::Signature,
     solana_signer::Signer,
 };
@@ -48,7 +47,10 @@ pub mod v0 {
     use {
         super::{MessageFormat, OffchainMessage as Base},
         crate::v0::serialization::V0MessageComponents,
+        solana_hash::Hash,
         solana_packet::PACKET_DATA_SIZE,
+        solana_sanitize::SanitizeError,
+        solana_sha256_hasher::Hasher,
     };
 
     #[derive(Debug, PartialEq, Eq, Clone)]
@@ -64,11 +66,18 @@ pub mod v0 {
         pub const MAX_LEN: usize = u16::MAX as usize - Base::HEADER_LEN - Self::PREAMBLE_LEN;
         pub const MAX_LEN_LEDGER: usize = PACKET_DATA_SIZE - Base::HEADER_LEN - Self::PREAMBLE_LEN;
 
+        /// Compute the SHA256 hash of the serialized off-chain message
+        pub fn hash(serialized_message: &[u8]) -> Result<Hash, SanitizeError> {
+            let mut hasher = Hasher::default();
+            hasher.hash(serialized_message);
+            Ok(hasher.result())
+        }
+
         pub fn get_format(&self) -> MessageFormat {
             self.format
         }
 
-        pub fn get_message(&self) -> &[u8] {
+        pub fn get_message(&self) -> &Vec<u8> {
             &self.message
         }
     }
@@ -96,10 +105,10 @@ pub enum OffchainMessage {
 
 impl OffchainMessage {
     pub const SIGNING_DOMAIN: &'static [u8] = b"\xffsolana offchain";
-    // Header length = Signing Domain (16) + Header Version (1)
+    // Header Length = Signing Domain (16) + Header Version (1)
     pub const HEADER_LEN: usize = Self::SIGNING_DOMAIN.len() + 1;
 
-    /// Construct a new OffchainMessage object from the given version and message.
+    /// Construct a new OffchainMessage object from the given version and message
     #[deprecated(
         since = "3.0.0",
         note = "Use `new_with_domain` or `new_with_params` instead"
@@ -133,16 +142,14 @@ impl OffchainMessage {
         message: &[u8],
     ) -> Result<Self, SanitizeError> {
         match version {
-            0 => {
-                let components =
-                    v0::serialization::new_with_params(application_domain, signers, message)?;
-                Ok(Self::V0(components.into()))
-            }
+            0 => Ok(Self::V0(
+                v0::serialization::new_with_params(application_domain, signers, message)?.into(),
+            )),
             _ => Err(SanitizeError::ValueOutOfBounds),
         }
     }
 
-    /// Serialize the off-chain message to bytes including full header.
+    /// Serialize the off-chain message to bytes including full header
     pub fn serialize(&self) -> Result<Vec<u8>, SanitizeError> {
         let mut data = Self::SIGNING_DOMAIN.to_vec();
         match self {
@@ -160,8 +167,7 @@ impl OffchainMessage {
         Ok(data)
     }
 
-    /// Deserialize the off-chain message from bytes that include full header.
-    /// Fails if data does not start with the signing domain.
+    /// Deserialize the off-chain message from bytes that include full header
     pub fn deserialize(data: &[u8]) -> Result<Self, SanitizeError> {
         let domain_len = Self::SIGNING_DOMAIN.len();
         match data.get(..domain_len) {
@@ -177,22 +183,37 @@ impl OffchainMessage {
             .get(domain_len.saturating_add(1)..)
             .ok_or(SanitizeError::ValueOutOfBounds)?;
         match version {
-            0 => {
-                let components = v0::serialization::deserialize(payload)?;
-                Ok(Self::V0(components.into()))
-            }
+            0 => Ok(Self::V0(v0::serialization::deserialize(payload)?.into())),
             _ => Err(SanitizeError::ValueOutOfBounds),
         }
     }
 
-    /// Compute the hash of the off-chain message.
+    /// Compute the hash of the off-chain message
     pub fn hash(&self) -> Result<Hash, SanitizeError> {
-        let mut hasher = Hasher::default();
-        hasher.hash(&self.serialize()?);
-        Ok(hasher.result())
+        match self {
+            Self::V0(_) => v0::OffchainMessage::hash(&self.serialize()?),
+        }
     }
 
-    /// Sign the message with provided keypair.
+    pub fn get_version(&self) -> u8 {
+        match self {
+            Self::V0(_) => 0,
+        }
+    }
+
+    pub fn get_format(&self) -> MessageFormat {
+        match self {
+            Self::V0(msg) => msg.get_format(),
+        }
+    }
+
+    pub fn get_message(&self) -> &Vec<u8> {
+        match self {
+            Self::V0(msg) => msg.get_message(),
+        }
+    }
+
+    /// Sign the message with provided keypair
     /// If message was created with dummy signer, update it with actual signer.
     /// For spec compliance, verify signer matches expected pubkey in message.
     pub fn sign(&self, signer: &dyn Signer) -> Result<Signature, SanitizeError> {
@@ -214,7 +235,7 @@ impl OffchainMessage {
         Ok(signer.sign_message(&self.serialize()?))
     }
 
-    /// Verify that the message signature is valid for the given public key.
+    /// Verify that the message signature is valid for the given public key
     pub fn verify(
         &self,
         signer: &solana_pubkey::Pubkey,
@@ -233,21 +254,20 @@ mod tests {
         #[allow(deprecated)]
         let message = OffchainMessage::new(0, b"Test Message").unwrap();
         assert!(
-            matches!(message, OffchainMessage::V0(ref msg) if msg.format == MessageFormat::RestrictedAscii)
+            matches!(message, OffchainMessage::V0(ref msg) if msg.get_format() == MessageFormat::RestrictedAscii)
         );
-        assert!(matches!(message, OffchainMessage::V0(ref msg) if msg.message == b"Test Message"));
+        assert!(
+            matches!(message, OffchainMessage::V0(ref msg) if msg.get_message() == b"Test Message")
+        );
     }
 
     #[test]
     fn test_offchain_message_utf8() {
         #[allow(deprecated)]
         let message = OffchainMessage::new(0, "Тестовое сообщение".as_bytes()).unwrap();
-        assert!(
-            matches!(message, OffchainMessage::V0(ref msg) if msg.format == MessageFormat::LimitedUtf8)
-        );
-        assert!(
-            matches!(message, OffchainMessage::V0(ref msg) if msg.message == "Тестовое сообщение".as_bytes())
-        );
+        assert_eq!(message.get_version(), 0);
+        assert_eq!(message.get_format(), MessageFormat::LimitedUtf8);
+        assert_eq!(message.get_message(), "Тестовое сообщение".as_bytes());
         let hash = message.hash().unwrap();
         assert_eq!(
             hash.to_string(),
