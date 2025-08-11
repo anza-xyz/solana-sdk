@@ -63,6 +63,14 @@ pub mod v0 {
         pub const PREAMBLE_LEN: usize = 36;
         pub const MAX_LEN: usize = u16::MAX as usize - Base::HEADER_LEN - Self::PREAMBLE_LEN;
         pub const MAX_LEN_LEDGER: usize = PACKET_DATA_SIZE - Base::HEADER_LEN - Self::PREAMBLE_LEN;
+
+        pub fn get_format(&self) -> MessageFormat {
+            self.format
+        }
+
+        pub fn get_message(&self) -> &[u8] {
+            &self.message
+        }
     }
 
     impl From<V0MessageComponents> for OffchainMessage {
