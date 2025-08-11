@@ -22,8 +22,8 @@ solana-sdk-wasm-js = { workspace = true }
 solana-system-interface = { workspace = true, features = ["bincode"] }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
-js-sys = "0.3.72"
-wasm-bindgen = "0.2"
+js-sys = { workspace = true }
+wasm-bindgen = { workspace = true }
 
 [lints]
 workspace = true
