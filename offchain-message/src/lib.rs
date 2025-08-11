@@ -47,6 +47,7 @@ pub fn is_utf8(data: &[u8]) -> bool {
 pub mod v0 {
     use {
         super::{MessageFormat, OffchainMessage as Base},
+        crate::v0::serialization::V0MessageComponents,
         solana_packet::PACKET_DATA_SIZE,
     };
 
@@ -64,8 +65,8 @@ pub mod v0 {
         pub const MAX_LEN_LEDGER: usize = PACKET_DATA_SIZE - Base::HEADER_LEN - Self::PREAMBLE_LEN;
     }
 
-    impl From<crate::serialization::V0MessageComponents> for OffchainMessage {
-        fn from(components: crate::serialization::V0MessageComponents) -> Self {
+    impl From<V0MessageComponents> for OffchainMessage {
+        fn from(components: V0MessageComponents) -> Self {
             let (application_domain, format, signers, message) = components;
             Self {
                 application_domain,

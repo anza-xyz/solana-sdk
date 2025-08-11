@@ -5,9 +5,6 @@ use {
     solana_sanitize::SanitizeError,
 };
 
-/// Components of a v0 message: (application_domain, format, signers, message)
-pub type V0MessageComponents = ([u8; 32], MessageFormat, Vec<[u8; 32]>, Vec<u8>);
-
 pub(crate) fn reject_zero_pubkey_in_multi_signer(
     signers: &[[u8; 32]],
 ) -> Result<(), SanitizeError> {
@@ -59,15 +56,14 @@ pub(crate) fn detect_format(
 pub(crate) mod v0 {
     use {
         super::SanitizeError,
-        crate::{
-            serialization::{self, V0MessageComponents},
-            v0::OffchainMessage as V0OffchainMessage,
-            MessageFormat,
-        },
+        crate::{serialization, v0::OffchainMessage as V0OffchainMessage, MessageFormat},
         solana_serialize_utils::{
             append_slice, append_u16, append_u8, read_slice, read_u16, read_u8,
         },
     };
+
+    /// Components of a v0 message: (application_domain, format, signers, message)
+    pub type V0MessageComponents = ([u8; 32], MessageFormat, Vec<[u8; 32]>, Vec<u8>);
 
     #[inline]
     pub(crate) const fn preamble_and_body_size(signer_count: usize, message_len: usize) -> usize {
