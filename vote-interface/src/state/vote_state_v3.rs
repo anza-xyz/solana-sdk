@@ -114,7 +114,7 @@ impl VoteStateV3 {
 
     // NOTE we retain `bincode::deserialize` for `not(target_os = "solana")` pending testing on mainnet-beta
     // once that testing is done, `VoteStateV3::deserialize_into` may be used for all targets
-    // conversion of V0_23_5 to current must be handled specially, however
+    // conversion of V0_23_5 to v3 must be handled specially, however
     // because it inserts a null voter into `authorized_voters`
     // which `VoteStateVersions::is_uninitialized` erroneously reports as initialized
     #[cfg(any(target_os = "solana", feature = "bincode"))]
@@ -122,7 +122,7 @@ impl VoteStateV3 {
         #[cfg(not(target_os = "solana"))]
         {
             bincode::deserialize::<VoteStateVersions>(input)
-                .map(|versioned| versioned.convert_to_current())
+                .map(|versioned| versioned.convert_to_v3())
                 .map_err(|_| InstructionError::InvalidAccountData)
         }
         #[cfg(target_os = "solana")]
@@ -192,7 +192,7 @@ impl VoteStateV3 {
                     unsafe {
                         vote_state.write(
                             bincode::deserialize::<VoteStateVersions>(input)
-                                .map(|versioned| versioned.convert_to_current())
+                                .map(|versioned| versioned.convert_to_v3())
                                 .map_err(|_| InstructionError::InvalidAccountData)?,
                         );
                     }
@@ -203,7 +203,7 @@ impl VoteStateV3 {
             }
             // V1_14_11. substantially different layout and data from V0_23_5
             1 => deserialize_vote_state_into(&mut cursor, vote_state, false),
-            // Current. the only difference from V1_14_11 is the addition of a slot-latency to each vote
+            // V3. the only difference from V1_14_11 is the addition of a slot-latency to each vote
             2 => deserialize_vote_state_into(&mut cursor, vote_state, true),
             _ => Err(InstructionError::InvalidAccountData),
         }?;
