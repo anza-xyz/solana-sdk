@@ -8,9 +8,7 @@ use {
     solana_signer::Signer,
 };
 
-pub mod envelope;
 pub mod serialization;
-pub use envelope::Envelope;
 
 #[cfg(test)]
 static_assertions::const_assert_eq!(OffchainMessage::HEADER_LEN, 17);
@@ -154,9 +152,9 @@ impl OffchainMessage {
         }
     }
 
-    /// Construct a new OffchainMessage object with custom application domain.
-    /// Signer information is filled when `sign()` is called. This can only
-    /// be used for single-signer messages; otherwise, use `new_with_params()`.
+    /// Construct a new single-signer OffchainMessage with custom application domain.
+    /// The actual signer will be determined when `sign()` is called.
+    /// For multi-signer scenarios, use `Envelope` instead.
     pub fn new_with_domain(
         version: u8,
         application_domain: [u8; 32],
