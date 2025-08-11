@@ -53,7 +53,7 @@ pub const fn total_message_size(signer_count: usize, message_len: usize) -> usiz
 #[allow(clippy::arithmetic_side_effects)]
 pub mod v0 {
     use {
-        super::{serialization, MessageFormat, OffchainMessage as Base},
+        super::{MessageFormat, OffchainMessage as Base},
         solana_hash::Hash,
         solana_packet::PACKET_DATA_SIZE,
         solana_sanitize::SanitizeError,
@@ -73,24 +73,14 @@ pub mod v0 {
         pub const MAX_LEN: usize = u16::MAX as usize - Base::HEADER_LEN - Self::PREAMBLE_LEN;
         pub const MAX_LEN_LEDGER: usize = PACKET_DATA_SIZE - Base::HEADER_LEN - Self::PREAMBLE_LEN;
 
-        /// Construct a new OffchainMessage object from the given message
-        #[deprecated(
-            since = "3.0.0",
-            note = "Use `new_with_domain` or `new_with_params` instead"
-        )]
-        pub fn new(message: &[u8]) -> Result<Self, SanitizeError> {
-            Self::new_with_params([0u8; 32], &[[0u8; 32]], message)
-        }
-
-        /// Construct a new OffchainMessage object with all parameters. This
-        /// must be used for multi-signer messages (where multiple parties must sign).
-        pub fn new_with_params(
+        /// Construct a new v0 OffchainMessage object with all parameters.
+        pub(crate) fn new_with_params(
             application_domain: [u8; 32],
             signers: &[[u8; 32]],
             message: &[u8],
         ) -> Result<Self, SanitizeError> {
             let (application_domain, format, signers, message) =
-                serialization::new_v0_with_params(application_domain, signers, message)?;
+                serialization::new_with_params(application_domain, signers, message)?;
             Ok(Self {
                 application_domain,
                 format,
@@ -100,8 +90,8 @@ pub mod v0 {
         }
 
         /// Serialize the message to bytes, including the full header.
-        pub fn serialize(&self, data: &mut Vec<u8>) -> Result<(), SanitizeError> {
-            serialization::serialize_v0(
+        pub(crate) fn serialize(&self, data: &mut Vec<u8>) -> Result<(), SanitizeError> {
+            serialization::serialize(
                 &self.application_domain,
                 self.format,
                 &self.signers,
@@ -111,9 +101,8 @@ pub mod v0 {
         }
 
         /// Deserialize the message from bytes that include a full header.
-        pub fn deserialize(data: &[u8]) -> Result<Self, SanitizeError> {
-            let (application_domain, format, signers, message) =
-                serialization::deserialize_v0(data)?;
+        pub(crate) fn deserialize(data: &[u8]) -> Result<Self, SanitizeError> {
+            let (application_domain, format, signers, message) = serialization::deserialize(data)?;
             Ok(Self {
                 application_domain,
                 format,
@@ -123,12 +112,15 @@ pub mod v0 {
         }
 
         /// Compute the SHA256 hash of the serialized off-chain message.
-        pub fn hash(serialized_message: &[u8]) -> Result<Hash, SanitizeError> {
+        pub(crate) fn hash(serialized_message: &[u8]) -> Result<Hash, SanitizeError> {
             let mut hasher = Hasher::default();
             hasher.hash(serialized_message);
             Ok(hasher.result())
         }
     }
+
+    // Smooth out nonsense like v0::serialization::v0::serialize
+    pub(crate) use crate::serialization::v0 as serialization;
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
@@ -147,11 +139,8 @@ impl OffchainMessage {
         note = "Use `new_with_domain` or `new_with_params` instead"
     )]
     pub fn new(version: u8, message: &[u8]) -> Result<Self, SanitizeError> {
-        #[allow(deprecated)]
-        match version {
-            0 => Ok(Self::V0(v0::OffchainMessage::new(message)?)),
-            _ => Err(SanitizeError::ValueOutOfBounds),
-        }
+        // Default values for backwards compatibility
+        Self::new_with_params(version, [0u8; 32], &[[0u8; 32]], message)
     }
 
     /// Construct a new single-signer OffchainMessage with custom application domain.
