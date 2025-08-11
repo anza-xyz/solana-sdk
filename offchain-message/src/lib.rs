@@ -43,14 +43,6 @@ pub fn is_utf8(data: &[u8]) -> bool {
     std::str::from_utf8(data).is_ok()
 }
 
-pub const fn total_message_size(signer_count: usize, message_len: usize) -> usize {
-    OffchainMessage::SIGNING_DOMAIN
-        .len()
-        .saturating_add(37) // version + app_domain + format + signer_count + msg_len
-        .saturating_add(signer_count.saturating_mul(32))
-        .saturating_add(message_len)
-}
-
 #[allow(clippy::arithmetic_side_effects)]
 pub mod v0 {
     use {

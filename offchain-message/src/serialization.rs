@@ -61,7 +61,6 @@ pub(crate) mod v0 {
         super::SanitizeError,
         crate::{
             serialization::{self, V0MessageComponents},
-            total_message_size,
             v0::OffchainMessage as V0OffchainMessage,
             MessageFormat,
         },
@@ -69,6 +68,13 @@ pub(crate) mod v0 {
             append_slice, append_u16, append_u8, read_slice, read_u16, read_u8,
         },
     };
+
+    #[inline]
+    pub(crate) const fn preamble_and_body_size(signer_count: usize, message_len: usize) -> usize {
+        V0OffchainMessage::PREAMBLE_LEN
+            .saturating_add(signer_count.saturating_mul(32))
+            .saturating_add(message_len)
+    }
 
     pub(crate) fn parse_application_domain(
         data: &[u8],
@@ -181,7 +187,7 @@ pub(crate) mod v0 {
         let message_len = parse_message_length(data, &mut offset)?;
         let message = parse_message_body(data, &mut offset, message_len)?;
 
-        let total_size = total_message_size(signers.len(), message_len);
+        let total_size = preamble_and_body_size(signers.len(), message_len);
         let expected_format = serialization::detect_format(total_size, &message)?;
         if expected_format != format {
             return Err(SanitizeError::InvalidValue);
@@ -197,7 +203,7 @@ pub(crate) mod v0 {
         message: &[u8],
     ) -> Result<V0MessageComponents, SanitizeError> {
         serialization::validate_components(signers, message)?;
-        let total_size = total_message_size(signers.len(), message.len());
+        let total_size = preamble_and_body_size(signers.len(), message.len());
         let format = serialization::detect_format(total_size, message)?;
 
         Ok((
