@@ -17,7 +17,7 @@ pub(crate) fn reject_zero_pubkey_in_multi_signer(
     Ok(())
 }
 
-/// Validate message componentsc
+/// Validate message components
 pub(crate) fn validate_components(
     signers: &[[u8; 32]],
     message: &[u8],
