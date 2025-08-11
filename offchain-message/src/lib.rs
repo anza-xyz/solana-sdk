@@ -56,7 +56,6 @@ pub mod v0 {
     use {
         super::{MessageFormat, OffchainMessage as Base},
         solana_packet::PACKET_DATA_SIZE,
-        solana_sanitize::SanitizeError,
     };
 
     #[derive(Debug, PartialEq, Eq, Clone)]
@@ -71,26 +70,6 @@ pub mod v0 {
         pub const PREAMBLE_LEN: usize = 36;
         pub const MAX_LEN: usize = u16::MAX as usize - Base::HEADER_LEN - Self::PREAMBLE_LEN;
         pub const MAX_LEN_LEDGER: usize = PACKET_DATA_SIZE - Base::HEADER_LEN - Self::PREAMBLE_LEN;
-
-        /// Construct a new v0 OffchainMessage object with all parameters.
-        pub(crate) fn new_with_params(
-            application_domain: [u8; 32],
-            signers: &[[u8; 32]],
-            message: &[u8],
-        ) -> Result<Self, SanitizeError> {
-            serialization::new_with_params(application_domain, signers, message).map(Into::into)
-        }
-
-        /// Serialize the message to bytes, including the full header.
-        pub(crate) fn serialize(&self, data: &mut Vec<u8>) -> Result<(), SanitizeError> {
-            serialization::serialize(
-                &self.application_domain,
-                self.format,
-                &self.signers,
-                &self.message,
-                data,
-            )
-        }
     }
 
     impl From<crate::serialization::V0MessageComponents> for OffchainMessage {
@@ -153,11 +132,11 @@ impl OffchainMessage {
         message: &[u8],
     ) -> Result<Self, SanitizeError> {
         match version {
-            0 => Ok(Self::V0(v0::OffchainMessage::new_with_params(
-                application_domain,
-                signers,
-                message,
-            )?)),
+            0 => {
+                let components =
+                    v0::serialization::new_with_params(application_domain, signers, message)?;
+                Ok(Self::V0(components.into()))
+            }
             _ => Err(SanitizeError::ValueOutOfBounds),
         }
     }
@@ -168,7 +147,13 @@ impl OffchainMessage {
         match self {
             Self::V0(msg) => {
                 data.push(0);
-                msg.serialize(&mut data)?;
+                v0::serialization::serialize(
+                    &msg.application_domain,
+                    msg.format,
+                    &msg.signers,
+                    &msg.message,
+                    &mut data,
+                )?;
             }
         }
         Ok(data)
@@ -192,7 +177,7 @@ impl OffchainMessage {
             .ok_or(SanitizeError::ValueOutOfBounds)?;
         match version {
             0 => {
-                let components = crate::serialization::v0::deserialize(payload)?;
+                let components = v0::serialization::deserialize(payload)?;
                 Ok(Self::V0(components.into()))
             }
             _ => Err(SanitizeError::ValueOutOfBounds),
