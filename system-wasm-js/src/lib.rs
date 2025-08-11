@@ -12,7 +12,7 @@ use {
 };
 
 #[wasm_bindgen]
-struct SystemInstruction;
+pub struct SystemInstruction;
 
 #[wasm_bindgen]
 impl SystemInstruction {
