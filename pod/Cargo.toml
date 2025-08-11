@@ -19,10 +19,10 @@ num-derive = "0.4"
 num_enum = "0.7"
 num-traits = "0.2"
 serde = { version = "1.0.219", optional = true }
-solana-program-error = "2.2.2"
-solana-program-option = "2.2.1"
-solana-pubkey = "2.2.1"
-solana-zk-sdk = "3.0.0"
+solana-program-error = "3.0.0"
+solana-program-option = "3.0.0"
+solana-pubkey = "3.0.0"
+solana-zk-sdk = "4.0.0"
 thiserror = "2.0"
 
 [dev-dependencies]
