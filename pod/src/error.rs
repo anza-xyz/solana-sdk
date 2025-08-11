@@ -37,7 +37,7 @@ impl From<PodSliceError> for ProgramError {
 }
 
 impl ToStr for PodSliceError {
-    fn to_str<E>(&self) -> &'static str {
+    fn to_str(&self) -> &'static str {
         match self {
             PodSliceError::CalculationFailure => "Error in checked math operation",
             PodSliceError::BufferTooSmall => "Provided byte buffer too small for expected type",
