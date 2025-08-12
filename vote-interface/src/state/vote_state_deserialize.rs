@@ -2,7 +2,8 @@ use {
     crate::{
         authorized_voters::AuthorizedVoters,
         state::{
-            BlockTimestamp, LandedVote, Lockout, VoteStateV3, MAX_EPOCH_CREDITS_HISTORY, MAX_ITEMS,
+            BlockTimestamp, LandedVote, Lockout, VoteStateV3, VoteStateV4,
+            BLS_PUBLIC_KEY_COMPRESSED_SIZE, MAX_EPOCH_CREDITS_HISTORY, MAX_ITEMS,
             MAX_LOCKOUT_HISTORY,
         },
     },
@@ -10,10 +11,14 @@ use {
     solana_instruction_error::InstructionError,
     solana_pubkey::Pubkey,
     solana_serialize_utils::cursor::{
-        read_bool, read_i64, read_option_u64, read_pubkey, read_pubkey_into, read_u32, read_u64,
-        read_u8,
+        read_bool, read_i64, read_option_u64, read_pubkey, read_pubkey_into, read_u16, read_u32,
+        read_u64, read_u8,
     },
-    std::{collections::VecDeque, io::Cursor, ptr::addr_of_mut},
+    std::{
+        collections::VecDeque,
+        io::{Cursor, Read},
+        ptr::addr_of_mut,
+    },
 };
 
 // This is to reset vote_state to T::default() if deserialize fails or panics.
@@ -67,7 +72,7 @@ pub(crate) fn deserialize_into<T: Default>(
     res
 }
 
-pub(super) fn deserialize_vote_state_into(
+pub(super) fn deserialize_vote_state_into_v3(
     cursor: &mut Cursor<&[u8]>,
     vote_state: *mut VoteStateV3,
     has_latency: bool,
@@ -92,7 +97,7 @@ pub(super) fn deserialize_vote_state_into(
     let authorized_voters = read_authorized_voters(cursor)?;
     read_prior_voters_into(cursor, vote_state)?;
     let epoch_credits = read_epoch_credits(cursor)?;
-    read_last_timestamp_into(cursor, vote_state)?;
+    let last_timestamp = read_last_timestamp(cursor)?;
 
     // Safety: if vote_state is non-null, all the fields are guaranteed to be
     // valid pointers.
@@ -106,6 +111,127 @@ pub(super) fn deserialize_vote_state_into(
         addr_of_mut!((*vote_state).root_slot).write(root_slot);
         addr_of_mut!((*vote_state).authorized_voters).write(authorized_voters);
         addr_of_mut!((*vote_state).epoch_credits).write(epoch_credits);
+        addr_of_mut!((*vote_state).last_timestamp).write(last_timestamp);
+    }
+
+    Ok(())
+}
+
+#[derive(PartialEq)]
+pub(crate) enum SourceVersion<'a> {
+    V1_14_11 { vote_pubkey: &'a Pubkey },
+    V3 { vote_pubkey: &'a Pubkey },
+    V4,
+}
+
+pub(crate) fn deserialize_vote_state_into_v4<'a>(
+    cursor: &mut Cursor<&[u8]>,
+    vote_state: *mut VoteStateV4,
+    source_version: SourceVersion<'a>,
+) -> Result<(), InstructionError> {
+    // General safety note: we must use addr_of_mut! to access the `vote_state` fields as the value
+    // is assumed to be _uninitialized_, so creating references to the state or any of its inner
+    // fields is UB.
+
+    // Read common fields that are in the same position for all versions.
+    read_pubkey_into(
+        cursor,
+        // Safety: if vote_state is non-null, node_pubkey is guaranteed to be valid too
+        unsafe { addr_of_mut!((*vote_state).node_pubkey) },
+    )?;
+    read_pubkey_into(
+        cursor,
+        // Safety: if vote_state is non-null, authorized_withdrawer is guaranteed to be valid too
+        unsafe { addr_of_mut!((*vote_state).authorized_withdrawer) },
+    )?;
+
+    // Handle version-specific fields and conversions.
+    let (
+        inflation_rewards_commission_bps,
+        block_revenue_commission_bps,
+        pending_delegator_rewards,
+        bls_pubkey_compressed,
+    ) = match source_version {
+        SourceVersion::V4 => {
+            // V4 has collectors and commission fields here.
+            read_pubkey_into(cursor, unsafe {
+                addr_of_mut!((*vote_state).inflation_rewards_collector)
+            })?;
+            read_pubkey_into(cursor, unsafe {
+                addr_of_mut!((*vote_state).block_revenue_collector)
+            })?;
+
+            // Read the basis points and pending rewards directly.
+            let inflation = read_u16(cursor)?;
+            let block = read_u16(cursor)?;
+            let pending = read_u64(cursor)?;
+
+            // Read the BLS pubkey.
+            let bls_pubkey_compressed = read_option_bls_public_key_compressed(cursor)?;
+
+            (inflation, block, pending, bls_pubkey_compressed)
+        }
+        SourceVersion::V1_14_11 { vote_pubkey } | SourceVersion::V3 { vote_pubkey } => {
+            // V1_14_11 and V3 have commission field here.
+            let commission = read_u8(cursor)?;
+
+            // Set collectors based on SIMD-0185.
+            // Safety: if vote_state is non-null, collectors are guaranteed to be valid too
+            unsafe {
+                // We already read `node_pubkey` earlier, so we can read it
+                // here again.
+                let node_pubkey = (*vote_state).node_pubkey;
+
+                addr_of_mut!((*vote_state).inflation_rewards_collector).write(*vote_pubkey);
+                addr_of_mut!((*vote_state).block_revenue_collector).write(node_pubkey);
+            }
+
+            // Convert commission to basis points and set block revenue to 100%.
+            // No rewards tracked. No BLS pubkey.
+            (
+                u16::from(commission).saturating_mul(100),
+                10_000u16,
+                0u64,
+                None,
+            )
+        }
+    };
+
+    // For V3 and V4, `has_latency` is always true.
+    let votes = read_votes(
+        cursor,
+        !matches!(source_version, SourceVersion::V1_14_11 { .. }),
+    )?;
+    let root_slot = read_option_u64(cursor)?;
+    let authorized_voters = read_authorized_voters(cursor)?;
+
+    // V1_14_11 and V3 have `prior_voters` field here.
+    // Skip, since V4 doesn't have this field.
+    if !matches!(source_version, SourceVersion::V4) {
+        skip_prior_voters(cursor)?;
+    }
+
+    let epoch_credits = read_epoch_credits(cursor)?;
+    let last_timestamp = read_last_timestamp(cursor)?;
+
+    // Safety: if vote_state is non-null, all the fields are guaranteed to be
+    // valid pointers.
+    //
+    // Heap allocated collections - votes, authorized_voters and epoch_credits -
+    // are guaranteed not to leak after this point as the VoteStateV4 is fully
+    // initialized and will be regularly dropped.
+    unsafe {
+        addr_of_mut!((*vote_state).inflation_rewards_commission_bps)
+            .write(inflation_rewards_commission_bps);
+        addr_of_mut!((*vote_state).block_revenue_commission_bps)
+            .write(block_revenue_commission_bps);
+        addr_of_mut!((*vote_state).pending_delegator_rewards).write(pending_delegator_rewards);
+        addr_of_mut!((*vote_state).bls_pubkey_compressed).write(bls_pubkey_compressed);
+        addr_of_mut!((*vote_state).votes).write(votes);
+        addr_of_mut!((*vote_state).root_slot).write(root_slot);
+        addr_of_mut!((*vote_state).authorized_voters).write(authorized_voters);
+        addr_of_mut!((*vote_state).epoch_credits).write(epoch_credits);
+        addr_of_mut!((*vote_state).last_timestamp).write(last_timestamp);
     }
 
     Ok(())
@@ -171,6 +297,36 @@ fn read_prior_voters_into<T: AsRef<[u8]>>(
     Ok(())
 }
 
+// Same navigation as `read_prior_voters_into`, but does not perform any writes.
+// Merely updates the cursor to skip over this section.
+fn skip_prior_voters<T: AsRef<[u8]>>(cursor: &mut Cursor<T>) -> Result<(), InstructionError> {
+    for _ in 0..MAX_ITEMS {
+        read_pubkey(cursor)?; // prior_voter
+        read_u64(cursor)?; // from_epoch
+        read_u64(cursor)?; // until_epoch
+    }
+    read_u64(cursor)?; // idx
+    read_bool(cursor)?; // is_empty
+    Ok(())
+}
+
+fn read_option_bls_public_key_compressed<T: AsRef<[u8]>>(
+    cursor: &mut Cursor<T>,
+) -> Result<Option<[u8; BLS_PUBLIC_KEY_COMPRESSED_SIZE]>, InstructionError> {
+    let variant = read_u8(cursor)?;
+    match variant {
+        0 => Ok(None),
+        1 => {
+            let mut buf = [0; BLS_PUBLIC_KEY_COMPRESSED_SIZE];
+            cursor
+                .read_exact(&mut buf)
+                .map_err(|_| InstructionError::InvalidAccountData)?;
+            Ok(Some(buf))
+        }
+        _ => Err(InstructionError::InvalidAccountData),
+    }
+}
+
 fn read_epoch_credits<T: AsRef<[u8]>>(
     cursor: &mut Cursor<T>,
 ) -> Result<Vec<(Epoch, u64, u64)>, InstructionError> {
@@ -187,19 +343,11 @@ fn read_epoch_credits<T: AsRef<[u8]>>(
     Ok(epoch_credits)
 }
 
-fn read_last_timestamp_into<T: AsRef<[u8]>>(
+fn read_last_timestamp<T: AsRef<[u8]>>(
     cursor: &mut Cursor<T>,
-    vote_state: *mut VoteStateV3,
-) -> Result<(), InstructionError> {
+) -> Result<BlockTimestamp, InstructionError> {
     let slot = read_u64(cursor)?;
     let timestamp = read_i64(cursor)?;
 
-    let last_timestamp = BlockTimestamp { slot, timestamp };
-
-    // Safety: if vote_state is non-null, last_timestamp is guaranteed to be valid too
-    unsafe {
-        addr_of_mut!((*vote_state).last_timestamp).write(last_timestamp);
-    }
-
-    Ok(())
+    Ok(BlockTimestamp { slot, timestamp })
 }
