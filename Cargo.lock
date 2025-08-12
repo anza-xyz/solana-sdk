@@ -3155,7 +3155,7 @@ dependencies = [
 
 [[package]]
 name = "solana-genesis-config"
-version = "2.3.0"
+version = "3.0.0"
 dependencies = [
  "bincode",
  "chrono",
@@ -3422,7 +3422,7 @@ dependencies = [
 
 [[package]]
 name = "solana-nonce-account"
-version = "2.2.1"
+version = "3.0.0"
 dependencies = [
  "solana-account",
  "solana-fee-calculator",
@@ -3994,6 +3994,16 @@ dependencies = [
  "solana-signer",
  "solana-system-interface",
  "solana-transaction",
+]
+
+[[package]]
+name = "solana-system-wasm-js"
+version = "1.0.0"
+dependencies = [
+ "js-sys",
+ "solana-sdk-wasm-js",
+ "solana-system-interface",
+ "wasm-bindgen",
 ]
 
 [[package]]

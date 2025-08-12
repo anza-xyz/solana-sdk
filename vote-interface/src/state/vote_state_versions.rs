@@ -20,15 +20,15 @@ use {
 pub enum VoteStateVersions {
     V0_23_5(Box<VoteState0_23_5>),
     V1_14_11(Box<VoteState1_14_11>),
-    Current(Box<VoteStateV3>),
+    V3(Box<VoteStateV3>),
 }
 
 impl VoteStateVersions {
-    pub fn new_current(vote_state: VoteStateV3) -> Self {
-        Self::Current(Box::new(vote_state))
+    pub fn new_v3(vote_state: VoteStateV3) -> Self {
+        Self::V3(Box::new(vote_state))
     }
 
-    pub fn convert_to_current(self) -> VoteStateV3 {
+    pub fn convert_to_v3(self) -> VoteStateV3 {
         match self {
             VoteStateVersions::V0_23_5(state) => {
                 let authorized_voters =
@@ -73,7 +73,7 @@ impl VoteStateVersions {
                 last_timestamp: state.last_timestamp,
             },
 
-            VoteStateVersions::Current(state) => *state,
+            VoteStateVersions::V3(state) => *state,
         }
     }
 
@@ -89,12 +89,12 @@ impl VoteStateVersions {
 
             VoteStateVersions::V1_14_11(vote_state) => vote_state.authorized_voters.is_empty(),
 
-            VoteStateVersions::Current(vote_state) => vote_state.authorized_voters.is_empty(),
+            VoteStateVersions::V3(vote_state) => vote_state.authorized_voters.is_empty(),
         }
     }
 
-    pub fn vote_state_size_of(is_current: bool) -> usize {
-        if is_current {
+    pub fn vote_state_size_of(is_v3: bool) -> usize {
+        if is_v3 {
             VoteStateV3::size_of()
         } else {
             VoteState1_14_11::size_of()
@@ -112,7 +112,7 @@ impl Arbitrary<'_> for VoteStateVersions {
     fn arbitrary(u: &mut Unstructured<'_>) -> arbitrary::Result<Self> {
         let variant = u.choose_index(2)?;
         match variant {
-            0 => Ok(Self::Current(Box::new(VoteStateV3::arbitrary(u)?))),
+            0 => Ok(Self::V3(Box::new(VoteStateV3::arbitrary(u)?))),
             1 => Ok(Self::V1_14_11(Box::new(VoteState1_14_11::arbitrary(u)?))),
             _ => unreachable!(),
         }

@@ -1,0 +1,29 @@
+[package]
+name = "solana-system-wasm-js"
+description = "Solana System Wasm JS"
+documentation = "https://docs.rs/solana-system-wasm-js"
+version = "1.0.0"
+authors = { workspace = true }
+repository = { workspace = true }
+homepage = { workspace = true }
+license = { workspace = true }
+edition = { workspace = true }
+
+[package.metadata.docs.rs]
+targets = ["wasm32-unknown-unknown"]
+all-features = true
+rustdoc-args = ["--cfg=docsrs"]
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+solana-sdk-wasm-js = { workspace = true }
+solana-system-interface = { workspace = true, features = ["bincode"] }
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+js-sys = { workspace = true }
+wasm-bindgen = { workspace = true }
+
+[lints]
+workspace = true
