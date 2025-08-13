@@ -350,3 +350,69 @@ fn read_last_timestamp<T: AsRef<[u8]>>(
 
     Ok(BlockTimestamp { slot, timestamp })
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    const PRIOR_VOTERS_SIZE: usize = MAX_ITEMS * core::mem::size_of::<(Pubkey, Epoch, Epoch)>() +
+        core::mem::size_of::<u64>() /* idx */ +
+        core::mem::size_of::<bool>() /* is_empty */;
+
+    #[test]
+    fn test_skip_prior_voters_success() {
+        // Correct size.
+        let buffer = vec![0u8; PRIOR_VOTERS_SIZE];
+        let mut cursor = Cursor::new(&buffer[..]);
+
+        // Should succeed.
+        let result = skip_prior_voters(&mut cursor);
+        assert!(result.is_ok());
+
+        // Cursor should be at the end.
+        assert_eq!(cursor.position() as usize, PRIOR_VOTERS_SIZE);
+    }
+
+    #[test]
+    fn test_skip_prior_voters_success_with_offset() {
+        // We'll use an offset of 100 and create a buffer with 100 extra bytes.
+        let offset = 100;
+        let buffer = vec![0u8; PRIOR_VOTERS_SIZE + offset];
+        let mut cursor = Cursor::new(&buffer[..]);
+
+        // Move cursor to offset position.
+        cursor.set_position(offset as u64);
+
+        // Should succeed.
+        let result = skip_prior_voters(&mut cursor);
+        assert!(result.is_ok());
+
+        // Cursor should be at the end.
+        assert_eq!(cursor.position() as usize, PRIOR_VOTERS_SIZE + offset);
+    }
+
+    #[test]
+    fn test_skip_prior_voters_buffer_too_small() {
+        // Too small.
+        let buffer = vec![0u8; PRIOR_VOTERS_SIZE - 1];
+        let mut cursor = Cursor::new(&buffer[..]);
+
+        // Should fail.
+        let result = skip_prior_voters(&mut cursor);
+        assert_eq!(result, Err(InstructionError::InvalidAccountData));
+    }
+
+    #[test]
+    fn test_skip_prior_voters_insufficient_remaining() {
+        // Create a buffer with 100 extra bytes.
+        let buffer = vec![0u8; PRIOR_VOTERS_SIZE + 100];
+        let mut cursor = Cursor::new(&buffer[..]);
+
+        // Position cursor so there's not enough remaining bytes.
+        cursor.set_position(101);
+
+        // Should fail because cursor position > bytes length.
+        let result = skip_prior_voters(&mut cursor);
+        assert_eq!(result, Err(InstructionError::InvalidAccountData));
+    }
+}
