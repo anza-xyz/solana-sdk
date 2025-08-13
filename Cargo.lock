@@ -2891,7 +2891,7 @@ dependencies = [
 
 [[package]]
 name = "solana-client-traits"
-version = "2.2.1"
+version = "3.0.0"
 dependencies = [
  "solana-account",
  "solana-commitment-config",
@@ -3319,7 +3319,7 @@ dependencies = [
 
 [[package]]
 name = "solana-loader-v3-interface"
-version = "6.0.0"
+version = "6.1.0"
 dependencies = [
  "bincode",
  "serde",
@@ -3336,7 +3336,7 @@ dependencies = [
 
 [[package]]
 name = "solana-loader-v4-interface"
-version = "3.0.0"
+version = "3.1.0"
 dependencies = [
  "memoffset",
  "serde",
@@ -3987,7 +3987,7 @@ dependencies = [
 
 [[package]]
 name = "solana-system-transaction"
-version = "2.2.1"
+version = "3.0.0"
 dependencies = [
  "solana-hash",
  "solana-keypair",
@@ -4113,7 +4113,7 @@ version = "3.0.0"
 
 [[package]]
 name = "solana-vote-interface"
-version = "2.2.5"
+version = "3.0.0"
 dependencies = [
  "arbitrary",
  "bincode",

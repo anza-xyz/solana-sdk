@@ -219,7 +219,7 @@ solana-blake3-hasher = { path = "blake3-hasher", version = "3.0.0" }
 solana-bls-signatures = { path = "bls-signatures", version = "0.1.1" }
 solana-bn254 = { path = "bn254", version = "3.0.0" }
 solana-borsh = { path = "borsh", version = "3.0.0" }
-solana-client-traits = { path = "client-traits", version = "2.2.1" }
+solana-client-traits = { path = "client-traits", version = "3.0.0" }
 solana-clock = { path = "clock", version = "3.0.0" }
 solana-cluster-type = { path = "cluster-type", version = "3.0.0" }
 solana-commitment-config = { path = "commitment-config", version = "3.0.0" }
@@ -300,7 +300,7 @@ solana-slot-hashes = { path = "slot-hashes", version = "3.0.0" }
 solana-slot-history = { path = "slot-history", version = "3.0.0" }
 solana-stable-layout = { path = "stable-layout", version = "3.0.0" }
 solana-system-interface = { path = "system-interface", version = "2.0" }
-solana-system-transaction = { path = "system-transaction", version = "2.2.1" }
+solana-system-transaction = { path = "system-transaction", version = "3.0.0" }
 solana-system-wasm-js = { path = "system-wasm-js", version = "1.0" }
 solana-sysvar = { path = "sysvar", version = "3.0.0" }
 solana-sysvar-id = { path = "sysvar-id", version = "3.0.0" }
@@ -308,7 +308,7 @@ solana-time-utils = { path = "time-utils", version = "3.0.0" }
 solana-transaction = { path = "transaction", version = "3.0.0" }
 solana-transaction-error = { path = "transaction-error", version = "3.0.0" }
 solana-validator-exit = { path = "validator-exit", version = "3.0.0" }
-solana-vote-interface = { path = "vote-interface", version = "2.2.1" }
+solana-vote-interface = { path = "vote-interface", version = "3.0.0" }
 static_assertions = "1.1.0"
 strum = "0.24"
 strum_macros = "0.24"
