@@ -16,7 +16,7 @@ use {
     },
     std::{
         collections::VecDeque,
-        io::{Cursor, Read},
+        io::{BufRead, Cursor, Read},
         ptr::addr_of_mut,
     },
 };
@@ -134,11 +134,12 @@ pub(crate) fn deserialize_vote_state_into_v4<'a>(
     // fields is UB.
 
     // Read common fields that are in the same position for all versions.
-    read_pubkey_into(
-        cursor,
+    // Keep the node pubkey value around for later fields.
+    let node_pubkey = read_pubkey(cursor)?;
+    unsafe {
         // Safety: if vote_state is non-null, node_pubkey is guaranteed to be valid too
-        unsafe { addr_of_mut!((*vote_state).node_pubkey) },
-    )?;
+        addr_of_mut!((*vote_state).node_pubkey).write(node_pubkey);
+    }
     read_pubkey_into(
         cursor,
         // Safety: if vote_state is non-null, authorized_withdrawer is guaranteed to be valid too
@@ -178,10 +179,6 @@ pub(crate) fn deserialize_vote_state_into_v4<'a>(
             // Set collectors based on SIMD-0185.
             // Safety: if vote_state is non-null, collectors are guaranteed to be valid too
             unsafe {
-                // We already read `node_pubkey` earlier, so we can read it
-                // here again.
-                let node_pubkey = (*vote_state).node_pubkey;
-
                 addr_of_mut!((*vote_state).inflation_rewards_collector).write(*vote_pubkey);
                 addr_of_mut!((*vote_state).block_revenue_collector).write(node_pubkey);
             }
@@ -198,10 +195,8 @@ pub(crate) fn deserialize_vote_state_into_v4<'a>(
     };
 
     // For V3 and V4, `has_latency` is always true.
-    let votes = read_votes(
-        cursor,
-        !matches!(source_version, SourceVersion::V1_14_11 { .. }),
-    )?;
+    let has_latency = !matches!(source_version, SourceVersion::V1_14_11 { .. });
+    let votes = read_votes(cursor, has_latency)?;
     let root_slot = read_option_u64(cursor)?;
     let authorized_voters = read_authorized_voters(cursor)?;
 
@@ -300,13 +295,17 @@ fn read_prior_voters_into<T: AsRef<[u8]>>(
 // Same navigation as `read_prior_voters_into`, but does not perform any writes.
 // Merely updates the cursor to skip over this section.
 fn skip_prior_voters<T: AsRef<[u8]>>(cursor: &mut Cursor<T>) -> Result<(), InstructionError> {
-    for _ in 0..MAX_ITEMS {
-        read_pubkey(cursor)?; // prior_voter
-        read_u64(cursor)?; // from_epoch
-        read_u64(cursor)?; // until_epoch
+    const PRIOR_VOTERS_SIZE: usize = MAX_ITEMS * core::mem::size_of::<(Pubkey, Epoch, Epoch)>() +
+            core::mem::size_of::<u64>() /* idx */ +
+            core::mem::size_of::<bool>() /* is_empty */;
+
+    cursor.consume(PRIOR_VOTERS_SIZE);
+
+    let bytes = cursor.get_ref().as_ref();
+    if cursor.position() as usize > bytes.len() {
+        return Err(InstructionError::InvalidAccountData);
     }
-    read_u64(cursor)?; // idx
-    read_bool(cursor)?; // is_empty
+
     Ok(())
 }
 

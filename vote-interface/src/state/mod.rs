@@ -407,6 +407,25 @@ mod tests {
         solana_instruction::error::InstructionError,
     };
 
+    // Test helper to create a VoteStateV4 with random data for testing
+    fn create_test_vote_state_v4(node_pubkey: Pubkey, root_slot: Slot) -> VoteStateV4 {
+        let votes = (1..32)
+            .map(|x| LandedVote {
+                latency: 0,
+                lockout: Lockout::new_with_confirmation_count(
+                    u64::from(x).saturating_add(root_slot),
+                    32_u32.saturating_sub(x),
+                ),
+            })
+            .collect();
+        VoteStateV4 {
+            node_pubkey,
+            root_slot: Some(root_slot),
+            votes,
+            ..VoteStateV4::default()
+        }
+    }
+
     #[test]
     fn test_vote_serialize_v3() {
         let mut buffer: Vec<u8> = vec![0; VoteStateV3::size_of()];
@@ -426,7 +445,11 @@ mod tests {
 
     #[test]
     fn test_vote_serialize_v4() {
-        let vote_pubkey = Pubkey::new_unique();
+        // Use two different pubkeys to demonstrate that v4 ignores the
+        // `vote_pubkey` parameter.
+        let vote_pubkey_for_deserialize = Pubkey::new_unique();
+        let vote_pubkey_for_convert = Pubkey::new_unique();
+
         let mut buffer: Vec<u8> = vec![0; VoteStateV4::size_of()];
         let mut vote_state = VoteStateV4::default();
         vote_state
@@ -437,8 +460,10 @@ mod tests {
         assert!(VoteStateV4::serialize(&versioned, &mut buffer[0..4]).is_err());
         VoteStateV4::serialize(&versioned, &mut buffer).unwrap();
         assert_eq!(
-            VoteStateV4::deserialize(&buffer, &vote_pubkey).unwrap(),
-            versioned.try_convert_to_v4(&vote_pubkey).unwrap()
+            VoteStateV4::deserialize(&buffer, &vote_pubkey_for_deserialize).unwrap(),
+            versioned
+                .try_convert_to_v4(&vote_pubkey_for_convert)
+                .unwrap()
         );
     }
 
@@ -528,7 +553,7 @@ mod tests {
     fn test_vote_deserialize_into_error_v4() {
         let vote_pubkey = Pubkey::new_unique();
 
-        let target_vote_state = VoteStateV4::new_rand_for_tests(Pubkey::new_unique(), 42);
+        let target_vote_state = create_test_vote_state_v4(Pubkey::new_unique(), 42);
         let mut vote_state_buf =
             bincode::serialize(&VoteStateVersions::new_v4(target_vote_state.clone())).unwrap();
         let len = vote_state_buf.len();
@@ -1108,12 +1133,15 @@ mod tests {
     }
 
     #[test]
-    fn test_vote_state_size_of() {
+    fn test_vote_state_v3_size_of() {
         let vote_state = VoteStateV3::get_max_sized_vote_state();
         let vote_state = VoteStateVersions::new_v3(vote_state);
         let size = serialized_size(&vote_state).unwrap();
         assert_eq!(VoteStateV3::size_of() as u64, size);
+    }
 
+    #[test]
+    fn test_vote_state_v4_size_of() {
         let vote_state = VoteStateV4::get_max_sized_vote_state();
         let vote_state = VoteStateVersions::new_v4(vote_state);
         let size = serialized_size(&vote_state).unwrap();

@@ -11,7 +11,7 @@ use solana_frozen_abi_macro::{frozen_abi, AbiExample};
 #[cfg(any(target_os = "solana", feature = "bincode"))]
 use solana_instruction::error::InstructionError;
 use {
-    super::{BlockTimestamp, LandedVote, Lockout, BLS_PUBLIC_KEY_COMPRESSED_SIZE},
+    super::{BlockTimestamp, LandedVote, BLS_PUBLIC_KEY_COMPRESSED_SIZE},
     crate::authorized_voters::AuthorizedVoters,
     solana_clock::{Epoch, Slot},
     solana_pubkey::Pubkey,
@@ -75,24 +75,6 @@ impl VoteStateV4 {
     /// when votes.len() is MAX_LOCKOUT_HISTORY.
     pub const fn size_of() -> usize {
         3762 // Same size as V3 to avoid account resizing
-    }
-
-    pub fn new_rand_for_tests(node_pubkey: Pubkey, root_slot: Slot) -> Self {
-        let votes = (1..32)
-            .map(|x| LandedVote {
-                latency: 0,
-                lockout: Lockout::new_with_confirmation_count(
-                    u64::from(x).saturating_add(root_slot),
-                    32_u32.saturating_sub(x),
-                ),
-            })
-            .collect();
-        Self {
-            node_pubkey,
-            root_slot: Some(root_slot),
-            votes,
-            ..VoteStateV4::default()
-        }
     }
 
     #[cfg(any(target_os = "solana", feature = "bincode"))]
@@ -223,13 +205,13 @@ impl VoteStateV4 {
 
     #[cfg(test)]
     pub(crate) fn get_max_sized_vote_state() -> Self {
-        use {
-            super::{MAX_EPOCH_CREDITS_HISTORY, MAX_LOCKOUT_HISTORY},
-            solana_epoch_schedule::MAX_LEADER_SCHEDULE_EPOCH_OFFSET,
-        };
+        use super::{MAX_EPOCH_CREDITS_HISTORY, MAX_LOCKOUT_HISTORY};
+
+        // V4 stores a maximum of 4 authorized voter entries.
+        const MAX_AUTHORIZED_VOTERS: usize = 4;
 
         let mut authorized_voters = AuthorizedVoters::default();
-        for i in 0..=MAX_LEADER_SCHEDULE_EPOCH_OFFSET {
+        for i in 0..MAX_AUTHORIZED_VOTERS as u64 {
             authorized_voters.insert(i, Pubkey::new_unique());
         }
 
