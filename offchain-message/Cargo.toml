@@ -19,19 +19,17 @@ dev-context-only-utils = []
 verify = []
 
 [dependencies]
-# TODO: these can be reverted to `workspace` once agave is using 3.0.0
-# crates across the board.
 num_enum = { workspace = true }
-solana-hash = "2.2.1"
-solana-packet = "2.2.1"
-solana-pubkey = "2.2.1"
-solana-sanitize = "2.2.1"
+solana-hash = { workspace = true }
+solana-packet = { workspace = true }
+solana-pubkey = { workspace = true }
+solana-sanitize = { workspace = true }
 solana-serialize-utils = { version = "3.0.0", path = "../serialize-utils" }
-solana-sha256-hasher = { version = "2.2.1", features = ["sha2"] }
-solana-signature = { version = "2.2.1", features = ["verify"] }
-solana-signer = "2.2.1"
+solana-sha256-hasher = { workspace = true, features = ["sha2"] }
+solana-signature = { workspace = true, features = ["verify"] }
+solana-signer = { workspace = true }
 
 [dev-dependencies]
-solana-keypair = "2.2.1"
+solana-keypair = { workspace = true }
 solana-offchain-message = { path = ".", features = ["dev-context-only-utils"] }
 static_assertions = { workspace = true }
