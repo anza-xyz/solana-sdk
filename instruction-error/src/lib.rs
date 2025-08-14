@@ -200,6 +200,9 @@ pub enum InstructionError {
 
     /// Builtin programs must consume compute units
     BuiltinProgramsMustConsumeComputeUnits,
+
+    /// The instruction cannot work with the two aliased accounts received
+    InvalidAccountAliasing,
     // Note: For any new error added here an equivalent ProgramError and its
     // conversions must also be added
 }
@@ -340,6 +343,9 @@ impl fmt::Display for InstructionError {
             }
             InstructionError::BuiltinProgramsMustConsumeComputeUnits => {
                 f.write_str("Builtin programs must consume compute units")
+            }
+            InstructionError::InvalidAccountAliasing => {
+                f.write_str("The instruction does not allow one or more account aliasing")
             }
         }
     }
