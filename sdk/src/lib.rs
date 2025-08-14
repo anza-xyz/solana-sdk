@@ -172,6 +172,7 @@ pub mod program_utils;
 pub mod pubkey;
 #[cfg(feature = "full")]
 #[deprecated(since = "2.3.0", note = "Use `solana_rent_collector` crate instead")]
+#[allow(deprecated)]
 pub mod rent_collector {
     pub use solana_rent_collector::*;
 }
