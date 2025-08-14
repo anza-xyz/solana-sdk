@@ -221,9 +221,11 @@ macro_rules! custom_heap_default {
     () => {
         #[cfg(all(not(feature = "custom-heap"), target_os = "solana"))]
         #[global_allocator]
-        static A: $crate::BumpAllocator = $crate::BumpAllocator {
-            start: $crate::HEAP_START_ADDRESS as usize,
-            len: $crate::HEAP_LENGTH,
+        static A: $crate::BumpAllocator = unsafe {
+            $crate::BumpAllocator::with_fixed_address_range(
+                $crate::HEAP_START_ADDRESS as usize,
+                $crate::HEAP_LENGTH,
+            )
         };
     };
 }
@@ -332,6 +334,19 @@ impl BumpAllocator {
             start: pos_ptr as usize,
             len: arena.len(),
         }
+    }
+
+    /// Creates the allocator tied to specific range of addresses.
+    ///
+    /// # Safety
+    /// This is unsafe in most situations, unless you are totally sure that the
+    /// provided start address and length can be written to by the allocator,
+    /// and that the memory will be usable for the lifespan of the allocator.
+    ///
+    /// For Solana on-chain programs, a certain address range is reserved, so
+    /// the allocator can be given those addresses.
+    pub const unsafe fn with_fixed_address_range(start: usize, len: usize) -> Self {
+        Self { start, len }
     }
 }
 

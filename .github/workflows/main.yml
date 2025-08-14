@@ -2,8 +2,13 @@ name: Main
 
 on:
   push:
-    branches: [master]
+    branches:
+      - 'master'
+      - 'maintenance/**'
   pull_request:
+    branches:
+      - 'master'
+      - 'maintenance/**'
 
 jobs:
   sanity:

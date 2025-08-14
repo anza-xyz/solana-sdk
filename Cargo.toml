@@ -66,7 +66,6 @@ members = [
     "pubkey",
     "quic-definitions",
     "rent",
-    "rent-collector",
     "reward-info",
     "sanitize",
     "sdk",
@@ -91,7 +90,9 @@ members = [
     "slot-hashes",
     "slot-history",
     "stable-layout",
+    "system-interface",
     "system-transaction",
+    "system-wasm-js",
     "sysvar",
     "sysvar-id",
     "time-utils",
@@ -217,7 +218,7 @@ solana-blake3-hasher = { path = "blake3-hasher", version = "3.0.0" }
 solana-bls-signatures = { path = "bls-signatures", version = "0.1.1" }
 solana-bn254 = { path = "bn254", version = "3.0.0" }
 solana-borsh = { path = "borsh", version = "3.0.0" }
-solana-client-traits = { path = "client-traits", version = "2.2.1" }
+solana-client-traits = { path = "client-traits", version = "3.0.0" }
 solana-clock = { path = "clock", version = "3.0.0" }
 solana-cluster-type = { path = "cluster-type", version = "3.0.0" }
 solana-commitment-config = { path = "commitment-config", version = "3.0.0" }
@@ -231,14 +232,14 @@ solana-epoch-rewards = { path = "epoch-rewards", version = "3.0.0" }
 solana-epoch-rewards-hasher = { path = "epoch-rewards-hasher", version = "3.0.0" }
 solana-epoch-schedule = { path = "epoch-schedule", version = "3.0.0" }
 solana-epoch-stake = { path = "epoch-stake", version = "3.0.0" }
-solana-example-mocks = { path = "example-mocks", version = "2.2.1" }
-solana-feature-gate-interface = { path = "feature-gate-interface", version = "2.2.1" }
+solana-example-mocks = { path = "example-mocks", version = "3.0.0" }
+solana-feature-gate-interface = { path = "feature-gate-interface", version = "3.0.0" }
 solana-fee-calculator = { path = "fee-calculator", version = "3.0.0" }
 solana-fee-structure = { path = "fee-structure", version = "3.0.0" }
 solana-file-download = { path = "file-download", version = "3.0.0" }
 solana-frozen-abi = { path = "frozen-abi", version = "3.0.0" }
 solana-frozen-abi-macro = { path = "frozen-abi-macro", version = "3.0.0" }
-solana-genesis-config = { path = "genesis-config", version = "2.2.1" }
+solana-genesis-config = { path = "genesis-config", version = "3.0.0" }
 solana-hard-forks = { path = "hard-forks", version = "3.0.0", default-features = false }
 solana-hash = { path = "hash", version = "3.0.0", default-features = false }
 solana-inflation = { path = "inflation", version = "3.0.0" }
@@ -252,11 +253,11 @@ solana-loader-v2-interface = { path = "loader-v2-interface", version = "3.0.0" }
 solana-loader-v3-interface = { path = "loader-v3-interface", version = "6.0.0" }
 solana-loader-v4-interface = { path = "loader-v4-interface", version = "3.0.0" }
 solana-logger = { path = "logger", version = "3.0.0" }
-solana-message = { path = "message", version = "2.2.1" }
+solana-message = { path = "message", version = "3.0.0" }
 solana-msg = { path = "msg", version = "3.0.0" }
 solana-native-token = { path = "native-token", version = "3.0.0" }
 solana-nonce = { path = "nonce", version = "3.0.0" }
-solana-nonce-account = { path = "nonce-account", version = "2.2.1" }
+solana-nonce-account = { path = "nonce-account", version = "3.0.0" }
 solana-offchain-message = { path = "offchain-message", version = "3.0.0" }
 solana-package-metadata = { path = "package-metadata", version = "3.0.0" }
 solana-package-metadata-macro = { path = "package-metadata-macro", version = "3.0.0" }
@@ -264,7 +265,7 @@ solana-packet = { path = "packet", version = "3.0.0" }
 solana-poh-config = { path = "poh-config", version = "3.0.0" }
 solana-precompile-error = { path = "precompile-error", version = "3.0.0" }
 solana-presigner = { path = "presigner", version = "3.0.0" }
-solana-program = { path = "program", version = "2.2.1", default-features = false }
+solana-program = { path = "program", version = "3.0.0", default-features = false }
 solana-program-entrypoint = { path = "program-entrypoint", version = "3.0.0" }
 solana-program-error = { path = "program-error", version = "3.0.0" }
 solana-program-memory = { path = "program-memory", version = "3.0.0" }
@@ -273,7 +274,6 @@ solana-program-pack = { path = "program-pack", version = "3.0.0" }
 solana-pubkey = { path = "pubkey", version = "3.0.0", default-features = false }
 solana-quic-definitions = { path = "quic-definitions", version = "3.0.0" }
 solana-rent = { path = "rent", version = "3.0.0", default-features = false }
-solana-rent-collector = { path = "rent-collector", version = "2.2.1" }
 solana-reward-info = { path = "reward-info", version = "3.0.0" }
 solana-sanitize = { path = "sanitize", version = "3.0.0" }
 solana-sdk = { path = "sdk", version = "2.2.1" }
@@ -298,14 +298,15 @@ solana-slot-hashes = { path = "slot-hashes", version = "3.0.0" }
 solana-slot-history = { path = "slot-history", version = "3.0.0" }
 solana-stable-layout = { path = "stable-layout", version = "3.0.0" }
 solana-system-interface = { path = "system-interface", version = "2.0" }
-solana-system-transaction = { path = "system-transaction", version = "2.2.1" }
+solana-system-transaction = { path = "system-transaction", version = "3.0.0" }
+solana-system-wasm-js = { path = "system-wasm-js", version = "1.0" }
 solana-sysvar = { path = "sysvar", version = "3.0.0" }
 solana-sysvar-id = { path = "sysvar-id", version = "3.0.0" }
 solana-time-utils = { path = "time-utils", version = "3.0.0" }
-solana-transaction = { path = "transaction", version = "2.2.1" }
+solana-transaction = { path = "transaction", version = "3.0.0" }
 solana-transaction-error = { path = "transaction-error", version = "3.0.0" }
 solana-validator-exit = { path = "validator-exit", version = "3.0.0" }
-solana-vote-interface = { path = "vote-interface", version = "2.2.1" }
+solana-vote-interface = { path = "vote-interface", version = "3.0.0" }
 static_assertions = "1.1.0"
 strum = "0.24"
 strum_macros = "0.24"

@@ -2891,7 +2891,7 @@ dependencies = [
 
 [[package]]
 name = "solana-client-traits"
-version = "2.2.1"
+version = "3.0.0"
 dependencies = [
  "solana-account",
  "solana-commitment-config",
@@ -3051,7 +3051,7 @@ dependencies = [
 
 [[package]]
 name = "solana-example-mocks"
-version = "2.2.1"
+version = "3.0.0"
 dependencies = [
  "serde",
  "serde_derive",
@@ -3070,7 +3070,7 @@ dependencies = [
 
 [[package]]
 name = "solana-feature-gate-interface"
-version = "2.2.2"
+version = "3.0.0"
 dependencies = [
  "bincode",
  "serde",
@@ -3155,7 +3155,7 @@ dependencies = [
 
 [[package]]
 name = "solana-genesis-config"
-version = "2.3.0"
+version = "3.0.0"
 dependencies = [
  "bincode",
  "chrono",
@@ -3319,7 +3319,7 @@ dependencies = [
 
 [[package]]
 name = "solana-loader-v3-interface"
-version = "6.0.0"
+version = "6.1.0"
 dependencies = [
  "bincode",
  "serde",
@@ -3336,7 +3336,7 @@ dependencies = [
 
 [[package]]
 name = "solana-loader-v4-interface"
-version = "3.0.0"
+version = "3.1.0"
 dependencies = [
  "memoffset",
  "serde",
@@ -3364,7 +3364,7 @@ dependencies = [
 
 [[package]]
 name = "solana-message"
-version = "2.4.0"
+version = "3.0.0"
 dependencies = [
  "anyhow",
  "bincode",
@@ -3422,7 +3422,7 @@ dependencies = [
 
 [[package]]
 name = "solana-nonce-account"
-version = "2.2.1"
+version = "3.0.0"
 dependencies = [
  "solana-account",
  "solana-fee-calculator",
@@ -3514,7 +3514,7 @@ dependencies = [
 
 [[package]]
 name = "solana-program"
-version = "2.3.0"
+version = "3.0.0"
 dependencies = [
  "memoffset",
  "solana-account-info",
@@ -3562,7 +3562,7 @@ dependencies = [
 
 [[package]]
 name = "solana-program-entrypoint"
-version = "3.0.0"
+version = "3.1.0"
 dependencies = [
  "solana-account-info",
  "solana-define-syscall",
@@ -3627,25 +3627,6 @@ dependencies = [
  "solana-sdk-macro",
  "solana-sysvar-id",
  "static_assertions",
-]
-
-[[package]]
-name = "solana-rent-collector"
-version = "2.2.1"
-dependencies = [
- "assert_matches",
- "serde",
- "serde_derive",
- "solana-account",
- "solana-clock",
- "solana-epoch-schedule",
- "solana-frozen-abi",
- "solana-frozen-abi-macro",
- "solana-genesis-config",
- "solana-logger",
- "solana-pubkey",
- "solana-rent",
- "solana-sdk-ids",
 ]
 
 [[package]]
@@ -3881,10 +3862,12 @@ dependencies = [
 
 [[package]]
 name = "solana-signature"
-version = "3.0.0"
+version = "3.1.0"
 dependencies = [
  "bincode",
  "bs58",
+ "bytemuck",
+ "bytemuck_derive",
  "curve25519-dalek",
  "ed25519-dalek",
  "five8",
@@ -3984,7 +3967,7 @@ dependencies = [
 
 [[package]]
 name = "solana-system-transaction"
-version = "2.2.1"
+version = "3.0.0"
 dependencies = [
  "solana-hash",
  "solana-keypair",
@@ -3993,6 +3976,16 @@ dependencies = [
  "solana-signer",
  "solana-system-interface",
  "solana-transaction",
+]
+
+[[package]]
+name = "solana-system-wasm-js"
+version = "1.0.0"
+dependencies = [
+ "js-sys",
+ "solana-sdk-wasm-js",
+ "solana-system-interface",
+ "wasm-bindgen",
 ]
 
 [[package]]
@@ -4050,7 +4043,7 @@ version = "3.0.0"
 
 [[package]]
 name = "solana-transaction"
-version = "2.2.3"
+version = "3.0.0"
 dependencies = [
  "anyhow",
  "bincode",
@@ -4100,7 +4093,7 @@ version = "3.0.0"
 
 [[package]]
 name = "solana-vote-interface"
-version = "2.2.5"
+version = "3.0.0"
 dependencies = [
  "arbitrary",
  "bincode",
