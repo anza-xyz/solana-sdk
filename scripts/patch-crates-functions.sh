@@ -71,7 +71,6 @@ crate_dirs=(
   pubkey
   quic-definitions
   rent
-  rent-collector
   reward-info
   sanitize
   sdk

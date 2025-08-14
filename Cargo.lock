@@ -3630,25 +3630,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "solana-rent-collector"
-version = "2.2.1"
-dependencies = [
- "assert_matches",
- "serde",
- "serde_derive",
- "solana-account",
- "solana-clock",
- "solana-epoch-schedule",
- "solana-frozen-abi",
- "solana-frozen-abi-macro",
- "solana-genesis-config",
- "solana-logger",
- "solana-pubkey",
- "solana-rent",
- "solana-sdk-ids",
-]
-
-[[package]]
 name = "solana-reward-info"
 version = "3.0.0"
 dependencies = [

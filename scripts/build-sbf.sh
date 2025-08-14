@@ -16,7 +16,6 @@ build_sbf_excludes=(
   --exclude solana-offchain-message
   --exclude solana-presigner
   --exclude solana-quic-definitions
-  --exclude solana-rent-collector
   --exclude solana-sdk-wasm-js
   --exclude solana-sdk-wasm-js-tests
   --exclude solana-secp256k1-program

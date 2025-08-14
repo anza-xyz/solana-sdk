@@ -66,7 +66,6 @@ members = [
     "pubkey",
     "quic-definitions",
     "rent",
-    "rent-collector",
     "reward-info",
     "sanitize",
     "sdk",
@@ -275,7 +274,6 @@ solana-program-pack = { path = "program-pack", version = "3.0.0" }
 solana-pubkey = { path = "pubkey", version = "3.0.0", default-features = false }
 solana-quic-definitions = { path = "quic-definitions", version = "3.0.0" }
 solana-rent = { path = "rent", version = "3.0.0", default-features = false }
-solana-rent-collector = { path = "rent-collector", version = "2.2.1" }
 solana-reward-info = { path = "reward-info", version = "3.0.0" }
 solana-sanitize = { path = "sanitize", version = "3.0.0" }
 solana-sdk = { path = "sdk", version = "2.2.1" }

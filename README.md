@@ -38,7 +38,6 @@ directly:
 * [`precompiles`](https://docs.rs/solana-sdk/latest/solana_sdk/precompiles) -> [`agave_precompiles`](https://docs.rs/agave-precompiles/latest/agave_precompiles)
 * [`program_utils`](https://docs.rs/solana-sdk/latest/solana_sdk/program_utils) -> [`solana_bincode::limited_deserialize`](https://docs.rs/solana-bincode/latest/solana_bincode)
 * [`quic`](https://docs.rs/solana-sdk/latest/solana_sdk/quic) -> [`solana_quic_definitions`](https://docs.rs/solana-quic-definitions/latest/solana_quic_definitions)
-* [`rent_collector`](https://docs.rs/solana-sdk/latest/solana_sdk/rent_collector) -> [`solana_rent_collector`](https://docs.rs/solana-rent-collector/latest/solana_rent_collector)
 * [`reserved_account_keys`](https://docs.rs/solana-sdk/latest/solana_sdk/reserved_account_keys) -> [`agave_reserved_account_keys`](https://docs.rs/agave-reserved-account-keys/latest/agave_reserved_account_keys)
 * [`reward_info`](https://docs.rs/solana-sdk/latest/solana_sdk/reward_info) -> [`solana_reward_info`](https://docs.rs/solana-reward-info/latest/solana_reward_info)
 * [`reward_type`](https://docs.rs/solana-sdk/latest/solana_sdk/reward_type) -> [`solana_reward_info`](https://docs.rs/solana-reward-info/latest/solana_reward_info)
