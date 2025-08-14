@@ -45,7 +45,7 @@ pub use {
 };
 
 impl Sysvar for LastRestartSlot {
-    impl_sysvar_get!(sol_get_last_restart_slot);
+    impl_sysvar_get!();
 }
 
 #[cfg(feature = "bincode")]
