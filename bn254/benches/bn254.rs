@@ -1,9 +1,12 @@
 use {
     criterion::{criterion_group, criterion_main, Criterion},
-    solana_bn254::{compression::prelude::convert_endianness, prelude::{
-        alt_bn128_addition, alt_bn128_addition_le, alt_bn128_multiplication,
-        alt_bn128_multiplication_le, alt_bn128_pairing, alt_bn128_pairing_le,
-    }},
+    solana_bn254::{
+        compression::prelude::convert_endianness,
+        prelude::{
+            alt_bn128_addition, alt_bn128_addition_le, alt_bn128_multiplication,
+            alt_bn128_multiplication_le, alt_bn128_pairing, alt_bn128_pairing_le,
+        },
+    },
 };
 
 fn bench_addition(c: &mut Criterion) {
@@ -126,7 +129,6 @@ fn bench_pairing_le(c: &mut Criterion) {
         12, 27, 249, 132, 95, 32, 198, 254, 57, 224, 126, 162, 204, 230, 31, 12, 155, 176, 72, 22,
         95, 229, 228, 222, 135, 117, 80,
     ]);
-
 
     let input_bytes = [&p_bytes[..], &q_bytes[..]].concat();
 

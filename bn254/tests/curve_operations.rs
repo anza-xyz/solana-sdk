@@ -95,7 +95,7 @@ fn alt_bn128_pairing_test() {
                 let g1 = convert_endianness::<32, 64>(&input[g1_start..g1_end].try_into().unwrap());
                 let g2 = convert_endianness::<64, 128>(&input[g1_end..g2_end].try_into().unwrap());
 
-                g1.into_iter().chain(g2.into_iter())
+                g1.into_iter().chain(g2)
             })
             .collect();
 
@@ -139,9 +139,15 @@ fn alt_bn128_compression_pairing_test_input() {
         // test le
         let g1_le = convert_endianness::<32, 64>(&g1.try_into().unwrap());
         let g1_compressed_le = alt_bn128_g1_compress_le(&g1_le).unwrap();
-        assert_eq!(g1_le, alt_bn128_g1_decompress_le(&g1_compressed_le).unwrap());
+        assert_eq!(
+            g1_le,
+            alt_bn128_g1_decompress_le(&g1_compressed_le).unwrap()
+        );
         let g2_le = convert_endianness::<64, 128>(&g2.try_into().unwrap());
         let g2_compressed_le = alt_bn128_g2_compress_le(&g2_le).unwrap();
-        assert_eq!(g2_le, alt_bn128_g2_decompress_le(&g2_compressed_le).unwrap());
+        assert_eq!(
+            g2_le,
+            alt_bn128_g2_decompress_le(&g2_compressed_le).unwrap()
+        );
     });
 }
