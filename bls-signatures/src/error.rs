@@ -14,6 +14,8 @@ pub enum BlsError {
     ParseFromString, // TODO: update after more precise error handling
     #[error("Failed to parse from bytes")]
     ParseFromBytes,
+    #[error("The length of inputs do not match")]
+    InputLengthMismatch,
 }
 
 impl From<Infallible> for BlsError {

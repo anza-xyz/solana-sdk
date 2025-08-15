@@ -1,6 +1,8 @@
 #![no_std]
 #![cfg_attr(feature = "frozen-abi", feature(min_specialization))]
 
+extern crate alloc;
+
 #[cfg(feature = "std")]
 extern crate std;
 #[cfg(not(target_os = "solana"))]
