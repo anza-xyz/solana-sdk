@@ -133,3 +133,30 @@ impl Sysvar for EpochSchedule {
 
 #[cfg(feature = "bincode")]
 impl SysvarSerialize for EpochSchedule {}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serial_test::serial;
+
+    fn to_bytes<T>(value: &T) -> Vec<u8> {
+        unsafe {
+            let size = core::mem::size_of::<T>();
+            let ptr = (value as *const T) as *const u8;
+            let mut data = vec![0u8; size];
+            std::ptr::copy_nonoverlapping(ptr, data.as_mut_ptr(), size);
+            data
+        }
+    }
+
+    #[test]
+    #[serial]
+    fn test_epoch_schedule_get_uses_sysvar_syscall() {
+        let expected = EpochSchedule::custom(1234, 5678, false);
+        let data = to_bytes(&expected);
+        crate::tests::mock_get_sysvar_syscall(&data);
+
+        let got = EpochSchedule::get().unwrap();
+        assert_eq!(got, expected);
+    }
+}

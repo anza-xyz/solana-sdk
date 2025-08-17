@@ -50,3 +50,32 @@ impl Sysvar for LastRestartSlot {
 
 #[cfg(feature = "bincode")]
 impl SysvarSerialize for LastRestartSlot {}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serial_test::serial;
+
+    fn to_bytes<T>(value: &T) -> Vec<u8> {
+        unsafe {
+            let size = core::mem::size_of::<T>();
+            let ptr = (value as *const T) as *const u8;
+            let mut data = vec![0u8; size];
+            std::ptr::copy_nonoverlapping(ptr, data.as_mut_ptr(), size);
+            data
+        }
+    }
+
+    #[test]
+    #[serial]
+    fn test_last_restart_slot_get_uses_sysvar_syscall() {
+        let expected = LastRestartSlot {
+            last_restart_slot: 9999,
+        };
+        let data = to_bytes(&expected);
+        crate::tests::mock_get_sysvar_syscall(&data);
+
+        let got = LastRestartSlot::get().unwrap();
+        assert_eq!(got, expected);
+    }
+}

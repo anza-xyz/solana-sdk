@@ -168,3 +168,39 @@ impl Sysvar for EpochRewards {
 
 #[cfg(feature = "bincode")]
 impl SysvarSerialize for EpochRewards {}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serial_test::serial;
+
+    fn to_bytes<T>(value: &T) -> Vec<u8> {
+        unsafe {
+            let size = core::mem::size_of::<T>();
+            let ptr = (value as *const T) as *const u8;
+            let mut data = vec![0u8; size];
+            std::ptr::copy_nonoverlapping(ptr, data.as_mut_ptr(), size);
+            data
+        }
+    }
+
+    #[test]
+    #[serial]
+    fn test_epoch_rewards_get_uses_sysvar_syscall() {
+        let expected = EpochRewards {
+            distribution_starting_block_height: 42,
+            num_partitions: 7,
+            parent_blockhash: solana_hash::Hash::new_unique(),
+            total_points: 1234567890,
+            total_rewards: 100,
+            distributed_rewards: 10,
+            active: true,
+        };
+
+        let data = to_bytes(&expected);
+        crate::tests::mock_get_sysvar_syscall(&data);
+
+        let got = EpochRewards::get().unwrap();
+        assert_eq!(got, expected);
+    }
+}
