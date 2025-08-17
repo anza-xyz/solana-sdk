@@ -290,6 +290,19 @@ mod tests {
         }));
     }
 
+    /// Convert a value to its in-memory byte representation.
+    ///
+    /// Safety: This relies on the type's plain old data layout. Intended for tests.
+    pub fn to_bytes<T>(value: &T) -> Vec<u8> {
+        unsafe {
+            let size = core::mem::size_of::<T>();
+            let ptr = (value as *const T) as *const u8;
+            let mut data = vec![0u8; size];
+            std::ptr::copy_nonoverlapping(ptr, data.as_mut_ptr(), size);
+            data
+        }
+    }
+
     #[test]
     fn test_sysvar_account_info_to_from() {
         let test_sysvar = TestSysvar::default();
