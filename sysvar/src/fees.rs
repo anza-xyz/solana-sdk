@@ -64,8 +64,7 @@ impl SysvarSerialize for Fees {}
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use serial_test::serial;
+    use {super::*, serial_test::serial};
 
     #[test]
     fn test_clone() {

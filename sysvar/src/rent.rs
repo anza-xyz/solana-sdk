@@ -137,10 +137,7 @@ impl SysvarSerialize for Rent {}
 
 #[cfg(test)]
 mod tests_sysvar_get {
-    use super::*;
-    use serial_test::serial;
-
-    use crate::tests::to_bytes;
+    use {super::*, crate::tests::to_bytes, serial_test::serial};
 
     #[test]
     #[serial]

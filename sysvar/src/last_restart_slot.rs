@@ -53,8 +53,7 @@ impl SysvarSerialize for LastRestartSlot {}
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use serial_test::serial;
+    use {super::*, serial_test::serial};
 
     fn to_bytes<T>(value: &T) -> Vec<u8> {
         unsafe {
