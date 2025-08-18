@@ -35,14 +35,16 @@ mod consts {
     /// the consistently united x and y fields as 64 bytes.
     pub const ALT_BN128_POINT_SIZE: usize = 64;
 
+    const LE_FLAG: u64 = 0x80;
+
     pub const ALT_BN128_ADD: u64 = 0;
     pub const ALT_BN128_SUB: u64 = 1;
     pub const ALT_BN128_MUL: u64 = 2;
     pub const ALT_BN128_PAIRING: u64 = 3;
-    pub const ALT_BN128_ADD_LE: u64 = ALT_BN128_ADD | 0x80;
-    pub const ALT_BN128_SUB_LE: u64 = ALT_BN128_SUB | 0x80;
-    pub const ALT_BN128_MUL_LE: u64 = ALT_BN128_MUL | 0x80;
-    pub const ALT_BN128_PAIRING_LE: u64 = ALT_BN128_PAIRING | 0x80;
+    pub const ALT_BN128_ADD_LE: u64 = ALT_BN128_ADD | LE_FLAG;
+    pub const ALT_BN128_SUB_LE: u64 = ALT_BN128_SUB | LE_FLAG;
+    pub const ALT_BN128_MUL_LE: u64 = ALT_BN128_MUL | LE_FLAG;
+    pub const ALT_BN128_PAIRING_LE: u64 = ALT_BN128_PAIRING | LE_FLAG;
 }
 
 // AltBn128Error must be removed once the
@@ -100,10 +102,9 @@ use consts::{ALT_BN128_FIELD_SIZE as FIELD_SIZE, ALT_BN128_POINT_SIZE as G1_POIN
 /// in the `ark-bn254` crate. Note that this differs from the EIP-197 standard,
 /// which specifies that the field elements are encoded as big-endian.
 ///
-/// The Solana syscalls still expect the inputs to be encoded in big-endian as
-/// specified in EIP-197. The type `PodG1` is an intermediate type that
-/// facilitates the translation between the EIP-197 encoding and the arkworks
-/// implementation encoding.
+/// `PodG1` can be constructed from both big-endian (EIP-197) and little-endian
+/// (ark-bn254) encodings using `from_be_bytes` and `from_le_bytes` methods,
+/// respectively.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Pod, Zeroable)]
 #[repr(transparent)]
 pub struct PodG1(pub [u8; G1_POINT_SIZE]);
@@ -123,10 +124,9 @@ const G2_POINT_SIZE: usize = FIELD_SIZE * 4;
 /// elements, the order of the polynomial field coefficients `x0`, `x1`, `y0`,
 /// and `y1` are different.
 ///
-/// THe Solana syscalls still expect the inputs to be encoded as specified in
-/// EIP-197. The type `PodG2` is an intermediate type that facilitates the
-/// translation between the `EIP-197 encoding and the encoding used in the
-/// arkworks implementation.
+/// `PodG2` can be constructed from both big-endian (EIP-197) and little-endian
+/// (ark-bn254) encodings using `from_be_bytes` and `from_le_bytes` methods,
+/// respectively.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Pod, Zeroable)]
 #[repr(transparent)]
 pub struct PodG2(pub [u8; G2_POINT_SIZE]);
@@ -157,6 +157,8 @@ mod target_arch {
             Ok(Self(pod_bytes))
         }
 
+        /// Takes in a little-endian byte encoding of a group element in G1 and constructs a
+        /// `PodG1` struct that encodes the same bytes internally.
         #[inline(always)]
         fn from_le_bytes(le_bytes: &[u8]) -> Result<Self, AltBn128Error> {
             Ok(Self(
@@ -206,6 +208,8 @@ mod target_arch {
             Ok(Self(pod_bytes))
         }
 
+        /// Takes in a little-endian byte encoding of a group element in G2 and constructs a
+        /// `PodG2` struct that encodes the same bytes internally.
         #[inline(always)]
         fn from_le_bytes(le_bytes: &[u8]) -> Result<Self, AltBn128Error> {
             Ok(Self(
@@ -287,12 +291,24 @@ mod target_arch {
         input: &[u8],
         endianness: Endianness,
     ) -> Result<Vec<u8>, AltBn128Error> {
-        if input.len() > ALT_BN128_ADDITION_INPUT_LEN {
-            return Err(AltBn128Error::InvalidInputData);
+        match endianness {
+            Endianness::BE => {
+                if input.len() > ALT_BN128_ADDITION_INPUT_LEN {
+                    return Err(AltBn128Error::InvalidInputData);
+                }
+            }
+            Endianness::LE => {
+                if input.len() != ALT_BN128_ADDITION_INPUT_LEN {
+                    return Err(AltBn128Error::InvalidInputData);
+                }
+            }
         }
 
         let mut input = input.to_vec();
-        input.resize(ALT_BN128_ADDITION_INPUT_LEN, 0);
+        match endianness {
+            Endianness::BE => input.resize(ALT_BN128_ADDITION_INPUT_LEN, 0),
+            Endianness::LE => (),
+        }
 
         let p: G1 = match endianness {
             Endianness::BE => PodG1::from_be_bytes(&input[..64])?.try_into()?,
@@ -344,12 +360,24 @@ mod target_arch {
         endianness: Endianness,
         expected_length: usize,
     ) -> Result<Vec<u8>, AltBn128Error> {
-        if input.len() > expected_length {
-            return Err(AltBn128Error::InvalidInputData);
+        match endianness {
+            Endianness::BE => {
+                if input.len() > expected_length {
+                    return Err(AltBn128Error::InvalidInputData);
+                }
+            }
+            Endianness::LE => {
+                if input.len() != expected_length {
+                    return Err(AltBn128Error::InvalidInputData);
+                }
+            }
         }
 
         let mut input = input.to_vec();
-        input.resize(expected_length, 0);
+        match endianness {
+            Endianness::BE => input.resize(expected_length, 0),
+            Endianness::LE => (),
+        }
 
         let p: G1 = match endianness {
             Endianness::BE => PodG1::from_be_bytes(&input[..64])?.try_into()?,
@@ -485,7 +513,7 @@ mod target_arch {
     }
 
     pub fn alt_bn128_addition_le(input: &[u8]) -> Result<Vec<u8>, AltBn128Error> {
-        if input.len() > ALT_BN128_ADDITION_INPUT_LEN {
+        if input.len() != ALT_BN128_ADDITION_INPUT_LEN {
             return Err(AltBn128Error::InvalidInputData);
         }
         let mut result_buffer = [0; ALT_BN128_ADDITION_OUTPUT_LEN];
@@ -508,7 +536,7 @@ mod target_arch {
         if input.len() > ALT_BN128_MULTIPLICATION_INPUT_LEN {
             return Err(AltBn128Error::InvalidInputData);
         }
-        let mut result_buffer = [0u8; ALT_BN128_POINT_SIZE];
+        let mut result_buffer = [0u8; ALT_BN128_MULTIPLICATION_OUTPUT_LEN];
         let result = unsafe {
             syscalls::sol_alt_bn128_group_op(
                 ALT_BN128_MUL,
@@ -525,10 +553,10 @@ mod target_arch {
     }
 
     pub fn alt_bn128_multiplication_le(input: &[u8]) -> Result<Vec<u8>, AltBn128Error> {
-        if input.len() > ALT_BN128_MULTIPLICATION_INPUT_LEN {
+        if input.len() != ALT_BN128_MULTIPLICATION_INPUT_LEN {
             return Err(AltBn128Error::InvalidInputData);
         }
-        let mut result_buffer = [0u8; ALT_BN128_POINT_SIZE];
+        let mut result_buffer = [0u8; ALT_BN128_MULTIPLICATION_OUTPUT_LEN];
         let result = unsafe {
             syscalls::sol_alt_bn128_group_op(
                 ALT_BN128_MUL_LE,
@@ -568,7 +596,7 @@ mod target_arch {
         }
     }
 
-    pub fn alt_bn128_pairing_le(input: &[u8]) -> Result<u8, AltBn128Error> {
+    pub fn alt_bn128_pairing_le(input: &[u8]) -> Result<Vec<u8>, AltBn128Error> {
         if input
             .len()
             .checked_rem(consts::ALT_BN128_PAIRING_ELEMENT_LEN)
@@ -587,7 +615,7 @@ mod target_arch {
         };
 
         match result {
-            0 => Ok(result_buffer[0]),
+            0 => Ok(result_buffer.to_vec()),
             _ => Err(AltBn128Error::UnexpectedError),
         }
     }
