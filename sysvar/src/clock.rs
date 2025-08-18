@@ -178,7 +178,9 @@ mod tests {
             assert_eq!(passed_id, id());
 
             let slice = unsafe { std::slice::from_raw_parts_mut(var_addr, length as usize) };
-            slice.copy_from_slice(&self.data[offset as usize..(offset + length) as usize]);
+            slice.copy_from_slice(
+                &self.data[offset as usize..(offset.saturating_add(length)) as usize],
+            );
             solana_program_entrypoint::SUCCESS
         }
     }
