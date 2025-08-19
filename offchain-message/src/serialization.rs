@@ -62,9 +62,6 @@ pub(crate) mod v0 {
         },
     };
 
-    /// Components of a v0 message: (application_domain, format, signers, message)
-    pub type V0MessageComponents = ([u8; 32], MessageFormat, Vec<[u8; 32]>, Vec<u8>);
-
     #[inline]
     pub(crate) const fn preamble_and_body_size(signer_count: usize, message_len: usize) -> usize {
         V0OffchainMessage::HEADER_LEN
@@ -169,7 +166,7 @@ pub(crate) mod v0 {
     }
 
     /// Deserialize the v0 preamble+body (expects no signing domain).
-    pub(crate) fn deserialize(data: &[u8]) -> Result<V0MessageComponents, SanitizeError> {
+    pub(crate) fn deserialize(data: &[u8]) -> Result<V0OffchainMessage, SanitizeError> {
         if data.len() < V0OffchainMessage::HEADER_LEN {
             return Err(SanitizeError::ValueOutOfBounds);
         }
@@ -189,25 +186,12 @@ pub(crate) mod v0 {
             return Err(SanitizeError::InvalidValue);
         }
 
-        Ok((application_domain, declared_format, signers, message))
-    }
-
-    /// Construct a new v0 message with validation.
-    pub(crate) fn new_with_params(
-        application_domain: [u8; 32],
-        signers: &[[u8; 32]],
-        message: &[u8],
-    ) -> Result<V0MessageComponents, SanitizeError> {
-        serialization::validate_components(signers, message)?;
-        let total_size = preamble_and_body_size(signers.len(), message.len());
-        let format = serialization::detect_minimal_format(total_size, message)?;
-
-        Ok((
+        Ok(V0OffchainMessage {
             application_domain,
-            format,
-            signers.to_vec(),
-            message.to_vec(),
-        ))
+            format: declared_format,
+            signers,
+            message,
+        })
     }
 }
 
@@ -302,34 +286,12 @@ mod tests {
             &mut serialized,
         )
         .unwrap();
-        let (parsed_domain, parsed_format, parsed_signers, parsed_message) =
-            v0::deserialize(&serialized).unwrap();
+        let parsed = v0::deserialize(&serialized).unwrap();
 
-        assert_eq!(parsed_domain, application_domain);
-        assert_eq!(parsed_format, format);
-        assert_eq!(parsed_signers, signers);
-        assert_eq!(parsed_message, message);
-    }
-
-    #[test]
-    fn test_new_v0_with_params() {
-        let application_domain = [0x42u8; 32];
-        let signers = [[0x11u8; 32]];
-        let message = b"Hello World!";
-        let (domain, format, parsed_signers, parsed_message) =
-            v0::new_with_params(application_domain, &signers, message).unwrap();
-        assert_eq!(domain, application_domain);
-        assert_eq!(format, MessageFormat::RestrictedAscii);
-        assert_eq!(parsed_signers, signers);
-        assert_eq!(parsed_message, message);
-        assert_eq!(
-            v0::new_with_params(application_domain, &[], b"Hello World!"),
-            Err(SanitizeError::ValueOutOfBounds)
-        ); // empty signers
-        assert_eq!(
-            v0::new_with_params(application_domain, &[[0x11u8; 32]], b""),
-            Err(SanitizeError::InvalidValue)
-        ); // empty message
+        assert_eq!(parsed.application_domain, application_domain);
+        assert_eq!(parsed.format, format);
+        assert_eq!(parsed.signers, signers);
+        assert_eq!(parsed.message, message);
     }
 
     // Minimal helpers for compact tests

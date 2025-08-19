@@ -46,7 +46,6 @@ pub fn is_utf8(data: &[u8]) -> bool {
 pub mod v0 {
     use {
         super::{MessageFormat, OffchainMessage as Base},
-        crate::v0::serialization::V0MessageComponents,
         solana_hash::Hash,
         solana_packet::PACKET_DATA_SIZE,
         solana_sanitize::SanitizeError,
@@ -79,18 +78,6 @@ pub mod v0 {
 
         pub fn get_message(&self) -> &Vec<u8> {
             &self.message
-        }
-    }
-
-    impl From<V0MessageComponents> for OffchainMessage {
-        fn from(components: V0MessageComponents) -> Self {
-            let (application_domain, format, signers, message) = components;
-            Self {
-                application_domain,
-                format,
-                signers,
-                message,
-            }
         }
     }
 
@@ -142,9 +129,18 @@ impl OffchainMessage {
         message: &[u8],
     ) -> Result<Self, SanitizeError> {
         match version {
-            0 => Ok(Self::V0(
-                v0::serialization::new_with_params(application_domain, signers, message)?.into(),
-            )),
+            0 => {
+                serialization::validate_components(signers, message)?;
+                let total_size =
+                    v0::serialization::preamble_and_body_size(signers.len(), message.len());
+                let format = serialization::detect_minimal_format(total_size, message)?;
+                Ok(Self::V0(v0::OffchainMessage {
+                    application_domain,
+                    format,
+                    signers: signers.to_vec(),
+                    message: message.to_vec(),
+                }))
+            }
             _ => Err(SanitizeError::ValueOutOfBounds),
         }
     }
@@ -183,7 +179,7 @@ impl OffchainMessage {
             .get(domain_len.saturating_add(1)..)
             .ok_or(SanitizeError::ValueOutOfBounds)?;
         match version {
-            0 => Ok(Self::V0(v0::serialization::deserialize(payload)?.into())),
+            0 => Ok(Self::V0(v0::serialization::deserialize(payload)?)),
             _ => Err(SanitizeError::ValueOutOfBounds),
         }
     }
