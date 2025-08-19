@@ -25,7 +25,7 @@ pub const TOTAL_MAX_LEDGER: usize = 1232;
 pub const TOTAL_MAX_EXTENDED: usize = u16::MAX as usize;
 
 #[repr(u8)]
-#[derive(Debug, PartialEq, Eq, Copy, Clone, TryFromPrimitive, IntoPrimitive)]
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Copy, Clone, TryFromPrimitive, IntoPrimitive)]
 pub enum MessageFormat {
     RestrictedAscii,
     LimitedUtf8,

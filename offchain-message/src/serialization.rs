@@ -29,8 +29,8 @@ pub(crate) fn validate_components(
     Ok(())
 }
 
-/// Detect appropriate message format based on size and content
-pub(crate) fn detect_format(
+/// Returns the minimal required format implied by size and encoding
+pub(crate) fn detect_minimal_format(
     total_size: usize,
     message: &[u8],
 ) -> Result<MessageFormat, SanitizeError> {
@@ -176,7 +176,7 @@ pub(crate) mod v0 {
 
         let mut offset = 0;
         let application_domain = parse_application_domain(data, &mut offset)?;
-        let format = parse_message_format(data, &mut offset)?;
+        let declared_format = parse_message_format(data, &mut offset)?;
         let signer_count = parse_signer_count(data, &mut offset)?;
         let signers = parse_signers(data, &mut offset, signer_count)?;
         serialization::reject_zero_pubkey_in_multi_signer(&signers)?;
@@ -184,12 +184,12 @@ pub(crate) mod v0 {
         let message = parse_message_body(data, &mut offset, message_len)?;
 
         let total_size = preamble_and_body_size(signers.len(), message_len);
-        let expected_format = serialization::detect_format(total_size, &message)?;
-        if expected_format != format {
+        let required_minimal_format = serialization::detect_minimal_format(total_size, &message)?;
+        if u8::from(declared_format) < u8::from(required_minimal_format) {
             return Err(SanitizeError::InvalidValue);
         }
 
-        Ok((application_domain, format, signers, message))
+        Ok((application_domain, declared_format, signers, message))
     }
 
     /// Construct a new v0 message with validation.
@@ -200,7 +200,7 @@ pub(crate) mod v0 {
     ) -> Result<V0MessageComponents, SanitizeError> {
         serialization::validate_components(signers, message)?;
         let total_size = preamble_and_body_size(signers.len(), message.len());
-        let format = serialization::detect_format(total_size, message)?;
+        let format = serialization::detect_minimal_format(total_size, message)?;
 
         Ok((
             application_domain,
@@ -235,23 +235,23 @@ mod tests {
     #[test]
     fn test_detect_format() {
         assert_eq!(
-            detect_format(100, b"Hello World!"),
+            detect_minimal_format(100, b"Hello World!"),
             Ok(MessageFormat::RestrictedAscii)
         );
         assert_eq!(
-            detect_format(100, "Привет мир!".as_bytes()),
+            detect_minimal_format(100, "Привет мир!".as_bytes()),
             Ok(MessageFormat::LimitedUtf8)
         );
         assert_eq!(
-            detect_format(TOTAL_MAX_LEDGER + 100, b"Hello World!"),
+            detect_minimal_format(TOTAL_MAX_LEDGER + 100, b"Hello World!"),
             Ok(MessageFormat::ExtendedUtf8)
         );
         assert_eq!(
-            detect_format(100, &[0xff, 0xfe, 0xfd]),
+            detect_minimal_format(100, &[0xff, 0xfe, 0xfd]),
             Err(SanitizeError::InvalidValue)
         );
         assert_eq!(
-            detect_format(TOTAL_MAX_EXTENDED + 1, b"Hello"),
+            detect_minimal_format(TOTAL_MAX_EXTENDED + 1, b"Hello"),
             Err(SanitizeError::ValueOutOfBounds)
         );
     }
@@ -330,5 +330,40 @@ mod tests {
             v0::new_with_params(application_domain, &[[0x11u8; 32]], b""),
             Err(SanitizeError::InvalidValue)
         ); // empty message
+    }
+
+    // Minimal helpers for compact tests
+    fn v0_bytes(format: MessageFormat, msg: &[u8]) -> Vec<u8> {
+        let mut out = Vec::new();
+        let domain = [0xAAu8; 32];
+        let signers = [[0x11u8; 32]];
+        v0::serialize(&domain, format, &signers, msg, &mut out).unwrap();
+        out
+    }
+
+    #[test]
+    fn test_accept_ascii_declared_higher() {
+        let msg = b"Hello";
+        assert!(v0::deserialize(&v0_bytes(MessageFormat::LimitedUtf8, msg)).is_ok());
+        assert!(v0::deserialize(&v0_bytes(MessageFormat::ExtendedUtf8, msg)).is_ok());
+    }
+
+    #[test]
+    fn test_accept_utf8_declared_extended() {
+        let msg = "Привет".as_bytes();
+        assert!(v0::deserialize(&v0_bytes(MessageFormat::ExtendedUtf8, msg)).is_ok());
+    }
+
+    #[test]
+    fn test_reject_extended_size_declared_ascii_or_limited() {
+        let msg = vec![b'a'; TOTAL_MAX_LEDGER]; // forces minimal ExtendedUtf8
+        assert!(v0::deserialize(&v0_bytes(MessageFormat::RestrictedAscii, &msg)).is_err());
+        assert!(v0::deserialize(&v0_bytes(MessageFormat::LimitedUtf8, &msg)).is_err());
+    }
+
+    #[test]
+    fn test_reject_non_utf8_even_if_declared_extended() {
+        let msg = vec![0xFF, 0xFE, 0xFD];
+        assert!(v0::deserialize(&v0_bytes(MessageFormat::ExtendedUtf8, &msg)).is_err());
     }
 }
