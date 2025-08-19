@@ -124,10 +124,45 @@ jobs:
       - name: Run minimal-versions check
         run: ./scripts/check-detached-minimal-versions.sh "${{ inputs.package_path }}"
 
+  semver:
+    name: Check Semver
+    runs-on: ubuntu-latest
+    steps:
+      - name: Git checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Environment
+        uses: ./.github/actions/setup
+        with:
+          cargo-cache-key: cargo-publish-semver-${{ inputs.package_path }}
+          cargo-cache-fallback-key: cargo-publish-semver
+
+      - name: Install cargo-semver-checks
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-semver-checks,cargo-release
+
+      - name: Set Git Author (required for cargo-release)
+        run: |
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config --global user.name "github-actions[bot]"
+
+      - name: Set Version
+        run: |
+          if [ "${{ inputs.level }}" == "version" ]; then
+            LEVEL=${{ inputs.version }}
+          else
+            LEVEL=${{ inputs.level }}
+          fi
+          cargo release $LEVEL --manifest-path "${{ inputs.package_path }}/Cargo.toml" --no-tag --no-publish --no-push --no-confirm --execute
+
+      - name: Check semver
+        run: cargo semver-checks --manifest-path "${{ inputs.package_path }}/Cargo.toml"
+
   publish-crate:
     name: Publish crate
     runs-on: ubuntu-latest
-    needs: [format, clippy, detached-minimal-versions]
+    needs: [format, clippy, detached-minimal-versions, semver]
     permissions:
       contents: write
     steps:
