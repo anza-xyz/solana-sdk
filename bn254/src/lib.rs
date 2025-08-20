@@ -414,10 +414,12 @@ mod target_arch {
         }
     }
 
+    #[inline(always)]
     pub fn alt_bn128_pairing(input: &[u8]) -> Result<Vec<u8>, AltBn128Error> {
         alt_bn128_apply_pairing(input, Endianness::BE)
     }
 
+    #[inline(always)]
     pub fn alt_bn128_pairing_le(input: &[u8]) -> Result<Vec<u8>, AltBn128Error> {
         alt_bn128_apply_pairing(input, Endianness::LE)
     }
