@@ -30,7 +30,7 @@ pub(crate) fn validate_components(
 }
 
 /// Returns the minimal required format implied by size and encoding
-pub(crate) fn detect_minimal_format(
+pub(crate) fn detect_implied_format(
     total_size: usize,
     message: &[u8],
 ) -> Result<MessageFormat, SanitizeError> {
@@ -181,8 +181,8 @@ pub(crate) mod v0 {
         let message = parse_message_body(data, &mut offset, message_len)?;
 
         let total_size = preamble_and_body_size(signers.len(), message_len);
-        let required_minimal_format = serialization::detect_minimal_format(total_size, &message)?;
-        if u8::from(declared_format) < u8::from(required_minimal_format) {
+        let implied_format = serialization::detect_implied_format(total_size, &message)?;
+        if !declared_format.includes(implied_format) {
             return Err(SanitizeError::InvalidValue);
         }
 
@@ -219,23 +219,23 @@ mod tests {
     #[test]
     fn test_detect_format() {
         assert_eq!(
-            detect_minimal_format(100, b"Hello World!"),
+            detect_implied_format(100, b"Hello World!"),
             Ok(MessageFormat::RestrictedAscii)
         );
         assert_eq!(
-            detect_minimal_format(100, "Привет мир!".as_bytes()),
+            detect_implied_format(100, "Привет мир!".as_bytes()),
             Ok(MessageFormat::LimitedUtf8)
         );
         assert_eq!(
-            detect_minimal_format(TOTAL_MAX_LEDGER + 100, b"Hello World!"),
+            detect_implied_format(TOTAL_MAX_LEDGER + 100, b"Hello World!"),
             Ok(MessageFormat::ExtendedUtf8)
         );
         assert_eq!(
-            detect_minimal_format(100, &[0xff, 0xfe, 0xfd]),
+            detect_implied_format(100, &[0xff, 0xfe, 0xfd]),
             Err(SanitizeError::InvalidValue)
         );
         assert_eq!(
-            detect_minimal_format(TOTAL_MAX_EXTENDED + 1, b"Hello"),
+            detect_implied_format(TOTAL_MAX_EXTENDED + 1, b"Hello"),
             Err(SanitizeError::ValueOutOfBounds)
         );
     }

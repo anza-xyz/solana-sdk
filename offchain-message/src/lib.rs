@@ -25,11 +25,26 @@ pub const TOTAL_MAX_LEDGER: usize = 1232;
 pub const TOTAL_MAX_EXTENDED: usize = u16::MAX as usize;
 
 #[repr(u8)]
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Copy, Clone, TryFromPrimitive, IntoPrimitive)]
+#[derive(Debug, PartialEq, Eq, Copy, Clone, TryFromPrimitive, IntoPrimitive)]
 pub enum MessageFormat {
     RestrictedAscii,
     LimitedUtf8,
     ExtendedUtf8,
+}
+
+impl MessageFormat {
+    /// Returns true if `self` format can represent all messages that `required` can.
+    ///
+    /// This avoids relying on enum discriminant ordering in case new formats
+    /// are introduced in the future that are not strict supersets of prior ones.
+    pub fn includes(self, required: MessageFormat) -> bool {
+        use MessageFormat::*;
+        match self {
+            RestrictedAscii => required == RestrictedAscii,
+            LimitedUtf8 => matches!(required, RestrictedAscii | LimitedUtf8),
+            ExtendedUtf8 => true,
+        }
+    }
 }
 
 /// Check if given bytes contain only printable ASCII characters
@@ -133,7 +148,7 @@ impl OffchainMessage {
                 serialization::validate_components(signers, message)?;
                 let total_size =
                     v0::serialization::preamble_and_body_size(signers.len(), message.len());
-                let format = serialization::detect_minimal_format(total_size, message)?;
+                let format = serialization::detect_implied_format(total_size, message)?;
                 Ok(Self::V0(v0::OffchainMessage {
                     application_domain,
                     format,
