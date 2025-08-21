@@ -111,7 +111,8 @@ mod tests {
     fn test_stake_history() {
         let mut stake_history = StakeHistory::default();
 
-        for i in 0..MAX_ENTRIES as u64 + 1 {
+        let current_epoch = MAX_ENTRIES as u64 + 1;
+        for i in 0..current_epoch {
             stake_history.add(
                 i,
                 StakeHistoryEntry {
@@ -123,8 +124,7 @@ mod tests {
         assert_eq!(stake_history.len(), MAX_ENTRIES);
         assert_eq!(stake_history.iter().map(|entry| entry.0).min().unwrap(), 1);
         assert_eq!(stake_history.get(0), None);
-        for i in 0..MAX_ENTRIES {
-            let epoch = (i + 1) as u64;
+        for epoch in 1..current_epoch {
             assert_eq!(
                 stake_history.get(epoch),
                 Some(&StakeHistoryEntry {
@@ -133,6 +133,7 @@ mod tests {
                 })
             );
         }
+        assert_eq!(stake_history.get(current_epoch), None);
     }
 
     #[test]
