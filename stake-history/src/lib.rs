@@ -66,10 +66,15 @@ impl std::ops::Add for StakeHistoryEntry {
 pub struct StakeHistory(Vec<(Epoch, StakeHistoryEntry)>);
 
 impl StakeHistory {
+    #[inline]
+    fn latest_epoch(&self) -> Option<&Epoch> {
+        self.first().map(|(epoch, _)| epoch)
+    }
+
     pub fn get(&self, epoch: Epoch) -> Option<&StakeHistoryEntry> {
-        self.binary_search_by(|probe| epoch.cmp(&probe.0))
-            .ok()
-            .map(|index| &self[index].1)
+        self.latest_epoch()
+            .and_then(|latest| latest.checked_sub(epoch))
+            .and_then(|index| self.0.get(index as usize).map(|(_, entry)| entry))
     }
 
     pub fn add(&mut self, epoch: Epoch, entry: StakeHistoryEntry) {
@@ -94,9 +99,7 @@ pub trait StakeHistoryGetEntry {
 
 impl StakeHistoryGetEntry for StakeHistory {
     fn get_entry(&self, epoch: Epoch) -> Option<StakeHistoryEntry> {
-        self.binary_search_by(|probe| epoch.cmp(&probe.0))
-            .ok()
-            .map(|index| self[index].1.clone())
+        self.get(epoch).map(|entry| entry.to_owned())
     }
 }
 
@@ -120,13 +123,16 @@ mod tests {
         assert_eq!(stake_history.len(), MAX_ENTRIES);
         assert_eq!(stake_history.iter().map(|entry| entry.0).min().unwrap(), 1);
         assert_eq!(stake_history.get(0), None);
-        assert_eq!(
-            stake_history.get(1),
-            Some(&StakeHistoryEntry {
-                activating: 1,
-                ..StakeHistoryEntry::default()
-            })
-        );
+        for i in 0..MAX_ENTRIES {
+            let epoch = (i + 1) as u64;
+            assert_eq!(
+                stake_history.get(epoch),
+                Some(&StakeHistoryEntry {
+                    activating: epoch,
+                    ..StakeHistoryEntry::default()
+                })
+            );
+        }
     }
 
     #[test]
