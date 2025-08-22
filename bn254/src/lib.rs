@@ -1,50 +1,30 @@
+pub mod addition;
 pub mod compression;
+pub mod multiplication;
+pub mod pairing;
+
 pub mod prelude {
-    pub use crate::{consts::*, target_arch::*, AltBn128Error};
+    pub use crate::{
+        addition::{consts::*, target_arch::*},
+        consts::*,
+        multiplication::{consts::*, target_arch::*},
+        pairing::{consts::*, target_arch::*},
+        AltBn128Error,
+    };
 }
 
 use {
     bytemuck::{Pod, Zeroable},
-    consts::*,
     thiserror::Error,
 };
 
 mod consts {
-    /// Input length for the add operation.
-    pub const ALT_BN128_ADDITION_INPUT_LEN: usize = 128;
-
-    /// Input length for the multiplication operation.
-    pub const ALT_BN128_MULTIPLICATION_INPUT_LEN: usize = 96;
-
-    /// Pair element length.
-    pub const ALT_BN128_PAIRING_ELEMENT_LEN: usize = 192;
-
-    /// Output length for the add operation.
-    pub const ALT_BN128_ADDITION_OUTPUT_LEN: usize = 64;
-
-    /// Output length for the multiplication operation.
-    pub const ALT_BN128_MULTIPLICATION_OUTPUT_LEN: usize = 64;
-
-    /// Output length for pairing operation.
-    pub const ALT_BN128_PAIRING_OUTPUT_LEN: usize = 32;
-
     /// Size of the EC point field, in bytes.
     pub const ALT_BN128_FIELD_SIZE: usize = 32;
 
     /// Size of the EC point. `alt_bn128` point contains
     /// the consistently united x and y fields as 64 bytes.
     pub const ALT_BN128_POINT_SIZE: usize = 64;
-
-    const LE_FLAG: u64 = 0x80;
-
-    pub const ALT_BN128_ADD: u64 = 0;
-    pub const ALT_BN128_SUB: u64 = 1;
-    pub const ALT_BN128_MUL: u64 = 2;
-    pub const ALT_BN128_PAIRING: u64 = 3;
-    pub const ALT_BN128_ADD_LE: u64 = ALT_BN128_ADD | LE_FLAG;
-    pub const ALT_BN128_SUB_LE: u64 = ALT_BN128_SUB | LE_FLAG;
-    pub const ALT_BN128_MUL_LE: u64 = ALT_BN128_MUL | LE_FLAG;
-    pub const ALT_BN128_PAIRING_LE: u64 = ALT_BN128_PAIRING | LE_FLAG;
 }
 
 // AltBn128Error must be removed once the
@@ -135,19 +115,17 @@ pub struct PodG2(pub [u8; G2_POINT_SIZE]);
 mod target_arch {
     use {
         super::*,
-        ark_bn254::{self, Config},
-        ark_ec::{self, models::bn::Bn, pairing::Pairing, AffineRepr},
-        ark_ff::{BigInteger, BigInteger256, One},
-        ark_serialize::{CanonicalDeserialize, CanonicalSerialize, Compress, Validate},
+        ark_ec::{self, AffineRepr},
+        ark_serialize::{CanonicalDeserialize, Compress, Validate},
     };
 
-    type G1 = ark_bn254::g1::G1Affine;
-    type G2 = ark_bn254::g2::G2Affine;
+    pub(crate) type G1 = ark_bn254::g1::G1Affine;
+    pub(crate) type G2 = ark_bn254::g2::G2Affine;
 
     impl PodG1 {
         /// Takes in an EIP-197 (big-endian) byte encoding of a group element in G1 and constructs a
         /// `PodG1` struct that encodes the same bytes in little-endian.
-        fn from_be_bytes(be_bytes: &[u8]) -> Result<Self, AltBn128Error> {
+        pub(crate) fn from_be_bytes(be_bytes: &[u8]) -> Result<Self, AltBn128Error> {
             if be_bytes.len() != G1_POINT_SIZE {
                 return Err(AltBn128Error::SliceOutOfBounds);
             }
@@ -160,7 +138,7 @@ mod target_arch {
         /// Takes in a little-endian byte encoding of a group element in G1 and constructs a
         /// `PodG1` struct that encodes the same bytes internally.
         #[inline(always)]
-        fn from_le_bytes(le_bytes: &[u8]) -> Result<Self, AltBn128Error> {
+        pub(crate) fn from_le_bytes(le_bytes: &[u8]) -> Result<Self, AltBn128Error> {
             Ok(Self(
                 le_bytes
                     .try_into()
@@ -173,7 +151,7 @@ mod target_arch {
         /// Takes in an EIP-197 (big-endian) byte encoding of a group element in G2
         /// and constructs a `PodG2` struct that encodes the same bytes in
         /// little-endian.
-        fn from_be_bytes(be_bytes: &[u8]) -> Result<Self, AltBn128Error> {
+        pub(crate) fn from_be_bytes(be_bytes: &[u8]) -> Result<Self, AltBn128Error> {
             if be_bytes.len() != G2_POINT_SIZE {
                 return Err(AltBn128Error::SliceOutOfBounds);
             }
@@ -211,7 +189,7 @@ mod target_arch {
         /// Takes in a little-endian byte encoding of a group element in G2 and constructs a
         /// `PodG2` struct that encodes the same bytes internally.
         #[inline(always)]
-        fn from_le_bytes(le_bytes: &[u8]) -> Result<Self, AltBn128Error> {
+        pub(crate) fn from_le_bytes(le_bytes: &[u8]) -> Result<Self, AltBn128Error> {
             Ok(Self(
                 le_bytes
                     .try_into()
@@ -272,206 +250,12 @@ mod target_arch {
         }
     }
 
-    enum Endianness {
+    pub(crate) enum Endianness {
         BE,
         LE,
     }
 
-    #[inline(always)]
-    pub fn alt_bn128_addition(input: &[u8]) -> Result<Vec<u8>, AltBn128Error> {
-        alt_bn128_apply_addition(input, Endianness::BE)
-    }
-
-    #[inline(always)]
-    pub fn alt_bn128_addition_le(input: &[u8]) -> Result<Vec<u8>, AltBn128Error> {
-        alt_bn128_apply_addition(input, Endianness::LE)
-    }
-
-    fn alt_bn128_apply_addition(
-        input: &[u8],
-        endianness: Endianness,
-    ) -> Result<Vec<u8>, AltBn128Error> {
-        match endianness {
-            Endianness::BE => {
-                if input.len() > ALT_BN128_ADDITION_INPUT_LEN {
-                    return Err(AltBn128Error::InvalidInputData);
-                }
-            }
-            Endianness::LE => {
-                if input.len() != ALT_BN128_ADDITION_INPUT_LEN {
-                    return Err(AltBn128Error::InvalidInputData);
-                }
-            }
-        }
-
-        let mut input = input.to_vec();
-        match endianness {
-            Endianness::BE => input.resize(ALT_BN128_ADDITION_INPUT_LEN, 0),
-            Endianness::LE => (),
-        }
-
-        let p: G1 = match endianness {
-            Endianness::BE => PodG1::from_be_bytes(&input[..64])?.try_into()?,
-            Endianness::LE => PodG1::from_le_bytes(&input[..64])?.try_into()?,
-        };
-
-        let q: G1 = match endianness {
-            Endianness::BE => PodG1::from_be_bytes(&input[64..])?.try_into()?,
-            Endianness::LE => PodG1::from_le_bytes(&input[64..])?.try_into()?,
-        };
-
-        #[allow(clippy::arithmetic_side_effects)]
-        let result_point = p + q;
-
-        let mut result_point_data = [0u8; ALT_BN128_ADDITION_OUTPUT_LEN];
-        let result_point_affine: G1 = result_point.into();
-        result_point_affine
-            .x
-            .serialize_with_mode(&mut result_point_data[..32], Compress::No)
-            .map_err(|_| AltBn128Error::InvalidInputData)?;
-        result_point_affine
-            .y
-            .serialize_with_mode(&mut result_point_data[32..], Compress::No)
-            .map_err(|_| AltBn128Error::InvalidInputData)?;
-
-        match endianness {
-            Endianness::BE => Ok(convert_endianness_64(&result_point_data[..])),
-            Endianness::LE => Ok(result_point_data.to_vec()),
-        }
-    }
-
-    #[inline(always)]
-    pub fn alt_bn128_multiplication(input: &[u8]) -> Result<Vec<u8>, AltBn128Error> {
-        alt_bn128_apply_multiplication(input, Endianness::BE, ALT_BN128_MULTIPLICATION_INPUT_LEN)
-    }
-
-    #[inline(always)]
-    pub fn alt_bn128_multiplication_le(input: &[u8]) -> Result<Vec<u8>, AltBn128Error> {
-        alt_bn128_apply_multiplication(input, Endianness::LE, ALT_BN128_MULTIPLICATION_INPUT_LEN)
-    }
-
-    #[inline(always)]
-    pub fn alt_bn128_multiplication_128(input: &[u8]) -> Result<Vec<u8>, AltBn128Error> {
-        alt_bn128_apply_multiplication(input, Endianness::BE, 128) // hard-code length; we will remove this function in the future
-    }
-
-    fn alt_bn128_apply_multiplication(
-        input: &[u8],
-        endianness: Endianness,
-        expected_length: usize,
-    ) -> Result<Vec<u8>, AltBn128Error> {
-        match endianness {
-            Endianness::BE => {
-                if input.len() > expected_length {
-                    return Err(AltBn128Error::InvalidInputData);
-                }
-            }
-            Endianness::LE => {
-                if input.len() != expected_length {
-                    return Err(AltBn128Error::InvalidInputData);
-                }
-            }
-        }
-
-        let mut input = input.to_vec();
-        match endianness {
-            Endianness::BE => input.resize(expected_length, 0),
-            Endianness::LE => (),
-        }
-
-        let p: G1 = match endianness {
-            Endianness::BE => PodG1::from_be_bytes(&input[..64])?.try_into()?,
-            Endianness::LE => PodG1::from_le_bytes(&input[..64])?.try_into()?,
-        };
-        let mut fr_bytes = [0u8; 32];
-        match endianness {
-            Endianness::BE => {
-                reverse_copy(&input[64..96], &mut fr_bytes)?;
-            }
-            Endianness::LE => {
-                fr_bytes.copy_from_slice(&input[64..96]);
-            }
-        }
-        let fr = BigInteger256::deserialize_uncompressed_unchecked(fr_bytes.as_slice())
-            .map_err(|_| AltBn128Error::InvalidInputData)?;
-
-        let result_point: G1 = p.mul_bigint(fr).into();
-
-        let mut result_point_data = [0u8; ALT_BN128_MULTIPLICATION_OUTPUT_LEN];
-
-        result_point
-            .x
-            .serialize_with_mode(&mut result_point_data[..32], Compress::No)
-            .map_err(|_| AltBn128Error::InvalidInputData)?;
-        result_point
-            .y
-            .serialize_with_mode(&mut result_point_data[32..], Compress::No)
-            .map_err(|_| AltBn128Error::InvalidInputData)?;
-
-        match endianness {
-            Endianness::BE => Ok(convert_endianness_64(&result_point_data[..])),
-            Endianness::LE => Ok(result_point_data.to_vec()),
-        }
-    }
-
-    #[inline(always)]
-    pub fn alt_bn128_pairing(input: &[u8]) -> Result<Vec<u8>, AltBn128Error> {
-        alt_bn128_apply_pairing(input, Endianness::BE)
-    }
-
-    #[inline(always)]
-    pub fn alt_bn128_pairing_le(input: &[u8]) -> Result<Vec<u8>, AltBn128Error> {
-        alt_bn128_apply_pairing(input, Endianness::LE)
-    }
-
-    fn alt_bn128_apply_pairing(
-        input: &[u8],
-        endianness: Endianness,
-    ) -> Result<Vec<u8>, AltBn128Error> {
-        if input
-            .len()
-            .checked_rem(consts::ALT_BN128_PAIRING_ELEMENT_LEN)
-            .is_none()
-        {
-            return Err(AltBn128Error::InvalidInputData);
-        }
-
-        let ele_len = input.len().saturating_div(ALT_BN128_PAIRING_ELEMENT_LEN);
-
-        let mut vec_pairs: Vec<(G1, G2)> = Vec::with_capacity(ele_len);
-        for chunk in input.chunks(ALT_BN128_PAIRING_ELEMENT_LEN).take(ele_len) {
-            let (p_bytes, q_bytes) = chunk.split_at(G1_POINT_SIZE);
-
-            let g1 = match endianness {
-                Endianness::BE => PodG1::from_be_bytes(p_bytes)?.try_into()?,
-                Endianness::LE => PodG1::from_le_bytes(p_bytes)?.try_into()?,
-            };
-            let g2 = match endianness {
-                Endianness::BE => PodG2::from_be_bytes(q_bytes)?.try_into()?,
-                Endianness::LE => PodG2::from_le_bytes(q_bytes)?.try_into()?,
-            };
-
-            vec_pairs.push((g1, g2));
-        }
-
-        let mut result = BigInteger256::from(0u64);
-        let res = <Bn<Config> as Pairing>::multi_pairing(
-            vec_pairs.iter().map(|pair| pair.0),
-            vec_pairs.iter().map(|pair| pair.1),
-        );
-
-        if res.0 == ark_bn254::Fq12::one() {
-            result = BigInteger256::from(1u64);
-        }
-
-        let output = match endianness {
-            Endianness::BE => result.to_bytes_be(),
-            Endianness::LE => result.to_bytes_le(),
-        };
-        Ok(output)
-    }
-
-    fn convert_endianness_64(bytes: &[u8]) -> Vec<u8> {
+    pub(crate) fn convert_endianness_64(bytes: &[u8]) -> Vec<u8> {
         bytes
             .chunks(32)
             .flat_map(|b| b.iter().copied().rev().collect::<Vec<u8>>())
@@ -479,7 +263,7 @@ mod target_arch {
     }
 
     /// Copies a `source` byte slice into a `destination` byte slice in reverse order.
-    fn reverse_copy(source: &[u8], destination: &mut [u8]) -> Result<(), AltBn128Error> {
+    pub(crate) fn reverse_copy(source: &[u8], destination: &mut [u8]) -> Result<(), AltBn128Error> {
         if source.len() != destination.len() {
             return Err(AltBn128Error::SliceOutOfBounds);
         }
@@ -487,139 +271,6 @@ mod target_arch {
             *destination_index = *source_index;
         }
         Ok(())
-    }
-}
-
-#[cfg(target_os = "solana")]
-mod target_arch {
-    use {super::*, solana_define_syscall::definitions as syscalls};
-
-    pub fn alt_bn128_addition(input: &[u8]) -> Result<Vec<u8>, AltBn128Error> {
-        if input.len() > ALT_BN128_ADDITION_INPUT_LEN {
-            return Err(AltBn128Error::InvalidInputData);
-        }
-        let mut result_buffer = [0; ALT_BN128_ADDITION_OUTPUT_LEN];
-        let result = unsafe {
-            syscalls::sol_alt_bn128_group_op(
-                ALT_BN128_ADD,
-                input as *const _ as *const u8,
-                input.len() as u64,
-                &mut result_buffer as *mut _ as *mut u8,
-            )
-        };
-
-        match result {
-            0 => Ok(result_buffer.to_vec()),
-            _ => Err(AltBn128Error::UnexpectedError),
-        }
-    }
-
-    pub fn alt_bn128_addition_le(input: &[u8]) -> Result<Vec<u8>, AltBn128Error> {
-        if input.len() != ALT_BN128_ADDITION_INPUT_LEN {
-            return Err(AltBn128Error::InvalidInputData);
-        }
-        let mut result_buffer = [0; ALT_BN128_ADDITION_OUTPUT_LEN];
-        let result = unsafe {
-            syscalls::sol_alt_bn128_group_op(
-                ALT_BN128_ADD_LE,
-                input as *const _ as *const u8,
-                input.len() as u64,
-                &mut result_buffer as *mut _ as *mut u8,
-            )
-        };
-
-        match result {
-            0 => Ok(result_buffer.to_vec()),
-            _ => Err(AltBn128Error::UnexpectedError),
-        }
-    }
-
-    pub fn alt_bn128_multiplication(input: &[u8]) -> Result<Vec<u8>, AltBn128Error> {
-        if input.len() > ALT_BN128_MULTIPLICATION_INPUT_LEN {
-            return Err(AltBn128Error::InvalidInputData);
-        }
-        let mut result_buffer = [0u8; ALT_BN128_MULTIPLICATION_OUTPUT_LEN];
-        let result = unsafe {
-            syscalls::sol_alt_bn128_group_op(
-                ALT_BN128_MUL,
-                input as *const _ as *const u8,
-                input.len() as u64,
-                &mut result_buffer as *mut _ as *mut u8,
-            )
-        };
-
-        match result {
-            0 => Ok(result_buffer.to_vec()),
-            _ => Err(AltBn128Error::UnexpectedError),
-        }
-    }
-
-    pub fn alt_bn128_multiplication_le(input: &[u8]) -> Result<Vec<u8>, AltBn128Error> {
-        if input.len() != ALT_BN128_MULTIPLICATION_INPUT_LEN {
-            return Err(AltBn128Error::InvalidInputData);
-        }
-        let mut result_buffer = [0u8; ALT_BN128_MULTIPLICATION_OUTPUT_LEN];
-        let result = unsafe {
-            syscalls::sol_alt_bn128_group_op(
-                ALT_BN128_MUL_LE,
-                input as *const _ as *const u8,
-                input.len() as u64,
-                &mut result_buffer as *mut _ as *mut u8,
-            )
-        };
-
-        match result {
-            0 => Ok(result_buffer.to_vec()),
-            _ => Err(AltBn128Error::UnexpectedError),
-        }
-    }
-
-    pub fn alt_bn128_pairing(input: &[u8]) -> Result<Vec<u8>, AltBn128Error> {
-        if input
-            .len()
-            .checked_rem(consts::ALT_BN128_PAIRING_ELEMENT_LEN)
-            .is_none()
-        {
-            return Err(AltBn128Error::InvalidInputData);
-        }
-        let mut result_buffer = [0u8; 32];
-        let result = unsafe {
-            syscalls::sol_alt_bn128_group_op(
-                ALT_BN128_PAIRING,
-                input as *const _ as *const u8,
-                input.len() as u64,
-                &mut result_buffer as *mut _ as *mut u8,
-            )
-        };
-
-        match result {
-            0 => Ok(result_buffer.to_vec()),
-            _ => Err(AltBn128Error::UnexpectedError),
-        }
-    }
-
-    pub fn alt_bn128_pairing_le(input: &[u8]) -> Result<Vec<u8>, AltBn128Error> {
-        if input
-            .len()
-            .checked_rem(consts::ALT_BN128_PAIRING_ELEMENT_LEN)
-            .is_none()
-        {
-            return Err(AltBn128Error::InvalidInputData);
-        }
-        let mut result_buffer = [0u8; 32];
-        let result = unsafe {
-            syscalls::sol_alt_bn128_group_op(
-                ALT_BN128_PAIRING_LE,
-                input as *const _ as *const u8,
-                input.len() as u64,
-                &mut result_buffer as *mut _ as *mut u8,
-            )
-        };
-
-        match result {
-            0 => Ok(result_buffer.to_vec()),
-            _ => Err(AltBn128Error::UnexpectedError),
-        }
     }
 }
 
@@ -650,16 +301,5 @@ mod tests {
             .try_into()
             .unwrap();
         assert_eq!(p, zero);
-    }
-
-    #[test]
-    fn alt_bn128_pairing_invalid_length() {
-        use ark_ff::{BigInteger, BigInteger256};
-
-        let input = [0; 193];
-        let result = alt_bn128_pairing(&input);
-        assert!(result.is_ok());
-        let expected = BigInteger256::from(1u64).to_bytes_be();
-        assert_eq!(result.unwrap(), expected);
     }
 }
