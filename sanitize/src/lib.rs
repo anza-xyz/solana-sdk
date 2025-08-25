@@ -1,5 +1,7 @@
 //! A trait for sanitizing values and members of over the wire messages.
 
+#![no_std]
+
 use core::{error::Error, fmt};
 
 #[derive(PartialEq, Debug, Eq, Clone)]
@@ -36,7 +38,7 @@ pub trait Sanitize {
     }
 }
 
-impl<T: Sanitize> Sanitize for Vec<T> {
+impl<T: Sanitize> Sanitize for [T] {
     fn sanitize(&self) -> Result<(), SanitizeError> {
         for x in self.iter() {
             x.sanitize()?;
