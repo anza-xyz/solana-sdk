@@ -32,8 +32,8 @@ macro_rules! impl_from_str {
 /// * `$affine`: The identifier for the affine (uncompressed) representation struct (e.g., `Pubkey`).
 /// * `$compressed`: The identifier for the compressed representation struct (e.g., `PubkeyCompressed`).
 /// * `$point_type`: The underlying `blstrs` affine point type (e.g., `G1Affine` or `G2Affine`).
-/// * `$error_type`: The error type to be used for fallible conversions (e.g., `BlsError`).
-/// * `$as_trait`: The identifier for the custom conversion trait (e.g., `AsPubkeyProjective`).
+/// * `$as_projective_trait`: The identifier for the custom projective conversion trait (e.g.,`AsPubkeyProjective`).
+/// * `$as_affine_trait`: The identifier for the custom affine conversion trait (e.g., `AsPubkey`).
 #[cfg(not(target_os = "solana"))]
 macro_rules! impl_bls_conversions {
     (
@@ -41,7 +41,8 @@ macro_rules! impl_bls_conversions {
         $affine:ident,
         $compressed:ident,
         $point_type:ty,
-        $as_trait:ident
+        $as_projective_trait:ident,
+        $as_affine_trait:ident
     ) => {
         // ---
         // infallible conversions from the projective type.
@@ -141,21 +142,42 @@ macro_rules! impl_bls_conversions {
             }
         }
 
-        impl $as_trait for $projective {
+        impl $as_projective_trait for $projective {
             fn try_as_projective(&self) -> Result<$projective, BlsError> {
                 Ok(*self)
             }
         }
 
-        impl $as_trait for $affine {
+        impl $as_projective_trait for $affine {
             fn try_as_projective(&self) -> Result<$projective, BlsError> {
                 $projective::try_from(self)
             }
         }
 
-        impl $as_trait for $compressed {
+        impl $as_projective_trait for $compressed {
             fn try_as_projective(&self) -> Result<$projective, BlsError> {
                 $projective::try_from(self)
+            }
+        }
+
+        impl $as_affine_trait for $projective {
+            fn try_as_affine(&self) -> Result<$affine, BlsError> {
+                // Uses the `From<&$projective>` for `$affine` conversion defined above.
+                Ok(self.into())
+            }
+        }
+
+        impl $as_affine_trait for $affine {
+            fn try_as_affine(&self) -> Result<$affine, BlsError> {
+                // Trivial case: already in the correct format.
+                Ok(*self)
+            }
+        }
+
+        impl $as_affine_trait for $compressed {
+            fn try_as_affine(&self) -> Result<$affine, BlsError> {
+                // Uses the `TryFrom<&$compressed>` for `$affine` conversion defined above.
+                $affine::try_from(self)
             }
         }
     };

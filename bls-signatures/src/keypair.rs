@@ -1,9 +1,9 @@
 use crate::{
     error::BlsError,
     proof_of_possession::ProofOfPossessionProjective,
-    pubkey::{PubkeyProjective, VerifiablePubkey, BLS_PUBLIC_KEY_AFFINE_SIZE},
+    pubkey::{Pubkey, PubkeyProjective, VerifiablePubkey, BLS_PUBLIC_KEY_AFFINE_SIZE},
     secret_key::{SecretKey, BLS_SECRET_KEY_SIZE},
-    signature::{AsSignatureProjective, SignatureProjective},
+    signature::{AsSignature, SignatureProjective},
 };
 #[cfg(feature = "solana-signer-derive")]
 use solana_signer::Signer;
@@ -25,7 +25,7 @@ pub const BLS_KEYPAIR_SIZE: usize = BLS_SECRET_KEY_SIZE + BLS_PUBLIC_KEY_AFFINE_
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Keypair {
     pub secret: SecretKey,
-    pub public: PubkeyProjective,
+    pub public: Pubkey,
 }
 
 impl Keypair {
@@ -33,14 +33,14 @@ impl Keypair {
     #[allow(clippy::new_without_default)]
     pub fn new() -> Self {
         let secret = SecretKey::new();
-        let public = PubkeyProjective::from_secret(&secret);
+        let public = PubkeyProjective::from_secret(&secret).into();
         Self { secret, public }
     }
 
     /// Derive a `Keypair` from a seed (input key material)
     pub fn derive(ikm: &[u8]) -> Result<Self, BlsError> {
         let secret = SecretKey::derive(ikm)?;
-        let public = PubkeyProjective::from_secret(&secret);
+        let public = PubkeyProjective::from_secret(&secret).into();
         Ok(Self { secret, public })
     }
 
@@ -48,7 +48,7 @@ impl Keypair {
     #[cfg(feature = "solana-signer-derive")]
     pub fn derive_from_signer(signer: &dyn Signer, public_seed: &[u8]) -> Result<Self, BlsError> {
         let secret = SecretKey::derive_from_signer(signer, public_seed)?;
-        let public = PubkeyProjective::from_secret(&secret);
+        let public = PubkeyProjective::from_secret(&secret).into();
         Ok(Self { secret, public })
     }
 
@@ -63,11 +63,7 @@ impl Keypair {
     }
 
     /// Verify a signature against a message and a public key
-    pub fn verify<S: AsSignatureProjective>(
-        &self,
-        signature: &S,
-        message: &[u8],
-    ) -> Result<bool, BlsError> {
+    pub fn verify<S: AsSignature>(&self, signature: &S, message: &[u8]) -> Result<bool, BlsError> {
         self.public.verify_signature(signature, message)
     }
 }
@@ -80,7 +76,11 @@ impl TryFrom<&[u8]> for Keypair {
         }
         Ok(Self {
             secret: SecretKey::try_from(&bytes[..BLS_SECRET_KEY_SIZE])?,
-            public: PubkeyProjective::try_from(&bytes[BLS_SECRET_KEY_SIZE..])?,
+            public: Pubkey(
+                bytes[BLS_SECRET_KEY_SIZE..]
+                    .try_into()
+                    .map_err(|_| BlsError::ParseFromBytes)?,
+            ),
         })
     }
 }
@@ -90,9 +90,7 @@ impl From<&Keypair> for [u8; BLS_KEYPAIR_SIZE] {
         let mut bytes = [0u8; BLS_KEYPAIR_SIZE];
         bytes[..BLS_SECRET_KEY_SIZE]
             .copy_from_slice(&Into::<[u8; BLS_SECRET_KEY_SIZE]>::into(&keypair.secret));
-        bytes[BLS_SECRET_KEY_SIZE..].copy_from_slice(
-            &Into::<[u8; BLS_PUBLIC_KEY_AFFINE_SIZE]>::into(&keypair.public),
-        );
+        bytes[BLS_SECRET_KEY_SIZE..].copy_from_slice(&keypair.public.0);
         bytes
     }
 }
@@ -155,7 +153,7 @@ mod tests {
     fn test_keygen_derive() {
         let ikm = b"test_ikm";
         let secret = SecretKey::derive(ikm).unwrap();
-        let public = PubkeyProjective::from_secret(&secret);
+        let public: Pubkey = PubkeyProjective::from_secret(&secret).into();
         let keypair = Keypair::derive(ikm).unwrap();
         assert_eq!(keypair.secret, secret);
         assert_eq!(keypair.public, public);
@@ -166,7 +164,7 @@ mod tests {
     fn test_keygen_derive_from_signer() {
         let solana_keypair = solana_keypair::Keypair::new();
         let secret = SecretKey::derive_from_signer(&solana_keypair, b"alpenglow-vote").unwrap();
-        let public = PubkeyProjective::from_secret(&secret);
+        let public: Pubkey = PubkeyProjective::from_secret(&secret).into();
         let keypair = Keypair::derive_from_signer(&solana_keypair, b"alpenglow-vote").unwrap();
 
         assert_eq!(keypair.secret, secret);

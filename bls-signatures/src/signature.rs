@@ -1,5 +1,7 @@
 #[cfg(feature = "bytemuck")]
 use bytemuck::{Pod, PodInOption, Zeroable, ZeroableInOption};
+#[cfg(all(feature = "parallel", not(target_os = "solana")))]
+use {crate::pubkey::Pubkey, alloc::vec::Vec, core::num::NonZeroUsize, rayon::prelude::*};
 #[cfg(not(target_os = "solana"))]
 use {
     crate::{
@@ -9,8 +11,6 @@ use {
     blstrs::{G2Affine, G2Projective},
     group::Group,
 };
-#[cfg(all(feature = "parallel", not(target_os = "solana")))]
-use {alloc::vec::Vec, core::num::NonZeroUsize, rayon::prelude::*};
 use {
     base64::{prelude::BASE64_STANDARD, Engine},
     core::fmt,
@@ -54,6 +54,13 @@ impl Default for VerificationOptions {
 pub trait AsSignatureProjective {
     /// Attempt to convert the type into a `SignatureProjective`.
     fn try_as_projective(&self) -> Result<SignatureProjective, BlsError>;
+}
+
+/// A trait for types that can be converted into a `Signature` (affine).
+#[cfg(not(target_os = "solana"))]
+pub trait AsSignature {
+    /// Attempt to convert the type into a `Signature`.
+    fn try_as_affine(&self) -> Result<Signature, BlsError>;
 }
 
 /// A trait that provides verification methods to any convertible signature type.
@@ -117,7 +124,7 @@ impl SignatureProjective {
         let aggregate_pubkey = PubkeyProjective::aggregate(public_keys)?;
         let aggregate_signature = SignatureProjective::aggregate(signatures)?;
 
-        Ok(aggregate_pubkey._verify_signature(&aggregate_signature, message))
+        aggregate_pubkey.verify_signature(&aggregate_signature, message)
     }
 
     /// Aggregate a list of signatures into an existing aggregate
@@ -164,8 +171,8 @@ impl SignatureProjective {
     /// to identify the valid and invalid ones.
     #[cfg(feature = "parallel")]
     pub fn par_verify_batch(
-        public_keys: &[&PubkeyProjective],
-        signatures: &[&SignatureProjective],
+        public_keys: &[&Pubkey],
+        signatures: &[&Signature],
         message: &[u8],
     ) -> Result<Vec<bool>, BlsError> {
         if public_keys.len() != signatures.len() {
@@ -184,11 +191,11 @@ impl SignatureProjective {
             Ok(alloc::vec![true; public_keys.len()])
         } else {
             // Use Rayon's parallel iterator to verify each signature concurrently.
-            public_keys
+            Ok(public_keys
                 .par_iter()
                 .zip(signatures.par_iter())
-                .map(|(pubkey, signature)| Ok(pubkey._verify_signature(signature, message)))
-                .collect()
+                .map(|(pubkey, signature)| pubkey._verify_signature(signature, message))
+                .collect())
         }
     }
 
@@ -209,7 +216,7 @@ impl SignatureProjective {
         );
         let aggregate_pubkey = aggregate_pubkey_res?;
         let aggregate_signature = aggregate_signature_res?;
-        Ok(aggregate_pubkey._verify_signature(&aggregate_signature, message))
+        aggregate_pubkey.verify_signature(&aggregate_signature, message)
     }
 
     /// Verify a list of signatures against a message and a list of public keys,
@@ -219,8 +226,8 @@ impl SignatureProjective {
     /// to efficiently identify invalid signatures in the batch (O(k log N) pairings).
     #[cfg(feature = "parallel")]
     pub fn par_verify_batch_binary_search(
-        public_keys: &[&PubkeyProjective],
-        signatures: &[&SignatureProjective],
+        public_keys: &[&Pubkey],
+        signatures: &[&Signature],
         message: &[u8],
         options: &VerificationOptions,
     ) -> Result<Vec<bool>, BlsError> {
@@ -233,7 +240,11 @@ impl SignatureProjective {
         let inputs: Result<Vec<(PubkeyProjective, SignatureProjective)>, BlsError> = public_keys
             .par_iter()
             .zip(signatures.par_iter())
-            .map(|(pk, sig)| Ok((**pk, **sig)))
+            .map(|(pk, sig)| {
+                let pk_proj = PubkeyProjective::try_from(*pk)?;
+                let sig_proj = SignatureProjective::try_from(*sig)?;
+                Ok((pk_proj, sig_proj))
+            })
             .collect();
 
         let inputs = inputs?;
@@ -300,7 +311,9 @@ impl SignatureProjective {
             )
         };
 
-        let is_valid = aggregate_pubkey._verify_signature(&aggregate_signature, message);
+        let is_valid = aggregate_pubkey
+            .verify_signature(&aggregate_signature, message)
+            .unwrap_or(false);
 
         if is_valid {
             // Success: Mark all in this batch as valid (in parallel).
@@ -354,7 +367,8 @@ impl_bls_conversions!(
     Signature,
     SignatureCompressed,
     G2Affine,
-    AsSignatureProjective
+    AsSignatureProjective,
+    AsSignature
 );
 
 /// A serialized BLS signature in a compressed point representation
@@ -452,7 +466,7 @@ mod tests {
         let test_message = b"test message";
         let signature_projective = keypair.sign(test_message);
 
-        let pubkey_projective = keypair.public;
+        let pubkey_projective: PubkeyProjective = (&keypair.public).try_into().unwrap();
         let pubkey_affine: Pubkey = pubkey_projective.into();
         let pubkey_compressed: PubkeyCompressed = pubkey_affine.try_into().unwrap();
 
@@ -539,8 +553,8 @@ mod tests {
         .unwrap());
 
         // verify with affine and compressed types
-        let pubkey0_affine: Pubkey = keypair0.public.into();
-        let pubkey1_affine: Pubkey = keypair1.public.into();
+        let pubkey0_affine: Pubkey = keypair0.public;
+        let pubkey1_affine: Pubkey = keypair1.public;
         let signature0_affine: Signature = signature0.into();
         let signature1_affine: Signature = signature1.into();
         assert!(SignatureProjective::aggregate_verify(
@@ -600,10 +614,9 @@ mod tests {
         let signature1_projective = keypair1.sign(test_message);
         let signature2_projective = keypair2.sign(test_message);
 
-        let pubkey0 = keypair0.public; // Projective
-        let pubkey1_affine: Pubkey = keypair1.public.into(); // Affine
-        let pubkey2_compressed: PubkeyCompressed =
-            Pubkey::from(keypair2.public).try_into().unwrap(); // Compressed
+        let pubkey0 = PubkeyProjective::try_from(keypair0.public).unwrap(); // Projective
+        let pubkey1_affine: Pubkey = keypair1.public; // Affine
+        let pubkey2_compressed: PubkeyCompressed = keypair2.public.try_into().unwrap(); // Compressed
 
         let signature0 = signature0_projective; // Projective
         let signature1_affine: Signature = signature1_projective.into(); // Affine
@@ -680,7 +693,10 @@ mod tests {
     fn test_parallel_aggregate_verify() {
         let message = b"test message";
         let keypairs: Vec<_> = (0..5).map(|_| Keypair::new()).collect();
-        let pubkeys: Vec<_> = keypairs.iter().map(|kp| kp.public).collect();
+        let pubkeys: Vec<_> = keypairs
+            .iter()
+            .map(|kp| PubkeyProjective::try_from(&kp.public).unwrap())
+            .collect();
         let pubkey_refs: Vec<_> = pubkeys.iter().collect();
         let signatures: Vec<_> = keypairs.iter().map(|kp| kp.sign(message)).collect();
         let signature_refs: Vec<_> = signatures.iter().collect();
@@ -719,19 +735,23 @@ mod tests {
 
         // Generate keypairs, public keys, and signatures
         let keypairs: Vec<_> = (0..NUM_SIGNATURES).map(|_| Keypair::new()).collect();
-        let pubkeys: Vec<_> = keypairs.iter().map(|kp| &kp.public).collect();
-        let signatures: Vec<_> = keypairs.iter().map(|kp| kp.sign(message)).collect();
-        let sig_refs: Vec<_> = signatures.iter().collect();
+        let pubkeys_affine: Vec<_> = keypairs.iter().map(|kp| kp.public).collect();
+        let pubkeys: Vec<_> = pubkeys_affine.iter().collect();
+        let signatures_proj: Vec<_> = keypairs.iter().map(|kp| kp.sign(message)).collect();
+        let signatures_affine: Vec<_> = signatures_proj.iter().map(Signature::from).collect();
+        let sig_refs: Vec<_> = signatures_affine.iter().collect();
 
         // All signatures are valid
         let results = SignatureProjective::par_verify_batch(&pubkeys, &sig_refs, message).unwrap();
         assert_eq!(results, std::vec![true; NUM_SIGNATURES]);
 
         // One signature is invalid (wrong message)
-        let mut bad_signatures = signatures.clone();
+        let mut bad_signatures_proj = signatures_proj.clone();
         let bad_sig = keypairs[3].sign(b"a different message");
-        bad_signatures[3] = bad_sig;
-        let bad_sig_refs: Vec<_> = bad_signatures.iter().collect();
+        bad_signatures_proj[3] = bad_sig;
+        let bad_signatures_affine: Vec<_> =
+            bad_signatures_proj.iter().map(Signature::from).collect();
+        let bad_sig_refs: Vec<_> = bad_signatures_affine.iter().collect();
 
         let results =
             SignatureProjective::par_verify_batch(&pubkeys, &bad_sig_refs, message).unwrap();
@@ -746,8 +766,8 @@ mod tests {
         assert_eq!(err, BlsError::InputLengthMismatch);
 
         // Empty inputs
-        let empty_pubkeys: &[&PubkeyProjective] = &[];
-        let empty_sigs: &[&SignatureProjective] = &[];
+        let empty_pubkeys: &[&Pubkey] = &[];
+        let empty_sigs: &[&Signature] = &[];
         let results =
             SignatureProjective::par_verify_batch(empty_pubkeys, empty_sigs, message).unwrap();
         assert!(results.is_empty());
@@ -761,9 +781,11 @@ mod tests {
 
         // Generate keypairs, public keys, and valid signatures
         let keypairs: Vec<_> = (0..NUM_SIGNATURES).map(|_| Keypair::new()).collect();
-        let pubkeys: Vec<_> = keypairs.iter().map(|kp| &kp.public).collect();
-        let signatures: Vec<_> = keypairs.iter().map(|kp| kp.sign(message)).collect();
-        let sig_refs: Vec<_> = signatures.iter().collect();
+        let pubkeys_affine: Vec<_> = keypairs.iter().map(|kp| kp.public).collect();
+        let pubkeys: Vec<_> = pubkeys_affine.iter().collect();
+        let signatures_proj: Vec<_> = keypairs.iter().map(|kp| kp.sign(message)).collect();
+        let signatures_affine: Vec<_> = signatures_proj.iter().map(Signature::from).collect();
+        let sig_refs: Vec<_> = signatures_affine.iter().collect();
 
         // Create some invalid signatures for testing
         let invalid_sig_wrong_msg = keypairs[0].sign(b"wrong message");
@@ -787,9 +809,11 @@ mod tests {
 
         // One signature is invalid
         for options in [&options_small_thresh, &options_large_thresh] {
-            let mut bad_signatures = signatures.clone();
-            bad_signatures[25] = invalid_sig_wrong_msg;
-            let bad_sig_refs: Vec<_> = bad_signatures.iter().collect();
+            let mut bad_signatures_proj = signatures_proj.clone();
+            bad_signatures_proj[25] = invalid_sig_wrong_msg;
+            let bad_signatures_affine: Vec<_> =
+                bad_signatures_proj.iter().map(Signature::from).collect();
+            let bad_sig_refs: Vec<_> = bad_signatures_affine.iter().collect();
 
             let results = SignatureProjective::par_verify_batch_binary_search(
                 &pubkeys,
@@ -805,11 +829,13 @@ mod tests {
 
         // Multiple signatures are invalid
         for options in [&options_small_thresh, &options_large_thresh] {
-            let mut bad_signatures = signatures.clone();
-            bad_signatures[5] = invalid_sig_wrong_key;
-            bad_signatures[15] = invalid_sig_wrong_msg;
-            bad_signatures[45] = invalid_sig_wrong_key;
-            let bad_sig_refs: Vec<_> = bad_signatures.iter().collect();
+            let mut bad_signatures_proj = signatures_proj.clone();
+            bad_signatures_proj[5] = invalid_sig_wrong_key;
+            bad_signatures_proj[15] = invalid_sig_wrong_msg;
+            bad_signatures_proj[45] = invalid_sig_wrong_key;
+            let bad_signatures_affine: Vec<_> =
+                bad_signatures_proj.iter().map(Signature::from).collect();
+            let bad_sig_refs: Vec<_> = bad_signatures_affine.iter().collect();
 
             let results = SignatureProjective::par_verify_batch_binary_search(
                 &pubkeys,
@@ -827,9 +853,11 @@ mod tests {
 
         // All signatures are invalid
         for options in [&options_small_thresh, &options_large_thresh] {
-            let bad_signatures: Vec<_> =
+            let bad_signatures_proj: Vec<_> =
                 (0..NUM_SIGNATURES).map(|_| invalid_sig_wrong_msg).collect();
-            let bad_sig_refs: Vec<_> = bad_signatures.iter().collect();
+            let bad_signatures_affine: Vec<_> =
+                bad_signatures_proj.iter().map(Signature::from).collect();
+            let bad_sig_refs: Vec<_> = bad_signatures_affine.iter().collect();
 
             let results = SignatureProjective::par_verify_batch_binary_search(
                 &pubkeys,
@@ -853,8 +881,8 @@ mod tests {
         assert_eq!(err, BlsError::InputLengthMismatch);
 
         // Empty inputs
-        let empty_pubkeys: &[&PubkeyProjective] = &[];
-        let empty_sigs: &[&SignatureProjective] = &[];
+        let empty_pubkeys: &[&Pubkey] = &[];
+        let empty_sigs: &[&Signature] = &[];
         let results = SignatureProjective::par_verify_batch_binary_search(
             empty_pubkeys,
             empty_sigs,

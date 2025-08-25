@@ -39,6 +39,13 @@ pub trait AsProofOfPossessionProjective {
     fn try_as_projective(&self) -> Result<ProofOfPossessionProjective, BlsError>;
 }
 
+/// A trait for types that can be converted into a `ProofOfPossession` (affine).
+#[cfg(not(target_os = "solana"))]
+pub trait AsProofOfPossession {
+    /// Attempt to convert the type into a `ProofOfPossession`.
+    fn try_as_affine(&self) -> Result<ProofOfPossession, BlsError>;
+}
+
 /// A trait that provides verification methods to any convertible proof of possession type.
 #[cfg(not(target_os = "solana"))]
 pub trait VerifiableProofOfPossession: AsProofOfPossessionProjective {
@@ -63,7 +70,8 @@ impl_bls_conversions!(
     ProofOfPossession,
     ProofOfPossessionCompressed,
     G2Affine,
-    AsProofOfPossessionProjective
+    AsProofOfPossessionProjective,
+    AsProofOfPossession
 );
 
 /// A serialized BLS signature in a compressed point representation
@@ -155,7 +163,7 @@ mod tests {
         super::*,
         crate::{
             keypair::Keypair,
-            pubkey::{Pubkey, PubkeyCompressed},
+            pubkey::{Pubkey, PubkeyCompressed, PubkeyProjective},
         },
         core::str::FromStr,
         std::string::ToString,
@@ -166,8 +174,8 @@ mod tests {
         let keypair = Keypair::new();
         let proof_projective = keypair.proof_of_possession();
 
-        let pubkey_projective = keypair.public;
-        let pubkey_affine: Pubkey = pubkey_projective.into();
+        let pubkey_projective: PubkeyProjective = (&keypair.public).try_into().unwrap();
+        let pubkey_affine: Pubkey = keypair.public;
         let pubkey_compressed: PubkeyCompressed = pubkey_affine.try_into().unwrap();
 
         let proof_affine: ProofOfPossession = proof_projective.into();

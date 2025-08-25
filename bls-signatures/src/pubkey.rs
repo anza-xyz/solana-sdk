@@ -9,9 +9,9 @@ use {
     crate::{
         error::BlsError,
         hash::{hash_message_to_point, hash_pubkey_to_g2},
-        proof_of_possession::{AsProofOfPossessionProjective, ProofOfPossessionProjective},
+        proof_of_possession::{AsProofOfPossession, ProofOfPossession},
         secret_key::SecretKey,
-        signature::{AsSignatureProjective, SignatureProjective},
+        signature::{AsSignature, Signature},
     },
     blstrs::{Bls12, G1Affine, G1Projective, G2Affine, G2Prepared, Gt},
     group::Group,
@@ -50,28 +50,35 @@ pub trait AsPubkeyProjective {
     fn try_as_projective(&self) -> Result<PubkeyProjective, BlsError>;
 }
 
+/// A trait for types that can be converted into a `Pubkey` (affine).
+#[cfg(not(target_os = "solana"))]
+pub trait AsPubkey {
+    /// Attempt to convert the type into a `Pubkey`.
+    fn try_as_affine(&self) -> Result<Pubkey, BlsError>;
+}
+
 /// A trait that provides verification methods to any convertible public key type.
 #[cfg(not(target_os = "solana"))]
-pub trait VerifiablePubkey: AsPubkeyProjective {
+pub trait VerifiablePubkey: AsPubkey {
     /// Uses this public key to verify any convertible signature type.
-    fn verify_signature<S: AsSignatureProjective>(
+    fn verify_signature<S: AsSignature>(
         &self,
         signature: &S,
         message: &[u8],
     ) -> Result<bool, BlsError> {
-        let pubkey_projective = self.try_as_projective()?;
-        let signature_projective = signature.try_as_projective()?;
-        Ok(pubkey_projective._verify_signature(&signature_projective, message))
+        let pubkey_affine = self.try_as_affine()?;
+        let signature_affine = signature.try_as_affine()?;
+        Ok(pubkey_affine._verify_signature(&signature_affine, message))
     }
 
     /// Uses this public key to verify any convertible proof of possession type.
-    fn verify_proof_of_possession<P: AsProofOfPossessionProjective>(
+    fn verify_proof_of_possession<P: AsProofOfPossession>(
         &self,
         proof: &P,
     ) -> Result<bool, BlsError> {
-        let pubkey_projective = self.try_as_projective()?;
-        let proof_projective = proof.try_as_projective()?;
-        Ok(pubkey_projective._verify_proof_of_possession(&proof_projective))
+        let pubkey_affine = self.try_as_affine()?;
+        let proof_affine = proof.try_as_affine()?;
+        Ok(pubkey_affine._verify_proof_of_possession(&proof_affine))
     }
 }
 
@@ -88,65 +95,6 @@ impl PubkeyProjective {
     /// for the purpose of aggregation
     pub fn identity() -> Self {
         Self(G1Projective::identity())
-    }
-
-    /// Verify a signature and a message against a public key
-    pub(crate) fn _verify_signature(
-        &self,
-        signature: &SignatureProjective,
-        message: &[u8],
-    ) -> bool {
-        // The verification equation is e(pubkey, H(m)) = e(g1, signature).
-        // This can be rewritten as e(pubkey, H(m)) * e(-g1, signature) = 1, which
-        // allows for a more efficient verification using a multi-miller loop.
-        let hashed_message: G2Affine = hash_message_to_point(message).into();
-        let pubkey_affine: G1Affine = self.0.into();
-        let signature_affine: G2Affine = signature.0.into();
-
-        let hashed_message_prepared = G2Prepared::from(hashed_message);
-        let signature_prepared = G2Prepared::from(signature_affine);
-
-        // use the static valud if `std` is available, otherwise compute it
-        #[cfg(feature = "std")]
-        let neg_g1_generator = &NEG_G1_GENERATOR_AFFINE;
-        #[cfg(not(feature = "std"))]
-        let neg_g1_generator_val: G1Affine = (-G1Projective::generator()).into();
-        #[cfg(not(feature = "std"))]
-        let neg_g1_generator = &neg_g1_generator_val;
-
-        let miller_loop_result = Bls12::multi_miller_loop(&[
-            (&pubkey_affine, &hashed_message_prepared),
-            (neg_g1_generator, &signature_prepared),
-        ]);
-        miller_loop_result.final_exponentiation() == Gt::identity()
-    }
-
-    /// Verify a proof of possession against a public key
-    pub(crate) fn _verify_proof_of_possession(&self, proof: &ProofOfPossessionProjective) -> bool {
-        // The verification equation is e(pubkey, H(pubkey)) == e(g1, proof).
-        // This is rewritten to e(pubkey, H(pubkey)) * e(-g1, proof) = 1 for batching.
-        let hashed_pubkey_affine: G2Affine = hash_pubkey_to_g2(self).into();
-        let proof_affine: G2Affine = proof.0.into();
-
-        let pubkey_affine: G1Affine = self.0.into();
-        let hashed_pubkey_prepared = G2Prepared::from(hashed_pubkey_affine);
-        let proof_prepared = G2Prepared::from(proof_affine);
-
-        // Use the static value if std is available, otherwise compute it
-        #[cfg(feature = "std")]
-        let neg_g1_generator = &NEG_G1_GENERATOR_AFFINE;
-        #[cfg(not(feature = "std"))]
-        let neg_g1_generator_val: G1Affine = (-G1Projective::generator()).into();
-        #[cfg(not(feature = "std"))]
-        let neg_g1_generator = &neg_g1_generator_val;
-
-        let miller_loop_result = Bls12::multi_miller_loop(&[
-            (&pubkey_affine, &hashed_pubkey_prepared),
-            // Reuse the same pre-computed static value here for efficiency
-            (neg_g1_generator, &proof_prepared),
-        ]);
-
-        miller_loop_result.final_exponentiation() == Gt::identity()
     }
 
     /// Construct a corresponding `BlsPubkey` for a `BlsSecretKey`
@@ -224,7 +172,7 @@ impl PubkeyProjective {
 }
 
 #[cfg(not(target_os = "solana"))]
-impl<T: AsPubkeyProjective> VerifiablePubkey for T {}
+impl<T: AsPubkey> VerifiablePubkey for T {}
 
 #[cfg(not(target_os = "solana"))]
 impl_bls_conversions!(
@@ -232,7 +180,8 @@ impl_bls_conversions!(
     Pubkey,
     PubkeyCompressed,
     G1Affine,
-    AsPubkeyProjective
+    AsPubkeyProjective,
+    AsPubkey
 );
 
 #[cfg(not(target_os = "solana"))]
@@ -300,6 +249,80 @@ pub struct Pubkey(
     pub  [u8; BLS_PUBLIC_KEY_AFFINE_SIZE],
 );
 
+#[cfg(not(target_os = "solana"))]
+impl Pubkey {
+    /// Verify a signature and a message against a public key
+    pub(crate) fn _verify_signature(&self, signature: &Signature, message: &[u8]) -> bool {
+        let Some(pubkey_affine): Option<G1Affine> = G1Affine::from_uncompressed(&self.0).into()
+        else {
+            return false;
+        };
+        let Some(signature_affine): Option<G2Affine> =
+            G2Affine::from_uncompressed(&signature.0).into()
+        else {
+            return false;
+        };
+
+        // The verification equation is e(pubkey, H(m)) = e(g1, signature).
+        // This can be rewritten as e(pubkey, H(m)) * e(-g1, signature) = 1, which
+        // allows for a more efficient verification using a multi-miller loop.
+        let hashed_message: G2Affine = hash_message_to_point(message).into();
+        let hashed_message_prepared = G2Prepared::from(hashed_message);
+        let signature_prepared = G2Prepared::from(signature_affine);
+
+        // use the static valud if `std` is available, otherwise compute it
+        #[cfg(feature = "std")]
+        let neg_g1_generator = &NEG_G1_GENERATOR_AFFINE;
+        #[cfg(not(feature = "std"))]
+        let neg_g1_generator_val: G1Affine = (-G1Projective::generator()).into();
+        #[cfg(not(feature = "std"))]
+        let neg_g1_generator = &neg_g1_generator_val;
+
+        let miller_loop_result = Bls12::multi_miller_loop(&[
+            (&pubkey_affine, &hashed_message_prepared),
+            (neg_g1_generator, &signature_prepared),
+        ]);
+        miller_loop_result.final_exponentiation() == Gt::identity()
+    }
+
+    /// Verify a proof of possession against a public key
+    pub(crate) fn _verify_proof_of_possession(&self, proof: &ProofOfPossession) -> bool {
+        let Some(pubkey_affine): Option<G1Affine> = G1Affine::from_uncompressed(&self.0).into()
+        else {
+            return false;
+        };
+        let Some(proof_affine): Option<G2Affine> = G2Affine::from_uncompressed(&proof.0).into()
+        else {
+            return false;
+        };
+        let Ok(pubkey_projective) = PubkeyProjective::try_from(self) else {
+            return false;
+        };
+
+        // The verification equation is e(pubkey, H(pubkey)) == e(g1, proof).
+        // This is rewritten to e(pubkey, H(pubkey)) * e(-g1, proof) = 1 for batching.
+        let hashed_pubkey_affine: G2Affine = hash_pubkey_to_g2(&pubkey_projective).into();
+        let hashed_pubkey_prepared = G2Prepared::from(hashed_pubkey_affine);
+        let proof_prepared = G2Prepared::from(proof_affine);
+
+        // Use the static value if std is available, otherwise compute it
+        #[cfg(feature = "std")]
+        let neg_g1_generator = &NEG_G1_GENERATOR_AFFINE;
+        #[cfg(not(feature = "std"))]
+        let neg_g1_generator_val: G1Affine = (-G1Projective::generator()).into();
+        #[cfg(not(feature = "std"))]
+        let neg_g1_generator = &neg_g1_generator_val;
+
+        let miller_loop_result = Bls12::multi_miller_loop(&[
+            (&pubkey_affine, &hashed_pubkey_prepared),
+            // Reuse the same pre-computed static value here for efficiency
+            (neg_g1_generator, &proof_prepared),
+        ]);
+
+        miller_loop_result.final_exponentiation() == Gt::identity()
+    }
+}
+
 impl Default for Pubkey {
     fn default() -> Self {
         Self([0; BLS_PUBLIC_KEY_AFFINE_SIZE])
@@ -355,8 +378,8 @@ mod tests {
         let test_message = b"test message";
         let signature_projective = keypair.sign(test_message);
 
-        let pubkey_projective = keypair.public;
-        let pubkey_affine: Pubkey = pubkey_projective.into();
+        let pubkey_projective: PubkeyProjective = (&keypair.public).try_into().unwrap();
+        let pubkey_affine: Pubkey = keypair.public;
         let pubkey_compressed: PubkeyCompressed = pubkey_affine.try_into().unwrap();
 
         let signature_affine: Signature = signature_projective.into();
@@ -398,7 +421,7 @@ mod tests {
         let keypair = Keypair::new();
         let proof_projective = keypair.proof_of_possession();
 
-        let pubkey_projective = keypair.public;
+        let pubkey_projective: PubkeyProjective = (&keypair.public).try_into().unwrap();
         let pubkey_affine: Pubkey = pubkey_projective.into();
         let pubkey_compressed: PubkeyCompressed = pubkey_affine.try_into().unwrap();
 
@@ -441,9 +464,9 @@ mod tests {
         let keypair0 = Keypair::new();
         let keypair1 = Keypair::new();
 
-        let pubkey_projective = keypair0.public;
-        let pubkey_affine: Pubkey = keypair1.public.into();
-        let pubkey_compressed: PubkeyCompressed = Pubkey::from(keypair1.public).try_into().unwrap();
+        let pubkey_projective: PubkeyProjective = (&keypair0.public).try_into().unwrap();
+        let pubkey_affine: Pubkey = keypair1.public;
+        let pubkey_compressed: PubkeyCompressed = pubkey_affine.try_into().unwrap();
 
         let dyn_pubkeys: std::vec::Vec<&dyn AsPubkeyProjective> =
             std::vec![&pubkey_projective, &pubkey_affine, &pubkey_compressed];
@@ -457,8 +480,7 @@ mod tests {
 
     #[test]
     fn pubkey_from_str() {
-        let pubkey = Keypair::new().public;
-        let pubkey_affine: Pubkey = pubkey.into();
+        let pubkey_affine = Keypair::new().public;
         let pubkey_affine_string = pubkey_affine.to_string();
         let pubkey_affine_from_string = Pubkey::from_str(&pubkey_affine_string).unwrap();
         assert_eq!(pubkey_affine, pubkey_affine_from_string);
@@ -503,8 +525,8 @@ mod tests {
     fn test_parallel_pubkey_aggregation() {
         let keypair0 = Keypair::new();
         let keypair1 = Keypair::new();
-        let pubkey0 = keypair0.public;
-        let pubkey1 = keypair1.public;
+        let pubkey0 = PubkeyProjective::try_from(&keypair0.public).unwrap();
+        let pubkey1 = PubkeyProjective::try_from(&keypair1.public).unwrap();
 
         // Test `aggregate`
         let sequential_agg = PubkeyProjective::aggregate(&[&pubkey0, &pubkey1]).unwrap();
