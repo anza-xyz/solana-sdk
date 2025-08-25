@@ -2,7 +2,7 @@
 use serde_derive::{Deserialize, Serialize};
 use {
     crate::{v0, AccountKeys},
-    solana_pubkey::Pubkey,
+    solana_address::Address,
     solana_sdk_ids::bpf_loader_upgradeable,
     std::{borrow::Cow, collections::HashSet},
 };
@@ -25,14 +25,14 @@ pub struct LoadedMessage<'a> {
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 pub struct LoadedAddresses {
     /// List of addresses for writable loaded accounts
-    pub writable: Vec<Pubkey>,
+    pub writable: Vec<Address>,
     /// List of addresses for read-only loaded accounts
-    pub readonly: Vec<Pubkey>,
+    pub readonly: Vec<Address>,
 }
 
 impl FromIterator<LoadedAddresses> for LoadedAddresses {
     fn from_iter<T: IntoIterator<Item = LoadedAddresses>>(iter: T) -> Self {
-        let (writable, readonly): (Vec<Vec<Pubkey>>, Vec<Vec<Pubkey>>) = iter
+        let (writable, readonly): (Vec<Vec<Address>>, Vec<Vec<Address>>) = iter
             .into_iter()
             .map(|addresses| (addresses.writable, addresses.readonly))
             .unzip();
@@ -59,7 +59,7 @@ impl<'a> LoadedMessage<'a> {
     pub fn new(
         message: v0::Message,
         loaded_addresses: LoadedAddresses,
-        reserved_account_keys: &HashSet<Pubkey>,
+        reserved_account_keys: &HashSet<Address>,
     ) -> Self {
         let mut loaded_message = Self {
             message: Cow::Owned(message),
@@ -73,7 +73,7 @@ impl<'a> LoadedMessage<'a> {
     pub fn new_borrowed(
         message: &'a v0::Message,
         loaded_addresses: &'a LoadedAddresses,
-        reserved_account_keys: &HashSet<Pubkey>,
+        reserved_account_keys: &HashSet<Address>,
     ) -> Self {
         let mut loaded_message = Self {
             message: Cow::Borrowed(message),
@@ -84,7 +84,7 @@ impl<'a> LoadedMessage<'a> {
         loaded_message
     }
 
-    fn set_is_writable_account_cache(&mut self, reserved_account_keys: &HashSet<Pubkey>) {
+    fn set_is_writable_account_cache(&mut self, reserved_account_keys: &HashSet<Address>) {
         let is_writable_account_cache = self
             .account_keys()
             .iter()
@@ -103,7 +103,7 @@ impl<'a> LoadedMessage<'a> {
     }
 
     /// Returns the list of static account keys that are loaded for this message.
-    pub fn static_account_keys(&self) -> &[Pubkey] {
+    pub fn static_account_keys(&self) -> &[Address] {
         &self.message.account_keys
     }
 
@@ -139,7 +139,7 @@ impl<'a> LoadedMessage<'a> {
     fn is_writable_internal(
         &self,
         key_index: usize,
-        reserved_account_keys: &HashSet<Pubkey>,
+        reserved_account_keys: &HashSet<Address>,
     ) -> bool {
         if self.is_writable_index(key_index) {
             if let Some(key) = self.account_keys().get(key_index) {
@@ -193,13 +193,13 @@ mod tests {
         solana_sdk_ids::{system_program, sysvar},
     };
 
-    fn check_test_loaded_message() -> (LoadedMessage<'static>, [Pubkey; 6]) {
-        let key0 = Pubkey::new_unique();
-        let key1 = Pubkey::new_unique();
-        let key2 = Pubkey::new_unique();
-        let key3 = Pubkey::new_unique();
-        let key4 = Pubkey::new_unique();
-        let key5 = Pubkey::new_unique();
+    fn check_test_loaded_message() -> (LoadedMessage<'static>, [Address; 6]) {
+        let key0 = Address::new_unique();
+        let key1 = Address::new_unique();
+        let key2 = Address::new_unique();
+        let key3 = Address::new_unique();
+        let key4 = Address::new_unique();
+        let key5 = Address::new_unique();
 
         let message = LoadedMessage::new(
             v0::Message {
@@ -230,7 +230,7 @@ mod tests {
 
     #[test]
     fn test_has_duplicates_with_dupe_keys() {
-        let create_message_with_dupe_keys = |mut keys: Vec<Pubkey>| {
+        let create_message_with_dupe_keys = |mut keys: Vec<Address>| {
             LoadedMessage::new(
                 v0::Message {
                     account_keys: keys.split_off(2),
@@ -244,11 +244,11 @@ mod tests {
             )
         };
 
-        let key0 = Pubkey::new_unique();
-        let key1 = Pubkey::new_unique();
-        let key2 = Pubkey::new_unique();
-        let key3 = Pubkey::new_unique();
-        let dupe_key = Pubkey::new_unique();
+        let key0 = Address::new_unique();
+        let key1 = Address::new_unique();
+        let key2 = Address::new_unique();
+        let key3 = Address::new_unique();
+        let dupe_key = Address::new_unique();
 
         let keys = vec![key0, key1, key2, key3, dupe_key, dupe_key];
         let keys_len = keys.len();
@@ -273,7 +273,7 @@ mod tests {
     #[test]
     fn test_is_writable() {
         let reserved_account_keys = HashSet::from_iter([sysvar::clock::id(), system_program::id()]);
-        let create_message_with_keys = |keys: Vec<Pubkey>| {
+        let create_message_with_keys = |keys: Vec<Address>| {
             LoadedMessage::new(
                 v0::Message {
                     header: MessageHeader {
@@ -292,9 +292,9 @@ mod tests {
             )
         };
 
-        let key0 = Pubkey::new_unique();
-        let key1 = Pubkey::new_unique();
-        let key2 = Pubkey::new_unique();
+        let key0 = Address::new_unique();
+        let key1 = Address::new_unique();
+        let key2 = Address::new_unique();
         {
             let message = create_message_with_keys(vec![sysvar::clock::id(), key0, key1, key2]);
             assert!(message.is_writable_index(0));
@@ -316,9 +316,9 @@ mod tests {
 
     #[test]
     fn test_demote_writable_program() {
-        let key0 = Pubkey::new_unique();
-        let key1 = Pubkey::new_unique();
-        let key2 = Pubkey::new_unique();
+        let key0 = Address::new_unique();
+        let key1 = Address::new_unique();
+        let key2 = Address::new_unique();
         let message = LoadedMessage::new(
             v0::Message {
                 header: MessageHeader {

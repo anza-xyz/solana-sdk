@@ -6,8 +6,8 @@ use crate::{
 use {
     crate::{inline_nonce::is_advance_nonce_instruction_data, MessageHeader},
     core::fmt,
+    solana_address::Address,
     solana_instruction::Instruction,
-    solana_pubkey::Pubkey,
     solana_sdk_ids::system_program,
     std::collections::BTreeMap,
 };
@@ -15,8 +15,8 @@ use {
 /// A helper struct to collect pubkeys compiled for a set of instructions
 #[derive(Default, Debug, Clone, PartialEq, Eq)]
 pub(crate) struct CompiledKeys {
-    payer: Option<Pubkey>,
-    key_meta_map: BTreeMap<Pubkey, CompiledKeyMeta>,
+    payer: Option<Address>,
+    key_meta_map: BTreeMap<Address, CompiledKeyMeta>,
 }
 
 #[cfg_attr(target_os = "solana", allow(dead_code))]
@@ -24,7 +24,7 @@ pub(crate) struct CompiledKeys {
 pub enum CompileError {
     AccountIndexOverflow,
     AddressTableLookupIndexOverflow,
-    UnknownInstructionKey(Pubkey),
+    UnknownInstructionKey(Address),
 }
 
 impl core::error::Error for CompileError {}
@@ -56,8 +56,8 @@ struct CompiledKeyMeta {
 impl CompiledKeys {
     /// Compiles the pubkeys referenced by a list of instructions and organizes by
     /// signer/non-signer and writable/readonly.
-    pub(crate) fn compile(instructions: &[Instruction], payer: Option<Pubkey>) -> Self {
-        let mut key_meta_map = BTreeMap::<Pubkey, CompiledKeyMeta>::new();
+    pub(crate) fn compile(instructions: &[Instruction], payer: Option<Address>) -> Self {
+        let mut key_meta_map = BTreeMap::<Address, CompiledKeyMeta>::new();
         for ix in instructions {
             let meta = key_meta_map.entry(ix.program_id).or_default();
             meta.is_invoked = true;
@@ -84,7 +84,7 @@ impl CompiledKeys {
 
     pub(crate) fn try_into_message_components(
         self,
-    ) -> Result<(MessageHeader, Vec<Pubkey>), CompileError> {
+    ) -> Result<(MessageHeader, Vec<Address>), CompileError> {
         let try_into_u8 = |num: usize| -> Result<u8, CompileError> {
             u8::try_from(num).map_err(|_| CompileError::AccountIndexOverflow)
         };
@@ -98,7 +98,7 @@ impl CompiledKeys {
             key_meta_map.remove_entry(payer);
         }
 
-        let writable_signer_keys: Vec<Pubkey> = payer
+        let writable_signer_keys: Vec<Address> = payer
             .into_iter()
             .chain(
                 key_meta_map
@@ -106,15 +106,15 @@ impl CompiledKeys {
                     .filter_map(|(key, meta)| (meta.is_signer && meta.is_writable).then_some(*key)),
             )
             .collect();
-        let readonly_signer_keys: Vec<Pubkey> = key_meta_map
+        let readonly_signer_keys: Vec<Address> = key_meta_map
             .iter()
             .filter_map(|(key, meta)| (meta.is_signer && !meta.is_writable).then_some(*key))
             .collect();
-        let writable_non_signer_keys: Vec<Pubkey> = key_meta_map
+        let writable_non_signer_keys: Vec<Address> = key_meta_map
             .iter()
             .filter_map(|(key, meta)| (!meta.is_signer && meta.is_writable).then_some(*key))
             .collect();
-        let readonly_non_signer_keys: Vec<Pubkey> = key_meta_map
+        let readonly_non_signer_keys: Vec<Address> = key_meta_map
             .iter()
             .filter_map(|(key, meta)| (!meta.is_signer && !meta.is_writable).then_some(*key))
             .collect();
@@ -174,9 +174,9 @@ impl CompiledKeys {
     #[cfg(not(target_os = "solana"))]
     fn try_drain_keys_found_in_lookup_table(
         &mut self,
-        lookup_table_addresses: &[Pubkey],
+        lookup_table_addresses: &[Address],
         key_meta_filter: impl Fn(&CompiledKeyMeta) -> bool,
-    ) -> Result<(Vec<u8>, Vec<Pubkey>), CompileError> {
+    ) -> Result<(Vec<u8>, Vec<Address>), CompileError> {
         let mut lookup_table_indexes = Vec::new();
         let mut drained_keys = Vec::new();
 
@@ -208,7 +208,7 @@ impl CompiledKeys {
 // inlined to avoid solana_nonce dep
 const NONCED_TX_MARKER_IX_INDEX: usize = 0;
 
-fn get_nonce_pubkey(instructions: &[Instruction]) -> Option<&Pubkey> {
+fn get_nonce_pubkey(instructions: &[Instruction]) -> Option<&Address> {
     let ix = instructions.get(NONCED_TX_MARKER_IX_INDEX)?;
     if !system_program::check_id(&ix.program_id) {
         return None;
@@ -257,14 +257,14 @@ mod tests {
 
     #[test]
     fn test_compile_with_dups() {
-        let program_id0 = Pubkey::new_unique();
-        let program_id1 = Pubkey::new_unique();
-        let program_id2 = Pubkey::new_unique();
-        let program_id3 = Pubkey::new_unique();
-        let id0 = Pubkey::new_unique();
-        let id1 = Pubkey::new_unique();
-        let id2 = Pubkey::new_unique();
-        let id3 = Pubkey::new_unique();
+        let program_id0 = Address::new_unique();
+        let program_id1 = Address::new_unique();
+        let program_id2 = Address::new_unique();
+        let program_id3 = Address::new_unique();
+        let id0 = Address::new_unique();
+        let id1 = Address::new_unique();
+        let id2 = Address::new_unique();
+        let id3 = Address::new_unique();
         let compiled_keys = CompiledKeys::compile(
             &[
                 Instruction::new_with_bincode(
@@ -317,8 +317,8 @@ mod tests {
 
     #[test]
     fn test_compile_with_dup_payer() {
-        let program_id = Pubkey::new_unique();
-        let payer = Pubkey::new_unique();
+        let program_id = Address::new_unique();
+        let payer = Address::new_unique();
         let compiled_keys = CompiledKeys::compile(
             &[Instruction::new_with_bincode(
                 program_id,
@@ -341,8 +341,8 @@ mod tests {
 
     #[test]
     fn test_compile_with_dup_signer_mismatch() {
-        let program_id = Pubkey::new_unique();
-        let id0 = Pubkey::new_unique();
+        let program_id = Address::new_unique();
+        let id0 = Address::new_unique();
         let compiled_keys = CompiledKeys::compile(
             &[Instruction::new_with_bincode(
                 program_id,
@@ -367,8 +367,8 @@ mod tests {
 
     #[test]
     fn test_compile_with_dup_signer_writable_mismatch() {
-        let program_id = Pubkey::new_unique();
-        let id0 = Pubkey::new_unique();
+        let program_id = Address::new_unique();
+        let id0 = Address::new_unique();
         let compiled_keys = CompiledKeys::compile(
             &[Instruction::new_with_bincode(
                 program_id,
@@ -396,8 +396,8 @@ mod tests {
 
     #[test]
     fn test_compile_with_dup_nonsigner_writable_mismatch() {
-        let program_id = Pubkey::new_unique();
-        let id0 = Pubkey::new_unique();
+        let program_id = Address::new_unique();
+        let id0 = Address::new_unique();
         let compiled_keys = CompiledKeys::compile(
             &[
                 Instruction::new_with_bincode(
@@ -428,8 +428,8 @@ mod tests {
 
     #[test]
     fn test_compile_with_nonce_instruction() {
-        let nonce_pubkey = Pubkey::new_unique();
-        let nonce_authority = Pubkey::new_unique();
+        let nonce_pubkey = Address::new_unique();
+        let nonce_authority = Address::new_unique();
         let compiled_keys = CompiledKeys::compile(
             &[advance_nonce_account(&nonce_pubkey, &nonce_authority)],
             Some(nonce_authority),
@@ -455,10 +455,10 @@ mod tests {
     #[test]
     fn test_try_into_message_components() {
         let keys = vec![
-            Pubkey::new_unique(),
-            Pubkey::new_unique(),
-            Pubkey::new_unique(),
-            Pubkey::new_unique(),
+            Address::new_unique(),
+            Address::new_unique(),
+            Address::new_unique(),
+            Address::new_unique(),
         ];
 
         let compiled_keys = CompiledKeys {
@@ -499,7 +499,7 @@ mod tests {
             let test_keys = CompiledKeys {
                 payer: None,
                 key_meta_map: BTreeMap::from_iter(
-                    (0..TOO_MANY_KEYS).map(|_| (Pubkey::new_unique(), key_flags.into())),
+                    (0..TOO_MANY_KEYS).map(|_| (Address::new_unique(), key_flags.into())),
                 ),
             };
 
@@ -513,12 +513,12 @@ mod tests {
     #[test]
     fn test_try_extract_table_lookup() {
         let keys = vec![
-            Pubkey::new_unique(),
-            Pubkey::new_unique(),
-            Pubkey::new_unique(),
-            Pubkey::new_unique(),
-            Pubkey::new_unique(),
-            Pubkey::new_unique(),
+            Address::new_unique(),
+            Address::new_unique(),
+            Address::new_unique(),
+            Address::new_unique(),
+            Address::new_unique(),
+            Address::new_unique(),
         ];
 
         let mut compiled_keys = CompiledKeys {
@@ -536,7 +536,7 @@ mod tests {
         // add some duplicates to ensure lowest index is selected
         let addresses = [keys.clone(), keys.clone()].concat();
         let lookup_table_account = AddressLookupTableAccount {
-            key: Pubkey::new_unique(),
+            key: Address::new_unique(),
             addresses,
         };
 
@@ -565,13 +565,13 @@ mod tests {
         let mut compiled_keys = CompiledKeys {
             payer: None,
             key_meta_map: BTreeMap::from([
-                (Pubkey::new_unique(), KeyFlags::WRITABLE.into()),
-                (Pubkey::new_unique(), KeyFlags::empty().into()),
+                (Address::new_unique(), KeyFlags::WRITABLE.into()),
+                (Address::new_unique(), KeyFlags::empty().into()),
             ]),
         };
 
         let lookup_table_account = AddressLookupTableAccount {
-            key: Pubkey::new_unique(),
+            key: Address::new_unique(),
             addresses: vec![],
         };
 
@@ -585,21 +585,21 @@ mod tests {
 
     #[test]
     fn test_try_extract_table_lookup_for_invalid_table() {
-        let writable_key = Pubkey::new_unique();
+        let writable_key = Address::new_unique();
         let mut compiled_keys = CompiledKeys {
             payer: None,
             key_meta_map: BTreeMap::from([
                 (writable_key, KeyFlags::WRITABLE.into()),
-                (Pubkey::new_unique(), KeyFlags::empty().into()),
+                (Address::new_unique(), KeyFlags::empty().into()),
             ]),
         };
 
         const MAX_LENGTH_WITHOUT_OVERFLOW: usize = u8::MAX as usize + 1;
-        let mut addresses = vec![Pubkey::default(); MAX_LENGTH_WITHOUT_OVERFLOW];
+        let mut addresses = vec![Address::default(); MAX_LENGTH_WITHOUT_OVERFLOW];
         addresses.push(writable_key);
 
         let lookup_table_account = AddressLookupTableAccount {
-            key: Pubkey::new_unique(),
+            key: Address::new_unique(),
             addresses,
         };
 
@@ -614,11 +614,11 @@ mod tests {
     #[test]
     fn test_try_drain_keys_found_in_lookup_table() {
         let orig_keys = [
-            Pubkey::new_unique(),
-            Pubkey::new_unique(),
-            Pubkey::new_unique(),
-            Pubkey::new_unique(),
-            Pubkey::new_unique(),
+            Address::new_unique(),
+            Address::new_unique(),
+            Address::new_unique(),
+            Address::new_unique(),
+            Address::new_unique(),
         ];
 
         let mut compiled_keys = CompiledKeys {
@@ -633,13 +633,13 @@ mod tests {
         };
 
         let lookup_table_addresses = vec![
-            Pubkey::new_unique(),
+            Address::new_unique(),
             orig_keys[0],
-            Pubkey::new_unique(),
+            Address::new_unique(),
             orig_keys[4],
-            Pubkey::new_unique(),
+            Address::new_unique(),
             orig_keys[2],
-            Pubkey::new_unique(),
+            Address::new_unique(),
         ];
 
         let drain_result = compiled_keys
@@ -662,9 +662,9 @@ mod tests {
         let mut compiled_keys = CompiledKeys::default();
 
         let lookup_table_addresses = vec![
-            Pubkey::new_unique(),
-            Pubkey::new_unique(),
-            Pubkey::new_unique(),
+            Address::new_unique(),
+            Address::new_unique(),
+            Address::new_unique(),
         ];
 
         let drain_result =
@@ -679,9 +679,9 @@ mod tests {
     #[test]
     fn test_try_drain_keys_found_in_lookup_table_with_empty_table() {
         let original_keys = [
-            Pubkey::new_unique(),
-            Pubkey::new_unique(),
-            Pubkey::new_unique(),
+            Address::new_unique(),
+            Address::new_unique(),
+            Address::new_unique(),
         ];
 
         let mut compiled_keys = CompiledKeys {
@@ -707,14 +707,14 @@ mod tests {
 
     #[test]
     fn test_try_drain_keys_found_in_lookup_table_with_too_many_addresses() {
-        let key = Pubkey::new_unique();
+        let key = Address::new_unique();
         let mut compiled_keys = CompiledKeys {
             payer: None,
             key_meta_map: BTreeMap::from([(key, CompiledKeyMeta::default())]),
         };
 
         const MAX_LENGTH_WITHOUT_OVERFLOW: usize = u8::MAX as usize + 1;
-        let mut lookup_table_addresses = vec![Pubkey::default(); MAX_LENGTH_WITHOUT_OVERFLOW];
+        let mut lookup_table_addresses = vec![Address::default(); MAX_LENGTH_WITHOUT_OVERFLOW];
         lookup_table_addresses.push(key);
 
         let drain_result =

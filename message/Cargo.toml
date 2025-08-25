@@ -23,16 +23,16 @@ frozen-abi = [
     "dep:solana-frozen-abi",
     "dep:solana-frozen-abi-macro",
     "dep:solana-logger",
+    "solana-address/frozen-abi",
     "solana-hash/frozen-abi",
-    "solana-pubkey/frozen-abi",
     "serde",
 ]
 serde = [
     "dep:serde",
     "dep:serde_derive",
     "dep:solana-short-vec",
+    "solana-address/serde",
     "solana-hash/serde",
-    "solana-pubkey/serde",
 ]
 
 [dependencies]
@@ -41,12 +41,12 @@ blake3 = { workspace = true, features = ["traits-preview"], optional = true }
 lazy_static = { workspace = true }
 serde = { workspace = true, optional = true }
 serde_derive = { workspace = true, optional = true }
+solana-address = { workspace = true }
 solana-frozen-abi = { workspace = true, optional = true }
 solana-frozen-abi-macro = { workspace = true, optional = true }
 solana-hash = { workspace = true }
 solana-instruction = { workspace = true, features = ["std"] }
 solana-logger = { workspace = true, optional = true }
-solana-pubkey = { workspace = true }
 solana-sanitize = { workspace = true }
 solana-sdk-ids = { workspace = true }
 solana-short-vec = { workspace = true, optional = true }

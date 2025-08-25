@@ -2,7 +2,7 @@
 use serde_derive::{Deserialize, Serialize};
 #[cfg(feature = "frozen-abi")]
 use solana_frozen_abi_macro::AbiExample;
-use {solana_pubkey::Pubkey, solana_sanitize::Sanitize};
+use {solana_address::Address, solana_sanitize::Sanitize};
 
 /// A compact encoding of an instruction.
 ///
@@ -50,7 +50,7 @@ impl CompiledInstruction {
         }
     }
 
-    pub fn program_id<'a>(&self, program_ids: &'a [Pubkey]) -> &'a Pubkey {
+    pub fn program_id<'a>(&self, program_ids: &'a [Address]) -> &'a Address {
         &program_ids[self.program_id_index as usize]
     }
 }

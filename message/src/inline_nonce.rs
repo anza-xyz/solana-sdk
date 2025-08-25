@@ -1,8 +1,8 @@
 //! Inlined nonce instruction information to avoid a dependency on bincode and
 //! solana-system-interface
 use {
+    solana_address::Address,
     solana_instruction::{AccountMeta, Instruction},
-    solana_pubkey::Pubkey,
     solana_sdk_ids::{system_program, sysvar},
 };
 
@@ -22,8 +22,8 @@ pub fn is_advance_nonce_instruction_data(data: &[u8]) -> bool {
 /// Inlined `advance_nonce_account` instruction creator to avoid
 /// solana_system_interface and bincode deps
 pub(crate) fn advance_nonce_account_instruction(
-    nonce_pubkey: &Pubkey,
-    nonce_authority_pubkey: &Pubkey,
+    nonce_pubkey: &Address,
+    nonce_authority_pubkey: &Address,
 ) -> Instruction {
     Instruction::new_with_bytes(
         system_program::id(),
@@ -46,8 +46,8 @@ mod test {
 
     #[test]
     fn inline_instruction_data_matches_program() {
-        let nonce = Pubkey::new_unique();
-        let nonce_authority = Pubkey::new_unique();
+        let nonce = Address::new_unique();
+        let nonce_authority = Address::new_unique();
         assert_eq!(
             advance_nonce_account_instruction(&nonce, &nonce_authority),
             advance_nonce_account(&nonce, &nonce_authority),

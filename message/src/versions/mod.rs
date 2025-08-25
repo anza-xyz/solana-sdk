@@ -5,8 +5,8 @@ use {
         compiled_instruction::CompiledInstruction, legacy::Message as LegacyMessage,
         v0::MessageAddressTableLookup, MessageHeader,
     },
+    solana_address::Address,
     solana_hash::Hash,
-    solana_pubkey::Pubkey,
     solana_sanitize::{Sanitize, SanitizeError},
     std::collections::HashSet,
 };
@@ -62,7 +62,7 @@ impl VersionedMessage {
         }
     }
 
-    pub fn static_account_keys(&self) -> &[Pubkey] {
+    pub fn static_account_keys(&self) -> &[Address] {
         match self {
             Self::Legacy(message) => &message.account_keys,
             Self::V0(message) => &message.account_keys,
@@ -89,7 +89,7 @@ impl VersionedMessage {
     pub fn is_maybe_writable(
         &self,
         index: usize,
-        reserved_account_keys: Option<&HashSet<Pubkey>>,
+        reserved_account_keys: Option<&HashSet<Address>>,
     ) -> bool {
         match self {
             Self::Legacy(message) => message.is_maybe_writable(index, reserved_account_keys),
@@ -271,7 +271,7 @@ impl<'de> serde::Deserialize<'de> for VersionedMessage {
                             pub num_readonly_signed_accounts: u8,
                             pub num_readonly_unsigned_accounts: u8,
                             #[cfg_attr(feature = "serde", serde(with = "solana_short_vec"))]
-                            pub account_keys: Vec<Pubkey>,
+                            pub account_keys: Vec<Address>,
                             pub recent_blockhash: Hash,
                             #[cfg_attr(feature = "serde", serde(with = "solana_short_vec"))]
                             pub instructions: Vec<CompiledInstruction>,
@@ -336,12 +336,12 @@ mod tests {
 
     #[test]
     fn test_legacy_message_serialization() {
-        let program_id0 = Pubkey::new_unique();
-        let program_id1 = Pubkey::new_unique();
-        let id0 = Pubkey::new_unique();
-        let id1 = Pubkey::new_unique();
-        let id2 = Pubkey::new_unique();
-        let id3 = Pubkey::new_unique();
+        let program_id0 = Address::new_unique();
+        let program_id1 = Address::new_unique();
+        let id0 = Address::new_unique();
+        let id1 = Address::new_unique();
+        let id2 = Address::new_unique();
+        let id3 = Address::new_unique();
         let instructions = vec![
             Instruction::new_with_bincode(program_id0, &0, vec![AccountMeta::new(id0, false)]),
             Instruction::new_with_bincode(program_id0, &0, vec![AccountMeta::new(id1, true)]),
@@ -391,15 +391,15 @@ mod tests {
                 num_readonly_unsigned_accounts: 0,
             },
             recent_blockhash: Hash::new_unique(),
-            account_keys: vec![Pubkey::new_unique()],
+            account_keys: vec![Address::new_unique()],
             address_table_lookups: vec![
                 MessageAddressTableLookup {
-                    account_key: Pubkey::new_unique(),
+                    account_key: Address::new_unique(),
                     writable_indexes: vec![1],
                     readonly_indexes: vec![0],
                 },
                 MessageAddressTableLookup {
-                    account_key: Pubkey::new_unique(),
+                    account_key: Address::new_unique(),
                     writable_indexes: vec![0],
                     readonly_indexes: vec![1],
                 },

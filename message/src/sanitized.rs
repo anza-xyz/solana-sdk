@@ -5,9 +5,9 @@ use {
         v0::{self, LoadedAddresses},
         AccountKeys, AddressLoader, MessageHeader, SanitizedVersionedMessage, VersionedMessage,
     },
+    solana_address::Address,
     solana_hash::Hash,
     solana_instruction::{BorrowedAccountMeta, BorrowedInstruction},
-    solana_pubkey::Pubkey,
     solana_sanitize::Sanitize,
     solana_sdk_ids::{ed25519_program, secp256k1_program, secp256r1_program},
     solana_transaction_error::SanitizeMessageError,
@@ -32,7 +32,7 @@ pub struct LegacyMessage<'a> {
 }
 
 impl LegacyMessage<'_> {
-    pub fn new(message: legacy::Message, reserved_account_keys: &HashSet<Pubkey>) -> Self {
+    pub fn new(message: legacy::Message, reserved_account_keys: &HashSet<Address>) -> Self {
         let is_writable_account_cache = message
             .account_keys
             .iter()
@@ -88,7 +88,7 @@ impl SanitizedMessage {
     pub fn try_new(
         sanitized_msg: SanitizedVersionedMessage,
         address_loader: impl AddressLoader,
-        reserved_account_keys: &HashSet<Pubkey>,
+        reserved_account_keys: &HashSet<Address>,
     ) -> Result<Self, SanitizeMessageError> {
         Ok(match sanitized_msg.message {
             VersionedMessage::Legacy(message) => {
@@ -109,7 +109,7 @@ impl SanitizedMessage {
     /// Create a sanitized legacy message
     pub fn try_from_legacy_message(
         message: legacy::Message,
-        reserved_account_keys: &HashSet<Pubkey>,
+        reserved_account_keys: &HashSet<Address>,
     ) -> Result<Self, SanitizeMessageError> {
         message.sanitize()?;
         Ok(Self::Legacy(LegacyMessage::new(
@@ -145,7 +145,7 @@ impl SanitizedMessage {
     }
 
     /// Returns the fee payer for the transaction
-    pub fn fee_payer(&self) -> &Pubkey {
+    pub fn fee_payer(&self) -> &Address {
         self.account_keys()
             .get(0)
             .expect("sanitized messages always have a fee payer at index 0")
@@ -172,7 +172,7 @@ impl SanitizedMessage {
     /// id.
     pub fn program_instructions_iter(
         &self,
-    ) -> impl Iterator<Item = (&Pubkey, &CompiledInstruction)> + Clone {
+    ) -> impl Iterator<Item = (&Address, &CompiledInstruction)> + Clone {
         self.instructions().iter().map(move |ix| {
             (
                 self.account_keys()
@@ -184,7 +184,7 @@ impl SanitizedMessage {
     }
 
     /// Return the list of statically included account keys.
-    pub fn static_account_keys(&self) -> &[Pubkey] {
+    pub fn static_account_keys(&self) -> &[Address] {
         match self {
             Self::Legacy(legacy_message) => &legacy_message.message.account_keys,
             Self::V0(loaded_msg) => &loaded_msg.message.account_keys,
@@ -298,7 +298,7 @@ impl SanitizedMessage {
     }
 
     /// Get a list of signers for the instruction at the given index
-    pub fn get_ix_signers(&self, ix_index: usize) -> impl Iterator<Item = &Pubkey> {
+    pub fn get_ix_signers(&self, ix_index: usize) -> impl Iterator<Item = &Address> {
         self.instructions()
             .get(ix_index)
             .into_iter()
@@ -313,7 +313,7 @@ impl SanitizedMessage {
     }
 
     /// If the message uses a durable nonce, return the pubkey of the nonce account
-    pub fn get_durable_nonce(&self) -> Option<&Pubkey> {
+    pub fn get_durable_nonce(&self) -> Option<&Address> {
         self.instructions()
             .get(NONCED_TX_MARKER_IX_INDEX as usize)
             .filter(
@@ -448,7 +448,7 @@ mod tests {
     #[test]
     fn test_try_from_legacy_message() {
         let legacy_message_with_no_signers = legacy::Message {
-            account_keys: vec![Pubkey::new_unique()],
+            account_keys: vec![Address::new_unique()],
             ..legacy::Message::default()
         };
 
@@ -464,12 +464,12 @@ mod tests {
 
     #[test]
     fn test_num_readonly_accounts() {
-        let key0 = Pubkey::new_unique();
-        let key1 = Pubkey::new_unique();
-        let key2 = Pubkey::new_unique();
-        let key3 = Pubkey::new_unique();
-        let key4 = Pubkey::new_unique();
-        let key5 = Pubkey::new_unique();
+        let key0 = Address::new_unique();
+        let key1 = Address::new_unique();
+        let key2 = Address::new_unique();
+        let key3 = Address::new_unique();
+        let key4 = Address::new_unique();
+        let key5 = Address::new_unique();
 
         let legacy_message = SanitizedMessage::try_from_legacy_message(
             legacy::Message {
@@ -509,10 +509,10 @@ mod tests {
 
     #[test]
     fn test_get_ix_signers() {
-        let signer0 = Pubkey::new_unique();
-        let signer1 = Pubkey::new_unique();
-        let non_signer = Pubkey::new_unique();
-        let loader_key = Pubkey::new_unique();
+        let signer0 = Address::new_unique();
+        let signer1 = Address::new_unique();
+        let non_signer = Address::new_unique();
+        let loader_key = Address::new_unique();
         let instructions = vec![
             CompiledInstruction::new(3, &(), vec![2, 0]),
             CompiledInstruction::new(3, &(), vec![0, 1]),
@@ -553,12 +553,12 @@ mod tests {
     #[test]
     #[allow(clippy::get_first)]
     fn test_is_writable_account_cache() {
-        let key0 = Pubkey::new_unique();
-        let key1 = Pubkey::new_unique();
-        let key2 = Pubkey::new_unique();
-        let key3 = Pubkey::new_unique();
-        let key4 = Pubkey::new_unique();
-        let key5 = Pubkey::new_unique();
+        let key0 = Address::new_unique();
+        let key1 = Address::new_unique();
+        let key2 = Address::new_unique();
+        let key3 = Address::new_unique();
+        let key4 = Address::new_unique();
+        let key5 = Address::new_unique();
 
         let legacy_message = SanitizedMessage::try_from_legacy_message(
             legacy::Message {
@@ -626,9 +626,9 @@ mod tests {
 
     #[test]
     fn test_get_signature_details() {
-        let key0 = Pubkey::new_unique();
-        let key1 = Pubkey::new_unique();
-        let loader_key = Pubkey::new_unique();
+        let key0 = Address::new_unique();
+        let key1 = Address::new_unique();
+        let loader_key = Address::new_unique();
 
         let loader_instr = CompiledInstruction::new(2, &(), vec![0, 1]);
         let mock_secp256k1_instr = CompiledInstruction::new(3, &[1u8; 10], vec![]);
@@ -670,9 +670,9 @@ mod tests {
     #[test]
     fn test_static_account_keys() {
         let keys = vec![
-            Pubkey::new_unique(),
-            Pubkey::new_unique(),
-            Pubkey::new_unique(),
+            Address::new_unique(),
+            Address::new_unique(),
+            Address::new_unique(),
         ];
 
         let header = MessageHeader {
@@ -713,8 +713,8 @@ mod tests {
                 ..v0::Message::default()
             },
             LoadedAddresses {
-                writable: vec![Pubkey::new_unique()],
-                readonly: vec![Pubkey::new_unique()],
+                writable: vec![Address::new_unique()],
+                readonly: vec![Address::new_unique()],
             },
             &HashSet::default(),
         ));

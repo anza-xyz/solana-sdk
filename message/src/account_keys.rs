@@ -1,7 +1,7 @@
 use {
     crate::{compiled_instruction::CompiledInstruction, v0::LoadedAddresses, CompileError},
+    solana_address::Address,
     solana_instruction::Instruction,
-    solana_pubkey::Pubkey,
     std::{collections::BTreeMap, iter::zip, ops::Index},
 };
 
@@ -9,12 +9,12 @@ use {
 /// during transaction processing.
 #[derive(Clone, Default, Debug, Eq)]
 pub struct AccountKeys<'a> {
-    static_keys: &'a [Pubkey],
+    static_keys: &'a [Address],
     dynamic_keys: Option<&'a LoadedAddresses>,
 }
 
 impl Index<usize> for AccountKeys<'_> {
-    type Output = Pubkey;
+    type Output = Address;
     #[inline]
     fn index(&self, index: usize) -> &Self::Output {
         self.get(index).expect("index is invalid")
@@ -22,7 +22,7 @@ impl Index<usize> for AccountKeys<'_> {
 }
 
 impl<'a> AccountKeys<'a> {
-    pub fn new(static_keys: &'a [Pubkey], dynamic_keys: Option<&'a LoadedAddresses>) -> Self {
+    pub fn new(static_keys: &'a [Address], dynamic_keys: Option<&'a LoadedAddresses>) -> Self {
         Self {
             static_keys,
             dynamic_keys,
@@ -33,7 +33,7 @@ impl<'a> AccountKeys<'a> {
     /// affects how account indexes from compiled instructions are resolved and
     /// so should not be changed.
     #[inline]
-    fn key_segment_iter(&self) -> impl Iterator<Item = &'a [Pubkey]> + Clone {
+    fn key_segment_iter(&self) -> impl Iterator<Item = &'a [Address]> + Clone {
         if let Some(dynamic_keys) = self.dynamic_keys {
             [
                 self.static_keys,
@@ -52,7 +52,7 @@ impl<'a> AccountKeys<'a> {
     /// loaded writable addresses, and lastly the list of dynamically loaded
     /// readonly addresses.
     #[inline]
-    pub fn get(&self, mut index: usize) -> Option<&'a Pubkey> {
+    pub fn get(&self, mut index: usize) -> Option<&'a Address> {
         for key_segment in self.key_segment_iter() {
             if index < key_segment.len() {
                 return Some(&key_segment[index]);
@@ -80,7 +80,7 @@ impl<'a> AccountKeys<'a> {
 
     /// Iterator for the addresses of the loaded accounts for a message
     #[inline]
-    pub fn iter(&self) -> impl Iterator<Item = &'a Pubkey> + Clone {
+    pub fn iter(&self) -> impl Iterator<Item = &'a Address> + Clone {
         self.key_segment_iter().flatten()
     }
 
@@ -110,13 +110,13 @@ impl<'a> AccountKeys<'a> {
         &self,
         instructions: &[Instruction],
     ) -> Result<Vec<CompiledInstruction>, CompileError> {
-        let mut account_index_map = BTreeMap::<&Pubkey, u8>::new();
+        let mut account_index_map = BTreeMap::<&Address, u8>::new();
         for (index, key) in self.iter().enumerate() {
             let index = u8::try_from(index).map_err(|_| CompileError::AccountIndexOverflow)?;
             account_index_map.insert(key, index);
         }
 
-        let get_account_index = |key: &Pubkey| -> Result<u8, CompileError> {
+        let get_account_index = |key: &Address| -> Result<u8, CompileError> {
             account_index_map
                 .get(key)
                 .cloned()
@@ -152,13 +152,13 @@ impl PartialEq for AccountKeys<'_> {
 mod tests {
     use {super::*, solana_instruction::AccountMeta};
 
-    fn test_account_keys() -> [Pubkey; 6] {
-        let key0 = Pubkey::new_unique();
-        let key1 = Pubkey::new_unique();
-        let key2 = Pubkey::new_unique();
-        let key3 = Pubkey::new_unique();
-        let key4 = Pubkey::new_unique();
-        let key5 = Pubkey::new_unique();
+    fn test_account_keys() -> [Address; 6] {
+        let key0 = Address::new_unique();
+        let key1 = Address::new_unique();
+        let key2 = Address::new_unique();
+        let key3 = Address::new_unique();
+        let key4 = Address::new_unique();
+        let key5 = Address::new_unique();
 
         [key0, key1, key2, key3, key4, key5]
     }
@@ -300,7 +300,7 @@ mod tests {
         let static_keys = test_account_keys();
         let account_keys = AccountKeys::new(&static_keys, None);
 
-        let unknown_key = Pubkey::new_unique();
+        let unknown_key = Address::new_unique();
         let test_instructions = [
             Instruction {
                 program_id: unknown_key,
@@ -328,9 +328,9 @@ mod tests {
     #[test]
     fn test_try_compile_instructions_with_too_many_account_keys() {
         const MAX_LENGTH_WITHOUT_OVERFLOW: usize = u8::MAX as usize + 1;
-        let static_keys = vec![Pubkey::default(); MAX_LENGTH_WITHOUT_OVERFLOW];
+        let static_keys = vec![Address::default(); MAX_LENGTH_WITHOUT_OVERFLOW];
         let dynamic_keys = LoadedAddresses {
-            writable: vec![Pubkey::default()],
+            writable: vec![Address::default()],
             readonly: vec![],
         };
         let account_keys = AccountKeys::new(&static_keys, Some(&dynamic_keys));

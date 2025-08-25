@@ -1,6 +1,6 @@
 use {
     super::VersionedMessage, crate::compiled_instruction::CompiledInstruction,
-    solana_pubkey::Pubkey, solana_sanitize::SanitizeError,
+    solana_address::Address, solana_sanitize::SanitizeError,
 };
 
 /// Wraps a sanitized `VersionedMessage` to provide a safe API
@@ -32,7 +32,7 @@ impl SanitizedVersionedMessage {
     /// id.
     pub fn program_instructions_iter(
         &self,
-    ) -> impl Iterator<Item = (&Pubkey, &CompiledInstruction)> + Clone {
+    ) -> impl Iterator<Item = (&Address, &CompiledInstruction)> + Clone {
         self.message.instructions().iter().map(move |ix| {
             (
                 self.message
