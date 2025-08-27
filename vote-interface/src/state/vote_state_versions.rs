@@ -41,8 +41,11 @@ impl VoteStateVersions {
     pub fn try_convert_to_v3(self) -> Result<VoteStateV3, InstructionError> {
         match self {
             VoteStateVersions::V0_23_5(state) => {
-                let authorized_voters =
-                    AuthorizedVoters::new(state.authorized_voter_epoch, state.authorized_voter);
+                let authorized_voters = if state.is_uninitialized() {
+                    AuthorizedVoters::default()
+                } else {
+                    AuthorizedVoters::new(state.authorized_voter_epoch, state.authorized_voter)
+                };
 
                 Ok(VoteStateV3 {
                     node_pubkey: state.node_pubkey,
@@ -97,8 +100,11 @@ impl VoteStateVersions {
     pub fn try_convert_to_v4(self, vote_pubkey: &Pubkey) -> Result<VoteStateV4, InstructionError> {
         Ok(match self {
             VoteStateVersions::V0_23_5(state) => {
-                let authorized_voters =
-                    AuthorizedVoters::new(state.authorized_voter_epoch, state.authorized_voter);
+                let authorized_voters = if state.is_uninitialized() {
+                    AuthorizedVoters::default()
+                } else {
+                    AuthorizedVoters::new(state.authorized_voter_epoch, state.authorized_voter)
+                };
 
                 VoteStateV4 {
                     node_pubkey: state.node_pubkey,
@@ -160,13 +166,11 @@ impl VoteStateVersions {
 
     pub fn is_uninitialized(&self) -> bool {
         match self {
-            VoteStateVersions::V0_23_5(vote_state) => {
-                vote_state.authorized_voter == Pubkey::default()
-            }
+            VoteStateVersions::V0_23_5(vote_state) => vote_state.is_uninitialized(),
 
-            VoteStateVersions::V1_14_11(vote_state) => vote_state.authorized_voters.is_empty(),
+            VoteStateVersions::V1_14_11(vote_state) => vote_state.is_uninitialized(),
 
-            VoteStateVersions::V3(vote_state) => vote_state.authorized_voters.is_empty(),
+            VoteStateVersions::V3(vote_state) => vote_state.is_uninitialized(),
 
             // As per SIMD-0185, v4 is always initialized.
             VoteStateVersions::V4(_) => false,

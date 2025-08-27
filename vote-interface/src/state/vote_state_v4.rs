@@ -79,18 +79,9 @@ impl VoteStateV4 {
 
     #[cfg(any(target_os = "solana", feature = "bincode"))]
     pub fn deserialize(input: &[u8], vote_pubkey: &Pubkey) -> Result<Self, InstructionError> {
-        #[cfg(not(target_os = "solana"))]
-        {
-            bincode::deserialize::<VoteStateVersions>(input)
-                .map_err(|_| InstructionError::InvalidAccountData)
-                .and_then(|versioned| versioned.try_convert_to_v4(vote_pubkey))
-        }
-        #[cfg(target_os = "solana")]
-        {
-            let mut vote_state = Self::default();
-            Self::deserialize_into(input, &mut vote_state, vote_pubkey)?;
-            Ok(vote_state)
-        }
+        let mut vote_state = Self::default();
+        Self::deserialize_into(input, &mut vote_state, vote_pubkey)?;
+        Ok(vote_state)
     }
 
     /// Deserializes the input `VoteStateVersions` buffer directly into the provided `VoteStateV4`.

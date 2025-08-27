@@ -112,25 +112,15 @@ impl VoteStateV3 {
         3762 // see test_vote_state_size_of.
     }
 
-    // NOTE we retain `bincode::deserialize` for `not(target_os = "solana")` pending testing on mainnet-beta
-    // once that testing is done, `VoteStateV3::deserialize_into` may be used for all targets
-    // conversion of V0_23_5 to v3 must be handled specially, however
-    // because it inserts a null voter into `authorized_voters`
-    // which `VoteStateVersions::is_uninitialized` erroneously reports as initialized
+    pub fn is_uninitialized(&self) -> bool {
+        self.authorized_voters.is_empty()
+    }
+
     #[cfg(any(target_os = "solana", feature = "bincode"))]
     pub fn deserialize(input: &[u8]) -> Result<Self, InstructionError> {
-        #[cfg(not(target_os = "solana"))]
-        {
-            bincode::deserialize::<VoteStateVersions>(input)
-                .map_err(|_| InstructionError::InvalidAccountData)
-                .and_then(|versioned| versioned.try_convert_to_v3())
-        }
-        #[cfg(target_os = "solana")]
-        {
-            let mut vote_state = Self::default();
-            Self::deserialize_into(input, &mut vote_state)?;
-            Ok(vote_state)
-        }
+        let mut vote_state = Self::default();
+        Self::deserialize_into(input, &mut vote_state)?;
+        Ok(vote_state)
     }
 
     /// Deserializes the input `VoteStateVersions` buffer directly into the provided `VoteStateV3`.

@@ -56,6 +56,10 @@ impl VoteState1_14_11 {
         3731 // see test_vote_state_size_of
     }
 
+    pub fn is_uninitialized(&self) -> bool {
+        self.authorized_voters.is_empty()
+    }
+
     pub fn is_correct_size_and_initialized(data: &[u8]) -> bool {
         const VERSION_OFFSET: usize = 4;
         const DEFAULT_PRIOR_VOTERS_END: usize = VERSION_OFFSET + DEFAULT_PRIOR_VOTERS_OFFSET;

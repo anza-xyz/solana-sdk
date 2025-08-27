@@ -38,6 +38,12 @@ pub struct VoteState0_23_5 {
     pub last_timestamp: BlockTimestamp,
 }
 
+impl VoteState0_23_5 {
+    pub fn is_uninitialized(&self) -> bool {
+        self.authorized_voter == Pubkey::default()
+    }
+}
+
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[derive(Debug, PartialEq, Eq, Clone)]
 #[cfg_attr(test, derive(Arbitrary))]
