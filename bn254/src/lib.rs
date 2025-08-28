@@ -1,14 +1,50 @@
-pub mod addition;
+pub(crate) mod addition;
 pub mod compression;
-pub mod multiplication;
-pub mod pairing;
+pub(crate) mod multiplication;
+pub(crate) mod pairing;
 
-pub mod prelude {
+/// This module contains the versioned syscall implementations and is intended for use
+/// primarily by validator code.
+#[cfg(not(target_os = "solana"))]
+pub mod validator {
     pub use crate::{
-        addition::{consts::*, target_arch::*},
+        addition::{
+            versioned_addition, VersionedAddition, ALT_BN128_ADD, ALT_BN128_ADDITION_INPUT_LEN,
+            ALT_BN128_ADDITION_OUTPUT_LEN, ALT_BN128_ADD_LE, ALT_BN128_SUB, ALT_BN128_SUB_LE,
+        },
+        multiplication::{
+            versioned_multiplication, VersionedMultiplication, ALT_BN128_MUL,
+            ALT_BN128_MULTIPLICATION_INPUT_LEN, ALT_BN128_MULTIPLICATION_OUTPUT_LEN,
+            ALT_BN128_MUL_LE,
+        },
+        pairing::{
+            versioned_pairing, VersionedPairing, ALT_BN128_PAIRING, ALT_BN128_PAIRING_ELEMENT_LEN,
+            ALT_BN128_PAIRING_LE, ALT_BN128_PAIRING_OUTPUT_LEN,
+        },
+        target_arch::Endianness,
+    };
+}
+
+/// This module should be used by Solana programs or other downstream projects.
+pub mod prelude {
+    #[allow(deprecated)]
+    #[cfg(not(target_os = "solana"))]
+    pub use crate::multiplication::alt_bn128_multiplication_128; // to be removed in v4.0
+    pub use crate::{
+        addition::{
+            alt_bn128_addition, alt_bn128_addition_le, ALT_BN128_ADD, ALT_BN128_ADDITION_INPUT_LEN,
+            ALT_BN128_ADDITION_OUTPUT_LEN, ALT_BN128_ADD_LE, ALT_BN128_SUB, ALT_BN128_SUB_LE,
+        },
         consts::*,
-        multiplication::{consts::*, target_arch::*},
-        pairing::{consts::*, target_arch::*},
+        multiplication::{
+            alt_bn128_multiplication, alt_bn128_multiplication_le, ALT_BN128_MUL,
+            ALT_BN128_MULTIPLICATION_INPUT_LEN, ALT_BN128_MULTIPLICATION_OUTPUT_LEN,
+            ALT_BN128_MUL_LE,
+        },
+        pairing::{
+            alt_bn128_pairing, alt_bn128_pairing_le, ALT_BN128_PAIRING,
+            ALT_BN128_PAIRING_ELEMENT_LEN, ALT_BN128_PAIRING_LE, ALT_BN128_PAIRING_OUTPUT_LEN,
+        },
         AltBn128Error,
     };
 }
@@ -253,7 +289,7 @@ mod target_arch {
         }
     }
 
-    pub(crate) enum Endianness {
+    pub enum Endianness {
         BE,
         LE,
     }
