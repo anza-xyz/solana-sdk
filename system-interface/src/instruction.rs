@@ -442,7 +442,6 @@ pub fn create_account_with_seed(
     let account_metas = vec![
         AccountMeta::new(*from_pubkey, true),
         AccountMeta::new(*to_pubkey, false),
-        AccountMeta::new_readonly(*base, true),
     ];
 
     Instruction::new_with_bincode(
@@ -636,10 +635,7 @@ pub fn assign_with_seed(
     seed: &str,
     owner: &Pubkey,
 ) -> Instruction {
-    let account_metas = vec![
-        AccountMeta::new(*address, false),
-        AccountMeta::new_readonly(*base, true),
-    ];
+    let account_metas = vec![AccountMeta::new(*address, false)];
     Instruction::new_with_bincode(
         ID,
         &SystemInstruction::AssignWithSeed {
@@ -1025,10 +1021,7 @@ pub fn allocate_with_seed(
     space: u64,
     owner: &Pubkey,
 ) -> Instruction {
-    let account_metas = vec![
-        AccountMeta::new(*address, false),
-        AccountMeta::new_readonly(*base, true),
-    ];
+    let account_metas = vec![AccountMeta::new(*address, false)];
     Instruction::new_with_bincode(
         ID,
         &SystemInstruction::AllocateWithSeed {
