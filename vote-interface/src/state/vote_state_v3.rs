@@ -299,7 +299,7 @@ impl VoteStateV3 {
     }
 
     // Computes the vote latency for vote on voted_for_slot where the vote itself landed in current_slot
-    pub fn compute_vote_latency(voted_for_slot: Slot, current_slot: Slot) -> u8 {
+    fn compute_vote_latency(voted_for_slot: Slot, current_slot: Slot) -> u8 {
         std::cmp::min(current_slot.saturating_sub(voted_for_slot), u8::MAX as u64) as u8
     }
 
