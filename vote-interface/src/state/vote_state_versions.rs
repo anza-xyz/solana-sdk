@@ -1,12 +1,14 @@
+use crate::state::{
+    vote_state_0_23_5::VoteState0_23_5, vote_state_1_14_11::VoteState1_14_11, VoteStateV3,
+    VoteStateV4,
+};
 #[cfg(test)]
 use arbitrary::{Arbitrary, Unstructured};
+#[cfg(any(test, target_os = "solana", feature = "bincode"))]
 use {
     crate::{
         authorized_voters::AuthorizedVoters,
-        state::{
-            vote_state_0_23_5::VoteState0_23_5, vote_state_1_14_11::VoteState1_14_11, CircBuf,
-            LandedVote, Lockout, VoteStateV3, VoteStateV4,
-        },
+        state::{CircBuf, LandedVote, Lockout},
     },
     solana_instruction::error::InstructionError,
     solana_pubkey::Pubkey,
@@ -38,7 +40,8 @@ impl VoteStateVersions {
     ///
     /// NOTE: Does not support conversion from `V4`. Attempting to convert from
     /// v4 to v3 will throw an error.
-    pub fn try_convert_to_v3(self) -> Result<VoteStateV3, InstructionError> {
+    #[cfg(any(test, target_os = "solana", feature = "bincode"))]
+    pub(crate) fn try_convert_to_v3(self) -> Result<VoteStateV3, InstructionError> {
         match self {
             VoteStateVersions::V0_23_5(state) => {
                 let authorized_voters = if state.is_uninitialized() {
@@ -97,7 +100,11 @@ impl VoteStateVersions {
     // this function returns `Ok(..)`. However, future versions may not be
     // convertible to v4 without data loss, so this function returns a `Result`
     // for forward compatibility.
-    pub fn try_convert_to_v4(self, vote_pubkey: &Pubkey) -> Result<VoteStateV4, InstructionError> {
+    #[cfg(any(test, target_os = "solana", feature = "bincode"))]
+    pub(crate) fn try_convert_to_v4(
+        self,
+        vote_pubkey: &Pubkey,
+    ) -> Result<VoteStateV4, InstructionError> {
         Ok(match self {
             VoteStateVersions::V0_23_5(state) => {
                 let authorized_voters = if state.is_uninitialized() {
@@ -160,6 +167,7 @@ impl VoteStateVersions {
         })
     }
 
+    #[cfg(any(test, target_os = "solana", feature = "bincode"))]
     fn landed_votes_from_lockouts(lockouts: VecDeque<Lockout>) -> VecDeque<LandedVote> {
         lockouts.into_iter().map(|lockout| lockout.into()).collect()
     }
