@@ -17,7 +17,8 @@ if [[ -z $2 ]]; then
   exit 1
 fi
 LEVEL=$2
-DRY_RUN=$3
+DEPENDENT_VERSION=$3
+DRY_RUN=$4
 
 # Go to the directory
 cd "${PACKAGE_PATH}"
@@ -31,7 +32,7 @@ tag_name="${package_name//solana-/}"
 if [[ -n ${DRY_RUN} ]]; then
   cargo release "${LEVEL}"
 else
-  cargo release "${LEVEL}" --tag-name "${tag_name}@v{{version}}" --no-confirm --execute --dependent-version fix
+  cargo release "${LEVEL}" --tag-name "${tag_name}@v{{version}}" --no-confirm --execute --dependent-version "${DEPENDENT_VERSION}"
 fi
 
 # Stop here if this is a dry run.
