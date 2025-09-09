@@ -4,7 +4,7 @@ use crate::state::{
 };
 #[cfg(test)]
 use arbitrary::{Arbitrary, Unstructured};
-#[cfg(any(test, target_os = "solana", feature = "bincode"))]
+#[cfg(any(test, all(not(target_os = "solana"), feature = "bincode")))]
 use {
     crate::{
         authorized_voters::AuthorizedVoters,
