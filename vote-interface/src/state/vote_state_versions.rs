@@ -40,7 +40,7 @@ impl VoteStateVersions {
     ///
     /// NOTE: Does not support conversion from `V4`. Attempting to convert from
     /// v4 to v3 will throw an error.
-    #[cfg(any(test, target_os = "solana", feature = "bincode"))]
+    #[cfg(all(not(target_os = "solana"), feature = "bincode"))]
     pub(crate) fn try_convert_to_v3(self) -> Result<VoteStateV3, InstructionError> {
         match self {
             VoteStateVersions::V0_23_5(state) => {
@@ -100,7 +100,7 @@ impl VoteStateVersions {
     // this function returns `Ok(..)`. However, future versions may not be
     // convertible to v4 without data loss, so this function returns a `Result`
     // for forward compatibility.
-    #[cfg(any(test, target_os = "solana", feature = "bincode"))]
+    #[cfg(all(not(target_os = "solana"), feature = "bincode"))]
     pub(crate) fn try_convert_to_v4(
         self,
         vote_pubkey: &Pubkey,
@@ -167,7 +167,7 @@ impl VoteStateVersions {
         })
     }
 
-    #[cfg(any(test, target_os = "solana", feature = "bincode"))]
+    #[cfg(all(not(target_os = "solana"), feature = "bincode"))]
     fn landed_votes_from_lockouts(lockouts: VecDeque<Lockout>) -> VecDeque<LandedVote> {
         lockouts.into_iter().map(|lockout| lockout.into()).collect()
     }
