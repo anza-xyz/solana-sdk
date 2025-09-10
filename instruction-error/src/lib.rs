@@ -1,4 +1,5 @@
 #![no_std]
+#![allow(deprecated)]
 #![cfg_attr(feature = "frozen-abi", feature(min_specialization))]
 #[cfg(feature = "num-traits")]
 use num_traits::ToPrimitive;
@@ -92,6 +93,7 @@ pub enum InstructionError {
     RentEpochModified,
 
     /// The instruction expected additional account keys
+    #[deprecated(since = "2.1.0", note = "Use InstructionError::MissingAccount instead")]
     NotEnoughAccountKeys,
 
     /// Program other than the account's owner changed the size of the account data
@@ -260,6 +262,7 @@ impl fmt::Display for InstructionError {
             InstructionError::RentEpochModified => {
                 f.write_str("instruction modified rent epoch of an account")
             }
+            #[allow(deprecated)]
             InstructionError::NotEnoughAccountKeys => {
                 f.write_str("insufficient account keys for instruction")
             }
@@ -363,7 +366,7 @@ where
             MISSING_REQUIRED_SIGNATURES => Self::MissingRequiredSignature,
             ACCOUNT_ALREADY_INITIALIZED => Self::AccountAlreadyInitialized,
             UNINITIALIZED_ACCOUNT => Self::UninitializedAccount,
-            NOT_ENOUGH_ACCOUNT_KEYS => Self::NotEnoughAccountKeys,
+            NOT_ENOUGH_ACCOUNT_KEYS => Self::MissingAccount,
             ACCOUNT_BORROW_FAILED => Self::AccountBorrowFailed,
             MAX_SEED_LENGTH_EXCEEDED => Self::MaxSeedLengthExceeded,
             INVALID_SEEDS => Self::InvalidSeeds,
@@ -436,7 +439,9 @@ impl TryFrom<InstructionError> for ProgramError {
             Self::Error::MissingRequiredSignature => Ok(Self::MissingRequiredSignature),
             Self::Error::AccountAlreadyInitialized => Ok(Self::AccountAlreadyInitialized),
             Self::Error::UninitializedAccount => Ok(Self::UninitializedAccount),
+            #[allow(deprecated)]
             Self::Error::NotEnoughAccountKeys => Ok(Self::NotEnoughAccountKeys),
+            Self::Error::MissingAccount => Ok(Self::NotEnoughAccountKeys),
             Self::Error::AccountBorrowFailed => Ok(Self::AccountBorrowFailed),
             Self::Error::MaxSeedLengthExceeded => Ok(Self::MaxSeedLengthExceeded),
             Self::Error::InvalidSeeds => Ok(Self::InvalidSeeds),
