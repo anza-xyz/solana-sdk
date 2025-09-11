@@ -112,10 +112,6 @@ impl VoteStateV3 {
         3762 // see test_vote_state_size_of.
     }
 
-    pub fn is_uninitialized(&self) -> bool {
-        self.authorized_voters.is_empty()
-    }
-
     #[cfg(any(target_os = "solana", feature = "bincode"))]
     pub fn deserialize(input: &[u8]) -> Result<Self, InstructionError> {
         let mut vote_state = Self::default();
