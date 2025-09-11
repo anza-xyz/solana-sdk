@@ -252,7 +252,7 @@ impl VoteStateV3 {
     }
 
     /// increment credits, record credits for last epoch if new epoch
-    pub fn increment_credits(&mut self, epoch: Epoch, credits: u64) {
+    fn increment_credits(&mut self, epoch: Epoch, credits: u64) {
         // increment credits, record by epoch
 
         // never seen a credit

@@ -826,56 +826,6 @@ mod tests {
     }
 
     #[test]
-    fn test_vote_state_epoch_credits() {
-        let mut vote_state = VoteStateV3::default();
-
-        assert_eq!(vote_state.credits(), 0);
-        assert_eq!(vote_state.epoch_credits.clone(), vec![]);
-
-        let mut expected = vec![];
-        let mut credits = 0;
-        let epochs = (MAX_EPOCH_CREDITS_HISTORY + 2) as u64;
-        for epoch in 0..epochs {
-            for _j in 0..epoch {
-                vote_state.increment_credits(epoch, 1);
-                credits += 1;
-            }
-            expected.push((epoch, credits, credits - epoch));
-        }
-
-        while expected.len() > MAX_EPOCH_CREDITS_HISTORY {
-            expected.remove(0);
-        }
-
-        assert_eq!(vote_state.credits(), credits);
-        assert_eq!(vote_state.epoch_credits.clone(), expected);
-    }
-
-    #[test]
-    fn test_vote_state_epoch0_no_credits() {
-        let mut vote_state = VoteStateV3::default();
-
-        assert_eq!(vote_state.epoch_credits.len(), 0);
-        vote_state.increment_credits(1, 1);
-        assert_eq!(vote_state.epoch_credits.len(), 1);
-
-        vote_state.increment_credits(2, 1);
-        assert_eq!(vote_state.epoch_credits.len(), 2);
-    }
-
-    #[test]
-    fn test_vote_state_increment_credits() {
-        let mut vote_state = VoteStateV3::default();
-
-        let credits = (MAX_EPOCH_CREDITS_HISTORY + 2) as u64;
-        for i in 0..credits {
-            vote_state.increment_credits(i, 1);
-        }
-        assert_eq!(vote_state.credits(), credits);
-        assert!(vote_state.epoch_credits.len() <= MAX_EPOCH_CREDITS_HISTORY);
-    }
-
-    #[test]
     fn test_vote_process_timestamp() {
         let (slot, timestamp) = (15, 1_575_412_285);
         let mut vote_state = VoteStateV3 {
