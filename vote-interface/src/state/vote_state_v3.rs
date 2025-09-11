@@ -350,15 +350,6 @@ impl VoteStateV3 {
         self.epoch_credits.last().map_or(0, |v| v.1)
     }
 
-    /// Number of "credits" owed to this account from the mining pool on a per-epoch basis,
-    ///  starting from credits observed.
-    /// Each tuple of (Epoch, u64, u64) is read as (epoch, credits, prev_credits), where
-    ///   credits for each epoch is credits - prev_credits; while redundant this makes
-    ///   calculating rewards over partial epochs nice and simple
-    pub fn epoch_credits(&self) -> &Vec<(Epoch, u64, u64)> {
-        &self.epoch_credits
-    }
-
     // Pop all recent votes that are not locked out at the next vote slot.  This
     // allows validators to switch forks once their votes for another fork have
     // expired. This also allows validators continue voting on recent blocks in

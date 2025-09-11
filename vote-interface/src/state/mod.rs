@@ -830,7 +830,7 @@ mod tests {
         let mut vote_state = VoteStateV3::default();
 
         assert_eq!(vote_state.credits(), 0);
-        assert_eq!(vote_state.epoch_credits().clone(), vec![]);
+        assert_eq!(vote_state.epoch_credits.clone(), vec![]);
 
         let mut expected = vec![];
         let mut credits = 0;
@@ -848,19 +848,19 @@ mod tests {
         }
 
         assert_eq!(vote_state.credits(), credits);
-        assert_eq!(vote_state.epoch_credits().clone(), expected);
+        assert_eq!(vote_state.epoch_credits.clone(), expected);
     }
 
     #[test]
     fn test_vote_state_epoch0_no_credits() {
         let mut vote_state = VoteStateV3::default();
 
-        assert_eq!(vote_state.epoch_credits().len(), 0);
+        assert_eq!(vote_state.epoch_credits.len(), 0);
         vote_state.increment_credits(1, 1);
-        assert_eq!(vote_state.epoch_credits().len(), 1);
+        assert_eq!(vote_state.epoch_credits.len(), 1);
 
         vote_state.increment_credits(2, 1);
-        assert_eq!(vote_state.epoch_credits().len(), 2);
+        assert_eq!(vote_state.epoch_credits.len(), 2);
     }
 
     #[test]
@@ -872,7 +872,7 @@ mod tests {
             vote_state.increment_credits(i, 1);
         }
         assert_eq!(vote_state.credits(), credits);
-        assert!(vote_state.epoch_credits().len() <= MAX_EPOCH_CREDITS_HISTORY);
+        assert!(vote_state.epoch_credits.len() <= MAX_EPOCH_CREDITS_HISTORY);
     }
 
     #[test]
