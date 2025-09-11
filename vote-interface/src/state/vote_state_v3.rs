@@ -362,7 +362,7 @@ impl VoteStateV3 {
         }
     }
 
-    pub fn double_lockouts(&mut self) {
+    fn double_lockouts(&mut self) {
         let stack_depth = self.votes.len();
         for (i, v) in self.votes.iter_mut().enumerate() {
             // Don't increase the lockout for this vote until we get more confirmations
