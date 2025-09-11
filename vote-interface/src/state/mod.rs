@@ -399,15 +399,9 @@ pub mod serde_tower_sync {
 #[cfg(test)]
 mod tests {
     use {
-        super::*,
-        crate::{error::VoteError, state::vote_state_0_23_5::VoteState0_23_5},
-        bincode::serialized_size,
-        core::mem::MaybeUninit,
-        itertools::Itertools,
-        rand::Rng,
-        solana_clock::Clock,
-        solana_hash::Hash,
-        solana_instruction::error::InstructionError,
+        super::*, crate::state::vote_state_0_23_5::VoteState0_23_5, bincode::serialized_size,
+        core::mem::MaybeUninit, itertools::Itertools, rand::Rng, solana_clock::Clock,
+        solana_hash::Hash, solana_instruction::error::InstructionError,
     };
 
     // Test helper to create a VoteStateV4 with random data for testing
@@ -823,60 +817,6 @@ mod tests {
             let test_vote_state = unsafe { test_vote_state.assume_init() };
             assert_eq!(test_vote_state, bincode_res.unwrap());
         }
-    }
-
-    #[test]
-    fn test_vote_process_timestamp() {
-        let (slot, timestamp) = (15, 1_575_412_285);
-        let mut vote_state = VoteStateV3 {
-            last_timestamp: BlockTimestamp { slot, timestamp },
-            ..VoteStateV3::default()
-        };
-
-        assert_eq!(
-            vote_state.process_timestamp(slot - 1, timestamp + 1),
-            Err(VoteError::TimestampTooOld)
-        );
-        assert_eq!(
-            vote_state.last_timestamp,
-            BlockTimestamp { slot, timestamp }
-        );
-        assert_eq!(
-            vote_state.process_timestamp(slot + 1, timestamp - 1),
-            Err(VoteError::TimestampTooOld)
-        );
-        assert_eq!(
-            vote_state.process_timestamp(slot, timestamp + 1),
-            Err(VoteError::TimestampTooOld)
-        );
-        assert_eq!(vote_state.process_timestamp(slot, timestamp), Ok(()));
-        assert_eq!(
-            vote_state.last_timestamp,
-            BlockTimestamp { slot, timestamp }
-        );
-        assert_eq!(vote_state.process_timestamp(slot + 1, timestamp), Ok(()));
-        assert_eq!(
-            vote_state.last_timestamp,
-            BlockTimestamp {
-                slot: slot + 1,
-                timestamp
-            }
-        );
-        assert_eq!(
-            vote_state.process_timestamp(slot + 2, timestamp + 1),
-            Ok(())
-        );
-        assert_eq!(
-            vote_state.last_timestamp,
-            BlockTimestamp {
-                slot: slot + 2,
-                timestamp: timestamp + 1
-            }
-        );
-
-        // Test initial vote
-        vote_state.last_timestamp = BlockTimestamp::default();
-        assert_eq!(vote_state.process_timestamp(0, timestamp), Ok(()));
     }
 
     #[test]

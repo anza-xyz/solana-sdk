@@ -11,10 +11,8 @@ use {
         BlockTimestamp, CircBuf, LandedVote, Lockout, VoteInit, MAX_EPOCH_CREDITS_HISTORY,
         MAX_LOCKOUT_HISTORY, VOTE_CREDITS_GRACE_SLOTS, VOTE_CREDITS_MAXIMUM_PER_SLOT,
     },
-    crate::{
-        authorized_voters::AuthorizedVoters, error::VoteError, state::DEFAULT_PRIOR_VOTERS_OFFSET,
-    },
-    solana_clock::{Clock, Epoch, Slot, UnixTimestamp},
+    crate::{authorized_voters::AuthorizedVoters, state::DEFAULT_PRIOR_VOTERS_OFFSET},
+    solana_clock::{Clock, Epoch, Slot},
     solana_instruction_error::InstructionError,
     solana_pubkey::Pubkey,
     solana_rent::Rent,
@@ -376,22 +374,6 @@ impl VoteStateV3 {
                 v.lockout.increase_confirmation_count(1);
             }
         }
-    }
-
-    pub fn process_timestamp(
-        &mut self,
-        slot: Slot,
-        timestamp: UnixTimestamp,
-    ) -> Result<(), VoteError> {
-        if (slot < self.last_timestamp.slot || timestamp < self.last_timestamp.timestamp)
-            || (slot == self.last_timestamp.slot
-                && BlockTimestamp { slot, timestamp } != self.last_timestamp
-                && self.last_timestamp.slot != 0)
-        {
-            return Err(VoteError::TimestampTooOld);
-        }
-        self.last_timestamp = BlockTimestamp { slot, timestamp };
-        Ok(())
     }
 
     pub fn is_correct_size_and_initialized(data: &[u8]) -> bool {
