@@ -205,12 +205,6 @@ impl VoteStateV3 {
         }
     }
 
-    // Upto MAX_LOCKOUT_HISTORY many recent unexpired
-    // vote slots pushed onto the stack.
-    pub fn tower(&self) -> Vec<Slot> {
-        self.votes.iter().map(|v| v.slot()).collect()
-    }
-
     pub fn is_correct_size_and_initialized(data: &[u8]) -> bool {
         const VERSION_OFFSET: usize = 4;
         const DEFAULT_PRIOR_VOTERS_END: usize = VERSION_OFFSET + DEFAULT_PRIOR_VOTERS_OFFSET;
