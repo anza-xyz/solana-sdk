@@ -336,16 +336,6 @@ impl VoteStateV3 {
         self.votes.iter().map(|v| v.slot()).collect()
     }
 
-    /// Number of "credits" owed to this account from the mining pool. Submit this
-    /// VoteStateV3 to the Rewards program to trade credits for lamports.
-    pub fn credits(&self) -> u64 {
-        if self.epoch_credits.is_empty() {
-            0
-        } else {
-            self.epoch_credits.last().unwrap().1
-        }
-    }
-
     // Pop all recent votes that are not locked out at the next vote slot.  This
     // allows validators to switch forks once their votes for another fork have
     // expired. This also allows validators continue voting on recent blocks in
