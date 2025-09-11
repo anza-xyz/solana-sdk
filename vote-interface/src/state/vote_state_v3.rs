@@ -286,7 +286,7 @@ impl VoteStateV3 {
     }
 
     /// Returns the credits to award for a vote at the given lockout slot index
-    pub fn credits_for_vote_at_index(&self, index: usize) -> u64 {
+    fn credits_for_vote_at_index(&self, index: usize) -> u64 {
         let latency = self
             .votes
             .get(index)
