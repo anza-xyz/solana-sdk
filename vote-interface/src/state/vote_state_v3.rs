@@ -214,12 +214,6 @@ impl VoteStateV3 {
         }
     }
 
-    // Upto MAX_LOCKOUT_HISTORY many recent unexpired
-    // vote slots pushed onto the stack.
-    pub fn tower(&self) -> Vec<Slot> {
-        self.votes.iter().map(|v| v.slot()).collect()
-    }
-
     pub fn current_epoch(&self) -> Epoch {
         self.epoch_credits.last().map_or(0, |v| v.0)
     }
