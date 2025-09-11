@@ -214,19 +214,6 @@ impl VoteStateV3 {
         }
     }
 
-    pub fn nth_recent_lockout(&self, position: usize) -> Option<&Lockout> {
-        if position < self.votes.len() {
-            let pos = self
-                .votes
-                .len()
-                .checked_sub(position)
-                .and_then(|pos| pos.checked_sub(1))?;
-            self.votes.get(pos).map(|vote| &vote.lockout)
-        } else {
-            None
-        }
-    }
-
     // Upto MAX_LOCKOUT_HISTORY many recent unexpired
     // vote slots pushed onto the stack.
     pub fn tower(&self) -> Vec<Slot> {
