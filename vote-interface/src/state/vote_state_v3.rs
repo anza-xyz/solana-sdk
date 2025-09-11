@@ -369,66 +369,6 @@ impl VoteStateV3 {
         &self.epoch_credits
     }
 
-    pub fn set_new_authorized_voter<F>(
-        &mut self,
-        authorized_pubkey: &Pubkey,
-        current_epoch: Epoch,
-        target_epoch: Epoch,
-        verify: F,
-    ) -> Result<(), InstructionError>
-    where
-        F: Fn(Pubkey) -> Result<(), InstructionError>,
-    {
-        let epoch_authorized_voter = self.get_and_update_authorized_voter(current_epoch)?;
-        verify(epoch_authorized_voter)?;
-
-        // The offset in slots `n` on which the target_epoch
-        // (default value `DEFAULT_LEADER_SCHEDULE_SLOT_OFFSET`) is
-        // calculated is the number of slots available from the
-        // first slot `S` of an epoch in which to set a new voter for
-        // the epoch at `S` + `n`
-        if self.authorized_voters.contains(target_epoch) {
-            return Err(VoteError::TooSoonToReauthorize.into());
-        }
-
-        // Get the latest authorized_voter
-        let (latest_epoch, latest_authorized_pubkey) = self
-            .authorized_voters
-            .last()
-            .ok_or(InstructionError::InvalidAccountData)?;
-
-        // If we're not setting the same pubkey as authorized pubkey again,
-        // then update the list of prior voters to mark the expiration
-        // of the old authorized pubkey
-        if latest_authorized_pubkey != authorized_pubkey {
-            // Update the epoch ranges of authorized pubkeys that will be expired
-            let epoch_of_last_authorized_switch =
-                self.prior_voters.last().map(|range| range.2).unwrap_or(0);
-
-            // target_epoch must:
-            // 1) Be monotonically increasing due to the clock always
-            //    moving forward
-            // 2) not be equal to latest epoch otherwise this
-            //    function would have returned TooSoonToReauthorize error
-            //    above
-            if target_epoch <= *latest_epoch {
-                return Err(InstructionError::InvalidAccountData);
-            }
-
-            // Commit the new state
-            self.prior_voters.append((
-                *latest_authorized_pubkey,
-                epoch_of_last_authorized_switch,
-                target_epoch,
-            ));
-        }
-
-        self.authorized_voters
-            .insert(target_epoch, *authorized_pubkey);
-
-        Ok(())
-    }
-
     pub fn get_and_update_authorized_voter(
         &mut self,
         current_epoch: Epoch,

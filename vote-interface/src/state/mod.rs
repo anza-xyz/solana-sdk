@@ -2,6 +2,8 @@
 
 #[cfg(feature = "dev-context-only-utils")]
 use arbitrary::Arbitrary;
+#[cfg(test)]
+use arbitrary::Unstructured;
 #[cfg(feature = "serde")]
 use serde_derive::{Deserialize, Serialize};
 #[cfg(feature = "frozen-abi")]
@@ -13,8 +15,6 @@ use {
     solana_rent::Rent,
     std::{collections::VecDeque, fmt::Debug},
 };
-#[cfg(test)]
-use {arbitrary::Unstructured, solana_epoch_schedule::MAX_LEADER_SCHEDULE_EPOCH_OFFSET};
 
 mod vote_state_0_23_5;
 pub mod vote_state_1_14_11;
@@ -974,9 +974,7 @@ mod tests {
 
         // Set an authorized voter change at slot 7
         let new_authorized_voter = Pubkey::new_unique();
-        vote_state
-            .set_new_authorized_voter(&new_authorized_voter, 5, 7, |_| Ok(()))
-            .unwrap();
+        vote_state.authorized_voters.insert(7, new_authorized_voter);
 
         // Try to get the authorized voter for epoch 6, unchanged
         assert_eq!(
@@ -996,152 +994,6 @@ mod tests {
     }
 
     #[test]
-    fn test_set_new_authorized_voter() {
-        let original_voter = Pubkey::new_unique();
-        let epoch_offset = 15;
-        let mut vote_state = VoteStateV3::new(
-            &VoteInit {
-                node_pubkey: original_voter,
-                authorized_voter: original_voter,
-                authorized_withdrawer: original_voter,
-                commission: 0,
-            },
-            &Clock::default(),
-        );
-
-        assert!(vote_state.prior_voters.last().is_none());
-
-        let new_voter = Pubkey::new_unique();
-        // Set a new authorized voter
-        vote_state
-            .set_new_authorized_voter(&new_voter, 0, epoch_offset, |_| Ok(()))
-            .unwrap();
-
-        assert_eq!(vote_state.prior_voters.idx, 0);
-        assert_eq!(
-            vote_state.prior_voters.last(),
-            Some(&(original_voter, 0, epoch_offset))
-        );
-
-        // Trying to set authorized voter for same epoch again should fail
-        assert_eq!(
-            vote_state.set_new_authorized_voter(&new_voter, 0, epoch_offset, |_| Ok(())),
-            Err(VoteError::TooSoonToReauthorize.into())
-        );
-
-        // Setting the same authorized voter again should succeed
-        vote_state
-            .set_new_authorized_voter(&new_voter, 2, 2 + epoch_offset, |_| Ok(()))
-            .unwrap();
-
-        // Set a third and fourth authorized voter
-        let new_voter2 = Pubkey::new_unique();
-        vote_state
-            .set_new_authorized_voter(&new_voter2, 3, 3 + epoch_offset, |_| Ok(()))
-            .unwrap();
-        assert_eq!(vote_state.prior_voters.idx, 1);
-        assert_eq!(
-            vote_state.prior_voters.last(),
-            Some(&(new_voter, epoch_offset, 3 + epoch_offset))
-        );
-
-        let new_voter3 = Pubkey::new_unique();
-        vote_state
-            .set_new_authorized_voter(&new_voter3, 6, 6 + epoch_offset, |_| Ok(()))
-            .unwrap();
-        assert_eq!(vote_state.prior_voters.idx, 2);
-        assert_eq!(
-            vote_state.prior_voters.last(),
-            Some(&(new_voter2, 3 + epoch_offset, 6 + epoch_offset))
-        );
-
-        // Check can set back to original voter
-        vote_state
-            .set_new_authorized_voter(&original_voter, 9, 9 + epoch_offset, |_| Ok(()))
-            .unwrap();
-
-        // Run with these voters for a while, check the ranges of authorized
-        // voters is correct
-        for i in 9..epoch_offset {
-            assert_eq!(
-                vote_state.get_and_update_authorized_voter(i).unwrap(),
-                original_voter
-            );
-        }
-        for i in epoch_offset..3 + epoch_offset {
-            assert_eq!(
-                vote_state.get_and_update_authorized_voter(i).unwrap(),
-                new_voter
-            );
-        }
-        for i in 3 + epoch_offset..6 + epoch_offset {
-            assert_eq!(
-                vote_state.get_and_update_authorized_voter(i).unwrap(),
-                new_voter2
-            );
-        }
-        for i in 6 + epoch_offset..9 + epoch_offset {
-            assert_eq!(
-                vote_state.get_and_update_authorized_voter(i).unwrap(),
-                new_voter3
-            );
-        }
-        for i in 9 + epoch_offset..=10 + epoch_offset {
-            assert_eq!(
-                vote_state.get_and_update_authorized_voter(i).unwrap(),
-                original_voter
-            );
-        }
-    }
-
-    #[test]
-    fn test_authorized_voter_is_locked_within_epoch() {
-        let original_voter = Pubkey::new_unique();
-        let mut vote_state = VoteStateV3::new(
-            &VoteInit {
-                node_pubkey: original_voter,
-                authorized_voter: original_voter,
-                authorized_withdrawer: original_voter,
-                commission: 0,
-            },
-            &Clock::default(),
-        );
-
-        // Test that it's not possible to set a new authorized
-        // voter within the same epoch, even if none has been
-        // explicitly set before
-        let new_voter = Pubkey::new_unique();
-        assert_eq!(
-            vote_state.set_new_authorized_voter(&new_voter, 1, 1, |_| Ok(())),
-            Err(VoteError::TooSoonToReauthorize.into())
-        );
-
-        assert_eq!(
-            vote_state.authorized_voters.get_authorized_voter(1),
-            Some(original_voter)
-        );
-
-        // Set a new authorized voter for a future epoch
-        assert_eq!(
-            vote_state.set_new_authorized_voter(&new_voter, 1, 2, |_| Ok(())),
-            Ok(())
-        );
-
-        // Test that it's not possible to set a new authorized
-        // voter within the same epoch, even if none has been
-        // explicitly set before
-        assert_eq!(
-            vote_state.set_new_authorized_voter(&original_voter, 3, 3, |_| Ok(())),
-            Err(VoteError::TooSoonToReauthorize.into())
-        );
-
-        assert_eq!(
-            vote_state.authorized_voters.get_authorized_voter(3),
-            Some(new_voter)
-        );
-    }
-
-    #[test]
     fn test_vote_state_v3_size_of() {
         let vote_state = VoteStateV3::get_max_sized_vote_state();
         let vote_state = VoteStateVersions::new_v3(vote_state);
@@ -1155,31 +1007,6 @@ mod tests {
         let vote_state = VoteStateVersions::new_v4(vote_state);
         let size = serialized_size(&vote_state).unwrap();
         assert!(size < VoteStateV4::size_of() as u64); // v4 is smaller than the max size
-    }
-
-    #[test]
-    fn test_vote_state_max_size() {
-        let mut max_sized_data = vec![0; VoteStateV3::size_of()];
-        let vote_state = VoteStateV3::get_max_sized_vote_state();
-        let (start_leader_schedule_epoch, _) = vote_state.authorized_voters.last().unwrap();
-        let start_current_epoch =
-            start_leader_schedule_epoch - MAX_LEADER_SCHEDULE_EPOCH_OFFSET + 1;
-
-        let mut vote_state = Some(vote_state);
-        for i in start_current_epoch..start_current_epoch + 2 * MAX_LEADER_SCHEDULE_EPOCH_OFFSET {
-            vote_state.as_mut().map(|vote_state| {
-                vote_state.set_new_authorized_voter(
-                    &Pubkey::new_unique(),
-                    i,
-                    i + MAX_LEADER_SCHEDULE_EPOCH_OFFSET,
-                    |_| Ok(()),
-                )
-            });
-
-            let versioned = VoteStateVersions::new_v3(vote_state.take().unwrap());
-            VoteStateV3::serialize(&versioned, &mut max_sized_data).unwrap();
-            vote_state = Some(versioned.try_convert_to_v3().unwrap());
-        }
     }
 
     #[test]
