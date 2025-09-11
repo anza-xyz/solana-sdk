@@ -200,13 +200,6 @@ impl VoteStateV3 {
         })
     }
 
-    /// Returns if the vote state contains a slot `candidate_slot`
-    pub fn contains_slot(&self, candidate_slot: Slot) -> bool {
-        self.votes
-            .binary_search_by(|vote| vote.slot().cmp(&candidate_slot))
-            .is_ok()
-    }
-
     #[cfg(test)]
     pub(crate) fn get_max_sized_vote_state() -> VoteStateV3 {
         use solana_epoch_schedule::MAX_LEADER_SCHEDULE_EPOCH_OFFSET;
