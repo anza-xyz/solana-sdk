@@ -407,6 +407,14 @@ mod tests {
         solana_instruction::error::InstructionError,
     };
 
+    fn get_credits(epoch_credits: &[(Epoch, u64, u64)]) -> u64 {
+        if epoch_credits.is_empty() {
+            0
+        } else {
+            epoch_credits.last().unwrap().1
+        }
+    }
+
     // Test helper to create a VoteStateV4 with random data for testing
     fn create_test_vote_state_v4(node_pubkey: Pubkey, root_slot: Slot) -> VoteStateV4 {
         let votes = (1..32)
@@ -826,7 +834,7 @@ mod tests {
     fn test_vote_state_epoch_credits() {
         let mut vote_state = VoteStateV3::default();
 
-        assert_eq!(vote_state.credits(), 0);
+        assert_eq!(get_credits(&vote_state.epoch_credits), 0);
         assert_eq!(vote_state.epoch_credits.clone(), vec![]);
 
         let mut expected = vec![];
@@ -844,7 +852,7 @@ mod tests {
             expected.remove(0);
         }
 
-        assert_eq!(vote_state.credits(), credits);
+        assert_eq!(get_credits(&vote_state.epoch_credits), credits);
         assert_eq!(vote_state.epoch_credits.clone(), expected);
     }
 
@@ -868,7 +876,7 @@ mod tests {
         for i in 0..credits {
             vote_state.increment_credits(i, 1);
         }
-        assert_eq!(vote_state.credits(), credits);
+        assert_eq!(get_credits(&vote_state.epoch_credits), credits);
         assert!(vote_state.epoch_credits.len() <= MAX_EPOCH_CREDITS_HISTORY);
     }
 
