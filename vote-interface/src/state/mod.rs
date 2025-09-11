@@ -1116,7 +1116,10 @@ mod tests {
             Err(VoteError::TooSoonToReauthorize.into())
         );
 
-        assert_eq!(vote_state.get_authorized_voter(1), Some(original_voter));
+        assert_eq!(
+            vote_state.authorized_voters.get_authorized_voter(1),
+            Some(original_voter)
+        );
 
         // Set a new authorized voter for a future epoch
         assert_eq!(
@@ -1132,7 +1135,10 @@ mod tests {
             Err(VoteError::TooSoonToReauthorize.into())
         );
 
-        assert_eq!(vote_state.get_authorized_voter(3), Some(new_voter));
+        assert_eq!(
+            vote_state.authorized_voters.get_authorized_voter(3),
+            Some(new_voter)
+        );
     }
 
     #[test]

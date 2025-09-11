@@ -90,10 +90,6 @@ impl VoteStateV3 {
         }
     }
 
-    pub fn get_authorized_voter(&self, epoch: Epoch) -> Option<Pubkey> {
-        self.authorized_voters.get_authorized_voter(epoch)
-    }
-
     pub fn get_rent_exempt_reserve(rent: &Rent) -> u64 {
         rent.minimum_balance(VoteStateV3::size_of())
     }
