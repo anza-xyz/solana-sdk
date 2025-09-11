@@ -369,19 +369,6 @@ impl VoteStateV3 {
         &self.epoch_credits
     }
 
-    pub fn get_and_update_authorized_voter(
-        &mut self,
-        current_epoch: Epoch,
-    ) -> Result<Pubkey, InstructionError> {
-        let pubkey = self
-            .authorized_voters
-            .get_and_cache_authorized_voter_for_epoch(current_epoch)
-            .ok_or(InstructionError::InvalidAccountData)?;
-        self.authorized_voters
-            .purge_authorized_voters(current_epoch);
-        Ok(pubkey)
-    }
-
     // Pop all recent votes that are not locked out at the next vote slot.  This
     // allows validators to switch forks once their votes for another fork have
     // expired. This also allows validators continue voting on recent blocks in
