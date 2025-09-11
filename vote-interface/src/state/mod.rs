@@ -1176,9 +1176,14 @@ mod tests {
     #[test]
     fn test_default_vote_state_is_uninitialized() {
         // The default `VoteStateV3` is stored to de-initialize a zero-balance vote account,
-        // so must remain such that `VoteStateVersions::is_uninitialized()` returns true
-        // when called on a `VoteStateVersions` that stores it
-        assert!(VoteStateVersions::new_v3(VoteStateV3::default()).is_uninitialized());
+        // so must remain such that its authorized_voters is empty when called on a
+        // `VoteStateVersions` that stores it
+        let vote_state_versions = VoteStateVersions::new_v3(VoteStateV3::default());
+        if let VoteStateVersions::V3(vote_state) = vote_state_versions {
+            assert!(vote_state.authorized_voters.is_empty());
+        } else {
+            panic!("Expected V3 variant");
+        }
     }
 
     #[test]
