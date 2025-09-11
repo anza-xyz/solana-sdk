@@ -336,14 +336,6 @@ impl VoteStateV3 {
         self.votes.iter().map(|v| v.slot()).collect()
     }
 
-    pub fn current_epoch(&self) -> Epoch {
-        if self.epoch_credits.is_empty() {
-            0
-        } else {
-            self.epoch_credits.last().unwrap().0
-        }
-    }
-
     /// Number of "credits" owed to this account from the mining pool. Submit this
     /// VoteStateV3 to the Rewards program to trade credits for lamports.
     pub fn credits(&self) -> u64 {
