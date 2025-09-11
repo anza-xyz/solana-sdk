@@ -352,7 +352,7 @@ impl VoteStateV3 {
     // allows validators to switch forks once their votes for another fork have
     // expired. This also allows validators continue voting on recent blocks in
     // the same fork without increasing lockouts.
-    pub fn pop_expired_votes(&mut self, next_vote_slot: Slot) {
+    fn pop_expired_votes(&mut self, next_vote_slot: Slot) {
         while let Some(vote) = self.last_lockout() {
             if !vote.is_locked_out_at_slot(next_vote_slot) {
                 self.votes.pop_back();
