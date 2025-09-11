@@ -221,7 +221,8 @@ impl VoteStateV3 {
     ) {
         // Ignore votes for slots earlier than we already have votes for
         if self
-            .last_voted_slot()
+            .last_lockout()
+            .map(|v| v.slot())
             .is_some_and(|last_voted_slot| next_vote_slot <= last_voted_slot)
         {
             return;
@@ -325,12 +326,8 @@ impl VoteStateV3 {
         }
     }
 
-    pub fn last_lockout(&self) -> Option<&Lockout> {
+    fn last_lockout(&self) -> Option<&Lockout> {
         self.votes.back().map(|vote| &vote.lockout)
-    }
-
-    pub fn last_voted_slot(&self) -> Option<Slot> {
-        self.last_lockout().map(|v| v.slot())
     }
 
     // Upto MAX_LOCKOUT_HISTORY many recent unexpired
