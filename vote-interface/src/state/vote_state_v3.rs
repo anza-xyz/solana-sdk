@@ -94,10 +94,6 @@ impl VoteStateV3 {
         self.authorized_voters.get_authorized_voter(epoch)
     }
 
-    pub fn authorized_voters(&self) -> &AuthorizedVoters {
-        &self.authorized_voters
-    }
-
     pub fn prior_voters(&mut self) -> &CircBuf<(Pubkey, Epoch, Epoch)> {
         &self.prior_voters
     }
