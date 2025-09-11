@@ -8,11 +8,12 @@ use arbitrary::Arbitrary;
 use serde_derive::{Deserialize, Serialize};
 #[cfg(feature = "frozen-abi")]
 use solana_frozen_abi_macro::{frozen_abi, AbiExample};
+#[cfg(any(target_os = "solana", feature = "bincode"))]
+use solana_instruction_error::InstructionError;
 use {
     super::{BlockTimestamp, CircBuf, LandedVote, Lockout, VoteInit},
     crate::{authorized_voters::AuthorizedVoters, state::DEFAULT_PRIOR_VOTERS_OFFSET},
     solana_clock::{Clock, Epoch, Slot},
-    solana_instruction_error::InstructionError,
     solana_pubkey::Pubkey,
     solana_rent::Rent,
     std::{collections::VecDeque, fmt::Debug},
