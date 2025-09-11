@@ -14,7 +14,6 @@ use {
     solana_clock::{Clock, Epoch, Slot},
     solana_instruction_error::InstructionError,
     solana_pubkey::Pubkey,
-    solana_rent::Rent,
     std::{collections::VecDeque, fmt::Debug},
 };
 
@@ -85,10 +84,6 @@ impl VoteStateV3 {
             votes,
             ..VoteStateV3::default()
         }
-    }
-
-    pub fn get_rent_exempt_reserve(rent: &Rent) -> u64 {
-        rent.minimum_balance(VoteStateV3::size_of())
     }
 
     /// Upper limit on the size of the Vote State
