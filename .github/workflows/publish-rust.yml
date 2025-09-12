@@ -31,6 +31,14 @@ on:
         required: true
         type: boolean
         default: true
+      dependent_version:
+        description: How workspace dependencies should be handled
+        required: true
+        default: fix
+        type: choice
+        options:
+          - fix
+          - upgrade
 
 jobs:
   sanity:
@@ -218,7 +226,7 @@ jobs:
             OPTIONS=""
           fi
 
-          ./scripts/publish-rust.sh "${{ inputs.package_path }}" $LEVEL $OPTIONS
+          ./scripts/publish-rust.sh "${{ inputs.package_path }}" $LEVEL "${{ inputs.dependent_version }}" $OPTIONS
 
       - name: Generate a changelog
         if: github.event.inputs.create_release == 'true'
