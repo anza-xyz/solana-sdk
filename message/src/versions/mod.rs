@@ -246,7 +246,9 @@ impl<'de> serde::Deserialize<'de> for VersionedMessage {
     where
         D: Deserializer<'de>,
     {
-        struct MessageVisitor;
+        struct MessageVisitor {
+            is_human_readable: bool,
+        }
 
         impl<'de> Visitor<'de> for MessageVisitor {
             type Value = VersionedMessage;
@@ -259,10 +261,28 @@ impl<'de> serde::Deserialize<'de> for VersionedMessage {
             where
                 A: SeqAccess<'de>,
             {
-                let prefix: MessagePrefix = seq
-                    .next_element()?
-                    .ok_or_else(|| de::Error::invalid_length(0, &self))?;
+                let prefix = if self.is_human_readable {
+                    #[derive(Deserialize)]
+                    #[serde(untagged)]
+                    enum PrefixOrLegacy {
+                        Prefix(MessagePrefix),
+                        Legacy(LegacyMessage),
+                    }
 
+                    let prefix_or_legacy: PrefixOrLegacy = seq
+                        .next_element()?
+                        .ok_or_else(|| de::Error::invalid_length(0, &self))?;
+
+                    match prefix_or_legacy {
+                        PrefixOrLegacy::Prefix(prefix) => prefix,
+                        PrefixOrLegacy::Legacy(message) => {
+                            return Ok(VersionedMessage::Legacy(message));
+                        }
+                    }
+                } else {
+                    seq.next_element()?
+                        .ok_or_else(|| de::Error::invalid_length(0, &self))?
+                };
                 match prefix {
                     MessagePrefix::Legacy(num_required_signatures) => {
                         // The remaining fields of the legacy Message struct after the first byte.
@@ -322,7 +342,8 @@ impl<'de> serde::Deserialize<'de> for VersionedMessage {
             }
         }
 
-        deserializer.deserialize_tuple(2, MessageVisitor)
+        let is_human_readable = deserializer.is_human_readable();
+        deserializer.deserialize_tuple(2, MessageVisitor { is_human_readable })
     }
 }
 
@@ -377,8 +398,14 @@ mod tests {
         // serde_json
         {
             let string = serde_json::to_string(&message).unwrap();
+            let wrapped_string = serde_json::to_string(&wrapped_message).unwrap();
+
             let message_from_string: LegacyMessage = serde_json::from_str(&string).unwrap();
+            let wrapped_message_from_string: VersionedMessage =
+                serde_json::from_str(&wrapped_string).unwrap();
+
             assert_eq!(message, message_from_string);
+            assert_eq!(wrapped_message, wrapped_message_from_string);
         }
     }
 
