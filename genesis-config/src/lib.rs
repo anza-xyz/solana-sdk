@@ -245,7 +245,11 @@ impl fmt::Display for GenesisConfig {
 
 #[cfg(all(feature = "serde", test))]
 mod tests {
-    use {super::*, solana_signer::Signer, std::path::PathBuf};
+    use {
+        super::*,
+        solana_signer::Signer,
+        std::{path::PathBuf, str::FromStr},
+    };
 
     fn make_tmp_path(name: &str) -> PathBuf {
         let out_dir = std::env::var("FARF_DIR").unwrap_or_else(|_| "farf".to_string());
@@ -265,6 +269,22 @@ mod tests {
         let _ignored = std::fs::remove_file(&path);
 
         path
+    }
+
+    #[test]
+    fn cluster_compatibility() {
+        for cluster in ["devnet", "testnet", "mainnet-beta"] {
+            let ledger_path = PathBuf::from(format!("tests/fixtures/{cluster}"));
+            let genesis_config = GenesisConfig::load(&ledger_path).unwrap();
+            let cluster_type = ClusterType::from_str(cluster).unwrap();
+            let expected_hash = cluster_type.get_genesis_hash().unwrap();
+
+            assert_eq!(
+                expected_hash,
+                genesis_config.hash(),
+                "{cluster} genesis hash mismatch",
+            );
+        }
     }
 
     #[test]
