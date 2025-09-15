@@ -32,7 +32,10 @@ on:
         type: boolean
         default: true
       dependent_version:
-        description: How workspace dependencies should be handled
+        description: |
+          How workspace dependencies should be handled.
+          - "fix": (Default) Only bumps the workspace for semver-breakage - prefer this option
+          - "upgrade": Bumps workspace version regardless - only use if another SDK crate requires new code
         required: true
         default: fix
         type: choice
