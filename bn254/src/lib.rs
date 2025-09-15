@@ -61,7 +61,13 @@ mod consts {
 
     /// Size of the EC point. `alt_bn128` point contains
     /// the consistently united x and y fields as 64 bytes.
-    pub const ALT_BN128_POINT_SIZE: usize = 64;
+    pub const ALT_BN128_G1_POINT_SIZE: usize = ALT_BN128_FIELD_SIZE * 2;
+
+    #[deprecated(since = "3.1.0", note = "Please use `ALT_BN128_G1_POINT_SIZE` instead")]
+    pub const ALT_BN128_POINT_SIZE: usize = ALT_BN128_G1_POINT_SIZE;
+
+    /// Elements in G2 is represented by 2 field-extension elements `(x, y)`.
+    pub const ALT_BN128_G2_POINT_SIZE: usize = ALT_BN128_FIELD_SIZE * 4;
 }
 
 // AltBn128Error must be removed once the
@@ -109,7 +115,10 @@ impl From<AltBn128Error> for u64 {
     }
 }
 
-use consts::{ALT_BN128_FIELD_SIZE as FIELD_SIZE, ALT_BN128_POINT_SIZE as G1_POINT_SIZE};
+use consts::{
+    ALT_BN128_FIELD_SIZE as FIELD_SIZE, ALT_BN128_G1_POINT_SIZE as G1_POINT_SIZE,
+    ALT_BN128_G2_POINT_SIZE as G2_POINT_SIZE,
+};
 
 /// A bitmask used to indicate that an operation's input data is little-endian.
 pub(crate) const LE_FLAG: u64 = 0x80;
@@ -128,8 +137,6 @@ pub(crate) const LE_FLAG: u64 = 0x80;
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Pod, Zeroable)]
 #[repr(transparent)]
 pub struct PodG1(pub [u8; G1_POINT_SIZE]);
-
-const G2_POINT_SIZE: usize = FIELD_SIZE * 4;
 
 /// The BN254 (BN128) group element in G2 as a POD type.
 ///

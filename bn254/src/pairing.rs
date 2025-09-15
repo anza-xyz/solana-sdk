@@ -1,10 +1,13 @@
-use crate::{AltBn128Error, LE_FLAG};
+use crate::{
+    consts::{ALT_BN128_G1_POINT_SIZE, ALT_BN128_G2_POINT_SIZE},
+    AltBn128Error, LE_FLAG,
+};
 #[cfg(target_os = "solana")]
 use solana_define_syscall::definitions as syscalls;
 #[cfg(not(target_os = "solana"))]
 use {
     crate::{
-        consts::ALT_BN128_POINT_SIZE as G1_POINT_SIZE,
+        consts::ALT_BN128_G1_POINT_SIZE as G1_POINT_SIZE,
         target_arch::{Endianness, G1, G2},
         PodG1, PodG2,
     },
@@ -14,7 +17,7 @@ use {
 };
 
 /// Pair element length.
-pub const ALT_BN128_PAIRING_ELEMENT_LEN: usize = 192;
+pub const ALT_BN128_PAIRING_ELEMENT_LEN: usize = ALT_BN128_G1_POINT_SIZE + ALT_BN128_G2_POINT_SIZE; // 192
 /// Output length for pairing operation.
 pub const ALT_BN128_PAIRING_OUTPUT_LEN: usize = 32;
 

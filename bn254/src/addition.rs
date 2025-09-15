@@ -1,4 +1,4 @@
-use crate::{AltBn128Error, LE_FLAG};
+use crate::{consts::ALT_BN128_G1_POINT_SIZE, AltBn128Error, LE_FLAG};
 #[cfg(target_os = "solana")]
 use solana_define_syscall::definitions as syscalls;
 #[cfg(not(target_os = "solana"))]
@@ -11,9 +11,9 @@ use {
 };
 
 /// Input length for the add operation.
-pub const ALT_BN128_ADDITION_INPUT_LEN: usize = 128;
+pub const ALT_BN128_ADDITION_INPUT_LEN: usize = ALT_BN128_G1_POINT_SIZE * 2; // 128
 /// Output length for the add operation.
-pub const ALT_BN128_ADDITION_OUTPUT_LEN: usize = 64;
+pub const ALT_BN128_ADDITION_OUTPUT_LEN: usize = ALT_BN128_G1_POINT_SIZE; // 64
 
 pub const ALT_BN128_ADD: u64 = 0;
 pub const ALT_BN128_SUB: u64 = 1;

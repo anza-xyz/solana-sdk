@@ -89,7 +89,7 @@ fn alt_bn128_pairing_test() {
         let input_le: Vec<u8> = (0..input.len().saturating_div(ALT_BN128_PAIRING_ELEMENT_LEN))
             .flat_map(|i| {
                 let g1_start = i * ALT_BN128_PAIRING_ELEMENT_LEN;
-                let g1_end = g1_start + ALT_BN128_POINT_SIZE;
+                let g1_end = g1_start + ALT_BN128_G1_POINT_SIZE;
                 let g2_end = g1_start + ALT_BN128_PAIRING_ELEMENT_LEN;
 
                 let g1 = convert_endianness::<32, 64>(&input[g1_start..g1_end].try_into().unwrap());
