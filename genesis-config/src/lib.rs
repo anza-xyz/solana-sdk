@@ -49,7 +49,7 @@ pub const UNUSED_DEFAULT: u64 = 1024;
 #[cfg_attr(
     feature = "frozen-abi",
     derive(AbiExample),
-    frozen_abi(digest = "2Qkibn4g2baTthkR3o6oP6AHPTw1hCXF96kZscPoBqoo")
+    frozen_abi(digest = "3tUUJkZiUUGfuNCXbDuDR6KCQYPsh3m3cPw5vVUSt113")
 )]
 #[cfg_attr(
     feature = "serde",
@@ -62,7 +62,7 @@ pub struct GenesisConfig {
     /// initial accounts
     pub accounts: BTreeMap<Pubkey, Account>,
     /// built-in programs
-    pub __unused_builtin_programs: Vec<(String, Pubkey)>,
+    pub native_instruction_processors: Vec<(String, Pubkey)>,
     /// accounts for network rewards, these do not count towards capitalization
     pub rewards_pools: BTreeMap<Pubkey, Account>,
     pub ticks_per_slot: u64,
@@ -87,12 +87,16 @@ pub struct GenesisConfig {
 // useful for basic tests
 pub fn create_genesis_config(lamports: u64) -> (GenesisConfig, Keypair) {
     let faucet_keypair = Keypair::new();
-    let mut genesis_config = GenesisConfig::default();
-    genesis_config.add_account(
-        faucet_keypair.pubkey(),
-        AccountSharedData::new(lamports, 0, &system_program::id()),
-    );
-    (genesis_config, faucet_keypair)
+    (
+        GenesisConfig::new(
+            &[(
+                faucet_keypair.pubkey(),
+                AccountSharedData::new(lamports, 0, &system_program::id()),
+            )],
+            &[],
+        ),
+        faucet_keypair,
+    )
 }
 
 impl Default for GenesisConfig {
@@ -103,7 +107,7 @@ impl Default for GenesisConfig {
                 .unwrap()
                 .as_secs() as UnixTimestamp,
             accounts: BTreeMap::default(),
-            __unused_builtin_programs: Vec::default(),
+            native_instruction_processors: Vec::default(),
             rewards_pools: BTreeMap::default(),
             ticks_per_slot: DEFAULT_TICKS_PER_SLOT,
             unused: UNUSED_DEFAULT,
@@ -119,6 +123,21 @@ impl Default for GenesisConfig {
 }
 
 impl GenesisConfig {
+    pub fn new(
+        accounts: &[(Pubkey, AccountSharedData)],
+        native_instruction_processors: &[(String, Pubkey)],
+    ) -> Self {
+        Self {
+            accounts: accounts
+                .iter()
+                .cloned()
+                .map(|(key, account)| (key, Account::from(account)))
+                .collect::<BTreeMap<Pubkey, Account>>(),
+            native_instruction_processors: native_instruction_processors.to_vec(),
+            ..GenesisConfig::default()
+        }
+    }
+
     #[cfg(feature = "serde")]
     pub fn hash(&self) -> Hash {
         let serialized = serialize(&self).unwrap();
@@ -165,6 +184,10 @@ impl GenesisConfig {
         self.accounts.insert(pubkey, Account::from(account));
     }
 
+    pub fn add_native_instruction_processor(&mut self, name: String, program_id: Pubkey) {
+        self.native_instruction_processors.push((name, program_id));
+    }
+
     pub fn hashes_per_tick(&self) -> Option<u64> {
         self.poh_config.hashes_per_tick
     }
@@ -209,6 +232,7 @@ impl fmt::Display for GenesisConfig {
              {:?}\n\
              {:?}\n\
              Capitalization: {} lamports in {} accounts\n\
+             Native instruction processors: {:#?}\n\
              Rewards pool: {:#?}\n\
              ",
             Utc.timestamp_opt(self.creation_time, 0)
@@ -238,6 +262,7 @@ impl fmt::Display for GenesisConfig {
                 })
                 .sum::<u64>(),
             self.accounts.len(),
+            self.native_instruction_processors,
             self.rewards_pools,
         )
     }
@@ -279,11 +304,7 @@ mod tests {
             solana_pubkey::new_rand(),
             AccountSharedData::new(1, 0, &Pubkey::default()),
         );
-
-        // Unused fields still impact genesis hash
-        config
-            .__unused_builtin_programs
-            .push(("hi".to_string(), solana_pubkey::new_rand()));
+        config.add_native_instruction_processor("hi".to_string(), solana_pubkey::new_rand());
 
         assert_eq!(config.accounts.len(), 2);
         assert!(config
