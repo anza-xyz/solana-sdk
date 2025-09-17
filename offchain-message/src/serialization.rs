@@ -49,9 +49,11 @@ impl Spec for V1 {
 
 /// Version-neutral parsing and serialization helpers
 pub(crate) mod core {
-    use super::{reject_zero_pubkey_in_multi_signer, MessageFormat, SanitizeError};
-    use solana_serialize_utils::{
-        append_slice, append_u16, append_u8, read_slice, read_u16, read_u8,
+    use {
+        super::{reject_zero_pubkey_in_multi_signer, MessageFormat, SanitizeError},
+        solana_serialize_utils::{
+            append_slice, append_u16, append_u8, read_slice, read_u16, read_u8,
+        },
     };
 
     pub(crate) const APPLICATION_DOMAIN_LEN: usize = 32;
