@@ -124,9 +124,10 @@ mod target_arch {
         g1_bytes: &[u8],
         endianness: Endianness,
     ) -> Result<[u8; ALT_BN128_G1_POINT_SIZE], AltBn128CompressionError> {
-        let g1_bytes: [u8; alt_bn128_compression_size::ALT_BN128_G1_COMPRESSED_POINT_SIZE] = g1_bytes
-            .try_into()
-            .map_err(|_| AltBn128CompressionError::InvalidInputSize)?;
+        let g1_bytes: [u8; alt_bn128_compression_size::ALT_BN128_G1_COMPRESSED_POINT_SIZE] =
+            g1_bytes
+                .try_into()
+                .map_err(|_| AltBn128CompressionError::InvalidInputSize)?;
         if g1_bytes == [0u8; alt_bn128_compression_size::ALT_BN128_G1_COMPRESSED_POINT_SIZE] {
             return Ok([0u8; ALT_BN128_G1_POINT_SIZE]);
         }
@@ -218,9 +219,10 @@ mod target_arch {
         g2_bytes: &[u8],
         endianness: Endianness,
     ) -> Result<[u8; ALT_BN128_G2_POINT_SIZE], AltBn128CompressionError> {
-        let g2_bytes: [u8; alt_bn128_compression_size::ALT_BN128_G2_COMPRESSED_POINT_SIZE] = g2_bytes
-            .try_into()
-            .map_err(|_| AltBn128CompressionError::InvalidInputSize)?;
+        let g2_bytes: [u8; alt_bn128_compression_size::ALT_BN128_G2_COMPRESSED_POINT_SIZE] =
+            g2_bytes
+                .try_into()
+                .map_err(|_| AltBn128CompressionError::InvalidInputSize)?;
         if g2_bytes == [0u8; alt_bn128_compression_size::ALT_BN128_G2_COMPRESSED_POINT_SIZE] {
             return Ok([0u8; ALT_BN128_G2_POINT_SIZE]);
         }
@@ -313,7 +315,9 @@ mod target_arch {
 mod target_arch {
     use {
         super::*,
-        alt_bn128_compression_size::{ALT_BN128_G1_COMPRESSED_POINT_SIZE, ALT_BN128_G2_COMPRESSED_POINT_SIZE},
+        alt_bn128_compression_size::{
+            ALT_BN128_G1_COMPRESSED_POINT_SIZE, ALT_BN128_G2_COMPRESSED_POINT_SIZE,
+        },
         prelude::*,
         solana_define_syscall::definitions as syscalls,
     };
