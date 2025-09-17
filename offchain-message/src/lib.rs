@@ -48,8 +48,9 @@ impl MessageFormat {
 }
 
 /// Check if given bytes contain only printable ASCII characters
-pub fn is_printable_ascii(data: &[u8]) -> bool {
-    data.iter().all(|&c| (0x20..=0x7e).contains(&c))
+pub fn is_printable_ascii(data: &[u8], allow_newline: bool) -> bool {
+    data.iter()
+        .all(|&c| (0x20..=0x7e).contains(&c) || (allow_newline && c == 0x0a))
 }
 
 /// Check if given bytes contain valid UTF8 string
@@ -77,7 +78,7 @@ pub mod v0 {
 
     impl OffchainMessage {
         /// Encoded byte length for the application domain, format, number of signers, and message length
-        pub const HEADER_LEN: usize = 36;
+        pub const HEADER_LEN: usize = crate::serialization::core::PREAMBLE_LEN;
         /// Maximum number of bytes available to the core v0 payload (signers + message)
         pub const MAX_LEN: usize = u16::MAX as usize - Base::HEADER_LEN - Self::HEADER_LEN;
         /// Maximum number of bytes available to the core v0 payload (signers + message) for Ledger
@@ -98,15 +99,26 @@ pub mod v0 {
         pub fn get_message(&self) -> &Vec<u8> {
             &self.message
         }
-    }
 
-    // Smooth out nonsense like v0::serialization::v0::serialize
-    pub(crate) use crate::serialization::v0 as serialization;
+        /// Application domain (32 bytes) identifying the domain of the message
+        pub fn application_domain(&self) -> &[u8; 32] {
+            &self.application_domain
+        }
+
+        /// Signers committing to the message (as declared in the preamble)
+        pub fn signers(&self) -> &[[u8; 32]] {
+            &self.signers
+        }
+    }
 }
 
+/// OffchainMessage is a wrapper around the v0 and v1 OffchainMessage types.
+/// v0::OffchainMessage is kept for backwards compatibility.
+/// Full off-chain message including signing domain and header version.
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum OffchainMessage {
     V0(v0::OffchainMessage),
+    V1(v0::OffchainMessage),
 }
 
 impl OffchainMessage {
@@ -151,9 +163,25 @@ impl OffchainMessage {
             0 => {
                 serialization::validate_components(signers, message)?;
                 let total_size =
-                    v0::serialization::preamble_and_body_size(signers.len(), message.len());
-                let format = serialization::detect_implied_format(total_size, message)?;
+                    serialization::core::preamble_and_body_size(signers.len(), message.len());
+                let format = serialization::detect_implied_format_for::<serialization::V0>(
+                    total_size, message,
+                )?;
                 Ok(Self::V0(v0::OffchainMessage {
+                    application_domain,
+                    format,
+                    signers: signers.to_vec(),
+                    message: message.to_vec(),
+                }))
+            }
+            1 => {
+                serialization::validate_components(signers, message)?;
+                let total_size =
+                    serialization::core::preamble_and_body_size(signers.len(), message.len());
+                let format = serialization::detect_implied_format_for::<serialization::V1>(
+                    total_size, message,
+                )?;
+                Ok(Self::V1(v0::OffchainMessage {
                     application_domain,
                     format,
                     signers: signers.to_vec(),
@@ -167,18 +195,18 @@ impl OffchainMessage {
     /// Serialize the off-chain message to bytes including full header
     pub fn serialize(&self) -> Result<Vec<u8>, SanitizeError> {
         let mut data = Self::SIGNING_DOMAIN.to_vec();
-        match self {
-            Self::V0(msg) => {
-                data.push(0);
-                v0::serialization::serialize(
-                    &msg.application_domain,
-                    msg.format,
-                    &msg.signers,
-                    &msg.message,
-                    &mut data,
-                )?;
-            }
-        }
+        let (version, msg) = match self {
+            Self::V0(msg) => (0u8, msg),
+            Self::V1(msg) => (1u8, msg),
+        };
+        data.push(version);
+        serialization::serialize(
+            &msg.application_domain,
+            msg.format,
+            &msg.signers,
+            &msg.message,
+            &mut data,
+        )?;
         Ok(data)
     }
 
@@ -198,33 +226,37 @@ impl OffchainMessage {
             .get(domain_len.saturating_add(1)..)
             .ok_or(SanitizeError::ValueOutOfBounds)?;
         match version {
-            0 => Ok(Self::V0(v0::serialization::deserialize(payload)?)),
+            0 => Ok(Self::V0(
+                serialization::deserialize_for::<serialization::V0>(payload)?,
+            )),
+            1 => Ok(Self::V1(
+                serialization::deserialize_for::<serialization::V1>(payload)?,
+            )),
             _ => Err(SanitizeError::ValueOutOfBounds),
         }
     }
 
     /// Compute the hash of the off-chain message
     pub fn hash(&self) -> Result<Hash, SanitizeError> {
-        match self {
-            Self::V0(_) => v0::OffchainMessage::hash(&self.serialize()?),
-        }
+        v0::OffchainMessage::hash(&self.serialize()?)
     }
 
     pub fn get_version(&self) -> u8 {
         match self {
             Self::V0(_) => 0,
+            Self::V1(_) => 1,
         }
     }
 
     pub fn get_format(&self) -> MessageFormat {
         match self {
-            Self::V0(msg) => msg.get_format(),
+            Self::V0(msg) | Self::V1(msg) => msg.get_format(),
         }
     }
 
     pub fn get_message(&self) -> &Vec<u8> {
         match self {
-            Self::V0(msg) => msg.get_message(),
+            Self::V0(msg) | Self::V1(msg) => msg.get_message(),
         }
     }
 
@@ -234,14 +266,18 @@ impl OffchainMessage {
     pub fn sign(&self, signer: &dyn Signer) -> Result<Signature, SanitizeError> {
         let signer_pubkey = signer.pubkey().to_bytes();
         let message_signers = match self {
-            Self::V0(msg) => &msg.signers,
+            Self::V0(msg) | Self::V1(msg) => &msg.signers,
         };
         if message_signers.len() == 1 && message_signers[0] == [0u8; 32] {
             let (application_domain, message) = match self {
-                Self::V0(msg) => (msg.application_domain, &msg.message),
+                Self::V0(msg) | Self::V1(msg) => (msg.application_domain, &msg.message),
             };
-            let rebuilt_message =
-                Self::new_with_params(0, application_domain, &[signer_pubkey], message)?;
+            let rebuilt_message = Self::new_with_params(
+                self.get_version(),
+                application_domain,
+                &[signer_pubkey],
+                message,
+            )?;
             return Ok(signer.sign_message(&rebuilt_message.serialize()?));
         }
         if !message_signers.contains(&signer_pubkey) {
@@ -288,6 +324,135 @@ mod tests {
             hash.to_string(),
             "E5tkTdEzcYTe5deSvw5jqzwPUEVBT83P4aHCYxjtzEW8"
         );
+    }
+
+    #[test]
+    fn test_offchain_message_v1_accepts_newline_as_ascii() {
+        let msg = b"Hello\nWorld";
+        let message = OffchainMessage::new_with_params(1, [0u8; 32], &[[0u8; 32]], msg).unwrap();
+        assert_eq!(message.get_version(), 1);
+        assert_eq!(message.get_format(), MessageFormat::RestrictedAscii);
+        assert_eq!(message.get_message(), &msg);
+        // round trip
+        let ser = message.serialize().unwrap();
+        let de = OffchainMessage::deserialize(&ser).unwrap();
+        assert_eq!(de.get_version(), 1);
+        assert_eq!(de.get_format(), MessageFormat::RestrictedAscii);
+        assert_eq!(de.get_message(), &msg);
+    }
+
+    #[test]
+    fn test_offchain_message_v0_newline_not_ascii() {
+        let msg = b"Hello\nWorld";
+        let message = OffchainMessage::new_with_params(0, [0u8; 32], &[[0u8; 32]], msg).unwrap();
+        assert_eq!(message.get_version(), 0);
+        assert_eq!(message.get_format(), MessageFormat::LimitedUtf8);
+        assert_eq!(message.get_message(), &msg);
+        // round trip
+        let ser = message.serialize().unwrap();
+        let de = OffchainMessage::deserialize(&ser).unwrap();
+        assert_eq!(de.get_version(), 0);
+        assert_eq!(de.get_format(), MessageFormat::LimitedUtf8);
+        assert_eq!(de.get_message(), &msg);
+    }
+
+    #[test]
+    fn test_header_prefix_and_version_bytes() {
+        let msg = b"Hdr";
+        let m0 = OffchainMessage::new_with_params(0, [0u8; 32], &[[0u8; 32]], msg).unwrap();
+        let m1 = OffchainMessage::new_with_params(1, [0u8; 32], &[[0u8; 32]], msg).unwrap();
+        let s0 = m0.serialize().unwrap();
+        let s1 = m1.serialize().unwrap();
+        assert_eq!(
+            &s0[..OffchainMessage::SIGNING_DOMAIN.len()],
+            OffchainMessage::SIGNING_DOMAIN
+        );
+        assert_eq!(s0[OffchainMessage::SIGNING_DOMAIN.len()], 0);
+        assert_eq!(
+            &s1[..OffchainMessage::SIGNING_DOMAIN.len()],
+            OffchainMessage::SIGNING_DOMAIN
+        );
+        assert_eq!(s1[OffchainMessage::SIGNING_DOMAIN.len()], 1);
+    }
+
+    #[test]
+    fn test_deserialize_rejects_wrong_prefix() {
+        let msg = OffchainMessage::new_with_params(0, [0u8; 32], &[[0u8; 32]], b"X").unwrap();
+        let mut data = msg.serialize().unwrap();
+        data[0] = 0u8; // break the 0xff domain prefix
+        assert!(OffchainMessage::deserialize(&data).is_err());
+    }
+
+    #[test]
+    fn test_deserialize_unknown_version_rejected() {
+        // Build minimal valid body and then set an unknown version byte
+        let msg = OffchainMessage::new_with_params(0, [0u8; 32], &[[0u8; 32]], b"X").unwrap();
+        let mut data = msg.serialize().unwrap();
+        let domain_len = OffchainMessage::SIGNING_DOMAIN.len();
+        data[domain_len] = 2; // unsupported version
+        assert!(matches!(
+            OffchainMessage::deserialize(&data),
+            Err(SanitizeError::ValueOutOfBounds)
+        ));
+    }
+
+    #[test]
+    fn test_new_with_params_zero_signers_and_zero_message_errors() {
+        assert!(matches!(
+            OffchainMessage::new_with_params(0, [0u8; 32], &[], b"hi"),
+            Err(SanitizeError::ValueOutOfBounds)
+        ));
+        assert!(matches!(
+            OffchainMessage::new_with_params(0, [0u8; 32], &[[0u8; 32]], &[]),
+            Err(SanitizeError::InvalidValue)
+        ));
+    }
+
+    #[test]
+    fn test_ascii_boundary_size_selection() {
+        // total_size = PREAMBLE(36) + 1 signer (32) + msg_len
+        let max_total = crate::TOTAL_MAX_LEDGER; // spec combined size for formats 0/1
+        let boundary_len = max_total.saturating_sub(36 + 32);
+        let msg_boundary = vec![b'a'; boundary_len];
+        let msg_exceed = vec![b'a'; boundary_len + 1];
+
+        let m_ok = OffchainMessage::new_with_params(0, [0u8; 32], &[[0u8; 32]], &msg_boundary)
+            .expect("boundary ascii should be allowed");
+        assert_eq!(m_ok.get_format(), MessageFormat::RestrictedAscii);
+
+        let m_big = OffchainMessage::new_with_params(0, [0u8; 32], &[[0u8; 32]], &msg_exceed)
+            .expect("oversized ascii should map to ExtendedUtf8");
+        assert_eq!(m_big.get_format(), MessageFormat::ExtendedUtf8);
+    }
+
+    #[test]
+    fn test_invalid_utf8_rejected_for_small_sizes() {
+        // 0xFF 0xFE 0xFD is invalid UTF-8 and not printable ascii
+        let bad = vec![0xFF, 0xFE, 0xFD];
+        assert!(matches!(
+            OffchainMessage::new_with_params(0, [0u8; 32], &[[0u8; 32]], &bad),
+            Err(SanitizeError::InvalidValue)
+        ));
+    }
+
+    #[test]
+    fn test_zero_pubkey_in_multi_signer_rejected() {
+        // Multi-signer list must not contain zero pubkey
+        let signers = [[0u8; 32], [1u8; 32]];
+        assert!(matches!(
+            OffchainMessage::new_with_params(0, [0u8; 32], &signers, b"abc"),
+            Err(SanitizeError::InvalidValue)
+        ));
+    }
+
+    #[test]
+    fn test_signer_count_overflow_rejected() {
+        // 256 signers exceeds u8::MAX, should be ValueOutOfBounds
+        let signers = vec![[1u8; 32]; 256];
+        assert!(matches!(
+            OffchainMessage::new_with_params(0, [0u8; 32], &signers, b"abc"),
+            Err(SanitizeError::ValueOutOfBounds)
+        ));
     }
 
     #[test]
