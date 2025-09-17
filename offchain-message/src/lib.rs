@@ -76,8 +76,12 @@ pub mod v0 {
     }
 
     impl OffchainMessage {
+        /// Encoded byte length for the application domain, format, number of signers, and message length
         pub const HEADER_LEN: usize = 36;
+        /// Maximum number of bytes available to the core v0 payload (signers + message)
         pub const MAX_LEN: usize = u16::MAX as usize - Base::HEADER_LEN - Self::HEADER_LEN;
+        /// Maximum number of bytes available to the core v0 payload (signers + message) for Ledger
+        /// hardware wallets
         pub const MAX_LEN_LEDGER: usize = PACKET_DATA_SIZE - Base::HEADER_LEN - Self::HEADER_LEN;
 
         /// Compute the SHA256 hash of the serialized off-chain message
