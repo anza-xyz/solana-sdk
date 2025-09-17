@@ -59,6 +59,9 @@ pub fn is_utf8(data: &[u8]) -> bool {
 }
 
 #[allow(clippy::arithmetic_side_effects)]
+/// `v0::OffchainMessage` is shared by header versions 0 and 1 to preserve
+/// API compatibility; version-specific policy (e.g., newline allowance) is
+/// enforced at construction and (de)serialization via `serialization::Spec`.
 pub mod v0 {
     use {
         super::{MessageFormat, OffchainMessage as Base},
