@@ -10,9 +10,9 @@ use {
     ark_serialize::{CanonicalSerialize, Compress},
 };
 
-/// Input length for the add operation.
+/// Input size for the add operation.
 pub const ALT_BN128_ADDITION_INPUT_SIZE: usize = ALT_BN128_G1_POINT_SIZE * 2; // 128
-/// Output length for the add operation.
+/// Output size for the add operation.
 pub const ALT_BN128_ADDITION_OUTPUT_SIZE: usize = ALT_BN128_G1_POINT_SIZE; // 64
 
 #[deprecated(

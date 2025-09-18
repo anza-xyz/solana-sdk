@@ -15,10 +15,10 @@ use {
     ark_serialize::{CanonicalDeserialize, CanonicalSerialize, Compress},
 };
 
-/// Input length for the multiplication operation.
+/// Input size for the multiplication operation.
 pub const ALT_BN128_MULTIPLICATION_INPUT_SIZE: usize =
     ALT_BN128_G1_POINT_SIZE + ALT_BN128_FIELD_SIZE; // 96
-/// Output length for the multiplication operation.
+/// Output size for the multiplication operation.
 pub const ALT_BN128_MULTIPLICATION_OUTPUT_SIZE: usize = ALT_BN128_G1_POINT_SIZE; // 64
 
 #[deprecated(
