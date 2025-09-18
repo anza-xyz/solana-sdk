@@ -130,7 +130,7 @@ pub use {
 };
 
 impl Sysvar for Clock {
-    impl_sysvar_get!();
+    impl_sysvar_get!(id());
 }
 
 #[cfg(feature = "bincode")]

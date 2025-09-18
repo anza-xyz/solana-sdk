@@ -163,7 +163,7 @@ pub use {
 };
 
 impl Sysvar for EpochRewards {
-    impl_sysvar_get!();
+    impl_sysvar_get!(id());
 }
 
 #[cfg(feature = "bincode")]

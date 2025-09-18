@@ -129,7 +129,7 @@ pub use {
     solana_sdk_ids::sysvar::rent::{check_id, id, ID},
 };
 impl Sysvar for Rent {
-    impl_sysvar_get!();
+    impl_sysvar_get!(id());
 }
 
 #[cfg(feature = "bincode")]
