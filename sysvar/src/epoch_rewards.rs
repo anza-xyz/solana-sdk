@@ -171,17 +171,7 @@ impl SysvarSerialize for EpochRewards {}
 
 #[cfg(test)]
 mod tests {
-    use {super::*, serial_test::serial};
-
-    fn to_bytes<T>(value: &T) -> Vec<u8> {
-        unsafe {
-            let size = core::mem::size_of::<T>();
-            let ptr = (value as *const T) as *const u8;
-            let mut data = vec![0u8; size];
-            std::ptr::copy_nonoverlapping(ptr, data.as_mut_ptr(), size);
-            data
-        }
-    }
+    use {super::*, crate::tests::to_bytes, serial_test::serial};
 
     #[test]
     #[serial]

@@ -99,10 +99,8 @@ mod tests {
     #[test]
     #[serial]
     fn test_fees_get_deprecated_syscall_path() {
-        let prev = crate::program_stubs::set_syscall_stubs(Box::new(MockFeesSyscall));
+        let _ = crate::program_stubs::set_syscall_stubs(Box::new(MockFeesSyscall));
         let got = Fees::get().unwrap();
-        // restore original stubs to avoid side effects on other tests
-        let _ = crate::program_stubs::set_syscall_stubs(prev);
         assert_eq!(got.fee_calculator.lamports_per_signature, 42);
     }
 
