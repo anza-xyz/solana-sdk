@@ -356,6 +356,85 @@ macro_rules! address {
     };
 }
 
+/// Convenience macro to declare a static address and functions to interact with it.
+///
+/// Input: a single literal base58 string representation of a program's ID.
+///
+/// # Example
+///
+/// ```
+/// # // wrapper is used so that the macro invocation occurs in the item position
+/// # // rather than in the statement position which isn't allowed.
+/// use std::str::FromStr;
+/// use solana_address::{declare_id, Address};
+///
+/// # mod item_wrapper {
+/// #   use solana_address::declare_id;
+/// declare_id!("My11111111111111111111111111111111111111111");
+/// # }
+/// # use item_wrapper::id;
+///
+/// let my_id = Address::from_str("My11111111111111111111111111111111111111111").unwrap();
+/// assert_eq!(id(), my_id);
+/// ```
+#[cfg(feature = "decode")]
+#[macro_export]
+macro_rules! declare_id {
+    ($address:expr) => {
+        /// The const program ID.
+        pub const ID: $crate::Address = $crate::Address::from_str_const($address);
+
+        /// Returns `true` if given address is the ID.
+        // TODO make this const once `derive_const` makes it out of nightly
+        // and we can `derive_const(PartialEq)` on `Address`.
+        pub fn check_id(id: &$crate::Address) -> bool {
+            id == &ID
+        }
+
+        /// Returns the ID.
+        pub const fn id() -> $crate::Address {
+            ID
+        }
+
+        #[cfg(test)]
+        #[test]
+        fn test_id() {
+            assert!(check_id(&id()));
+        }
+    };
+}
+
+/// Same as [`declare_id`] except that it reports that this ID has been deprecated.
+#[cfg(feature = "decode")]
+#[macro_export]
+macro_rules! declare_deprecated_id {
+    ($address:expr) => {
+        /// The const ID.
+        pub const ID: $crate::Address = $crate::Address::from_str_const($address);
+
+        /// Returns `true` if given address is the ID.
+        // TODO make this const once `derive_const` makes it out of nightly
+        // and we can `derive_const(PartialEq)` on `Address`.
+        #[deprecated()]
+        pub fn check_id(id: &$crate::Address) -> bool {
+            id == &ID
+        }
+
+        /// Returns the ID.
+        #[deprecated()]
+        pub const fn id() -> $crate::Address {
+            ID
+        }
+
+        #[cfg(test)]
+        #[test]
+        #[allow(deprecated)]
+        fn test_id() {
+            assert!(check_id(&id()));
+        }
+    };
+}
+
 #[cfg(test)]
 mod tests {
     use {super::*, core::str::from_utf8, std::string::String};
