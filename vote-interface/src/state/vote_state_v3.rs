@@ -1,5 +1,3 @@
-use crate::state::VoteStateV4;
-
 #[cfg(feature = "bincode")]
 use super::VoteStateVersions;
 #[cfg(feature = "dev-context-only-utils")]
@@ -14,7 +12,9 @@ use {
         MAX_LOCKOUT_HISTORY, VOTE_CREDITS_GRACE_SLOTS, VOTE_CREDITS_MAXIMUM_PER_SLOT,
     },
     crate::{
-        authorized_voters::AuthorizedVoters, error::VoteError, state::DEFAULT_PRIOR_VOTERS_OFFSET,
+        authorized_voters::AuthorizedVoters,
+        error::VoteError,
+        state::{VoteStateV4, DEFAULT_PRIOR_VOTERS_OFFSET},
     },
     solana_clock::{Clock, Epoch, Slot, UnixTimestamp},
     solana_instruction_error::InstructionError,
@@ -529,11 +529,7 @@ impl From<VoteStateV4> for VoteStateV3 {
             node_pubkey: vote_state.node_pubkey,
             authorized_withdrawer: vote_state.authorized_withdrawer,
             commission,
-            votes: vote_state
-                .votes
-                .into_iter()
-                .map(|landed_vote| landed_vote.into())
-                .collect(),
+            votes: vote_state.votes,
             root_slot: vote_state.root_slot,
             authorized_voters: vote_state.authorized_voters,
             prior_voters: CircBuf::default(),
