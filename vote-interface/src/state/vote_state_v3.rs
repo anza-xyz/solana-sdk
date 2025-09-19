@@ -12,7 +12,9 @@ use {
         MAX_LOCKOUT_HISTORY, VOTE_CREDITS_GRACE_SLOTS, VOTE_CREDITS_MAXIMUM_PER_SLOT,
     },
     crate::{
-        authorized_voters::AuthorizedVoters, error::VoteError, state::DEFAULT_PRIOR_VOTERS_OFFSET,
+        authorized_voters::AuthorizedVoters,
+        error::VoteError,
+        state::{VoteStateV4, DEFAULT_PRIOR_VOTERS_OFFSET},
     },
     solana_clock::{Clock, Epoch, Slot, UnixTimestamp},
     solana_instruction_error::InstructionError,
@@ -511,5 +513,28 @@ impl VoteStateV3 {
         const DEFAULT_PRIOR_VOTERS_END: usize = VERSION_OFFSET + DEFAULT_PRIOR_VOTERS_OFFSET;
         data.len() == VoteStateV3::size_of()
             && data[VERSION_OFFSET..DEFAULT_PRIOR_VOTERS_END] != [0; DEFAULT_PRIOR_VOTERS_OFFSET]
+    }
+}
+
+impl From<VoteStateV4> for VoteStateV3 {
+    fn from(vote_state: VoteStateV4) -> Self {
+        let commission_bps = vote_state
+            .inflation_rewards_commission_bps
+            .checked_add(vote_state.block_revenue_commission_bps)
+            .expect("Inflation rewards commission and block revenue commission bps overflow.");
+
+        let commission = commission_bps.div_ceil(10_000) as u8;
+
+        Self {
+            node_pubkey: vote_state.node_pubkey,
+            authorized_withdrawer: vote_state.authorized_withdrawer,
+            commission,
+            votes: vote_state.votes,
+            root_slot: vote_state.root_slot,
+            authorized_voters: vote_state.authorized_voters,
+            prior_voters: CircBuf::default(),
+            epoch_credits: vote_state.epoch_credits,
+            last_timestamp: vote_state.last_timestamp,
+        }
     }
 }

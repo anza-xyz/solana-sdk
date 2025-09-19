@@ -1,9 +1,11 @@
 #[cfg(feature = "serde")]
 use serde_derive::{Deserialize, Serialize};
+#[cfg(feature = "serde")]
+use serde_with::serde_as;
 #[cfg(feature = "frozen-abi")]
 use solana_frozen_abi_macro::{frozen_abi, AbiExample};
 use {
-    crate::state::{Lockout, MAX_LOCKOUT_HISTORY},
+    crate::state::{Lockout, BLS_PUBLIC_KEY_COMPRESSED_SIZE, MAX_LOCKOUT_HISTORY},
     solana_clock::{Slot, UnixTimestamp},
     solana_hash::Hash,
     solana_pubkey::Pubkey,
@@ -192,6 +194,7 @@ impl TowerSync {
     }
 }
 
+#[cfg_attr(feature = "serde", cfg_eval::cfg_eval, serde_as)]
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[derive(Default, Debug, PartialEq, Eq, Clone, Copy)]
 pub struct VoteInit {
@@ -199,6 +202,13 @@ pub struct VoteInit {
     pub authorized_voter: Pubkey,
     pub authorized_withdrawer: Pubkey,
     pub commission: u8,
+
+    /// Compressed BLS pubkey for Alpenglow.
+    #[cfg_attr(
+        feature = "serde",
+        serde_as(as = "Option<[_; BLS_PUBLIC_KEY_COMPRESSED_SIZE]>")
+    )]
+    pub bls_pubkey_compressed: Option<[u8; BLS_PUBLIC_KEY_COMPRESSED_SIZE]>,
 }
 
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]

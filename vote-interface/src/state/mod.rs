@@ -935,6 +935,7 @@ mod tests {
                 authorized_voter: original_voter,
                 authorized_withdrawer: original_voter,
                 commission: 0,
+                bls_pubkey_compressed: None,
             },
             &Clock::default(),
         );
@@ -1002,6 +1003,7 @@ mod tests {
                 authorized_voter: original_voter,
                 authorized_withdrawer: original_voter,
                 commission: 0,
+                bls_pubkey_compressed: None,
             },
             &Clock::default(),
         );
@@ -1100,6 +1102,7 @@ mod tests {
                 authorized_voter: original_voter,
                 authorized_withdrawer: original_voter,
                 commission: 0,
+                bls_pubkey_compressed: None,
             },
             &Clock::default(),
         );
@@ -1217,6 +1220,7 @@ mod tests {
                 authorized_voter: Pubkey::new_unique(),
                 authorized_withdrawer: Pubkey::new_unique(),
                 commission: 0,
+                bls_pubkey_compressed: None,
             },
             &Clock::default(),
         );
