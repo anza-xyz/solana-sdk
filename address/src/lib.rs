@@ -34,6 +34,7 @@ use core::{
     array,
     convert::TryFrom,
     hash::{Hash, Hasher},
+    ptr::read_unaligned,
 };
 #[cfg(feature = "serde")]
 use serde_derive::{Deserialize, Serialize};
@@ -54,9 +55,8 @@ pub const MAX_SEEDS: usize = 16;
 #[cfg(feature = "decode")]
 /// Maximum string length of a base58 encoded address.
 const MAX_BASE58_LEN: usize = 44;
-
-#[cfg(feature = "sha2")]
-const PDA_MARKER: &[u8; 21] = b"ProgramDerivedAddress";
+/// Marker used to find program derived addresses (PDAs).
+pub const PDA_MARKER: &[u8; 21] = b"ProgramDerivedAddress";
 
 /// The address of a [Solana account][acc].
 ///
@@ -82,8 +82,9 @@ const PDA_MARKER: &[u8; 21] = b"ProgramDerivedAddress";
 #[cfg_attr(all(feature = "borsh", feature = "std"), derive(BorshSchema))]
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[cfg_attr(feature = "bytemuck", derive(Pod, Zeroable))]
-#[derive(Clone, Copy, Default, Eq, Ord, PartialEq, PartialOrd)]
 #[cfg_attr(feature = "dev-context-only-utils", derive(Arbitrary))]
+#[cfg_attr(not(feature = "decode"), derive(Debug))]
+#[derive(Clone, Copy, Default, Eq, Ord, PartialOrd)]
 pub struct Address(pub(crate) [u8; 32]);
 
 #[cfg(feature = "sanitize")]
@@ -270,6 +271,12 @@ impl Address {
     pub fn is_on_curve(&self) -> bool {
         bytes_are_curve_point(self)
     }
+
+    #[cfg(all(not(target_os = "solana"), feature = "std"))]
+    /// Log a `Address` from a program
+    pub fn log(&self) {
+        std::println!("{}", std::string::ToString::to_string(&self));
+    }
 }
 
 impl AsRef<[u8]> for Address {
@@ -307,6 +314,26 @@ impl core::fmt::Display for Address {
     }
 }
 
+/// Custom impl of `PartialEq` for `Address`.
+///
+/// The implementation compares the address in 4 chunks of 8 bytes (`u64` values),
+/// which is currently more efficient (CU-wise) than the default implementation.
+impl PartialEq for Address {
+    #[inline(always)]
+    fn eq(&self, other: &Self) -> bool {
+        let p1_ptr = self.0.as_ptr().cast::<u64>();
+        let p2_ptr = other.0.as_ptr().cast::<u64>();
+
+        unsafe {
+            read_unaligned(p1_ptr) == read_unaligned(p2_ptr)
+                && read_unaligned(p1_ptr.add(1)) == read_unaligned(p2_ptr.add(1))
+                && read_unaligned(p1_ptr.add(2)) == read_unaligned(p2_ptr.add(2))
+                && read_unaligned(p1_ptr.add(3)) == read_unaligned(p2_ptr.add(3))
+        }
+    }
+}
+
+#[cfg(feature = "decode")]
 /// Convenience macro to define a static `Address` value.
 ///
 /// Input: a single literal base58 string representation of an `Address`.
@@ -326,6 +353,85 @@ impl core::fmt::Display for Address {
 macro_rules! address {
     ($input:literal) => {
         $crate::Address::from_str_const($input)
+    };
+}
+
+/// Convenience macro to declare a static address and functions to interact with it.
+///
+/// Input: a single literal base58 string representation of a program's ID.
+///
+/// # Example
+///
+/// ```
+/// # // wrapper is used so that the macro invocation occurs in the item position
+/// # // rather than in the statement position which isn't allowed.
+/// use std::str::FromStr;
+/// use solana_address::{declare_id, Address};
+///
+/// # mod item_wrapper {
+/// #   use solana_address::declare_id;
+/// declare_id!("My11111111111111111111111111111111111111111");
+/// # }
+/// # use item_wrapper::id;
+///
+/// let my_id = Address::from_str("My11111111111111111111111111111111111111111").unwrap();
+/// assert_eq!(id(), my_id);
+/// ```
+#[cfg(feature = "decode")]
+#[macro_export]
+macro_rules! declare_id {
+    ($address:expr) => {
+        /// The const program ID.
+        pub const ID: $crate::Address = $crate::Address::from_str_const($address);
+
+        /// Returns `true` if given address is the ID.
+        // TODO make this const once `derive_const` makes it out of nightly
+        // and we can `derive_const(PartialEq)` on `Address`.
+        pub fn check_id(id: &$crate::Address) -> bool {
+            id == &ID
+        }
+
+        /// Returns the ID.
+        pub const fn id() -> $crate::Address {
+            ID
+        }
+
+        #[cfg(test)]
+        #[test]
+        fn test_id() {
+            assert!(check_id(&id()));
+        }
+    };
+}
+
+/// Same as [`declare_id`] except that it reports that this ID has been deprecated.
+#[cfg(feature = "decode")]
+#[macro_export]
+macro_rules! declare_deprecated_id {
+    ($address:expr) => {
+        /// The const ID.
+        pub const ID: $crate::Address = $crate::Address::from_str_const($address);
+
+        /// Returns `true` if given address is the ID.
+        // TODO make this const once `derive_const` makes it out of nightly
+        // and we can `derive_const(PartialEq)` on `Address`.
+        #[deprecated()]
+        pub fn check_id(id: &$crate::Address) -> bool {
+            id == &ID
+        }
+
+        /// Returns the ID.
+        #[deprecated()]
+        pub const fn id() -> $crate::Address {
+            ID
+        }
+
+        #[cfg(test)]
+        #[test]
+        #[allow(deprecated)]
+        fn test_id() {
+            assert!(check_id(&id()));
+        }
     };
 }
 
@@ -608,5 +714,25 @@ mod tests {
             Address::from_str("9h1HyLCW5dZnBVap8C5egQ9Z6pHyjsh5MNy83iPqqRuq").unwrap(),
             ADDRESS
         );
+    }
+
+    #[test]
+    fn test_address_eq_matches_default_eq() {
+        for i in 0..u8::MAX {
+            let p1 = Address::from([i; ADDRESS_BYTES]);
+            let p2 = Address::from([i; ADDRESS_BYTES]);
+
+            // Identical addresses must be equal.
+            assert!(p1 == p2);
+            assert!(p1.eq(&p2));
+            assert_eq!(p1.eq(&p2), p1.0 == p2.0);
+
+            let p3 = Address::from([u8::MAX - i; ADDRESS_BYTES]);
+
+            // Different addresses must not be equal.
+            assert!(p1 != p3);
+            assert!(!p1.eq(&p3));
+            assert_eq!(!p1.eq(&p3), p1.0 != p3.0);
+        }
     }
 }

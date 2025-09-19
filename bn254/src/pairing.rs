@@ -1,10 +1,13 @@
-use crate::{AltBn128Error, LE_FLAG};
+use crate::{
+    consts::{ALT_BN128_G1_POINT_SIZE, ALT_BN128_G2_POINT_SIZE},
+    AltBn128Error, LE_FLAG,
+};
 #[cfg(target_os = "solana")]
 use solana_define_syscall::definitions as syscalls;
 #[cfg(not(target_os = "solana"))]
 use {
     crate::{
-        consts::ALT_BN128_POINT_SIZE as G1_POINT_SIZE,
+        consts::ALT_BN128_G1_POINT_SIZE as G1_POINT_SIZE,
         target_arch::{Endianness, G1, G2},
         PodG1, PodG2,
     },
@@ -13,10 +16,21 @@ use {
     ark_ff::{BigInteger, BigInteger256, One},
 };
 
-/// Pair element length.
-pub const ALT_BN128_PAIRING_ELEMENT_LEN: usize = 192;
-/// Output length for pairing operation.
-pub const ALT_BN128_PAIRING_OUTPUT_LEN: usize = 32;
+/// Pair element size.
+pub const ALT_BN128_PAIRING_ELEMENT_SIZE: usize = ALT_BN128_G1_POINT_SIZE + ALT_BN128_G2_POINT_SIZE; // 192
+/// Output size for pairing operation.
+pub const ALT_BN128_PAIRING_OUTPUT_SIZE: usize = 32;
+
+#[deprecated(
+    since = "3.1.0",
+    note = "Please use `ALT_BN128_PAIRING_ELEMENT_SIZE` instead"
+)]
+pub const ALT_BN128_PAIRING_ELEMENT_LEN: usize = ALT_BN128_PAIRING_ELEMENT_SIZE;
+#[deprecated(
+    since = "3.1.0",
+    note = "Please use `ALT_BN128_PAIRING_OUTPUT_SIZE` instead"
+)]
+pub const ALT_BN128_PAIRING_OUTPUT_LEN: usize = ALT_BN128_PAIRING_OUTPUT_SIZE;
 
 pub const ALT_BN128_PAIRING: u64 = 3;
 pub const ALT_BN128_PAIRING_LE: u64 = ALT_BN128_PAIRING | LE_FLAG;
@@ -51,23 +65,23 @@ pub fn alt_bn128_versioned_pairing(
         VersionedPairing::V0 => {
             if input
                 .len()
-                .checked_rem(ALT_BN128_PAIRING_ELEMENT_LEN)
+                .checked_rem(ALT_BN128_PAIRING_ELEMENT_SIZE)
                 .is_none()
             {
                 return Err(AltBn128Error::InvalidInputData);
             }
         }
         VersionedPairing::V1 => {
-            if !input.len().is_multiple_of(ALT_BN128_PAIRING_ELEMENT_LEN) {
+            if !input.len().is_multiple_of(ALT_BN128_PAIRING_ELEMENT_SIZE) {
                 return Err(AltBn128Error::InvalidInputData);
             }
         }
     }
 
-    let ele_len = input.len().saturating_div(ALT_BN128_PAIRING_ELEMENT_LEN);
+    let ele_len = input.len().saturating_div(ALT_BN128_PAIRING_ELEMENT_SIZE);
 
     let mut vec_pairs: Vec<(G1, G2)> = Vec::with_capacity(ele_len);
-    for chunk in input.chunks(ALT_BN128_PAIRING_ELEMENT_LEN).take(ele_len) {
+    for chunk in input.chunks(ALT_BN128_PAIRING_ELEMENT_SIZE).take(ele_len) {
         let (p_bytes, q_bytes) = chunk.split_at(G1_POINT_SIZE);
 
         let g1 = match endianness {
@@ -107,7 +121,7 @@ pub fn alt_bn128_pairing(input: &[u8]) -> Result<Vec<u8>, AltBn128Error> {
     }
     #[cfg(target_os = "solana")]
     {
-        if !input.len().is_multiple_of(ALT_BN128_PAIRING_ELEMENT_LEN) {
+        if !input.len().is_multiple_of(ALT_BN128_PAIRING_ELEMENT_SIZE) {
             return Err(AltBn128Error::InvalidInputData);
         }
         let mut result_buffer = [0u8; 32];
@@ -135,7 +149,7 @@ pub fn alt_bn128_pairing_le(input: &[u8]) -> Result<Vec<u8>, AltBn128Error> {
     }
     #[cfg(target_os = "solana")]
     {
-        if !input.len().is_multiple_of(ALT_BN128_PAIRING_ELEMENT_LEN) {
+        if !input.len().is_multiple_of(ALT_BN128_PAIRING_ELEMENT_SIZE) {
             return Err(AltBn128Error::InvalidInputData);
         }
         let mut result_buffer = [0u8; 32];

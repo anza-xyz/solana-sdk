@@ -1,3 +1,4 @@
+use crate::consts::{ALT_BN128_G1_POINT_SIZE, ALT_BN128_G2_POINT_SIZE};
 pub mod prelude {
     pub use crate::compression::{
         alt_bn128_compression_size::*, consts::*, target_arch::*, AltBn128CompressionError,
@@ -21,10 +22,26 @@ mod consts {
 }
 
 mod alt_bn128_compression_size {
-    pub const G1: usize = 64;
-    pub const G2: usize = 128;
-    pub const G1_COMPRESSED: usize = 32;
-    pub const G2_COMPRESSED: usize = 64;
+    use super::*;
+
+    #[deprecated(since = "3.1.0", note = "Please use `ALT_BN128_G1_POINT_SIZE` instead")]
+    pub const G1: usize = ALT_BN128_G1_POINT_SIZE;
+    #[deprecated(since = "3.1.0", note = "Please use `ALT_BN128_G2_POINT_SIZE` instead")]
+    pub const G2: usize = ALT_BN128_G2_POINT_SIZE;
+
+    pub const ALT_BN128_G1_COMPRESSED_POINT_SIZE: usize = ALT_BN128_G1_POINT_SIZE / 2; // 32
+    #[deprecated(
+        since = "3.1.0",
+        note = "Please use `ALT_BN128_G1_COMPRESSED_POINT_SIZE` instead"
+    )]
+    pub const G1_COMPRESSED: usize = ALT_BN128_G1_COMPRESSED_POINT_SIZE;
+
+    pub const ALT_BN128_G2_COMPRESSED_POINT_SIZE: usize = ALT_BN128_G2_POINT_SIZE / 2; // 64
+    #[deprecated(
+        since = "3.1.0",
+        note = "Please use `ALT_BN128_G2_COMPRESSED_POINT_SIZE` instead"
+    )]
+    pub const G2_COMPRESSED: usize = ALT_BN128_G2_COMPRESSED_POINT_SIZE;
 }
 
 // AltBn128CompressionError must be removed once the
@@ -92,26 +109,27 @@ mod target_arch {
     #[inline(always)]
     pub fn alt_bn128_g1_decompress(
         g1_bytes: &[u8],
-    ) -> Result<[u8; alt_bn128_compression_size::G1], AltBn128CompressionError> {
+    ) -> Result<[u8; ALT_BN128_G1_POINT_SIZE], AltBn128CompressionError> {
         alt_bn128_apply_g1_decompress(g1_bytes, Endianness::BE)
     }
 
     #[inline(always)]
     pub fn alt_bn128_g1_decompress_le(
         g1_bytes: &[u8],
-    ) -> Result<[u8; alt_bn128_compression_size::G1], AltBn128CompressionError> {
+    ) -> Result<[u8; ALT_BN128_G1_POINT_SIZE], AltBn128CompressionError> {
         alt_bn128_apply_g1_decompress(g1_bytes, Endianness::LE)
     }
 
     fn alt_bn128_apply_g1_decompress(
         g1_bytes: &[u8],
         endianness: Endianness,
-    ) -> Result<[u8; alt_bn128_compression_size::G1], AltBn128CompressionError> {
-        let g1_bytes: [u8; alt_bn128_compression_size::G1_COMPRESSED] = g1_bytes
-            .try_into()
-            .map_err(|_| AltBn128CompressionError::InvalidInputSize)?;
-        if g1_bytes == [0u8; alt_bn128_compression_size::G1_COMPRESSED] {
-            return Ok([0u8; alt_bn128_compression_size::G1]);
+    ) -> Result<[u8; ALT_BN128_G1_POINT_SIZE], AltBn128CompressionError> {
+        let g1_bytes: [u8; alt_bn128_compression_size::ALT_BN128_G1_COMPRESSED_POINT_SIZE] =
+            g1_bytes
+                .try_into()
+                .map_err(|_| AltBn128CompressionError::InvalidInputSize)?;
+        if g1_bytes == [0u8; alt_bn128_compression_size::ALT_BN128_G1_COMPRESSED_POINT_SIZE] {
+            return Ok([0u8; ALT_BN128_G1_POINT_SIZE]);
         }
         let g1_bytes = match endianness {
             Endianness::BE => convert_endianness::<32, 32>(&g1_bytes),
@@ -120,7 +138,7 @@ mod target_arch {
         let decompressed_g1 =
             G1::deserialize_with_mode(g1_bytes.as_slice(), Compress::Yes, Validate::No)
                 .map_err(|_| AltBn128CompressionError::G1DecompressionFailed)?;
-        let mut decompressed_g1_bytes = [0u8; alt_bn128_compression_size::G1];
+        let mut decompressed_g1_bytes = [0u8; ALT_BN128_G1_POINT_SIZE];
         decompressed_g1
             .x
             .serialize_with_mode(&mut decompressed_g1_bytes[..32], Compress::No)
@@ -138,26 +156,35 @@ mod target_arch {
     #[inline(always)]
     pub fn alt_bn128_g1_compress(
         g1_bytes: &[u8],
-    ) -> Result<[u8; alt_bn128_compression_size::G1_COMPRESSED], AltBn128CompressionError> {
+    ) -> Result<
+        [u8; alt_bn128_compression_size::ALT_BN128_G1_COMPRESSED_POINT_SIZE],
+        AltBn128CompressionError,
+    > {
         alt_bn128_apply_g1_compress(g1_bytes, Endianness::BE)
     }
 
     #[inline(always)]
     pub fn alt_bn128_g1_compress_le(
         g1_bytes: &[u8],
-    ) -> Result<[u8; alt_bn128_compression_size::G1_COMPRESSED], AltBn128CompressionError> {
+    ) -> Result<
+        [u8; alt_bn128_compression_size::ALT_BN128_G1_COMPRESSED_POINT_SIZE],
+        AltBn128CompressionError,
+    > {
         alt_bn128_apply_g1_compress(g1_bytes, Endianness::LE)
     }
 
     fn alt_bn128_apply_g1_compress(
         g1_bytes: &[u8],
         endianness: Endianness,
-    ) -> Result<[u8; alt_bn128_compression_size::G1_COMPRESSED], AltBn128CompressionError> {
-        let g1_bytes: [u8; alt_bn128_compression_size::G1] = g1_bytes
+    ) -> Result<
+        [u8; alt_bn128_compression_size::ALT_BN128_G1_COMPRESSED_POINT_SIZE],
+        AltBn128CompressionError,
+    > {
+        let g1_bytes: [u8; ALT_BN128_G1_POINT_SIZE] = g1_bytes
             .try_into()
             .map_err(|_| AltBn128CompressionError::InvalidInputSize)?;
-        if g1_bytes == [0u8; alt_bn128_compression_size::G1] {
-            return Ok([0u8; alt_bn128_compression_size::G1_COMPRESSED]);
+        if g1_bytes == [0u8; ALT_BN128_G1_POINT_SIZE] {
+            return Ok([0u8; alt_bn128_compression_size::ALT_BN128_G1_COMPRESSED_POINT_SIZE]);
         }
         let g1_bytes = match endianness {
             Endianness::BE => convert_endianness::<32, 64>(&g1_bytes),
@@ -165,7 +192,7 @@ mod target_arch {
         };
         let g1 = G1::deserialize_with_mode(g1_bytes.as_slice(), Compress::No, Validate::No)
             .map_err(|_| AltBn128CompressionError::G1CompressionFailed)?;
-        let mut g1_bytes = [0u8; alt_bn128_compression_size::G1_COMPRESSED];
+        let mut g1_bytes = [0u8; alt_bn128_compression_size::ALT_BN128_G1_COMPRESSED_POINT_SIZE];
         G1::serialize_compressed(&g1, g1_bytes.as_mut_slice())
             .map_err(|_| AltBn128CompressionError::G1CompressionFailed)?;
         match endianness {
@@ -177,26 +204,27 @@ mod target_arch {
     #[inline(always)]
     pub fn alt_bn128_g2_decompress(
         g2_bytes: &[u8],
-    ) -> Result<[u8; alt_bn128_compression_size::G2], AltBn128CompressionError> {
+    ) -> Result<[u8; ALT_BN128_G2_POINT_SIZE], AltBn128CompressionError> {
         alt_bn128_apply_g2_decompress(g2_bytes, Endianness::BE)
     }
 
     #[inline(always)]
     pub fn alt_bn128_g2_decompress_le(
         g2_bytes: &[u8],
-    ) -> Result<[u8; alt_bn128_compression_size::G2], AltBn128CompressionError> {
+    ) -> Result<[u8; ALT_BN128_G2_POINT_SIZE], AltBn128CompressionError> {
         alt_bn128_apply_g2_decompress(g2_bytes, Endianness::LE)
     }
 
     fn alt_bn128_apply_g2_decompress(
         g2_bytes: &[u8],
         endianness: Endianness,
-    ) -> Result<[u8; alt_bn128_compression_size::G2], AltBn128CompressionError> {
-        let g2_bytes: [u8; alt_bn128_compression_size::G2_COMPRESSED] = g2_bytes
-            .try_into()
-            .map_err(|_| AltBn128CompressionError::InvalidInputSize)?;
-        if g2_bytes == [0u8; alt_bn128_compression_size::G2_COMPRESSED] {
-            return Ok([0u8; alt_bn128_compression_size::G2]);
+    ) -> Result<[u8; ALT_BN128_G2_POINT_SIZE], AltBn128CompressionError> {
+        let g2_bytes: [u8; alt_bn128_compression_size::ALT_BN128_G2_COMPRESSED_POINT_SIZE] =
+            g2_bytes
+                .try_into()
+                .map_err(|_| AltBn128CompressionError::InvalidInputSize)?;
+        if g2_bytes == [0u8; alt_bn128_compression_size::ALT_BN128_G2_COMPRESSED_POINT_SIZE] {
+            return Ok([0u8; ALT_BN128_G2_POINT_SIZE]);
         }
         let g2_bytes = match endianness {
             Endianness::BE => convert_endianness::<64, 64>(&g2_bytes),
@@ -205,7 +233,7 @@ mod target_arch {
         let decompressed_g2 =
             G2::deserialize_with_mode(g2_bytes.as_slice(), Compress::Yes, Validate::No)
                 .map_err(|_| AltBn128CompressionError::G2DecompressionFailed)?;
-        let mut decompressed_g2_bytes = [0u8; alt_bn128_compression_size::G2];
+        let mut decompressed_g2_bytes = [0u8; ALT_BN128_G2_POINT_SIZE];
         decompressed_g2
             .x
             .serialize_with_mode(&mut decompressed_g2_bytes[..64], Compress::No)
@@ -223,26 +251,35 @@ mod target_arch {
     #[inline(always)]
     pub fn alt_bn128_g2_compress(
         g2_bytes: &[u8],
-    ) -> Result<[u8; alt_bn128_compression_size::G2_COMPRESSED], AltBn128CompressionError> {
+    ) -> Result<
+        [u8; alt_bn128_compression_size::ALT_BN128_G2_COMPRESSED_POINT_SIZE],
+        AltBn128CompressionError,
+    > {
         alt_bn128_apply_g2_compress(g2_bytes, Endianness::BE)
     }
 
     #[inline(always)]
     pub fn alt_bn128_g2_compress_le(
         g2_bytes: &[u8],
-    ) -> Result<[u8; alt_bn128_compression_size::G2_COMPRESSED], AltBn128CompressionError> {
+    ) -> Result<
+        [u8; alt_bn128_compression_size::ALT_BN128_G2_COMPRESSED_POINT_SIZE],
+        AltBn128CompressionError,
+    > {
         alt_bn128_apply_g2_compress(g2_bytes, Endianness::LE)
     }
 
     fn alt_bn128_apply_g2_compress(
         g2_bytes: &[u8],
         endianness: Endianness,
-    ) -> Result<[u8; alt_bn128_compression_size::G2_COMPRESSED], AltBn128CompressionError> {
-        let g2_bytes: [u8; alt_bn128_compression_size::G2] = g2_bytes
+    ) -> Result<
+        [u8; alt_bn128_compression_size::ALT_BN128_G2_COMPRESSED_POINT_SIZE],
+        AltBn128CompressionError,
+    > {
+        let g2_bytes: [u8; ALT_BN128_G2_POINT_SIZE] = g2_bytes
             .try_into()
             .map_err(|_| AltBn128CompressionError::InvalidInputSize)?;
-        if g2_bytes == [0u8; alt_bn128_compression_size::G2] {
-            return Ok([0u8; alt_bn128_compression_size::G2_COMPRESSED]);
+        if g2_bytes == [0u8; ALT_BN128_G2_POINT_SIZE] {
+            return Ok([0u8; alt_bn128_compression_size::ALT_BN128_G2_COMPRESSED_POINT_SIZE]);
         }
         let g2_bytes = match endianness {
             Endianness::BE => convert_endianness::<64, 128>(&g2_bytes),
@@ -250,7 +287,7 @@ mod target_arch {
         };
         let g2 = G2::deserialize_with_mode(g2_bytes.as_slice(), Compress::No, Validate::No)
             .map_err(|_| AltBn128CompressionError::G2CompressionFailed)?;
-        let mut g2_bytes = [0u8; alt_bn128_compression_size::G2_COMPRESSED];
+        let mut g2_bytes = [0u8; alt_bn128_compression_size::ALT_BN128_G2_COMPRESSED_POINT_SIZE];
         G2::serialize_compressed(&g2, g2_bytes.as_mut_slice())
             .map_err(|_| AltBn128CompressionError::G2CompressionFailed)?;
         match endianness {
@@ -278,15 +315,17 @@ mod target_arch {
 mod target_arch {
     use {
         super::*,
-        alt_bn128_compression_size::{G1, G1_COMPRESSED, G2, G2_COMPRESSED},
+        alt_bn128_compression_size::{
+            ALT_BN128_G1_COMPRESSED_POINT_SIZE, ALT_BN128_G2_COMPRESSED_POINT_SIZE,
+        },
         prelude::*,
         solana_define_syscall::definitions as syscalls,
     };
 
     pub fn alt_bn128_g1_compress(
         input: &[u8],
-    ) -> Result<[u8; G1_COMPRESSED], AltBn128CompressionError> {
-        let mut result_buffer = [0; G1_COMPRESSED];
+    ) -> Result<[u8; ALT_BN128_G1_COMPRESSED_POINT_SIZE], AltBn128CompressionError> {
+        let mut result_buffer = [0; ALT_BN128_G1_COMPRESSED_POINT_SIZE];
         let result = unsafe {
             syscalls::sol_alt_bn128_compression(
                 ALT_BN128_G1_COMPRESS,
@@ -304,8 +343,8 @@ mod target_arch {
 
     pub fn alt_bn128_g1_compress_le(
         input: &[u8],
-    ) -> Result<[u8; G1_COMPRESSED], AltBn128CompressionError> {
-        let mut result_buffer = [0; G1_COMPRESSED];
+    ) -> Result<[u8; ALT_BN128_G1_COMPRESSED_POINT_SIZE], AltBn128CompressionError> {
+        let mut result_buffer = [0; ALT_BN128_G1_COMPRESSED_POINT_SIZE];
         let result = unsafe {
             syscalls::sol_alt_bn128_compression(
                 ALT_BN128_G1_COMPRESS_LE,
@@ -321,8 +360,10 @@ mod target_arch {
         }
     }
 
-    pub fn alt_bn128_g1_decompress(input: &[u8]) -> Result<[u8; G1], AltBn128CompressionError> {
-        let mut result_buffer = [0; G1];
+    pub fn alt_bn128_g1_decompress(
+        input: &[u8],
+    ) -> Result<[u8; ALT_BN128_G1_POINT_SIZE], AltBn128CompressionError> {
+        let mut result_buffer = [0; ALT_BN128_G1_POINT_SIZE];
         let result = unsafe {
             syscalls::sol_alt_bn128_compression(
                 ALT_BN128_G1_DECOMPRESS,
@@ -338,8 +379,10 @@ mod target_arch {
         }
     }
 
-    pub fn alt_bn128_g1_decompress_le(input: &[u8]) -> Result<[u8; G1], AltBn128CompressionError> {
-        let mut result_buffer = [0; G1];
+    pub fn alt_bn128_g1_decompress_le(
+        input: &[u8],
+    ) -> Result<[u8; ALT_BN128_G1_POINT_SIZE], AltBn128CompressionError> {
+        let mut result_buffer = [0; ALT_BN128_G1_POINT_SIZE];
         let result = unsafe {
             syscalls::sol_alt_bn128_compression(
                 ALT_BN128_G1_DECOMPRESS_LE,
@@ -357,8 +400,8 @@ mod target_arch {
 
     pub fn alt_bn128_g2_compress(
         input: &[u8],
-    ) -> Result<[u8; G2_COMPRESSED], AltBn128CompressionError> {
-        let mut result_buffer = [0; G2_COMPRESSED];
+    ) -> Result<[u8; ALT_BN128_G2_COMPRESSED_POINT_SIZE], AltBn128CompressionError> {
+        let mut result_buffer = [0; ALT_BN128_G2_COMPRESSED_POINT_SIZE];
         let result = unsafe {
             syscalls::sol_alt_bn128_compression(
                 ALT_BN128_G2_COMPRESS,
@@ -376,8 +419,8 @@ mod target_arch {
 
     pub fn alt_bn128_g2_compress_le(
         input: &[u8],
-    ) -> Result<[u8; G2_COMPRESSED], AltBn128CompressionError> {
-        let mut result_buffer = [0; G2_COMPRESSED];
+    ) -> Result<[u8; ALT_BN128_G2_COMPRESSED_POINT_SIZE], AltBn128CompressionError> {
+        let mut result_buffer = [0; ALT_BN128_G2_COMPRESSED_POINT_SIZE];
         let result = unsafe {
             syscalls::sol_alt_bn128_compression(
                 ALT_BN128_G2_COMPRESS_LE,
@@ -394,9 +437,9 @@ mod target_arch {
     }
 
     pub fn alt_bn128_g2_decompress(
-        input: &[u8; G2_COMPRESSED],
-    ) -> Result<[u8; G2], AltBn128CompressionError> {
-        let mut result_buffer = [0; G2];
+        input: &[u8; ALT_BN128_G2_COMPRESSED_POINT_SIZE],
+    ) -> Result<[u8; ALT_BN128_G2_POINT_SIZE], AltBn128CompressionError> {
+        let mut result_buffer = [0; ALT_BN128_G2_POINT_SIZE];
         let result = unsafe {
             syscalls::sol_alt_bn128_compression(
                 ALT_BN128_G2_DECOMPRESS,
@@ -413,9 +456,9 @@ mod target_arch {
     }
 
     pub fn alt_bn128_g2_decompress_le(
-        input: &[u8; G2_COMPRESSED],
-    ) -> Result<[u8; G2], AltBn128CompressionError> {
-        let mut result_buffer = [0; G2];
+        input: &[u8; ALT_BN128_G2_COMPRESSED_POINT_SIZE],
+    ) -> Result<[u8; ALT_BN128_G2_POINT_SIZE], AltBn128CompressionError> {
+        let mut result_buffer = [0; ALT_BN128_G2_POINT_SIZE];
         let result = unsafe {
             syscalls::sol_alt_bn128_compression(
                 ALT_BN128_G2_DECOMPRESS_LE,

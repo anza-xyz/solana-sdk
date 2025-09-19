@@ -24,9 +24,9 @@ fn alt_bn128_addition_test() {
         assert_eq!(result.unwrap(), expected);
 
         // le test
-        input.resize(ALT_BN128_ADDITION_INPUT_LEN, 0);
+        input.resize(ALT_BN128_ADDITION_INPUT_SIZE, 0);
         let input_le =
-            convert_endianness::<32, ALT_BN128_ADDITION_INPUT_LEN>(&input.try_into().unwrap());
+            convert_endianness::<32, ALT_BN128_ADDITION_INPUT_SIZE>(&input.try_into().unwrap());
         let result = alt_bn128_addition_le(&input_le);
         assert!(result.is_ok());
         let expected_le = convert_endianness::<32, 64>(&expected.try_into().unwrap());
@@ -54,8 +54,8 @@ fn alt_bn128_multiplication_test() {
         assert_eq!(result.unwrap(), expected);
 
         // le test
-        input.resize(ALT_BN128_MULTIPLICATION_INPUT_LEN, 0);
-        let input_le = convert_endianness::<32, ALT_BN128_MULTIPLICATION_INPUT_LEN>(
+        input.resize(ALT_BN128_MULTIPLICATION_INPUT_SIZE, 0);
+        let input_le = convert_endianness::<32, ALT_BN128_MULTIPLICATION_INPUT_SIZE>(
             &input.try_into().unwrap(),
         );
         let result = alt_bn128_multiplication_le(&input_le);
@@ -86,11 +86,11 @@ fn alt_bn128_pairing_test() {
         assert_eq!(result.unwrap(), expected);
 
         // le test
-        let input_le: Vec<u8> = (0..input.len().saturating_div(ALT_BN128_PAIRING_ELEMENT_LEN))
+        let input_le: Vec<u8> = (0..input.len().saturating_div(ALT_BN128_PAIRING_ELEMENT_SIZE))
             .flat_map(|i| {
-                let g1_start = i * ALT_BN128_PAIRING_ELEMENT_LEN;
-                let g1_end = g1_start + ALT_BN128_POINT_SIZE;
-                let g2_end = g1_start + ALT_BN128_PAIRING_ELEMENT_LEN;
+                let g1_start = i * ALT_BN128_PAIRING_ELEMENT_SIZE;
+                let g1_end = g1_start + ALT_BN128_G1_POINT_SIZE;
+                let g2_end = g1_start + ALT_BN128_PAIRING_ELEMENT_SIZE;
 
                 let g1 = convert_endianness::<32, 64>(&input[g1_start..g1_end].try_into().unwrap());
                 let g2 = convert_endianness::<64, 128>(&input[g1_end..g2_end].try_into().unwrap());

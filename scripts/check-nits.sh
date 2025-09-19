@@ -18,7 +18,7 @@ declare prints=(
 declare print_free_tree=(
   ':**.rs'
   ':^address/src/hasher.rs'
-  ':^address/src/syscalls.rs'
+  ':^address/src/lib.rs'
   ':^logger/src/lib.rs'
   ':^msg/src/lib.rs'
   ':^program-option/src/lib.rs'
