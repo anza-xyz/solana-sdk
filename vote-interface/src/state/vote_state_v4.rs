@@ -214,4 +214,13 @@ impl VoteStateV4 {
             ..Self::default()
         }
     }
+
+    pub fn commission(&self) -> Result<u8, InstructionError> {
+        let commission_bps = self
+            .inflation_rewards_commission_bps
+            .checked_add(self.block_revenue_commission_bps)
+            .ok_or(InstructionError::ArithmeticOverflow)?;
+
+        Ok(commission_bps.div_ceil(10_000) as u8)
+    }
 }
