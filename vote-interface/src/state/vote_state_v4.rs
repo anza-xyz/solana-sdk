@@ -8,12 +8,11 @@ use serde_derive::{Deserialize, Serialize};
 use serde_with::serde_as;
 #[cfg(feature = "frozen-abi")]
 use solana_frozen_abi_macro::{frozen_abi, AbiExample};
-#[cfg(any(target_os = "solana", feature = "bincode"))]
-use solana_instruction::error::InstructionError;
 use {
     super::{BlockTimestamp, LandedVote, BLS_PUBLIC_KEY_COMPRESSED_SIZE},
-    crate::authorized_voters::AuthorizedVoters,
-    solana_clock::{Epoch, Slot},
+    crate::{authorized_voters::AuthorizedVoters, state::VoteInit},
+    solana_clock::{Clock, Epoch, Slot},
+    solana_instruction_error::InstructionError,
     solana_pubkey::Pubkey,
     std::{collections::VecDeque, fmt::Debug},
 };
@@ -71,6 +70,21 @@ pub struct VoteStateV4 {
 }
 
 impl VoteStateV4 {
+    pub fn new(vote_init: &VoteInit, clock: &Clock) -> Self {
+        let inflation_rewards_commission_bps = (vote_init.commission as u16)
+            .checked_mul(10_000)
+            .expect("Turning commission into basis points results in an overflow.");
+
+        Self {
+            node_pubkey: vote_init.node_pubkey,
+            authorized_voters: AuthorizedVoters::new(clock.epoch, vote_init.authorized_voter),
+            authorized_withdrawer: vote_init.authorized_withdrawer,
+            inflation_rewards_commission_bps,
+            bls_pubkey_compressed: vote_init.bls_pubkey_compressed,
+            ..VoteStateV4::default()
+        }
+    }
+
     /// Upper limit on the size of the Vote State
     /// when votes.len() is MAX_LOCKOUT_HISTORY.
     pub const fn size_of() -> usize {
