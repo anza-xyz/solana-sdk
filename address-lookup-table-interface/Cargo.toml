@@ -53,7 +53,7 @@ solana-pubkey = { workspace = true, features = ["curve25519"] }
 solana-address-lookup-table-interface = { path = ".", features = [
     "dev-context-only-utils",
 ] }
-solana-hash = { workspace = true }
+solana-hash = { workspace = true, features = ["std"] }
 
 [lints]
 workspace = true
