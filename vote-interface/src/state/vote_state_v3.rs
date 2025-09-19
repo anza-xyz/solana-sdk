@@ -1,3 +1,5 @@
+use crate::state::VoteStateV4;
+
 #[cfg(feature = "bincode")]
 use super::VoteStateVersions;
 #[cfg(feature = "dev-context-only-utils")]
@@ -511,5 +513,32 @@ impl VoteStateV3 {
         const DEFAULT_PRIOR_VOTERS_END: usize = VERSION_OFFSET + DEFAULT_PRIOR_VOTERS_OFFSET;
         data.len() == VoteStateV3::size_of()
             && data[VERSION_OFFSET..DEFAULT_PRIOR_VOTERS_END] != [0; DEFAULT_PRIOR_VOTERS_OFFSET]
+    }
+}
+
+impl From<VoteStateV4> for VoteStateV3 {
+    fn from(vote_state: VoteStateV4) -> Self {
+        let commission_bps = vote_state
+            .inflation_rewards_commission_bps
+            .checked_add(vote_state.block_revenue_commission_bps)
+            .expect("Inflation rewards commission and block revenue commission bps overflow.");
+
+        let commission = commission_bps.div_ceil(10_000) as u8;
+
+        Self {
+            node_pubkey: vote_state.node_pubkey,
+            authorized_withdrawer: vote_state.authorized_withdrawer,
+            commission,
+            votes: vote_state
+                .votes
+                .into_iter()
+                .map(|landed_vote| landed_vote.into())
+                .collect(),
+            root_slot: vote_state.root_slot,
+            authorized_voters: vote_state.authorized_voters,
+            prior_voters: CircBuf::default(),
+            epoch_credits: vote_state.epoch_credits,
+            last_timestamp: vote_state.last_timestamp,
+        }
     }
 }
