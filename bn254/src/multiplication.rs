@@ -32,8 +32,10 @@ pub const ALT_BN128_MULTIPLICATION_INPUT_LEN: usize = ALT_BN128_MULTIPLICATION_I
 )]
 pub const ALT_BN128_MULTIPLICATION_OUTPUT_LEN: usize = ALT_BN128_MULTIPLICATION_OUTPUT_SIZE;
 
-pub const ALT_BN128_MUL: u64 = 2;
-pub const ALT_BN128_MUL_LE: u64 = ALT_BN128_MUL | LE_FLAG;
+pub const ALT_BN128_G1_MUL_BE: u64 = 2;
+#[deprecated(since = "3.1.0", note = "Please use `ALT_BN128_G1_MUL_BE` instead")]
+pub const ALT_BN128_MUL: u64 = ALT_BN128_G1_MUL_BE;
+pub const ALT_BN128_G1_MUL_LE: u64 = ALT_BN128_G1_MUL_BE | LE_FLAG;
 
 /// The version enum used to version changes to the `alt_bn128_multiplication` syscall.
 #[cfg(not(target_os = "solana"))]
@@ -121,7 +123,7 @@ pub fn alt_bn128_versioned_g1_multiplication(
 }
 
 #[inline(always)]
-pub fn alt_bn128_multiplication(input: &[u8]) -> Result<Vec<u8>, AltBn128Error> {
+pub fn alt_bn128_g1_multiplication_be(input: &[u8]) -> Result<Vec<u8>, AltBn128Error> {
     #[cfg(not(target_os = "solana"))]
     {
         alt_bn128_versioned_g1_multiplication(VersionedG1Multiplication::V1, input, Endianness::BE)
@@ -134,35 +136,7 @@ pub fn alt_bn128_multiplication(input: &[u8]) -> Result<Vec<u8>, AltBn128Error> 
         let mut result_buffer = [0u8; ALT_BN128_MULTIPLICATION_OUTPUT_SIZE];
         let result = unsafe {
             syscalls::sol_alt_bn128_group_op(
-                ALT_BN128_MUL,
-                input as *const _ as *const u8,
-                input.len() as u64,
-                &mut result_buffer as *mut _ as *mut u8,
-            )
-        };
-
-        match result {
-            0 => Ok(result_buffer.to_vec()),
-            _ => Err(AltBn128Error::UnexpectedError),
-        }
-    }
-}
-
-#[inline(always)]
-pub fn alt_bn128_multiplication_le(input: &[u8]) -> Result<Vec<u8>, AltBn128Error> {
-    #[cfg(not(target_os = "solana"))]
-    {
-        alt_bn128_versioned_g1_multiplication(VersionedG1Multiplication::V1, input, Endianness::LE)
-    }
-    #[cfg(target_os = "solana")]
-    {
-        if input.len() != ALT_BN128_MULTIPLICATION_INPUT_SIZE {
-            return Err(AltBn128Error::InvalidInputData);
-        }
-        let mut result_buffer = [0u8; ALT_BN128_MULTIPLICATION_OUTPUT_SIZE];
-        let result = unsafe {
-            syscalls::sol_alt_bn128_group_op(
-                ALT_BN128_MUL_LE,
+                ALT_BN128_G1_MUL_BE,
                 input as *const _ as *const u8,
                 input.len() as u64,
                 &mut result_buffer as *mut _ as *mut u8,
@@ -178,7 +152,44 @@ pub fn alt_bn128_multiplication_le(input: &[u8]) -> Result<Vec<u8>, AltBn128Erro
 
 #[deprecated(
     since = "3.1.0",
-    note = "Please use `alt_bn128_multiplication` instead"
+    note = "Please use `alt_bn128_g1_multiplication_be` instead"
+)]
+#[inline(always)]
+pub fn alt_bn128_multiplication(input: &[u8]) -> Result<Vec<u8>, AltBn128Error> {
+    alt_bn128_g1_multiplication_be(input)
+}
+
+#[inline(always)]
+pub fn alt_bn128_g1_multiplication_le(input: &[u8]) -> Result<Vec<u8>, AltBn128Error> {
+    #[cfg(not(target_os = "solana"))]
+    {
+        alt_bn128_versioned_g1_multiplication(VersionedG1Multiplication::V1, input, Endianness::LE)
+    }
+    #[cfg(target_os = "solana")]
+    {
+        if input.len() != ALT_BN128_MULTIPLICATION_INPUT_SIZE {
+            return Err(AltBn128Error::InvalidInputData);
+        }
+        let mut result_buffer = [0u8; ALT_BN128_MULTIPLICATION_OUTPUT_SIZE];
+        let result = unsafe {
+            syscalls::sol_alt_bn128_group_op(
+                ALT_BN128_G1_MUL_LE,
+                input as *const _ as *const u8,
+                input.len() as u64,
+                &mut result_buffer as *mut _ as *mut u8,
+            )
+        };
+
+        match result {
+            0 => Ok(result_buffer.to_vec()),
+            _ => Err(AltBn128Error::UnexpectedError),
+        }
+    }
+}
+
+#[deprecated(
+    since = "3.1.0",
+    note = "Please use `alt_bn128_g1_multiplication_be` instead"
 )]
 #[cfg(not(target_os = "solana"))]
 #[inline(always)]

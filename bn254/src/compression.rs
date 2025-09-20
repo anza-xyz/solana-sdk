@@ -10,15 +10,35 @@ use thiserror::Error;
 mod consts {
     use crate::LE_FLAG;
 
-    pub const ALT_BN128_G1_COMPRESS: u64 = 0;
-    pub const ALT_BN128_G1_DECOMPRESS: u64 = 1;
-    pub const ALT_BN128_G2_COMPRESS: u64 = 2;
-    pub const ALT_BN128_G2_DECOMPRESS: u64 = 3;
+    pub const ALT_BN128_G1_COMPRESS_BE: u64 = 0;
+    pub const ALT_BN128_G1_DECOMPRESS_BE: u64 = 1;
+    pub const ALT_BN128_G2_COMPRESS_BE: u64 = 2;
+    pub const ALT_BN128_G2_DECOMPRESS_BE: u64 = 3;
+    #[deprecated(
+        since = "3.1.0",
+        note = "Please use `ALT_BN128_G1_COMPRESS_BE` instead"
+    )]
+    pub const ALT_BN128_G1_COMPRESS: u64 = ALT_BN128_G1_COMPRESS_BE;
+    #[deprecated(
+        since = "3.1.0",
+        note = "Please use `ALT_BN128_G1_DECOMPRESS_BE` instead"
+    )]
+    pub const ALT_BN128_G1_DECOMPRESS: u64 = ALT_BN128_G1_DECOMPRESS_BE;
+    #[deprecated(
+        since = "3.1.0",
+        note = "Please use `ALT_BN128_G2_COMPRESS_BE` instead"
+    )]
+    pub const ALT_BN128_G2_COMPRESS: u64 = ALT_BN128_G2_COMPRESS_BE;
+    #[deprecated(
+        since = "3.1.0",
+        note = "Please use `ALT_BN128_G2_DECOMPRESS_BE` instead"
+    )]
+    pub const ALT_BN128_G2_DECOMPRESS: u64 = ALT_BN128_G2_DECOMPRESS_BE;
 
-    pub const ALT_BN128_G1_COMPRESS_LE: u64 = ALT_BN128_G1_COMPRESS | LE_FLAG;
-    pub const ALT_BN128_G1_DECOMPRESS_LE: u64 = ALT_BN128_G1_DECOMPRESS | LE_FLAG;
-    pub const ALT_BN128_G2_COMPRESS_LE: u64 = ALT_BN128_G2_COMPRESS | LE_FLAG;
-    pub const ALT_BN128_G2_DECOMPRESS_LE: u64 = ALT_BN128_G2_DECOMPRESS | LE_FLAG;
+    pub const ALT_BN128_G1_COMPRESS_LE: u64 = ALT_BN128_G1_COMPRESS_BE | LE_FLAG;
+    pub const ALT_BN128_G1_DECOMPRESS_LE: u64 = ALT_BN128_G1_DECOMPRESS_BE | LE_FLAG;
+    pub const ALT_BN128_G2_COMPRESS_LE: u64 = ALT_BN128_G2_COMPRESS_BE | LE_FLAG;
+    pub const ALT_BN128_G2_DECOMPRESS_LE: u64 = ALT_BN128_G2_DECOMPRESS_BE | LE_FLAG;
 }
 
 mod alt_bn128_compression_size {
@@ -328,7 +348,7 @@ mod target_arch {
         let mut result_buffer = [0; ALT_BN128_G1_COMPRESSED_POINT_SIZE];
         let result = unsafe {
             syscalls::sol_alt_bn128_compression(
-                ALT_BN128_G1_COMPRESS,
+                ALT_BN128_G1_COMPRESS_BE,
                 input as *const _ as *const u8,
                 input.len() as u64,
                 &mut result_buffer as *mut _ as *mut u8,
@@ -366,7 +386,7 @@ mod target_arch {
         let mut result_buffer = [0; ALT_BN128_G1_POINT_SIZE];
         let result = unsafe {
             syscalls::sol_alt_bn128_compression(
-                ALT_BN128_G1_DECOMPRESS,
+                ALT_BN128_G1_DECOMPRESS_BE,
                 input as *const _ as *const u8,
                 input.len() as u64,
                 &mut result_buffer as *mut _ as *mut u8,
@@ -404,7 +424,7 @@ mod target_arch {
         let mut result_buffer = [0; ALT_BN128_G2_COMPRESSED_POINT_SIZE];
         let result = unsafe {
             syscalls::sol_alt_bn128_compression(
-                ALT_BN128_G2_COMPRESS,
+                ALT_BN128_G2_COMPRESS_BE,
                 input as *const _ as *const u8,
                 input.len() as u64,
                 &mut result_buffer as *mut _ as *mut u8,
@@ -442,7 +462,7 @@ mod target_arch {
         let mut result_buffer = [0; ALT_BN128_G2_POINT_SIZE];
         let result = unsafe {
             syscalls::sol_alt_bn128_compression(
-                ALT_BN128_G2_DECOMPRESS,
+                ALT_BN128_G2_DECOMPRESS_BE,
                 input as *const _ as *const u8,
                 input.len() as u64,
                 &mut result_buffer as *mut _ as *mut u8,
