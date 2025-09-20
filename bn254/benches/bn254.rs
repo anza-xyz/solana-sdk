@@ -3,8 +3,8 @@ use {
     solana_bn254::{
         compression::prelude::convert_endianness,
         prelude::{
-            alt_bn128_addition, alt_bn128_addition_le, alt_bn128_multiplication,
-            alt_bn128_multiplication_le, alt_bn128_pairing, alt_bn128_pairing_le,
+            alt_bn128_g1_addition_be, alt_bn128_g1_addition_le, alt_bn128_g1_multiplication_be,
+            alt_bn128_g1_multiplication_le, alt_bn128_pairing_be, alt_bn128_pairing_le,
         },
     },
 };
@@ -51,14 +51,14 @@ const PAIRING_Q_BYTES_BE: [u8; 128] = [
     135, 117, 80,
 ];
 
-fn bench_addition(c: &mut Criterion) {
+fn bench_addition_be(c: &mut Criterion) {
     let p_bytes = ADD_P_BYTES_BE;
     let q_bytes = ADD_Q_BYTES_BE;
 
     let input_bytes = [&p_bytes[..], &q_bytes[..]].concat();
 
-    c.bench_function("bn128 addition", |b| {
-        b.iter(|| alt_bn128_addition(&input_bytes))
+    c.bench_function("bn128 addition be", |b| {
+        b.iter(|| alt_bn128_g1_addition_be(&input_bytes))
     });
 }
 
@@ -69,18 +69,18 @@ fn bench_addition_le(c: &mut Criterion) {
     let input_bytes = [&p_bytes[..], &q_bytes[..]].concat();
 
     c.bench_function("bn128 addition le", |b| {
-        b.iter(|| alt_bn128_addition_le(&input_bytes))
+        b.iter(|| alt_bn128_g1_addition_le(&input_bytes))
     });
 }
 
-fn bench_multiplication(c: &mut Criterion) {
+fn bench_multiplication_be(c: &mut Criterion) {
     let point_bytes = MUL_POINT_BYTES_BE;
     let scalar_bytes = MUL_SCALAR_BYTES_BE;
 
     let input_bytes = [&point_bytes[..], &scalar_bytes[..]].concat();
 
-    c.bench_function("bn128 multiplication", |b| {
-        b.iter(|| alt_bn128_multiplication(&input_bytes))
+    c.bench_function("bn128 multiplication be", |b| {
+        b.iter(|| alt_bn128_g1_multiplication_be(&input_bytes))
     });
 }
 
@@ -91,18 +91,18 @@ fn bench_multiplication_le(c: &mut Criterion) {
     let input_bytes = [&point_bytes[..], &scalar_bytes[..]].concat();
 
     c.bench_function("bn128 multiplication le", |b| {
-        b.iter(|| alt_bn128_multiplication_le(&input_bytes))
+        b.iter(|| alt_bn128_g1_multiplication_le(&input_bytes))
     });
 }
 
-fn bench_pairing(c: &mut Criterion) {
+fn bench_pairing_be(c: &mut Criterion) {
     let p_bytes = PAIRING_P_BYTES_BE;
     let q_bytes = PAIRING_Q_BYTES_BE;
 
     let input_bytes = [&p_bytes[..], &q_bytes[..]].concat();
 
-    c.bench_function("bn128 pairing", |b| {
-        b.iter(|| alt_bn128_pairing(&input_bytes))
+    c.bench_function("bn128 pairing be", |b| {
+        b.iter(|| alt_bn128_pairing_be(&input_bytes))
     });
 }
 
@@ -119,11 +119,11 @@ fn bench_pairing_le(c: &mut Criterion) {
 
 criterion_group!(
     benches,
-    bench_addition,
+    bench_addition_be,
     bench_addition_le,
-    bench_multiplication,
+    bench_multiplication_be,
     bench_multiplication_le,
-    bench_pairing,
+    bench_pairing_be,
     bench_pairing_le,
 );
 criterion_main!(benches);
