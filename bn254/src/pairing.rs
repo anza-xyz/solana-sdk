@@ -121,7 +121,7 @@ pub fn alt_bn128_pairing(input: &[u8]) -> Result<Vec<u8>, AltBn128Error> {
     }
     #[cfg(target_os = "solana")]
     {
-        if !input.len().is_multiple_of(ALT_BN128_PAIRING_ELEMENT_SIZE) {
+        if input.len() % ALT_BN128_PAIRING_ELEMENT_SIZE != 0 {
             return Err(AltBn128Error::InvalidInputData);
         }
         let mut result_buffer = [0u8; 32];
@@ -149,7 +149,7 @@ pub fn alt_bn128_pairing_le(input: &[u8]) -> Result<Vec<u8>, AltBn128Error> {
     }
     #[cfg(target_os = "solana")]
     {
-        if !input.len().is_multiple_of(ALT_BN128_PAIRING_ELEMENT_SIZE) {
+        if input.len() % ALT_BN128_PAIRING_ELEMENT_SIZE != 0 {
             return Err(AltBn128Error::InvalidInputData);
         }
         let mut result_buffer = [0u8; 32];

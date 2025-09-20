@@ -63,10 +63,9 @@ pub mod prelude {
     };
 }
 
-use {
-    bytemuck::{Pod, Zeroable},
-    thiserror::Error,
-};
+#[cfg(not(target_os = "solana"))]
+use bytemuck::{Pod, Zeroable};
+use thiserror::Error;
 
 mod consts {
     /// Size of the EC point field, in bytes.
@@ -128,6 +127,7 @@ impl From<AltBn128Error> for u64 {
     }
 }
 
+#[cfg(not(target_os = "solana"))]
 use consts::{
     ALT_BN128_FIELD_SIZE as FIELD_SIZE, ALT_BN128_G1_POINT_SIZE as G1_POINT_SIZE,
     ALT_BN128_G2_POINT_SIZE as G2_POINT_SIZE,
@@ -147,6 +147,7 @@ pub(crate) const LE_FLAG: u64 = 0x80;
 /// `PodG1` can be constructed from both big-endian (EIP-197) and little-endian
 /// (ark-bn254) encodings using `from_be_bytes` and `from_le_bytes` methods,
 /// respectively.
+#[cfg(not(target_os = "solana"))]
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Pod, Zeroable)]
 #[repr(transparent)]
 pub struct PodG1(pub [u8; G1_POINT_SIZE]);
@@ -167,6 +168,7 @@ pub struct PodG1(pub [u8; G1_POINT_SIZE]);
 /// `PodG2` can be constructed from both big-endian (EIP-197) and little-endian
 /// (ark-bn254) encodings using `from_be_bytes` and `from_le_bytes` methods,
 /// respectively.
+#[cfg(not(target_os = "solana"))]
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Pod, Zeroable)]
 #[repr(transparent)]
 pub struct PodG2(pub [u8; G2_POINT_SIZE]);
