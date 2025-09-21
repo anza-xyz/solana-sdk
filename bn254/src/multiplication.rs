@@ -149,7 +149,9 @@ pub fn alt_bn128_multiplication(input: &[u8]) -> Result<Vec<u8>, AltBn128Error> 
 }
 
 #[inline(always)]
-pub fn alt_bn128_multiplication_le(input: &[u8]) -> Result<Vec<u8>, AltBn128Error> {
+pub fn alt_bn128_multiplication_le(
+    input: &[u8; ALT_BN128_MULTIPLICATION_INPUT_SIZE],
+) -> Result<Vec<u8>, AltBn128Error> {
     #[cfg(not(target_os = "solana"))]
     {
         alt_bn128_versioned_g1_multiplication(VersionedG1Multiplication::V1, input, Endianness::LE)
