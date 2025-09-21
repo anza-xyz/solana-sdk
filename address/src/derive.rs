@@ -1,6 +1,6 @@
 use crate::{Address, MAX_SEEDS, PDA_MARKER};
 #[cfg(target_os = "solana")]
-use core::mem::MaybeUninit;
+use {core::mem::MaybeUninit, solana_define_syscall::definitions::sol_sha256};
 
 /// Derive a [program address][pda] from the given seeds, optional bump and
 /// program id.
@@ -78,7 +78,7 @@ pub fn derive_address<const N: usize>(
         }
 
         // SAFETY: `pda` has been initialized by the syscall.
-        Address::new_from_array(unsafe { pda.assume_init() })
+        unsafe { pda.assume_init() }
     }
 
     #[cfg(not(target_os = "solana"))]
@@ -125,8 +125,8 @@ pub const fn derive_address_const<const N: usize>(
         i += 1;
     }
 
-    // TODO: replace this with `is_some` when the MSRV is upgraded
-    // to `1.84.0+`.
+    // TODO: replace this with `bump.as_slice()` when the MSRV is
+    // upgraded to `1.84.0+`.
     Address::new_from_array(if let Some(bump) = bump {
         hasher
             .update(&[bump])
