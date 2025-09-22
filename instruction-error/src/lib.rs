@@ -1,209 +1,216 @@
 #![no_std]
-#![allow(deprecated)]
 #![cfg_attr(feature = "frozen-abi", feature(min_specialization))]
 #[cfg(feature = "num-traits")]
 use num_traits::ToPrimitive;
 #[cfg(feature = "frozen-abi")]
-use solana_frozen_abi_macro::{AbiEnumVisitor, AbiExample};
-#[cfg(feature = "frozen-abi")]
 extern crate std;
-pub use solana_program_error::{
-    ACCOUNT_ALREADY_INITIALIZED, ACCOUNT_BORROW_FAILED, ACCOUNT_DATA_TOO_SMALL,
-    ACCOUNT_NOT_RENT_EXEMPT, ARITHMETIC_OVERFLOW, BORSH_IO_ERROR,
-    BUILTIN_PROGRAMS_MUST_CONSUME_COMPUTE_UNITS, CUSTOM_ZERO, ILLEGAL_OWNER, IMMUTABLE,
-    INCORRECT_AUTHORITY, INCORRECT_PROGRAM_ID, INSUFFICIENT_FUNDS, INVALID_ACCOUNT_DATA,
-    INVALID_ACCOUNT_DATA_REALLOC, INVALID_ACCOUNT_OWNER, INVALID_ARGUMENT,
-    INVALID_INSTRUCTION_DATA, INVALID_SEEDS, MAX_ACCOUNTS_DATA_ALLOCATIONS_EXCEEDED,
-    MAX_INSTRUCTION_TRACE_LENGTH_EXCEEDED, MAX_SEED_LENGTH_EXCEEDED, MISSING_REQUIRED_SIGNATURES,
-    NOT_ENOUGH_ACCOUNT_KEYS, UNINITIALIZED_ACCOUNT, UNSUPPORTED_SYSVAR,
-};
 use {core::fmt, solana_program_error::ProgramError};
+pub use {
+    instruction_error_module::*,
+    solana_program_error::{
+        ACCOUNT_ALREADY_INITIALIZED, ACCOUNT_BORROW_FAILED, ACCOUNT_DATA_TOO_SMALL,
+        ACCOUNT_NOT_RENT_EXEMPT, ARITHMETIC_OVERFLOW, BORSH_IO_ERROR,
+        BUILTIN_PROGRAMS_MUST_CONSUME_COMPUTE_UNITS, CUSTOM_ZERO, ILLEGAL_OWNER, IMMUTABLE,
+        INCORRECT_AUTHORITY, INCORRECT_PROGRAM_ID, INSUFFICIENT_FUNDS, INVALID_ACCOUNT_DATA,
+        INVALID_ACCOUNT_DATA_REALLOC, INVALID_ACCOUNT_OWNER, INVALID_ARGUMENT,
+        INVALID_INSTRUCTION_DATA, INVALID_SEEDS, MAX_ACCOUNTS_DATA_ALLOCATIONS_EXCEEDED,
+        MAX_INSTRUCTION_TRACE_LENGTH_EXCEEDED, MAX_SEED_LENGTH_EXCEEDED,
+        MISSING_REQUIRED_SIGNATURES, NOT_ENOUGH_ACCOUNT_KEYS, UNINITIALIZED_ACCOUNT,
+        UNSUPPORTED_SYSVAR,
+    },
+};
 
-/// Reasons the runtime might have rejected an instruction.
-///
-/// Members of this enum must not be removed, but new ones can be added.
-/// Also, it is crucial that meta-information if any that comes along with
-/// an error be consistent across software versions.  For example, it is
-/// dangerous to include error strings from 3rd party crates because they could
-/// change at any time and changes to them are difficult to detect.
-#[cfg_attr(feature = "frozen-abi", derive(AbiExample, AbiEnumVisitor))]
-#[cfg_attr(
-    feature = "serde",
-    derive(serde_derive::Serialize, serde_derive::Deserialize)
-)]
-#[derive(Debug, PartialEq, Eq, Clone)]
-pub enum InstructionError {
-    /// Deprecated! Use CustomError instead!
-    /// The program instruction returned an error
-    GenericError,
+#[allow(deprecated)]
+mod instruction_error_module {
+    #[cfg(feature = "frozen-abi")]
+    use solana_frozen_abi_macro::{AbiEnumVisitor, AbiExample};
 
-    /// The arguments provided to a program were invalid
-    InvalidArgument,
+    /// Reasons the runtime might have rejected an instruction.
+    ///
+    /// Members of this enum must not be removed, but new ones can be added.
+    /// Also, it is crucial that meta-information if any that comes along with
+    /// an error be consistent across software versions.  For example, it is
+    /// dangerous to include error strings from 3rd party crates because they could
+    /// change at any time and changes to them are difficult to detect.
+    #[cfg_attr(feature = "frozen-abi", derive(AbiExample, AbiEnumVisitor))]
+    #[cfg_attr(
+        feature = "serde",
+        derive(serde_derive::Serialize, serde_derive::Deserialize)
+    )]
+    #[derive(Debug, PartialEq, Eq, Clone)]
+    pub enum InstructionError {
+        /// Deprecated! Use CustomError instead!
+        /// The program instruction returned an error
+        GenericError,
 
-    /// An instruction's data contents were invalid
-    InvalidInstructionData,
+        /// The arguments provided to a program were invalid
+        InvalidArgument,
 
-    /// An account's data contents was invalid
-    InvalidAccountData,
+        /// An instruction's data contents were invalid
+        InvalidInstructionData,
 
-    /// An account's data was too small
-    AccountDataTooSmall,
+        /// An account's data contents was invalid
+        InvalidAccountData,
 
-    /// An account's balance was too small to complete the instruction
-    InsufficientFunds,
+        /// An account's data was too small
+        AccountDataTooSmall,
 
-    /// The account did not have the expected program id
-    IncorrectProgramId,
+        /// An account's balance was too small to complete the instruction
+        InsufficientFunds,
 
-    /// A signature was required but not found
-    MissingRequiredSignature,
+        /// The account did not have the expected program id
+        IncorrectProgramId,
 
-    /// An initialize instruction was sent to an account that has already been initialized.
-    AccountAlreadyInitialized,
+        /// A signature was required but not found
+        MissingRequiredSignature,
 
-    /// An attempt to operate on an account that hasn't been initialized.
-    UninitializedAccount,
+        /// An initialize instruction was sent to an account that has already been initialized.
+        AccountAlreadyInitialized,
 
-    /// Program's instruction lamport balance does not equal the balance after the instruction
-    UnbalancedInstruction,
+        /// An attempt to operate on an account that hasn't been initialized.
+        UninitializedAccount,
 
-    /// Program illegally modified an account's program id
-    ModifiedProgramId,
+        /// Program's instruction lamport balance does not equal the balance after the instruction
+        UnbalancedInstruction,
 
-    /// Program spent the lamports of an account that doesn't belong to it
-    ExternalAccountLamportSpend,
+        /// Program illegally modified an account's program id
+        ModifiedProgramId,
 
-    /// Program modified the data of an account that doesn't belong to it
-    ExternalAccountDataModified,
+        /// Program spent the lamports of an account that doesn't belong to it
+        ExternalAccountLamportSpend,
 
-    /// Read-only account's lamports modified
-    ReadonlyLamportChange,
+        /// Program modified the data of an account that doesn't belong to it
+        ExternalAccountDataModified,
 
-    /// Read-only account's data was modified
-    ReadonlyDataModified,
+        /// Read-only account's lamports modified
+        ReadonlyLamportChange,
 
-    /// An account was referenced more than once in a single instruction
-    // Deprecated, instructions can now contain duplicate accounts
-    DuplicateAccountIndex,
+        /// Read-only account's data was modified
+        ReadonlyDataModified,
 
-    /// Executable bit on account changed, but shouldn't have
-    ExecutableModified,
+        /// An account was referenced more than once in a single instruction
+        // Deprecated, instructions can now contain duplicate accounts
+        DuplicateAccountIndex,
 
-    /// Rent_epoch account changed, but shouldn't have
-    RentEpochModified,
+        /// Executable bit on account changed, but shouldn't have
+        ExecutableModified,
 
-    /// The instruction expected additional account keys
-    #[deprecated(since = "2.1.0", note = "Use InstructionError::MissingAccount instead")]
-    NotEnoughAccountKeys,
+        /// Rent_epoch account changed, but shouldn't have
+        RentEpochModified,
 
-    /// Program other than the account's owner changed the size of the account data
-    AccountDataSizeChanged,
+        /// The instruction expected additional account keys
+        #[deprecated(since = "2.1.0", note = "Use InstructionError::MissingAccount instead")]
+        NotEnoughAccountKeys,
 
-    /// The instruction expected an executable account
-    AccountNotExecutable,
+        /// Program other than the account's owner changed the size of the account data
+        AccountDataSizeChanged,
 
-    /// Failed to borrow a reference to account data, already borrowed
-    AccountBorrowFailed,
+        /// The instruction expected an executable account
+        AccountNotExecutable,
 
-    /// Account data has an outstanding reference after a program's execution
-    AccountBorrowOutstanding,
+        /// Failed to borrow a reference to account data, already borrowed
+        AccountBorrowFailed,
 
-    /// The same account was multiply passed to an on-chain program's entrypoint, but the program
-    /// modified them differently.  A program can only modify one instance of the account because
-    /// the runtime cannot determine which changes to pick or how to merge them if both are modified
-    DuplicateAccountOutOfSync,
+        /// Account data has an outstanding reference after a program's execution
+        AccountBorrowOutstanding,
 
-    /// Allows on-chain programs to implement program-specific error types and see them returned
-    /// by the Solana runtime. A program-specific error may be any type that is represented as
-    /// or serialized to a u32 integer.
-    Custom(u32),
+        /// The same account was multiply passed to an on-chain program's entrypoint, but the program
+        /// modified them differently.  A program can only modify one instance of the account because
+        /// the runtime cannot determine which changes to pick or how to merge them if both are modified
+        DuplicateAccountOutOfSync,
 
-    /// The return value from the program was invalid.  Valid errors are either a defined builtin
-    /// error value or a user-defined error in the lower 32 bits.
-    InvalidError,
+        /// Allows on-chain programs to implement program-specific error types and see them returned
+        /// by the Solana runtime. A program-specific error may be any type that is represented as
+        /// or serialized to a u32 integer.
+        Custom(u32),
 
-    /// Executable account's data was modified
-    ExecutableDataModified,
+        /// The return value from the program was invalid.  Valid errors are either a defined builtin
+        /// error value or a user-defined error in the lower 32 bits.
+        InvalidError,
 
-    /// Executable account's lamports modified
-    ExecutableLamportChange,
+        /// Executable account's data was modified
+        ExecutableDataModified,
 
-    /// Executable accounts must be rent exempt
-    ExecutableAccountNotRentExempt,
+        /// Executable account's lamports modified
+        ExecutableLamportChange,
 
-    /// Unsupported program id
-    UnsupportedProgramId,
+        /// Executable accounts must be rent exempt
+        ExecutableAccountNotRentExempt,
 
-    /// Cross-program invocation call depth too deep
-    CallDepth,
+        /// Unsupported program id
+        UnsupportedProgramId,
 
-    /// An account required by the instruction is missing
-    MissingAccount,
+        /// Cross-program invocation call depth too deep
+        CallDepth,
 
-    /// Cross-program invocation reentrancy not allowed for this instruction
-    ReentrancyNotAllowed,
+        /// An account required by the instruction is missing
+        MissingAccount,
 
-    /// Length of the seed is too long for address generation
-    MaxSeedLengthExceeded,
+        /// Cross-program invocation reentrancy not allowed for this instruction
+        ReentrancyNotAllowed,
 
-    /// Provided seeds do not result in a valid address
-    InvalidSeeds,
+        /// Length of the seed is too long for address generation
+        MaxSeedLengthExceeded,
 
-    /// Failed to reallocate account data of this length
-    InvalidRealloc,
+        /// Provided seeds do not result in a valid address
+        InvalidSeeds,
 
-    /// Computational budget exceeded
-    ComputationalBudgetExceeded,
+        /// Failed to reallocate account data of this length
+        InvalidRealloc,
 
-    /// Cross-program invocation with unauthorized signer or writable account
-    PrivilegeEscalation,
+        /// Computational budget exceeded
+        ComputationalBudgetExceeded,
 
-    /// Failed to create program execution environment
-    ProgramEnvironmentSetupFailure,
+        /// Cross-program invocation with unauthorized signer or writable account
+        PrivilegeEscalation,
 
-    /// Program failed to complete
-    ProgramFailedToComplete,
+        /// Failed to create program execution environment
+        ProgramEnvironmentSetupFailure,
 
-    /// Program failed to compile
-    ProgramFailedToCompile,
+        /// Program failed to complete
+        ProgramFailedToComplete,
 
-    /// Account is immutable
-    Immutable,
+        /// Program failed to compile
+        ProgramFailedToCompile,
 
-    /// Incorrect authority provided
-    IncorrectAuthority,
+        /// Account is immutable
+        Immutable,
 
-    /// Failed to serialize or deserialize account data
-    BorshIoError,
+        /// Incorrect authority provided
+        IncorrectAuthority,
 
-    /// An account does not have enough lamports to be rent-exempt
-    AccountNotRentExempt,
+        /// Failed to serialize or deserialize account data
+        BorshIoError,
 
-    /// Invalid account owner
-    InvalidAccountOwner,
+        /// An account does not have enough lamports to be rent-exempt
+        AccountNotRentExempt,
 
-    /// Program arithmetic overflowed
-    ArithmeticOverflow,
+        /// Invalid account owner
+        InvalidAccountOwner,
 
-    /// Unsupported sysvar
-    UnsupportedSysvar,
+        /// Program arithmetic overflowed
+        ArithmeticOverflow,
 
-    /// Illegal account owner
-    IllegalOwner,
+        /// Unsupported sysvar
+        UnsupportedSysvar,
 
-    /// Accounts data allocations exceeded the maximum allowed per transaction
-    MaxAccountsDataAllocationsExceeded,
+        /// Illegal account owner
+        IllegalOwner,
 
-    /// Max accounts exceeded
-    MaxAccountsExceeded,
+        /// Accounts data allocations exceeded the maximum allowed per transaction
+        MaxAccountsDataAllocationsExceeded,
 
-    /// Max instruction trace length exceeded
-    MaxInstructionTraceLengthExceeded,
+        /// Max accounts exceeded
+        MaxAccountsExceeded,
 
-    /// Builtin programs must consume compute units
-    BuiltinProgramsMustConsumeComputeUnits,
-    // Note: For any new error added here an equivalent ProgramError and its
-    // conversions must also be added
+        /// Max instruction trace length exceeded
+        MaxInstructionTraceLengthExceeded,
+
+        /// Builtin programs must consume compute units
+        BuiltinProgramsMustConsumeComputeUnits,
+        // Note: For any new error added here an equivalent ProgramError and its
+        // conversions must also be added
+    }
 }
 
 impl core::error::Error for InstructionError {}
