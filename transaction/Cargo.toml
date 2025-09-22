@@ -22,7 +22,12 @@ bincode = [
     "solana-message/bincode",
 ]
 blake3 = ["bincode", "solana-message/blake3"]
-dev-context-only-utils = ["blake3", "serde", "verify"]
+dev-context-only-utils = [
+    "blake3",
+    "solana-hash/std",
+    "serde",
+    "verify",
+]
 frozen-abi = [
     "dep:solana-frozen-abi",
     "dep:solana-frozen-abi-macro",
@@ -61,7 +66,7 @@ anyhow = { workspace = true }
 bincode = { workspace = true }
 borsh = { workspace = true }
 solana-example-mocks = { path = "../example-mocks" }
-solana-hash = { workspace = true }
+solana-hash = { workspace = true, features = ["std"] }
 solana-instruction = { workspace = true, features = ["borsh"] }
 solana-keypair = { workspace = true }
 solana-nonce = { workspace = true }
