@@ -163,8 +163,33 @@ pub use {
 };
 
 impl Sysvar for EpochRewards {
-    impl_sysvar_get!(sol_get_epoch_rewards_sysvar);
+    impl_sysvar_get!(id());
 }
 
 #[cfg(feature = "bincode")]
 impl SysvarSerialize for EpochRewards {}
+
+#[cfg(test)]
+mod tests {
+    use {super::*, crate::tests::to_bytes, serial_test::serial};
+
+    #[test]
+    #[serial]
+    fn test_epoch_rewards_get_uses_sysvar_syscall() {
+        let expected = EpochRewards {
+            distribution_starting_block_height: 42,
+            num_partitions: 7,
+            parent_blockhash: solana_hash::Hash::new_unique(),
+            total_points: 1234567890,
+            total_rewards: 100,
+            distributed_rewards: 10,
+            active: true,
+        };
+
+        let data = to_bytes(&expected);
+        crate::tests::mock_get_sysvar_syscall(&data);
+
+        let got = EpochRewards::get().unwrap();
+        assert_eq!(got, expected);
+    }
+}

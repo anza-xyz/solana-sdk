@@ -130,8 +130,74 @@ pub use {
 };
 
 impl Sysvar for Clock {
-    impl_sysvar_get!(sol_get_clock_sysvar);
+    impl_sysvar_get!(id());
 }
 
 #[cfg(feature = "bincode")]
 impl SysvarSerialize for Clock {}
+
+#[cfg(test)]
+mod tests {
+    use {super::*, crate::tests::to_bytes, serial_test::serial};
+
+    #[test]
+    #[serial]
+    fn test_clock_get_uses_sysvar_syscall() {
+        let expected = Clock {
+            slot: 1,
+            epoch_start_timestamp: 2,
+            epoch: 3,
+            leader_schedule_epoch: 4,
+            unix_timestamp: 5,
+        };
+
+        let data = to_bytes(&expected);
+        crate::tests::mock_get_sysvar_syscall(&data);
+
+        let got = Clock::get().unwrap();
+        assert_eq!(got, expected);
+    }
+
+    struct ValidateIdSyscall {
+        data: Vec<u8>,
+    }
+
+    impl crate::program_stubs::SyscallStubs for ValidateIdSyscall {
+        fn sol_get_sysvar(
+            &self,
+            sysvar_id_addr: *const u8,
+            var_addr: *mut u8,
+            offset: u64,
+            length: u64,
+        ) -> u64 {
+            // Validate that the macro passed the correct sysvar id pointer
+            let passed_id = unsafe { *(sysvar_id_addr as *const solana_pubkey::Pubkey) };
+            assert_eq!(passed_id, id());
+
+            let slice = unsafe { std::slice::from_raw_parts_mut(var_addr, length as usize) };
+            slice.copy_from_slice(
+                &self.data[offset as usize..(offset.saturating_add(length)) as usize],
+            );
+            solana_program_entrypoint::SUCCESS
+        }
+    }
+
+    #[test]
+    #[serial]
+    fn test_clock_get_passes_correct_sysvar_id() {
+        let expected = Clock {
+            slot: 11,
+            epoch_start_timestamp: 22,
+            epoch: 33,
+            leader_schedule_epoch: 44,
+            unix_timestamp: 55,
+        };
+        let data = to_bytes(&expected);
+        let prev = crate::program_stubs::set_syscall_stubs(Box::new(ValidateIdSyscall { data }));
+
+        let got = Clock::get().unwrap();
+        assert_eq!(got, expected);
+
+        let _ = crate::program_stubs::set_syscall_stubs(prev);
+    }
+}

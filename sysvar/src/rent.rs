@@ -129,8 +129,28 @@ pub use {
     solana_sdk_ids::sysvar::rent::{check_id, id, ID},
 };
 impl Sysvar for Rent {
-    impl_sysvar_get!(sol_get_rent_sysvar);
+    impl_sysvar_get!(id());
 }
 
 #[cfg(feature = "bincode")]
 impl SysvarSerialize for Rent {}
+
+#[cfg(test)]
+mod tests_sysvar_get {
+    use {super::*, crate::tests::to_bytes, serial_test::serial};
+
+    #[test]
+    #[serial]
+    fn test_rent_get_uses_sysvar_syscall() {
+        let expected = Rent {
+            lamports_per_byte_year: 123,
+            exemption_threshold: 2.5,
+            burn_percent: 7,
+        };
+        let data = to_bytes(&expected);
+        crate::tests::mock_get_sysvar_syscall(&data);
+
+        let got = Rent::get().unwrap();
+        assert_eq!(got, expected);
+    }
+}

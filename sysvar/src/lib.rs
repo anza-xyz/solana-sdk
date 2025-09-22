@@ -161,6 +161,9 @@ pub trait SysvarSerialize:
 /// Implements the [`Sysvar::get`] method for both SBF and host targets.
 #[macro_export]
 macro_rules! impl_sysvar_get {
+    // DEPRECATED: This variant is only for the deprecated Fees sysvar and should be
+    // removed once Fees is no longer in use. It uses the old-style direct syscall
+    // approach instead of the new sol_get_sysvar syscall.
     ($syscall_name:ident) => {
         fn get() -> Result<Self, $crate::__private::ProgramError> {
             let mut var = Self::default();
@@ -177,6 +180,24 @@ macro_rules! impl_sysvar_get {
                 // Unexpected errors are folded into `UnsupportedSysvar`.
                 _ => Err($crate::__private::ProgramError::UnsupportedSysvar),
             }
+        }
+    };
+    ($sysvar_id:expr) => {
+        fn get() -> Result<Self, $crate::__private::ProgramError> {
+            // Allocate uninitialized memory for the sysvar struct
+            let mut uninit = core::mem::MaybeUninit::<Self>::uninit();
+            let size = core::mem::size_of::<Self>() as u64;
+            // Safety: we build a mutable slice pointing to the uninitialized
+            // buffer.  The `get_sysvar` syscall will fill exactly `size`
+            // bytes, after which the buffer is fully initialised.
+            let dst = unsafe {
+                core::slice::from_raw_parts_mut(uninit.as_mut_ptr() as *mut u8, size as usize)
+            };
+            // Attempt to load the sysvar data using the provided sysvar id.
+            $crate::get_sysvar(dst, &$sysvar_id, 0, size)?;
+            // Safety: `get_sysvar` succeeded and initialised the buffer.
+            let var = unsafe { uninit.assume_init() };
+            Ok(var)
         }
     };
 }
@@ -267,6 +288,19 @@ mod tests {
         set_syscall_stubs(Box::new(MockGetSysvarSyscall {
             data: data.to_vec(),
         }));
+    }
+
+    /// Convert a value to its in-memory byte representation.
+    ///
+    /// Safety: This relies on the type's plain old data layout. Intended for tests.
+    pub fn to_bytes<T>(value: &T) -> Vec<u8> {
+        unsafe {
+            let size = core::mem::size_of::<T>();
+            let ptr = (value as *const T) as *const u8;
+            let mut data = vec![0u8; size];
+            std::ptr::copy_nonoverlapping(ptr, data.as_mut_ptr(), size);
+            data
+        }
     }
 
     #[test]

@@ -33,12 +33,12 @@ define_syscall!(fn sol_get_sysvar(sysvar_id_addr: *const u8, result: *mut u8, of
 define_syscall!(fn sol_get_epoch_stake(vote_address: *const u8) -> u64);
 define_syscall!(fn sol_panic_(filename: *const u8, filename_len: u64, line: u64, column: u64));
 
-// these are to be deprecated once they are superceded by sol_get_sysvar
-define_syscall!(fn sol_get_clock_sysvar(addr: *mut u8) -> u64);
-define_syscall!(fn sol_get_epoch_schedule_sysvar(addr: *mut u8) -> u64);
-define_syscall!(fn sol_get_rent_sysvar(addr: *mut u8) -> u64);
-define_syscall!(fn sol_get_last_restart_slot(addr: *mut u8) -> u64);
-define_syscall!(fn sol_get_epoch_rewards_sysvar(addr: *mut u8) -> u64);
+// these are deprecated - use sol_get_sysvar instead
+define_syscall!(#[deprecated(since = "3.0.0", note = "Use `sol_get_sysvar` with `Clock` sysvar address instead")] fn sol_get_clock_sysvar(addr: *mut u8) -> u64);
+define_syscall!(#[deprecated(since = "3.0.0", note = "Use `sol_get_sysvar` with `EpochSchedule` sysvar address instead")] fn sol_get_epoch_schedule_sysvar(addr: *mut u8) -> u64);
+define_syscall!(#[deprecated(since = "3.0.0", note = "Use `sol_get_sysvar` with `Rent` sysvar address instead")] fn sol_get_rent_sysvar(addr: *mut u8) -> u64);
+define_syscall!(#[deprecated(since = "3.0.0", note = "Use `sol_get_sysvar` with `LastRestartSlot` sysvar address instead")] fn sol_get_last_restart_slot(addr: *mut u8) -> u64);
+define_syscall!(#[deprecated(since = "3.0.0", note = "Use `sol_get_sysvar` with `EpochRewards` sysvar address instead")] fn sol_get_epoch_rewards_sysvar(addr: *mut u8) -> u64);
 
 // this cannot go through sol_get_sysvar but can be removed once no longer in use
 define_syscall!(fn sol_get_fees_sysvar(addr: *mut u8) -> u64);

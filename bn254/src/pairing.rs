@@ -41,6 +41,8 @@ pub const ALT_BN128_PAIRING_LE: u64 = ALT_BN128_PAIRING_BE | LE_FLAG;
 #[cfg(not(target_os = "solana"))]
 pub enum VersionedPairing {
     V0,
+    /// SIMD-0334 - Fix alt_bn128_pairing Syscall Length Check
+    V1,
 }
 
 /// The syscall implementation for the `alt_bn128_pairing` syscall.
@@ -57,16 +59,25 @@ pub enum VersionedPairing {
 /// and the new logic must be scoped to that variant.
 #[cfg(not(target_os = "solana"))]
 pub fn alt_bn128_versioned_pairing(
-    _version: VersionedPairing,
+    version: VersionedPairing,
     input: &[u8],
     endianness: Endianness,
 ) -> Result<Vec<u8>, AltBn128Error> {
-    if input
-        .len()
-        .checked_rem(ALT_BN128_PAIRING_ELEMENT_SIZE)
-        .is_none()
-    {
-        return Err(AltBn128Error::InvalidInputData);
+    match version {
+        VersionedPairing::V0 => {
+            if input
+                .len()
+                .checked_rem(ALT_BN128_PAIRING_ELEMENT_SIZE)
+                .is_none()
+            {
+                return Err(AltBn128Error::InvalidInputData);
+            }
+        }
+        VersionedPairing::V1 => {
+            if !input.len().is_multiple_of(ALT_BN128_PAIRING_ELEMENT_SIZE) {
+                return Err(AltBn128Error::InvalidInputData);
+            }
+        }
     }
 
     let ele_len = input.len().saturating_div(ALT_BN128_PAIRING_ELEMENT_SIZE);
@@ -108,15 +119,11 @@ pub fn alt_bn128_versioned_pairing(
 pub fn alt_bn128_pairing_be(input: &[u8]) -> Result<Vec<u8>, AltBn128Error> {
     #[cfg(not(target_os = "solana"))]
     {
-        alt_bn128_versioned_pairing(VersionedPairing::V0, input, Endianness::BE)
+        alt_bn128_versioned_pairing(VersionedPairing::V1, input, Endianness::BE)
     }
     #[cfg(target_os = "solana")]
     {
-        if input
-            .len()
-            .checked_rem(ALT_BN128_PAIRING_ELEMENT_SIZE)
-            .is_none()
-        {
+        if input.len() % ALT_BN128_PAIRING_ELEMENT_SIZE != 0 {
             return Err(AltBn128Error::InvalidInputData);
         }
         let mut result_buffer = [0u8; 32];
@@ -146,15 +153,11 @@ pub fn alt_bn128_pairing(input: &[u8]) -> Result<Vec<u8>, AltBn128Error> {
 pub fn alt_bn128_pairing_le(input: &[u8]) -> Result<Vec<u8>, AltBn128Error> {
     #[cfg(not(target_os = "solana"))]
     {
-        alt_bn128_versioned_pairing(VersionedPairing::V0, input, Endianness::LE)
+        alt_bn128_versioned_pairing(VersionedPairing::V1, input, Endianness::LE)
     }
     #[cfg(target_os = "solana")]
     {
-        if input
-            .len()
-            .checked_rem(ALT_BN128_PAIRING_ELEMENT_SIZE)
-            .is_none()
-        {
+        if input.len() % ALT_BN128_PAIRING_ELEMENT_SIZE != 0 {
             return Err(AltBn128Error::InvalidInputData);
         }
         let mut result_buffer = [0u8; 32];
@@ -180,12 +183,8 @@ mod tests {
 
     #[test]
     fn alt_bn128_pairing_invalid_length() {
-        use ark_ff::{BigInteger, BigInteger256};
-
         let input = [0; 193];
         let result = alt_bn128_pairing_be(&input);
-        assert!(result.is_ok());
-        let expected = BigInteger256::from(1u64).to_bytes_be();
-        assert_eq!(result.unwrap(), expected);
+        assert!(result.is_err());
     }
 }
