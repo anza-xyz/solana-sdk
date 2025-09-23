@@ -2744,7 +2744,7 @@ name = "solana-account-info"
 version = "3.0.0"
 dependencies = [
  "bincode",
- "serde",
+ "serde_core",
  "solana-program-error",
  "solana-program-memory",
  "solana-pubkey",
@@ -2829,7 +2829,7 @@ name = "solana-bincode"
 version = "3.0.0"
 dependencies = [
  "bincode",
- "serde",
+ "serde_core",
  "solana-instruction-error",
  "solana-system-interface",
 ]
@@ -3855,7 +3855,7 @@ version = "3.0.0"
 dependencies = [
  "assert_matches",
  "bincode",
- "serde",
+ "serde_core",
  "serde_json",
  "solana-frozen-abi",
  "solana-frozen-abi-macro",

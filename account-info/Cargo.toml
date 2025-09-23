@@ -15,11 +15,11 @@ all-features = true
 rustdoc-args = ["--cfg=docsrs"]
 
 [features]
-bincode = ["dep:bincode", "dep:serde"]
+bincode = ["dep:bincode", "dep:serde_core"]
 
 [dependencies]
 bincode = { workspace = true, optional = true }
-serde = { workspace = true, optional = true }
+serde_core = { workspace = true, optional = true }
 solana-program-error = { workspace = true }
 solana-program-memory = { workspace = true }
 solana-pubkey = { workspace = true, default-features = false }

@@ -14,7 +14,7 @@ targets = ["x86_64-unknown-linux-gnu"]
 
 [dependencies]
 bincode = { workspace = true }
-serde = { workspace = true }
+serde_core = { workspace = true }
 solana-instruction-error = { workspace = true }
 
 [dev-dependencies]

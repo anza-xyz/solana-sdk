@@ -215,12 +215,17 @@ impl<'a> AccountInfo<'a> {
     }
 
     #[cfg(feature = "bincode")]
-    pub fn deserialize_data<T: serde::de::DeserializeOwned>(&self) -> Result<T, bincode::Error> {
+    pub fn deserialize_data<T: serde_core::de::DeserializeOwned>(
+        &self,
+    ) -> Result<T, bincode::Error> {
         bincode::deserialize(&self.data.borrow())
     }
 
     #[cfg(feature = "bincode")]
-    pub fn serialize_data<T: serde::Serialize>(&self, state: &T) -> Result<(), bincode::Error> {
+    pub fn serialize_data<T: serde_core::Serialize>(
+        &self,
+        state: &T,
+    ) -> Result<(), bincode::Error> {
         if bincode::serialized_size(state)? > self.data_len() as u64 {
             return Err(Box::new(bincode::ErrorKind::SizeLimit));
         }
