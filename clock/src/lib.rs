@@ -112,7 +112,7 @@ pub const HOLD_TRANSACTIONS_SLOT_OFFSET: u64 = 20;
 
 /// The unit of time given to a leader for encoding a block.
 ///
-/// It is some some number of _ticks_ long.
+/// It is some number of _ticks_ long.
 pub type Slot = u64;
 
 /// Uniquely distinguishes every version of a slot.
