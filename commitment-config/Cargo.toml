@@ -17,5 +17,5 @@ targets = ["x86_64-unknown-linux-gnu"]
 serde = ["dep:serde", "dep:serde_derive"]
 
 [dependencies]
-serde = { workspace = true, optional = true }
+serde = { workspace = true, optional = true, default-features = false}
 serde_derive = { workspace = true, optional = true }
