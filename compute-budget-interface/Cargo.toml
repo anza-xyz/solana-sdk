@@ -15,10 +15,12 @@ all-features = true
 rustdoc-args = ["--cfg=docsrs"]
 
 [features]
+default = ["std"]
 borsh = ["dep:borsh"]
-dev-context-only-utils = ["borsh"]
+dev-context-only-utils = ["borsh", "std"]
 frozen-abi = ["dep:solana-frozen-abi", "dep:solana-frozen-abi-macro", "serde"]
 serde = ["dep:serde", "dep:serde_derive"]
+std = ["serde?/std", "borsh?/std"]
 
 [dependencies]
 borsh = { workspace = true, optional = true }

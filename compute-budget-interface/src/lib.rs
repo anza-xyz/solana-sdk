@@ -1,11 +1,13 @@
 //! Instructions for the compute budget native program.
 #![cfg_attr(docsrs, feature(doc_auto_cfg))]
 #![cfg_attr(feature = "frozen-abi", feature(min_specialization))]
-
+#![cfg_attr(not(feature = "std"), no_std)]
+extern crate alloc;
 #[cfg(feature = "borsh")]
 use borsh::{BorshDeserialize, BorshSerialize};
 use solana_instruction::Instruction;
 pub use solana_sdk_ids::compute_budget::{check_id, id, ID};
+use alloc::vec;
 
 /// Compute Budget Instructions
 #[cfg_attr(
