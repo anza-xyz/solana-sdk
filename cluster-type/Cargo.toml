@@ -15,8 +15,10 @@ all-features = true
 rustdoc-args = ["--cfg=docsrs"]
 
 [features]
+default = ["std"]
 frozen-abi = ["dep:solana-frozen-abi", "dep:solana-frozen-abi-macro"]
 serde = ["dep:serde", "dep:serde_derive"]
+std = ["serde?/std", "solana-hash/std"]
 
 [dependencies]
 serde = { workspace = true, optional = true }
