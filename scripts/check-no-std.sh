@@ -12,6 +12,7 @@ no_std_crates=(
   -p solana-account-view
   -p solana-blake3-hasher
   -p solana-clock
+  -p solana-cluster-type
   -p solana-commitment-config
   -p solana-define-syscall
   -p solana-epoch-info
