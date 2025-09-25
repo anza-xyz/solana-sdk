@@ -11,6 +11,10 @@
 //! [`create_account`] function does all three at once. All new accounts must
 //! contain enough lamports to be [rent exempt], or else the creation
 //! instruction will fail.
+//! 
+//! The [`create_account`] function requires that the account have zero 
+//! lamports. [`create_account_allow_prefund`] allows for the account to have
+//! lamports prefunded.
 //!
 //! [rent exempt]: https://solana.com/docs/core/accounts#rent-exemption
 //!
@@ -249,6 +253,41 @@ pub enum SystemInstruction {
     /// # Account references
     ///   0. `[WRITE]` Nonce account
     UpgradeNonceAccount,
+
+    /// Create a new account **without enforcing the _lamports&nbsp;==&nbsp;0_ invariant**.
+    ///
+    /// This constructor is identical to [`create_account`] with the exception that it
+    /// **does not** check that the destination account (`to_pubkey`) has a zero
+    /// lamport balance prior to creation. This enables patterns where you first transfer
+    /// lamports to prefund an account, then use `create_account_allow_prefund` as a single
+    /// CPI to transfer additional lamports, allocate space, and assign ownership.
+    ///
+    /// ⚠️  **Safety considerations**
+    ///
+    /// • This instruction still performs the same lamport transfer, space allocation, and
+    ///   ownership assignment as [`create_account`]. The only difference is that it skips
+    ///   the initial zero-balance check.
+    ///
+    /// • Use [`create_account`] for typical account creation.
+    ///   Use [`create_account_allow_prefund`] when the target account has already been
+    ///   prefunded and you need to complete the creation process in a single CPI.
+    ///
+    /// Apart from skipping the zero-balance precondition, the semantics (signers, rent-exemption
+    /// rules, etc.) are identical to [`create_account`].
+    ///
+    /// # Account references
+    ///   0. `[WRITE, SIGNER]` Funding account
+    ///   1. `[WRITE, SIGNER]` New account
+    CreateAccountAllowPrefund {
+        /// Number of lamports to transfer to the new account
+        lamports: u64,
+
+        /// Number of bytes of memory to allocate
+        space: u64,
+
+        /// Address of program that will own the new account
+        owner: Pubkey,
+    },
 }
 
 /// Create an account.
@@ -1667,6 +1706,30 @@ pub fn authorize_nonce_account(
 pub fn upgrade_nonce_account(nonce_pubkey: Pubkey) -> Instruction {
     let account_metas = vec![AccountMeta::new(nonce_pubkey, /*is_signer:*/ false)];
     Instruction::new_with_bincode(ID, &SystemInstruction::UpgradeNonceAccount, account_metas)
+}
+
+/// Create a new account without enforcing zero lamports.
+#[cfg(feature = "bincode")]
+pub fn create_prefunded_account(
+    from_pubkey: &Pubkey,
+    to_pubkey: &Pubkey,
+    lamports: u64,
+    space: u64,
+    owner: &Pubkey,
+) -> Instruction {
+    let account_metas = vec![
+        AccountMeta::new(*from_pubkey, true),
+        AccountMeta::new(*to_pubkey, true),
+    ];
+    Instruction::new_with_bincode(
+        ID,
+        &SystemInstruction::CreateAccountAllowPrefund {
+            lamports,
+            space,
+            owner: *owner,
+        },
+        account_metas,
+    )
 }
 
 #[cfg(feature = "bincode")]
