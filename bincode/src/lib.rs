@@ -8,7 +8,7 @@ use {bincode::config::Options, solana_instruction_error::InstructionError};
 /// This function should be used in place of direct deserialization to help prevent OOM errors
 pub fn limited_deserialize<T>(instruction_data: &[u8], limit: u64) -> Result<T, InstructionError>
 where
-    T: serde::de::DeserializeOwned,
+    T: serde_core::de::DeserializeOwned,
 {
     bincode::options()
         .with_limit(limit)

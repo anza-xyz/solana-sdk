@@ -4,7 +4,7 @@
 #[cfg(feature = "frozen-abi")]
 use solana_frozen_abi_macro::AbiExample;
 use {
-    serde::{
+    serde_core::{
         de::{self, Deserializer, SeqAccess, Visitor},
         ser::{self, SerializeTuple, Serializer},
         Deserialize, Serialize,

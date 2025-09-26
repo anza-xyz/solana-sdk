@@ -16,7 +16,7 @@ targets = ["x86_64-unknown-linux-gnu"]
 frozen-abi = ["dep:solana-frozen-abi", "dep:solana-frozen-abi-macro"]
 
 [dependencies]
-serde = { workspace = true }
+serde_core = { workspace = true }
 solana-frozen-abi = { workspace = true, optional = true, features = [
     "frozen-abi",
 ] }
