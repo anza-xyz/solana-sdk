@@ -41,7 +41,7 @@ serde = { workspace = true, optional = true }
 serde_derive = { workspace = true, optional = true }
 solana-account = { workspace = true }
 solana-clock = { workspace = true }
-solana-cluster-type = { workspace = true }
+solana-cluster-type = { workspace = true, default-features = false }
 solana-epoch-schedule = { workspace = true }
 solana-fee-calculator = { workspace = true }
 solana-frozen-abi = { workspace = true, optional = true }

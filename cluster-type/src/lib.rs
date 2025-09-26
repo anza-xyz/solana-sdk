@@ -1,8 +1,13 @@
 #![cfg_attr(feature = "frozen-abi", feature(min_specialization))]
 #![cfg_attr(docsrs, feature(doc_auto_cfg))]
+#![cfg_attr(not(feature = "std"), no_std)]
+extern crate alloc;
+
 #[cfg(feature = "frozen-abi")]
 use solana_frozen_abi_macro::{AbiEnumVisitor, AbiExample};
-use {solana_hash::Hash, std::str::FromStr};
+
+use {solana_hash::Hash, core::str::FromStr};
+use alloc::{format, string::String};
 
 // The order can't align with release lifecycle only to remain ABI-compatible...
 #[cfg_attr(feature = "frozen-abi", derive(AbiExample, AbiEnumVisitor))]
