@@ -84,7 +84,8 @@ pub const PDA_MARKER: &[u8; 21] = b"ProgramDerivedAddress";
 #[cfg_attr(feature = "bytemuck", derive(Pod, Zeroable))]
 #[cfg_attr(feature = "dev-context-only-utils", derive(Arbitrary))]
 #[cfg_attr(not(feature = "decode"), derive(Debug))]
-#[derive(Clone, Copy, Default, Eq, Ord, PartialOrd)]
+#[cfg_attr(feature = "copy", derive(Copy))]
+#[derive(Clone, Default, Eq, Ord, PartialOrd)]
 pub struct Address(pub(crate) [u8; 32]);
 
 #[cfg(feature = "sanitize")]
@@ -124,7 +125,7 @@ impl Hash for Address {
 impl From<&Address> for Address {
     #[inline]
     fn from(value: &Address) -> Self {
-        *value
+        Self(value.0)
     }
 }
 
