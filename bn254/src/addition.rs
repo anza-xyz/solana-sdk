@@ -26,10 +26,14 @@ pub const ALT_BN128_ADDITION_INPUT_LEN: usize = ALT_BN128_ADDITION_INPUT_SIZE;
 )]
 pub const ALT_BN128_ADDITION_OUTPUT_LEN: usize = ALT_BN128_ADDITION_OUTPUT_SIZE;
 
-pub const ALT_BN128_ADD: u64 = 0;
-pub const ALT_BN128_SUB: u64 = 1;
-pub const ALT_BN128_ADD_LE: u64 = ALT_BN128_ADD | LE_FLAG;
-pub const ALT_BN128_SUB_LE: u64 = ALT_BN128_SUB | LE_FLAG;
+pub const ALT_BN128_G1_ADD_BE: u64 = 0;
+pub const ALT_BN128_G1_SUB_BE: u64 = 1;
+#[deprecated(since = "3.1.0", note = "Please use `ALT_BN128_G1_ADD_BE` instead")]
+pub const ALT_BN128_ADD: u64 = ALT_BN128_G1_ADD_BE;
+#[deprecated(since = "3.1.0", note = "Please use `ALT_BN128_G1_SUB_BE` instead")]
+pub const ALT_BN128_SUB: u64 = ALT_BN128_G1_SUB_BE;
+pub const ALT_BN128_G1_ADD_LE: u64 = ALT_BN128_G1_ADD_BE | LE_FLAG;
+pub const ALT_BN128_G1_SUB_LE: u64 = ALT_BN128_G1_SUB_BE | LE_FLAG;
 
 /// The version enum used to version changes to the `alt_bn128_addition` syscall.
 #[cfg(not(target_os = "solana"))]
@@ -105,7 +109,7 @@ pub fn alt_bn128_versioned_g1_addition(
 }
 
 #[inline(always)]
-pub fn alt_bn128_addition(input: &[u8]) -> Result<Vec<u8>, AltBn128Error> {
+pub fn alt_bn128_g1_addition_be(input: &[u8]) -> Result<Vec<u8>, AltBn128Error> {
     #[cfg(not(target_os = "solana"))]
     {
         alt_bn128_versioned_g1_addition(VersionedG1Addition::V0, input, Endianness::BE)
@@ -118,7 +122,7 @@ pub fn alt_bn128_addition(input: &[u8]) -> Result<Vec<u8>, AltBn128Error> {
         let mut result_buffer = [0; ALT_BN128_ADDITION_OUTPUT_SIZE];
         let result = unsafe {
             syscalls::sol_alt_bn128_group_op(
-                ALT_BN128_ADD,
+                ALT_BN128_G1_ADD_BE,
                 input as *const _ as *const u8,
                 input.len() as u64,
                 &mut result_buffer as *mut _ as *mut u8,
@@ -132,8 +136,17 @@ pub fn alt_bn128_addition(input: &[u8]) -> Result<Vec<u8>, AltBn128Error> {
     }
 }
 
+#[deprecated(
+    since = "3.1.0",
+    note = "Please use `alt_bn128_g1_addition_be` instead"
+)]
 #[inline(always)]
-pub fn alt_bn128_addition_le(input: &[u8]) -> Result<Vec<u8>, AltBn128Error> {
+pub fn alt_bn128_addition(input: &[u8]) -> Result<Vec<u8>, AltBn128Error> {
+    alt_bn128_g1_addition_be(input)
+}
+
+#[inline(always)]
+pub fn alt_bn128_g1_addition_le(input: &[u8]) -> Result<Vec<u8>, AltBn128Error> {
     #[cfg(not(target_os = "solana"))]
     {
         alt_bn128_versioned_g1_addition(VersionedG1Addition::V0, input, Endianness::LE)
@@ -146,7 +159,7 @@ pub fn alt_bn128_addition_le(input: &[u8]) -> Result<Vec<u8>, AltBn128Error> {
         let mut result_buffer = [0; ALT_BN128_ADDITION_OUTPUT_SIZE];
         let result = unsafe {
             syscalls::sol_alt_bn128_group_op(
-                ALT_BN128_ADD_LE,
+                ALT_BN128_G1_ADD_LE,
                 input as *const _ as *const u8,
                 input.len() as u64,
                 &mut result_buffer as *mut _ as *mut u8,

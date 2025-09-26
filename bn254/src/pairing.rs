@@ -32,8 +32,10 @@ pub const ALT_BN128_PAIRING_ELEMENT_LEN: usize = ALT_BN128_PAIRING_ELEMENT_SIZE;
 )]
 pub const ALT_BN128_PAIRING_OUTPUT_LEN: usize = ALT_BN128_PAIRING_OUTPUT_SIZE;
 
-pub const ALT_BN128_PAIRING: u64 = 3;
-pub const ALT_BN128_PAIRING_LE: u64 = ALT_BN128_PAIRING | LE_FLAG;
+pub const ALT_BN128_PAIRING_BE: u64 = 3;
+#[deprecated(since = "3.1.0", note = "Please use `ALT_BN128_PAIRING_BE` instead")]
+pub const ALT_BN128_PAIRING: u64 = ALT_BN128_PAIRING_BE;
+pub const ALT_BN128_PAIRING_LE: u64 = ALT_BN128_PAIRING_BE | LE_FLAG;
 
 /// The version enum used to version changes to the `alt_bn128_pairing` syscall.
 #[cfg(not(target_os = "solana"))]
@@ -114,7 +116,7 @@ pub fn alt_bn128_versioned_pairing(
 }
 
 #[inline(always)]
-pub fn alt_bn128_pairing(input: &[u8]) -> Result<Vec<u8>, AltBn128Error> {
+pub fn alt_bn128_pairing_be(input: &[u8]) -> Result<Vec<u8>, AltBn128Error> {
     #[cfg(not(target_os = "solana"))]
     {
         alt_bn128_versioned_pairing(VersionedPairing::V1, input, Endianness::BE)
@@ -127,7 +129,7 @@ pub fn alt_bn128_pairing(input: &[u8]) -> Result<Vec<u8>, AltBn128Error> {
         let mut result_buffer = [0u8; 32];
         let result = unsafe {
             syscalls::sol_alt_bn128_group_op(
-                ALT_BN128_PAIRING,
+                ALT_BN128_PAIRING_BE,
                 input as *const _ as *const u8,
                 input.len() as u64,
                 &mut result_buffer as *mut _ as *mut u8,
@@ -139,6 +141,12 @@ pub fn alt_bn128_pairing(input: &[u8]) -> Result<Vec<u8>, AltBn128Error> {
             _ => Err(AltBn128Error::UnexpectedError),
         }
     }
+}
+
+#[deprecated(since = "3.1.0", note = "Please use `alt_bn128_pairing_be` instead")]
+#[inline(always)]
+pub fn alt_bn128_pairing(input: &[u8]) -> Result<Vec<u8>, AltBn128Error> {
+    alt_bn128_pairing_be(input)
 }
 
 #[inline(always)]
@@ -176,7 +184,7 @@ mod tests {
     #[test]
     fn alt_bn128_pairing_invalid_length() {
         let input = [0; 193];
-        let result = alt_bn128_pairing(&input);
+        let result = alt_bn128_pairing_be(&input);
         assert!(result.is_err());
     }
 }

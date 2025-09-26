@@ -18,7 +18,7 @@ fn alt_bn128_addition_test() {
 
     test_cases.iter().for_each(|test| {
         let mut input = array_bytes::hex2bytes_unchecked(&test.input);
-        let result = alt_bn128_addition(&input);
+        let result = alt_bn128_g1_addition_be(&input);
         assert!(result.is_ok());
         let expected = array_bytes::hex2bytes_unchecked(&test.expected);
         assert_eq!(result.unwrap(), expected);
@@ -27,7 +27,7 @@ fn alt_bn128_addition_test() {
         input.resize(ALT_BN128_ADDITION_INPUT_SIZE, 0);
         let input_le =
             convert_endianness::<32, ALT_BN128_ADDITION_INPUT_SIZE>(&input.try_into().unwrap());
-        let result = alt_bn128_addition_le(&input_le);
+        let result = alt_bn128_g1_addition_le(&input_le);
         assert!(result.is_ok());
         let expected_le = convert_endianness::<32, 64>(&expected.try_into().unwrap());
         assert_eq!(result.unwrap(), expected_le);
@@ -48,7 +48,7 @@ fn alt_bn128_multiplication_test() {
 
     test_cases.iter().for_each(|test| {
         let mut input = array_bytes::hex2bytes_unchecked(&test.input);
-        let result = alt_bn128_multiplication(&input);
+        let result = alt_bn128_g1_multiplication_be(&input);
         assert!(result.is_ok());
         let expected = array_bytes::hex2bytes_unchecked(&test.expected);
         assert_eq!(result.unwrap(), expected);
@@ -58,7 +58,7 @@ fn alt_bn128_multiplication_test() {
         let input_le = convert_endianness::<32, ALT_BN128_MULTIPLICATION_INPUT_SIZE>(
             &input.try_into().unwrap(),
         );
-        let result = alt_bn128_multiplication_le(&input_le);
+        let result = alt_bn128_g1_multiplication_le(&input_le);
         assert!(result.is_ok());
         let expected_le = convert_endianness::<32, 64>(&expected.try_into().unwrap());
         assert_eq!(result.unwrap(), expected_le);
@@ -80,7 +80,7 @@ fn alt_bn128_pairing_test() {
 
     test_cases.iter().for_each(|test| {
         let input = array_bytes::hex2bytes_unchecked(&test.input);
-        let result = alt_bn128_pairing(&input);
+        let result = alt_bn128_pairing_be(&input);
         assert!(result.is_ok());
         let expected = array_bytes::hex2bytes_unchecked(&test.expected);
         assert_eq!(result.unwrap(), expected);
