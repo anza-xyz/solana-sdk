@@ -414,7 +414,7 @@ impl Address {
             hasher.hashv(&[program_id.as_ref(), PDA_MARKER]);
             let hash = hasher.result();
 
-            if bytes_are_curve_point(hash) {
+            if bytes_are_curve_point(hash.as_ref()) {
                 return Err(AddressError::InvalidSeeds);
             }
 
