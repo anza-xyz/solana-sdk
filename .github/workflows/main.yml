@@ -551,3 +551,22 @@ jobs:
 
       - name: Run benches
         run: ./scripts/test-bench.sh
+
+  check-no-std:
+    name: Check no_std build
+    runs-on: ubuntu-latest
+    needs: [sanity]
+    steps:
+      - name: Git Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Environment
+        uses: ./.github/actions/setup
+        with:
+          nightly-toolchain: true
+          rust-src: true
+          cargo-cache-key: cargo-nightly-no-std
+          cargo-cache-fallback-key: cargo-nightly
+
+      - name: Run check
+        run: ./scripts/check-no-std.sh

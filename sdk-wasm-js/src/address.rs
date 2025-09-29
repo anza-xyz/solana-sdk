@@ -3,6 +3,7 @@
 use {
     crate::display_to_jsvalue,
     js_sys::{Array, Uint8Array},
+    solana_address::{ADDRESS_BYTES, MAX_SEEDS, MAX_SEED_LEN},
     wasm_bindgen::{prelude::wasm_bindgen, JsCast, JsValue},
 };
 
@@ -15,20 +16,33 @@ pub struct Address {
 crate::conversion::impl_inner_conversion!(Address, solana_address::Address);
 
 fn js_value_to_seeds_vec(array_of_uint8_arrays: &[JsValue]) -> Result<Vec<Vec<u8>>, JsValue> {
-    let vec_vec_u8 = array_of_uint8_arrays
-        .iter()
-        .filter_map(|u8_array| {
-            u8_array
-                .dyn_ref::<Uint8Array>()
-                .map(|u8_array| u8_array.to_vec())
-        })
-        .collect::<Vec<_>>();
-
-    if vec_vec_u8.len() != array_of_uint8_arrays.len() {
-        Err("Invalid Array of Uint8Arrays".into())
-    } else {
-        Ok(vec_vec_u8)
+    if array_of_uint8_arrays.len() > MAX_SEEDS {
+        return Err(JsValue::from(std::format!(
+            "Too many seeds: {} > {}",
+            array_of_uint8_arrays.len(),
+            MAX_SEEDS
+        )));
     }
+
+    array_of_uint8_arrays
+        .iter()
+        .enumerate()
+        .map(|(i, u8_array_js)| {
+            let u8_array = u8_array_js
+                .dyn_ref::<Uint8Array>()
+                .ok_or_else(|| JsValue::from(std::format!("Invalid seed type at index {}", i)))?;
+            if u8_array.length() as usize > MAX_SEED_LEN {
+                return Err(JsValue::from(std::format!(
+                    "Seed {} too long: {} > {}",
+                    i,
+                    u8_array.length(),
+                    MAX_SEED_LEN
+                )));
+            }
+
+            Ok(u8_array.to_vec())
+        })
+        .collect::<Result<Vec<_>, _>>()
 }
 
 #[allow(non_snake_case)]
@@ -45,26 +59,40 @@ impl Address {
                 .map(Into::into)
                 .map_err(display_to_jsvalue)
         } else if let Some(uint8_array) = value.dyn_ref::<Uint8Array>() {
-            solana_address::Address::try_from(uint8_array.to_vec())
-                .map(Into::into)
-                .map_err(|err| JsValue::from(std::format!("Invalid Uint8Array address: {err:?}")))
+            if uint8_array.length() as usize != ADDRESS_BYTES {
+                return Err(std::format!(
+                    "Invalid Uint8Array length: expected {}, got {}",
+                    ADDRESS_BYTES,
+                    uint8_array.length()
+                )
+                .into());
+            }
+            let mut bytes = [0u8; ADDRESS_BYTES];
+            uint8_array.copy_to(&mut bytes);
+            Ok(solana_address::Address::new_from_array(bytes).into())
         } else if let Some(array) = value.dyn_ref::<Array>() {
-            let mut bytes = std::vec![];
+            if array.length() as usize != ADDRESS_BYTES {
+                return Err(std::format!(
+                    "Invalid Array length: expected {}, got {}",
+                    ADDRESS_BYTES,
+                    array.length()
+                )
+                .into());
+            }
+            let mut bytes = [0u8; ADDRESS_BYTES];
             let iterator = js_sys::try_iter(&array.values())?.expect("array to be iterable");
-            for x in iterator {
+            for (i, x) in iterator.enumerate() {
                 let x = x?;
 
                 if let Some(n) = x.as_f64() {
                     if n >= 0. && n <= 255. {
-                        bytes.push(n as u8);
+                        bytes[i] = n as u8;
                         continue;
                     }
                 }
                 return Err(std::format!("Invalid array argument: {:?}", x).into());
             }
-            solana_address::Address::try_from(bytes)
-                .map(Into::into)
-                .map_err(|err| JsValue::from(std::format!("Invalid Array address: {err:?}")))
+            Ok(solana_address::Address::new_from_array(bytes).into())
         } else if value.is_undefined() {
             Ok(solana_address::Address::default().into())
         } else {

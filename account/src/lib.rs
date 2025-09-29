@@ -712,6 +712,22 @@ impl AccountSharedData {
     pub fn serialize_data<T: serde::Serialize>(&mut self, state: &T) -> Result<(), bincode::Error> {
         shared_serialize_data(self, state)
     }
+
+    pub fn create_from_existing_shared_data(
+        lamports: u64,
+        data: Arc<Vec<u8>>,
+        owner: Pubkey,
+        executable: bool,
+        rent_epoch: Epoch,
+    ) -> AccountSharedData {
+        AccountSharedData {
+            lamports,
+            data,
+            owner,
+            executable,
+            rent_epoch,
+        }
+    }
 }
 
 pub type InheritableAccountFields = (u64, Epoch);

@@ -24,6 +24,7 @@ solana-hash = { workspace = true }
 solana-instruction = { workspace = true, features = ["std"] }
 solana-keypair = { workspace = true }
 solana-message = { workspace = true }
+solana-packet = { workspace = true }
 solana-signature = { workspace = true }
 solana-signer = { workspace = true }
 solana-transaction = { workspace = true, features = ["bincode", "verify"] }

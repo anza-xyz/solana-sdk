@@ -3,7 +3,12 @@
 //! (ref: https://github.com/rustwasm/wasm-bindgen/issues/111)
 #![allow(non_snake_case)]
 
-use {crate::address::Address, wasm_bindgen::prelude::*};
+use {
+    crate::address::Address, js_sys::Uint8Array, solana_packet::PACKET_DATA_SIZE,
+    wasm_bindgen::prelude::*,
+};
+
+const MAX_INSTRUCTION_DATA_LEN: usize = PACKET_DATA_SIZE;
 
 /// wasm-bindgen version of the Instruction struct.
 /// This duplication is required until https://github.com/rustwasm/wasm-bindgen/issues/3671
@@ -25,8 +30,18 @@ impl Instruction {
             .into()
     }
 
-    pub fn setData(&mut self, data: &[u8]) {
+    pub fn setData(&mut self, data: Uint8Array) -> Result<(), JsValue> {
+        if data.length() as usize > MAX_INSTRUCTION_DATA_LEN {
+            return Err(std::format!(
+                "Instruction data too large: {} > {}",
+                data.length(),
+                MAX_INSTRUCTION_DATA_LEN
+            )
+            .into());
+        }
+
         self.inner.data = data.to_vec();
+        Ok(())
     }
 
     pub fn addAccount(&mut self, account_meta: AccountMeta) {

@@ -1,4 +1,7 @@
-use {crate::address::Address, solana_signer::Signer, wasm_bindgen::prelude::*};
+use {
+    crate::address::Address, js_sys::Uint8Array, solana_keypair::KEYPAIR_LENGTH,
+    solana_signer::Signer, wasm_bindgen::prelude::*,
+};
 
 #[wasm_bindgen]
 #[derive(Debug)]
@@ -23,8 +26,19 @@ impl Keypair {
     }
 
     /// Recover a `Keypair` from a `Uint8Array`
-    pub fn fromBytes(bytes: &[u8]) -> Result<Self, JsValue> {
-        solana_keypair::Keypair::try_from(bytes)
+    pub fn fromBytes(uint8_array: Uint8Array) -> Result<Self, JsValue> {
+        if uint8_array.length() as usize != KEYPAIR_LENGTH {
+            return Err(std::format!(
+                "Invalid length for Keypair bytes: expected {}, got {}",
+                KEYPAIR_LENGTH,
+                uint8_array.length()
+            )
+            .into());
+        }
+        let mut buf = [0u8; KEYPAIR_LENGTH];
+        uint8_array.copy_to(&mut buf);
+
+        solana_keypair::Keypair::try_from(buf.as_ref())
             .map(Into::into)
             .map_err(|e| e.to_string().into())
     }

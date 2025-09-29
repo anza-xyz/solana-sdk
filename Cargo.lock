@@ -3713,6 +3713,7 @@ dependencies = [
  "solana-instruction",
  "solana-keypair",
  "solana-message",
+ "solana-packet",
  "solana-signature",
  "solana-signer",
  "solana-transaction",
