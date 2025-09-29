@@ -1,5 +1,5 @@
 #![cfg_attr(docsrs, feature(doc_auto_cfg))]
-use {siphasher::sip::SipHasher13, solana_hash::Hash, solana_pubkey::Pubkey, std::hash::Hasher};
+use {siphasher::sip::SipHasher13, solana_address::Address, solana_hash::Hash, std::hash::Hasher};
 
 #[derive(Debug, Clone)]
 pub struct EpochRewardsHasher {
@@ -16,7 +16,7 @@ impl EpochRewardsHasher {
     }
 
     /// Return partition index (0..partitions) by hashing `address` with the `hasher`
-    pub fn hash_address_to_partition(self, address: &Pubkey) -> usize {
+    pub fn hash_address_to_partition(self, address: &Address) -> usize {
         let Self {
             mut hasher,
             partitions,
@@ -163,7 +163,7 @@ mod tests {
         let partitions = 10;
         let hasher = EpochRewardsHasher::new(partitions, &seed);
 
-        let pk = Pubkey::new_unique();
+        let pk = Address::new_unique();
 
         let b1 = hasher.clone().hash_address_to_partition(&pk);
         let b2 = hasher.hash_address_to_partition(&pk);

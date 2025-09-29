@@ -12,7 +12,7 @@ use {
     },
 };
 pub use {
-    solana_pubkey::Pubkey,
+    solana_address::Address,
     solana_signature::{error::Error as SignatureError, Signature},
     solana_signer::{EncodableKey, EncodableKeypair, Signer},
 };
@@ -104,11 +104,11 @@ static_assertions::const_assert_eq!(Keypair::SECRET_KEY_LENGTH, ed25519_dalek::S
 
 impl Signer for Keypair {
     #[inline]
-    fn pubkey(&self) -> Pubkey {
-        Pubkey::from(self.0.verifying_key().to_bytes())
+    fn pubkey(&self) -> Address {
+        Address::from(self.0.verifying_key().to_bytes())
     }
 
-    fn try_pubkey(&self) -> Result<Pubkey, SignerError> {
+    fn try_pubkey(&self) -> Result<Address, SignerError> {
         Ok(self.pubkey())
     }
 
@@ -145,7 +145,7 @@ impl EncodableKey for Keypair {
 }
 
 impl EncodableKeypair for Keypair {
-    type Pubkey = Pubkey;
+    type Pubkey = Address;
 
     /// Returns the associated pubkey. Use this function specifically for settings that involve
     /// reading or writing pubkeys. For other settings, use `Signer::pubkey()` instead.
@@ -298,7 +298,7 @@ mod tests {
 
         assert_eq!(
             read_keypair_file(&outfile).unwrap().pubkey().as_ref().len(),
-            mem::size_of::<Pubkey>()
+            mem::size_of::<Address>()
         );
         fs::remove_file(&outfile).unwrap();
         assert!(!Path::new(&outfile).exists());
@@ -356,7 +356,7 @@ mod tests {
         assert_eq!(keypair, keypair2);
     }
 
-    fn pubkeys(signers: &[&dyn Signer]) -> Vec<Pubkey> {
+    fn pubkeys(signers: &[&dyn Signer]) -> Vec<Address> {
         signers.iter().map(|x| x.pubkey()).collect()
     }
 

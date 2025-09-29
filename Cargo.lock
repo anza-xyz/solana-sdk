@@ -2735,9 +2735,9 @@ version = "3.0.0"
 dependencies = [
  "bincode",
  "serde",
+ "solana-address",
  "solana-program-error",
  "solana-program-memory",
- "solana-pubkey",
 ]
 
 [[package]]
@@ -3021,8 +3021,8 @@ name = "solana-epoch-rewards-hasher"
 version = "3.0.0"
 dependencies = [
  "siphasher",
+ "solana-address",
  "solana-hash",
- "solana-pubkey",
 ]
 
 [[package]]
@@ -3256,6 +3256,7 @@ dependencies = [
  "bitflags 2.8.0",
  "qualifier_attr",
  "solana-account-info",
+ "solana-address",
  "solana-instruction",
  "solana-instruction-error",
  "solana-program-error",
@@ -3284,8 +3285,8 @@ dependencies = [
  "five8",
  "rand",
  "serde_json",
+ "solana-address",
  "solana-derivation-path",
- "solana-pubkey",
  "solana-seed-derivable",
  "solana-seed-phrase",
  "solana-signature",
@@ -3685,7 +3686,7 @@ dependencies = [
 name = "solana-sdk-ids"
 version = "3.0.0"
 dependencies = [
- "solana-pubkey",
+ "solana-address",
 ]
 
 [[package]]
@@ -3948,6 +3949,7 @@ dependencies = [
  "serde",
  "serde_derive",
  "solana-account-info",
+ "solana-address",
  "solana-cpi",
  "solana-example-mocks",
  "solana-frozen-abi",
@@ -3958,7 +3960,6 @@ dependencies = [
  "solana-nonce",
  "solana-program-entrypoint",
  "solana-program-error",
- "solana-pubkey",
  "solana-system-interface",
  "solana-sysvar",
  "solana-sysvar-id",
@@ -4035,7 +4036,7 @@ dependencies = [
 name = "solana-sysvar-id"
 version = "3.0.0"
 dependencies = [
- "solana-pubkey",
+ "solana-address",
  "solana-sdk-ids",
 ]
 

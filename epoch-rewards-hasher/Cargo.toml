@@ -14,8 +14,11 @@ targets = ["x86_64-unknown-linux-gnu"]
 
 [dependencies]
 siphasher = { workspace = true }
+solana-address = { workspace = true }
 solana-hash = { workspace = true }
-solana-pubkey = { workspace = true }
+
+[dev-dependencies]
+solana-address = { workspace = true, features = ["atomic"] }
 
 [lints]
 workspace = true
