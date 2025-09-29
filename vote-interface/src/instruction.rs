@@ -226,8 +226,12 @@ impl VoteInstruction {
             Self::UpdateVoteState(vote_state_update)
             | Self::UpdateVoteStateSwitch(vote_state_update, _)
             | Self::CompactUpdateVoteState(vote_state_update)
-            | Self::CompactUpdateVoteStateSwitch(vote_state_update, _) => vote_state_update.hash.clone(),
-            Self::TowerSync(tower_sync) | Self::TowerSyncSwitch(tower_sync, _) => tower_sync.hash.clone(),
+            | Self::CompactUpdateVoteStateSwitch(vote_state_update, _) => {
+                vote_state_update.hash.clone()
+            }
+            Self::TowerSync(tower_sync) | Self::TowerSyncSwitch(tower_sync, _) => {
+                tower_sync.hash.clone()
+            }
             _ => panic!("Tried to get hash on non simple vote instruction"),
         }
     }
