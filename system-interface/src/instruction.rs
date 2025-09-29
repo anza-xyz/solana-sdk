@@ -1710,7 +1710,7 @@ pub fn upgrade_nonce_account(nonce_pubkey: Pubkey) -> Instruction {
 
 /// Create a new account without enforcing zero lamports.
 #[cfg(feature = "bincode")]
-pub fn create_prefunded_account(
+pub fn create_account_allow_prefund(
     from_pubkey: &Pubkey,
     to_pubkey: &Pubkey,
     lamports: u64,
