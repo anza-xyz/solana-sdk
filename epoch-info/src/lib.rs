@@ -1,3 +1,5 @@
+#![no_std]
+
 //! Information about the current epoch.
 //!
 //! As returned by the [`getEpochInfo`] RPC method.

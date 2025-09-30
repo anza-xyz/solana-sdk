@@ -12,6 +12,7 @@ no_std_crates=(
   -p solana-clock
   -p solana-commitment-config
   -p solana-define-syscall
+  -p solana-epoch-info
   -p solana-fee-calculator
   -p solana-program-error
   -p solana-program-memory
