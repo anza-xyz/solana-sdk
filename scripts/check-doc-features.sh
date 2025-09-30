@@ -10,7 +10,7 @@ err=0
 files=$(comm -23 <(git ls-files -- '**/Cargo.toml' | sort) <(git grep -l "\[package.metadata.docs.rs\]" | sort))
 if [[ -n $files ]]; then
   echo "Files found without [package.metadata.docs.rs]:"
-  echo $files
+  echo "$files"
   err=1
 fi
 
@@ -18,7 +18,7 @@ fi
 files=$(comm -23 <(git ls-files -- '**/lib.rs' | sort) <(git grep -lE '#!\[cfg_attr\(docsrs, feature\(doc_auto_cfg\)\)\]' | sort))
 if [[ -n $files ]]; then
   echo "Files found without #![cfg_attr(docsrs, feature(doc_auto_cfg))]"
-  echo $files
+  echo "$files"
   err=1
 fi
 exit $err
