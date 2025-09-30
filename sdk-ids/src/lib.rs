@@ -1,4 +1,5 @@
 #![no_std]
+#![cfg_attr(docsrs, feature(doc_auto_cfg))]
 
 pub mod address_lookup_table {
     solana_pubkey::declare_id!("AddressLookupTab1e1111111111111111111111111");

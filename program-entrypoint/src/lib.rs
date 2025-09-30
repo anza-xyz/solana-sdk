@@ -1,4 +1,5 @@
 //! The Rust-based BPF program entrypoint supported by the latest BPF loader.
+#![cfg_attr(docsrs, feature(doc_auto_cfg))]
 
 extern crate alloc;
 use {

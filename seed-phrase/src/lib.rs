@@ -1,4 +1,5 @@
 //! Functions for generating keypairs from seed phrases.
+#![cfg_attr(docsrs, feature(doc_auto_cfg))]
 use hmac::Hmac;
 
 pub fn generate_seed_from_seed_phrase_and_passphrase(

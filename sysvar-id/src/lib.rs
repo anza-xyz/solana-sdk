@@ -17,6 +17,7 @@
 //! For more details see the Solana [documentation on sysvars][sysvardoc].
 //!
 //! [sysvardoc]: https://docs.solanalabs.com/runtime/sysvars
+#![cfg_attr(docsrs, feature(doc_auto_cfg))]
 
 /// Re-export types required for macros
 pub use {
