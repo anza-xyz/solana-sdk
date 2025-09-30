@@ -373,7 +373,8 @@ where
             MISSING_REQUIRED_SIGNATURES => Self::MissingRequiredSignature,
             ACCOUNT_ALREADY_INITIALIZED => Self::AccountAlreadyInitialized,
             UNINITIALIZED_ACCOUNT => Self::UninitializedAccount,
-            NOT_ENOUGH_ACCOUNT_KEYS => Self::MissingAccount,
+            #[allow(deprecated)]
+            NOT_ENOUGH_ACCOUNT_KEYS => Self::NotEnoughAccountKeys,
             ACCOUNT_BORROW_FAILED => Self::AccountBorrowFailed,
             MAX_SEED_LENGTH_EXCEEDED => Self::MaxSeedLengthExceeded,
             INVALID_SEEDS => Self::InvalidSeeds,
