@@ -169,7 +169,7 @@ macro_rules! entrypoint_no_alloc {
             #[allow(clippy::declare_interior_mutable_const)]
             const UNINIT_ACCOUNT_INFO: MaybeUninit<AccountInfo> =
                 MaybeUninit::<AccountInfo>::uninit();
-            const MAX_ACCOUNT_INFOS: usize = 64;
+            const MAX_ACCOUNT_INFOS: usize = 128;
             let mut accounts = [UNINIT_ACCOUNT_INFO; MAX_ACCOUNT_INFOS];
             let (program_id, num_accounts, instruction_data) =
                 unsafe { $crate::deserialize_into(input, &mut accounts) };
