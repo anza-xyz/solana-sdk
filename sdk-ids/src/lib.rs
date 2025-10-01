@@ -73,7 +73,7 @@ pub mod vote {
 }
 
 pub mod sysvar {
-    // Owner pubkey for sysvar accounts
+    // Owner address for sysvar accounts
     solana_address::declare_id!("Sysvar1111111111111111111111111111111111111");
     pub mod clock {
         solana_address::declare_id!("SysvarC1ock11111111111111111111111111111111");
