@@ -35,3 +35,4 @@ solana-sha256-hasher = { workspace = true }
 [dev-dependencies]
 bincode = { workspace = true }
 solana-nonce = { path = ".", features = ["dev-context-only-utils"] }
+solana-pubkey = { workspace = true, features = ["std"], default-features = false }

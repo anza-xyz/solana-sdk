@@ -36,6 +36,9 @@ jobs:
       - name: Run ShellCheck
         run: ./scripts/check-shell.sh
 
+      - name: Check doc features
+        run: ./scripts/check-doc-features.sh
+
   check-crates:
     name: Check crate ownership
     runs-on: ubuntu-latest

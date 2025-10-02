@@ -1,3 +1,4 @@
+#![cfg_attr(docsrs, feature(doc_auto_cfg))]
 pub(crate) mod addition;
 pub mod compression;
 pub(crate) mod multiplication;

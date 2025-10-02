@@ -1,3 +1,4 @@
+#![cfg_attr(docsrs, feature(doc_auto_cfg))]
 pub use implementation::AtomicU64;
 
 #[cfg(target_pointer_width = "64")]

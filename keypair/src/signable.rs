@@ -1,6 +1,6 @@
 use {
     crate::Keypair,
-    solana_pubkey::Pubkey,
+    solana_address::Address,
     solana_signature::Signature,
     solana_signer::Signer,
     std::borrow::{Borrow, Cow},
@@ -16,7 +16,7 @@ pub trait Signable {
             .verify(self.pubkey().as_ref(), self.signable_data().borrow())
     }
 
-    fn pubkey(&self) -> Pubkey;
+    fn pubkey(&self) -> Address;
     fn signable_data(&self) -> Cow<'_, [u8]>;
     fn get_signature(&self) -> Signature;
     fn set_signature(&mut self, signature: Signature);

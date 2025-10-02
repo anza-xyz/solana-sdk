@@ -12,12 +12,16 @@ no_std_crates=(
   -p solana-clock
   -p solana-commitment-config
   -p solana-define-syscall
+  -p solana-epoch-info
   -p solana-fee-calculator
+  -p solana-msg
   -p solana-program-error
   -p solana-program-memory
   -p solana-rent
   -p solana-sanitize
+  -p solana-sdk-ids
   -p solana-signature
+  -p solana-sysvar-id
 )
 # Use the upstream BPF target, which doesn't support std, to make sure that our
 # no_std support really works.

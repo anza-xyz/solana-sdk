@@ -1,4 +1,5 @@
 //! The interface by which keys are derived.
+#![cfg_attr(docsrs, feature(doc_auto_cfg))]
 use {solana_derivation_path::DerivationPath, std::error};
 
 /// The `SeedDerivable` trait defines the interface by which cryptographic keys/keypairs are

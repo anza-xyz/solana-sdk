@@ -1,4 +1,5 @@
 //! Functions related to nonce accounts.
+#![cfg_attr(docsrs, feature(doc_auto_cfg))]
 
 use {
     solana_account::{state_traits::StateMut, AccountSharedData, ReadableAccount},

@@ -17,20 +17,22 @@
 //! For more details see the Solana [documentation on sysvars][sysvardoc].
 //!
 //! [sysvardoc]: https://docs.solanalabs.com/runtime/sysvars
+#![cfg_attr(docsrs, feature(doc_auto_cfg))]
+#![no_std]
 
 /// Re-export types required for macros
 pub use {
-    solana_pubkey::{declare_deprecated_id, declare_id, Pubkey},
+    solana_address::{declare_deprecated_id, declare_id, Address},
     solana_sdk_ids::sysvar::{check_id, id, ID},
 };
 
-/// A type that holds sysvar data and has an associated sysvar `Pubkey`.
+/// A type that holds sysvar data and has an associated sysvar `Address`.
 pub trait SysvarId {
-    /// The `Pubkey` of the sysvar.
-    fn id() -> Pubkey;
+    /// The `Address` of the sysvar.
+    fn id() -> Address;
 
-    /// Returns `true` if the given pubkey is the program ID.
-    fn check_id(pubkey: &Pubkey) -> bool;
+    /// Returns `true` if the given address is the ID.
+    fn check_id(address: &Address) -> bool;
 }
 
 /// Implements [`SysvarId`] for a module that already uses
@@ -39,12 +41,12 @@ pub trait SysvarId {
 macro_rules! impl_sysvar_id(
     ($type:ty) => {
         impl $crate::SysvarId for $type {
-            fn id() -> $crate::Pubkey {
+            fn id() -> $crate::Address {
                 id()
             }
 
-            fn check_id(pubkey: &$crate::Pubkey) -> bool {
-                check_id(pubkey)
+            fn check_id(address: &$crate::Address) -> bool {
+                check_id(address)
             }
         }
     }
@@ -56,14 +58,14 @@ macro_rules! impl_sysvar_id(
 macro_rules! impl_deprecated_sysvar_id(
     ($type:ty) => {
         impl $crate::SysvarId for $type {
-            fn id() -> $crate::Pubkey {
+            fn id() -> $crate::Address {
                 #[allow(deprecated)]
                 id()
             }
 
-            fn check_id(pubkey: &$crate::Pubkey) -> bool {
+            fn check_id(address: &$crate::Address) -> bool {
                 #[allow(deprecated)]
-                check_id(pubkey)
+                check_id(address)
             }
         }
     }
