@@ -1,3 +1,7 @@
+#![cfg_attr(
+    not(feature = "create-account-allow-prefund"),
+    allow(rustdoc::broken_intra_doc_links)
+)]
 //! Instructions and constructors for the system program.
 //!
 //! The system program is responsible for the creation of accounts and [nonce
@@ -14,7 +18,9 @@
 //!
 //! The [`create_account`] function requires that the account have zero
 //! lamports. [`create_account_allow_prefund`] allows for the account to have
-//! lamports prefunded.
+//! lamports prefunded; it is only included in this interface under the
+//! `create-account-allow-prefund` feature and requires activation of [SIMD-0312]
+//! (https://github.com/solana-foundation/solana-improvement-documents/pull/312).
 //!
 //! [rent exempt]: https://solana.com/docs/core/accounts#rent-exemption
 //!
@@ -1815,14 +1821,12 @@ mod tests {
         let instr = create_account_allow_prefund(
             &Some(from_address),
             &to_address,
-            1, // lamports > 0 triggers transfer
+            1, // lamports
             8, // arbitrary space
             &crate::program::ID,
         );
 
-        // Program id should be system program id
         assert_eq!(instr.program_id, crate::program::ID);
-
         // Expect two account metas: [to, from]
         assert_eq!(instr.accounts.len(), 2);
 
@@ -1850,9 +1854,7 @@ mod tests {
             &crate::program::ID,
         );
 
-        // Program id should be system program id
         assert_eq!(instr.program_id, crate::program::ID);
-
         // Expect a single account meta: [to]
         assert_eq!(instr.accounts.len(), 1);
 
