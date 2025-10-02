@@ -11,8 +11,8 @@
 //! [`create_account`] function does all three at once. All new accounts must
 //! contain enough lamports to be [rent exempt], or else the creation
 //! instruction will fail.
-//! 
-//! The [`create_account`] function requires that the account have zero 
+//!
+//! The [`create_account`] function requires that the account have zero
 //! lamports. [`create_account_allow_prefund`] allows for the account to have
 //! lamports prefunded.
 //!
@@ -286,7 +286,7 @@ pub enum SystemInstruction {
         space: u64,
 
         /// Address of program that will own the new account
-        owner: Pubkey,
+        owner: Address,
     },
 }
 
@@ -1711,11 +1711,11 @@ pub fn upgrade_nonce_account(nonce_address: Address) -> Instruction {
 /// Create a new account without enforcing zero lamports.
 #[cfg(feature = "bincode")]
 pub fn create_account_allow_prefund(
-    from_pubkey: &Pubkey,
-    to_pubkey: &Pubkey,
+    from_pubkey: &Address,
+    to_pubkey: &Address,
     lamports: u64,
     space: u64,
-    owner: &Pubkey,
+    owner: &Address,
 ) -> Instruction {
     let account_metas = vec![
         AccountMeta::new(*from_pubkey, true),
