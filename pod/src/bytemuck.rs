@@ -1,6 +1,6 @@
 //! wrappers for `bytemuck` functions
 
-use {bytemuck::Pod, solana_program_error::ProgramError};
+use {crate::error::SplPodError, bytemuck::Pod};
 
 /// On-chain size of a `Pod` type
 pub const fn pod_get_packed_len<T: Pod>() -> usize {
@@ -13,8 +13,8 @@ pub fn pod_bytes_of<T: Pod>(t: &T) -> &[u8] {
 }
 
 /// Convert a slice of bytes into a `Pod` (zero copy)
-pub fn pod_from_bytes<T: Pod>(bytes: &[u8]) -> Result<&T, ProgramError> {
-    bytemuck::try_from_bytes(bytes).map_err(|_| ProgramError::InvalidArgument)
+pub fn pod_from_bytes<T: Pod>(bytes: &[u8]) -> Result<&T, SplPodError> {
+    Ok(bytemuck::try_from_bytes(bytes)?)
 }
 
 /// Maybe convert a slice of bytes into a `Pod` (zero copy)
@@ -22,29 +22,27 @@ pub fn pod_from_bytes<T: Pod>(bytes: &[u8]) -> Result<&T, ProgramError> {
 /// Returns `None` if the slice is empty, or else `Err` if input length is not
 /// equal to `pod_get_packed_len::<T>()`.
 /// This function exists primarily because `Option<T>` is not a `Pod`.
-pub fn pod_maybe_from_bytes<T: Pod>(bytes: &[u8]) -> Result<Option<&T>, ProgramError> {
+pub fn pod_maybe_from_bytes<T: Pod>(bytes: &[u8]) -> Result<Option<&T>, SplPodError> {
     if bytes.is_empty() {
         Ok(None)
     } else {
-        bytemuck::try_from_bytes(bytes)
-            .map(Some)
-            .map_err(|_| ProgramError::InvalidArgument)
+        Ok(bytemuck::try_from_bytes(bytes).map(Some)?)
     }
 }
 
 /// Convert a slice of bytes into a mutable `Pod` (zero copy)
-pub fn pod_from_bytes_mut<T: Pod>(bytes: &mut [u8]) -> Result<&mut T, ProgramError> {
-    bytemuck::try_from_bytes_mut(bytes).map_err(|_| ProgramError::InvalidArgument)
+pub fn pod_from_bytes_mut<T: Pod>(bytes: &mut [u8]) -> Result<&mut T, SplPodError> {
+    Ok(bytemuck::try_from_bytes_mut(bytes)?)
 }
 
 /// Convert a slice of bytes into a `Pod` slice (zero copy)
-pub fn pod_slice_from_bytes<T: Pod>(bytes: &[u8]) -> Result<&[T], ProgramError> {
-    bytemuck::try_cast_slice(bytes).map_err(|_| ProgramError::InvalidArgument)
+pub fn pod_slice_from_bytes<T: Pod>(bytes: &[u8]) -> Result<&[T], SplPodError> {
+    Ok(bytemuck::try_cast_slice(bytes)?)
 }
 
 /// Convert a slice of bytes into a mutable `Pod` slice (zero copy)
-pub fn pod_slice_from_bytes_mut<T: Pod>(bytes: &mut [u8]) -> Result<&mut [T], ProgramError> {
-    bytemuck::try_cast_slice_mut(bytes).map_err(|_| ProgramError::InvalidArgument)
+pub fn pod_slice_from_bytes_mut<T: Pod>(bytes: &mut [u8]) -> Result<&mut [T], SplPodError> {
+    Ok(bytemuck::try_cast_slice_mut(bytes)?)
 }
 
 /// Convert a `Pod` slice into a single slice of bytes

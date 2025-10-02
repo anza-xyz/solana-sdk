@@ -5,13 +5,12 @@ use {
         bytemuck::{
             pod_from_bytes, pod_from_bytes_mut, pod_slice_from_bytes, pod_slice_from_bytes_mut,
         },
-        error::PodSliceError,
+        error::SplPodError,
         list::{list_view_mut::ListViewMut, list_view_read_only::ListViewReadOnly},
         pod_length::PodLength,
         primitives::PodU32,
     },
     bytemuck::Pod,
-    solana_program_error::ProgramError,
     std::{
         marker::PhantomData,
         mem::{align_of, size_of},
@@ -51,17 +50,17 @@ struct Layout {
 impl<T: Pod, L: PodLength> ListView<T, L> {
     /// Calculate the total byte size for a `ListView` holding `num_items`.
     /// This includes the length prefix, padding, and data.
-    pub fn size_of(num_items: usize) -> Result<usize, ProgramError> {
+    pub fn size_of(num_items: usize) -> Result<usize, SplPodError> {
         let header_padding = Self::header_padding()?;
         size_of::<T>()
             .checked_mul(num_items)
             .and_then(|curr| curr.checked_add(size_of::<L>()))
             .and_then(|curr| curr.checked_add(header_padding))
-            .ok_or_else(|| PodSliceError::CalculationFailure.into())
+            .ok_or(SplPodError::CalculationFailure)
     }
 
     /// Unpack a read-only buffer into a `ListViewReadOnly`
-    pub fn unpack(buf: &[u8]) -> Result<ListViewReadOnly<T, L>, ProgramError> {
+    pub fn unpack(buf: &[u8]) -> Result<ListViewReadOnly<T, L>, SplPodError> {
         let layout = Self::calculate_layout(buf.len())?;
 
         // Slice the buffer to get the length prefix and the data.
@@ -79,7 +78,7 @@ impl<T: Pod, L: PodLength> ListView<T, L> {
         let capacity = data.len();
 
         if (*length).into() > capacity {
-            return Err(PodSliceError::BufferTooSmall.into());
+            return Err(SplPodError::BufferTooSmall);
         }
 
         Ok(ListViewReadOnly {
@@ -90,16 +89,16 @@ impl<T: Pod, L: PodLength> ListView<T, L> {
     }
 
     /// Unpack the mutable buffer into a mutable `ListViewMut`
-    pub fn unpack_mut(buf: &mut [u8]) -> Result<ListViewMut<T, L>, ProgramError> {
+    pub fn unpack_mut(buf: &mut [u8]) -> Result<ListViewMut<T, L>, SplPodError> {
         let view = Self::build_mut_view(buf)?;
         if (*view.length).into() > view.capacity {
-            return Err(PodSliceError::BufferTooSmall.into());
+            return Err(SplPodError::BufferTooSmall);
         }
         Ok(view)
     }
 
     /// Initialize a buffer: sets `length = 0` and returns a mutable `ListViewMut`.
-    pub fn init(buf: &mut [u8]) -> Result<ListViewMut<T, L>, ProgramError> {
+    pub fn init(buf: &mut [u8]) -> Result<ListViewMut<T, L>, SplPodError> {
         let view = Self::build_mut_view(buf)?;
         *view.length = L::try_from(0)?;
         Ok(view)
@@ -107,7 +106,7 @@ impl<T: Pod, L: PodLength> ListView<T, L> {
 
     /// Internal helper to build a mutable view without validation or initialization.
     #[inline]
-    fn build_mut_view(buf: &mut [u8]) -> Result<ListViewMut<T, L>, ProgramError> {
+    fn build_mut_view(buf: &mut [u8]) -> Result<ListViewMut<T, L>, SplPodError> {
         let layout = Self::calculate_layout(buf.len())?;
 
         // Split the buffer to get the length prefix and the data.
@@ -133,13 +132,13 @@ impl<T: Pod, L: PodLength> ListView<T, L> {
 
     /// Calculate the byte ranges for the length and data sections of the buffer
     #[inline]
-    fn calculate_layout(buf_len: usize) -> Result<Layout, ProgramError> {
+    fn calculate_layout(buf_len: usize) -> Result<Layout, SplPodError> {
         let len_field_end = size_of::<L>();
         let header_padding = Self::header_padding()?;
         let data_start = len_field_end.saturating_add(header_padding);
 
         if buf_len < data_start {
-            return Err(PodSliceError::BufferTooSmall.into());
+            return Err(SplPodError::BufferTooSmall);
         }
 
         Ok(Layout {
@@ -153,10 +152,10 @@ impl<T: Pod, L: PodLength> ListView<T, L> {
     /// The goal is to ensure that the data field `T` starts at a memory offset
     /// that is a multiple of its alignment requirement.
     #[inline]
-    fn header_padding() -> Result<usize, ProgramError> {
+    fn header_padding() -> Result<usize, SplPodError> {
         // Enforce that the length prefix type `L` itself does not have alignment requirements
         if align_of::<L>() != 1 {
-            return Err(ProgramError::InvalidArgument);
+            return Err(SplPodError::InvalidLengthTypeAlignment);
         }
 
         let length_size = size_of::<L>();
@@ -240,12 +239,12 @@ mod tests {
         // Case 1: Multiplication overflows.
         // `size_of::<u16>() * usize::MAX` will overflow.
         let err = ListView::<u16, PodU32>::size_of(usize::MAX).unwrap_err();
-        assert_eq!(err, PodSliceError::CalculationFailure.into());
+        assert_eq!(err, SplPodError::CalculationFailure);
 
         // Case 2: Multiplication does not overflow, but subsequent addition does.
         // `size_of::<u8>() * usize::MAX` does not overflow, but adding `size_of<L>` will.
         let err = ListView::<u8, PodU32>::size_of(usize::MAX).unwrap_err();
-        assert_eq!(err, PodSliceError::CalculationFailure.into());
+        assert_eq!(err, SplPodError::CalculationFailure);
     }
 
     #[test]
@@ -262,7 +261,7 @@ mod tests {
             }
         }
         impl TryFrom<usize> for TestPodU32 {
-            type Error = PodSliceError;
+            type Error = SplPodError;
             fn try_from(val: usize) -> Result<Self, Self::Error> {
                 Ok(Self(u32::try_from(val)?))
             }
@@ -271,13 +270,13 @@ mod tests {
         let mut buf = [0u8; 100];
 
         let err_size_of = ListView::<u8, TestPodU32>::size_of(10).unwrap_err();
-        assert_eq!(err_size_of, ProgramError::InvalidArgument);
+        assert_eq!(err_size_of, SplPodError::InvalidLengthTypeAlignment);
 
         let err_unpack = ListView::<u8, TestPodU32>::unpack(&buf).unwrap_err();
-        assert_eq!(err_unpack, ProgramError::InvalidArgument);
+        assert_eq!(err_unpack, SplPodError::InvalidLengthTypeAlignment);
 
         let err_init = ListView::<u8, TestPodU32>::init(&mut buf).unwrap_err();
-        assert_eq!(err_init, ProgramError::InvalidArgument);
+        assert_eq!(err_init, SplPodError::InvalidLengthTypeAlignment);
     }
 
     #[test]
@@ -445,10 +444,10 @@ mod tests {
         let mut buf = vec![0u8; header_size - 1]; // 7 bytes
 
         let err = ListView::<u64, PodU32>::unpack(&buf).unwrap_err();
-        assert_eq!(err, PodSliceError::BufferTooSmall.into());
+        assert_eq!(err, SplPodError::BufferTooSmall);
 
         let err = ListView::<u64, PodU32>::unpack_mut(&mut buf).unwrap_err();
-        assert_eq!(err, PodSliceError::BufferTooSmall.into());
+        assert_eq!(err, SplPodError::BufferTooSmall);
     }
 
     #[test]
@@ -465,10 +464,10 @@ mod tests {
         buf[0..len_size].copy_from_slice(bytemuck::bytes_of(&pod_len));
 
         let err = ListView::<u32, PodU32>::unpack(&buf).unwrap_err();
-        assert_eq!(err, PodSliceError::BufferTooSmall.into());
+        assert_eq!(err, SplPodError::BufferTooSmall);
 
         let err = ListView::<u32, PodU32>::unpack_mut(&mut buf).unwrap_err();
-        assert_eq!(err, PodSliceError::BufferTooSmall.into());
+        assert_eq!(err, SplPodError::BufferTooSmall);
     }
 
     #[test]
@@ -482,20 +481,20 @@ mod tests {
         // bytemuck::try_cast_slice returns an alignment error, which we map to InvalidArgument
 
         let err = ListView::<u32, PodU32>::unpack(&buf).unwrap_err();
-        assert_eq!(err, ProgramError::InvalidArgument);
+        assert_eq!(err, SplPodError::PodCast);
 
         let err = ListView::<u32, PodU32>::unpack_mut(&mut buf).unwrap_err();
-        assert_eq!(err, ProgramError::InvalidArgument);
+        assert_eq!(err, SplPodError::PodCast);
     }
 
     #[test]
     fn test_unpack_empty_buffer() {
         let mut buf = [];
         let err = ListView::<u32, PodU32>::unpack(&buf).unwrap_err();
-        assert_eq!(err, PodSliceError::BufferTooSmall.into());
+        assert_eq!(err, SplPodError::BufferTooSmall);
 
         let err = ListView::<u32, PodU32>::unpack_mut(&mut buf).unwrap_err();
-        assert_eq!(err, PodSliceError::BufferTooSmall.into());
+        assert_eq!(err, SplPodError::BufferTooSmall);
     }
 
     #[test]
@@ -562,12 +561,12 @@ mod tests {
         // Header requires 4 bytes (size_of<PodU32>)
         let mut buf = vec![0u8; 3];
         let err = ListView::<u32, PodU32>::init(&mut buf).unwrap_err();
-        assert_eq!(err, PodSliceError::BufferTooSmall.into());
+        assert_eq!(err, SplPodError::BufferTooSmall);
 
         // With padding, header requires 8 bytes (4 for len, 4 for pad)
         let mut buf_padded = vec![0u8; 7];
         let err_padded = ListView::<u64, PodU32>::init(&mut buf_padded).unwrap_err();
-        assert_eq!(err_padded, PodSliceError::BufferTooSmall.into());
+        assert_eq!(err_padded, SplPodError::BufferTooSmall);
     }
 
     #[test]
