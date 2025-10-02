@@ -279,7 +279,7 @@ pub enum SystemInstruction {
     /// If `lamports > 0`:
     ///   0. `[WRITE, SIGNER]` Funding account
     ///   1. `[WRITE, SIGNER]` New account
-    /// 
+    ///
     /// If `lamports == 0`:
     ///   0. `[WRITE, SIGNER]` New account
     CreateAccountAllowPrefund {
