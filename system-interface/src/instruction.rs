@@ -265,7 +265,7 @@ pub enum SystemInstruction {
     /// Use [`create_account`] for typical account creation.
     /// Use [`create_account_allow_prefund`] when the target account has already been
     /// prefunded and you want to complete the creation process with a single CPI.
-    /// 
+    ///
     /// **Safety considerations**
     /// This instruction can brick wallets; do not pass in a wallet system account as
     /// the new account.
@@ -1721,7 +1721,7 @@ pub fn create_account_allow_prefund(
     owner: &Address,
 ) -> Instruction {
     let mut account_metas = vec![];
-    
+
     // Note that the order is swapped, when compared to `create_account`, since
     // the funding account is optional.
     account_metas.push(AccountMeta::new(*to_pubkey, true));
