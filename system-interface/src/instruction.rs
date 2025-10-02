@@ -276,8 +276,12 @@ pub enum SystemInstruction {
     /// rules, etc.) are identical to [`create_account`].
     ///
     /// # Account references
+    /// If `lamports > 0`:
     ///   0. `[WRITE, SIGNER]` Funding account
     ///   1. `[WRITE, SIGNER]` New account
+    /// 
+    /// If `lamports == 0`:
+    ///   0. `[WRITE, SIGNER]` New account
     CreateAccountAllowPrefund {
         /// Number of lamports to transfer to the new account
         lamports: u64,
@@ -1709,18 +1713,24 @@ pub fn upgrade_nonce_account(nonce_address: Address) -> Instruction {
 }
 
 /// Create a new account without enforcing zero lamports.
+///
+/// Pass `None` for `from_pubkey` when `lamports == 0` (no transfer occurs). When
+/// `lamports > 0`, pass `Some(funding_account)` so the transfer can occur.
 #[cfg(feature = "bincode")]
 pub fn create_account_allow_prefund(
-    from_pubkey: &Address,
+    from_pubkey: &Option<Address>,
     to_pubkey: &Address,
     lamports: u64,
     space: u64,
     owner: &Address,
 ) -> Instruction {
-    let account_metas = vec![
-        AccountMeta::new(*from_pubkey, true),
-        AccountMeta::new(*to_pubkey, true),
-    ];
+    let mut account_metas = vec![];
+    if lamports > 0 {
+        if let Some(from) = from_pubkey {
+            account_metas.push(AccountMeta::new(*from, true));
+        }
+    }
+    account_metas.push(AccountMeta::new(*to_pubkey, true));
     Instruction::new_with_bincode(
         ID,
         &SystemInstruction::CreateAccountAllowPrefund {
