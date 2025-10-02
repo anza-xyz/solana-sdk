@@ -2,11 +2,11 @@
 
 use {
     crate::{
-        error::SplPodError,
         list::{ListView, ListViewMut, ListViewReadOnly},
         primitives::PodU32,
     },
     bytemuck::Pod,
+    solana_program_error::ProgramError,
 };
 
 #[deprecated(
@@ -22,7 +22,7 @@ pub struct PodSlice<'data, T: Pod> {
 #[allow(deprecated)]
 impl<'data, T: Pod> PodSlice<'data, T> {
     /// Unpack the buffer into a slice
-    pub fn unpack<'a>(data: &'a [u8]) -> Result<Self, SplPodError>
+    pub fn unpack<'a>(data: &'a [u8]) -> Result<Self, ProgramError>
     where
         'a: 'data,
     {
@@ -37,7 +37,7 @@ impl<'data, T: Pod> PodSlice<'data, T> {
     }
 
     /// Get the amount of bytes used by `num_items`
-    pub fn size_of(num_items: usize) -> Result<usize, SplPodError> {
+    pub fn size_of(num_items: usize) -> Result<usize, ProgramError> {
         ListView::<T, PodU32>::size_of(num_items)
     }
 }
@@ -55,7 +55,7 @@ pub struct PodSliceMut<'data, T: Pod> {
 #[allow(deprecated)]
 impl<'data, T: Pod> PodSliceMut<'data, T> {
     /// Unpack the mutable buffer into a mutable slice
-    pub fn unpack<'a>(data: &'a mut [u8]) -> Result<Self, SplPodError>
+    pub fn unpack<'a>(data: &'a mut [u8]) -> Result<Self, ProgramError>
     where
         'a: 'data,
     {
@@ -65,7 +65,7 @@ impl<'data, T: Pod> PodSliceMut<'data, T> {
 
     /// Unpack the mutable buffer into a mutable slice, and initialize the
     /// slice to 0-length
-    pub fn init<'a>(data: &'a mut [u8]) -> Result<Self, SplPodError>
+    pub fn init<'a>(data: &'a mut [u8]) -> Result<Self, ProgramError>
     where
         'a: 'data,
     {
@@ -74,7 +74,7 @@ impl<'data, T: Pod> PodSliceMut<'data, T> {
     }
 
     /// Add another item to the slice
-    pub fn push(&mut self, t: T) -> Result<(), SplPodError> {
+    pub fn push(&mut self, t: T) -> Result<(), ProgramError> {
         self.inner.push(t)
     }
 }
@@ -84,7 +84,7 @@ impl<'data, T: Pod> PodSliceMut<'data, T> {
 mod tests {
     use {
         super::*,
-        crate::{bytemuck::pod_slice_to_bytes, error::SplPodError},
+        crate::{bytemuck::pod_slice_to_bytes, error::PodSliceError},
         bytemuck_derive::{Pod, Zeroable},
     };
 
@@ -134,7 +134,7 @@ mod tests {
         let err = PodSlice::<TestStruct>::unpack(&pod_slice_bytes)
             .err()
             .unwrap();
-        assert_eq!(err, SplPodError::PodCast);
+        assert!(matches!(err, ProgramError::InvalidArgument));
     }
 
     #[test]
@@ -171,7 +171,7 @@ mod tests {
         let err = PodSlice::<TestStruct>::unpack(&pod_slice_bytes)
             .err()
             .unwrap();
-        assert_eq!(err, SplPodError::PodCast);
+        assert!(matches!(err, ProgramError::InvalidArgument));
     }
 
     #[test]
@@ -193,8 +193,8 @@ mod tests {
             let err = PodSlice::<TestStruct>::unpack(&data).err().unwrap();
             assert_eq!(
                 err,
-                SplPodError::BufferTooSmall,
-                "Expected an `SplPodError::BufferTooSmall` error"
+                PodSliceError::BufferTooSmall.into(),
+                "Expected an `PodSliceError::BufferTooSmall` error"
             );
         }
     }
@@ -215,7 +215,7 @@ mod tests {
 
         let err = pod_slice
             .push(TestStruct::default())
-            .expect_err("Expected an `SplPodError::BufferTooSmall` error");
-        assert_eq!(err, SplPodError::BufferTooSmall);
+            .expect_err("Expected an `PodSliceError::BufferTooSmall` error");
+        assert_eq!(err, PodSliceError::BufferTooSmall.into());
     }
 }

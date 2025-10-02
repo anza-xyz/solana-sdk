@@ -2,9 +2,10 @@
 
 use {
     crate::{
-        error::SplPodError, list::list_trait::List, pod_length::PodLength, primitives::PodU32,
+        error::PodSliceError, list::list_trait::List, pod_length::PodLength, primitives::PodU32,
     },
     bytemuck::Pod,
+    solana_program_error::ProgramError,
     std::ops::{Deref, DerefMut},
 };
 
@@ -17,10 +18,10 @@ pub struct ListViewMut<'data, T: Pod, L: PodLength = PodU32> {
 
 impl<T: Pod, L: PodLength> ListViewMut<'_, T, L> {
     /// Add another item to the slice
-    pub fn push(&mut self, item: T) -> Result<(), SplPodError> {
+    pub fn push(&mut self, item: T) -> Result<(), ProgramError> {
         let length = (*self.length).into();
         if length >= self.capacity {
-            Err(SplPodError::BufferTooSmall)
+            Err(PodSliceError::BufferTooSmall.into())
         } else {
             self.data[length] = item;
             *self.length = L::try_from(length.saturating_add(1))?;
@@ -30,10 +31,10 @@ impl<T: Pod, L: PodLength> ListViewMut<'_, T, L> {
 
     /// Remove and return the element at `index`, shifting all later
     /// elements one position to the left.
-    pub fn remove(&mut self, index: usize) -> Result<T, SplPodError> {
+    pub fn remove(&mut self, index: usize) -> Result<T, ProgramError> {
         let len = (*self.length).into();
         if index >= len {
-            return Err(SplPodError::IndexOutOfRange);
+            return Err(ProgramError::InvalidArgument);
         }
 
         let removed_item = self.data[index];
@@ -41,7 +42,7 @@ impl<T: Pod, L: PodLength> ListViewMut<'_, T, L> {
         // Move the tail left by one
         let tail_start = index
             .checked_add(1)
-            .ok_or(SplPodError::CalculationFailure)?;
+            .ok_or(ProgramError::ArithmeticOverflow)?;
         self.data.copy_within(tail_start..len, index);
 
         // Store the new length (len - 1)
@@ -146,7 +147,7 @@ mod tests {
         // Try to push beyond capacity
         let item4 = TestStruct::new(4, 40);
         let err = view.push(item4).unwrap_err();
-        assert_eq!(err, SplPodError::BufferTooSmall);
+        assert_eq!(err, PodSliceError::BufferTooSmall.into());
 
         // Ensure state is unchanged
         assert_eq!(view.len(), 3);
@@ -206,12 +207,12 @@ mod tests {
 
         // Try to remove at index == len
         let err = view.remove(2).unwrap_err();
-        assert_eq!(err, SplPodError::IndexOutOfRange);
+        assert_eq!(err, ProgramError::InvalidArgument);
         assert_eq!(view.len(), 2); // Unchanged
 
         // Try to remove at index > len
         let err = view.remove(100).unwrap_err();
-        assert_eq!(err, SplPodError::IndexOutOfRange);
+        assert_eq!(err, ProgramError::InvalidArgument);
         assert_eq!(view.len(), 2); // Unchanged
 
         // Empty the view
@@ -221,7 +222,7 @@ mod tests {
 
         // Try to remove from empty view
         let err = view.remove(0).unwrap_err();
-        assert_eq!(err, SplPodError::IndexOutOfRange);
+        assert_eq!(err, ProgramError::InvalidArgument);
     }
 
     #[test]
@@ -279,10 +280,10 @@ mod tests {
         assert!(view.is_empty());
 
         let err = view.push(TestStruct::new(1, 1)).unwrap_err();
-        assert_eq!(err, SplPodError::BufferTooSmall);
+        assert_eq!(err, PodSliceError::BufferTooSmall.into());
 
         let err = view.remove(0).unwrap_err();
-        assert_eq!(err, SplPodError::IndexOutOfRange);
+        assert_eq!(err, ProgramError::InvalidArgument);
     }
 
     #[test]
