@@ -16,13 +16,14 @@
 //! contain enough lamports to be [rent exempt], or else the creation
 //! instruction will fail.
 //!
+//! [rent exempt]: https://solana.com/docs/core/accounts#rent-exemption
+//! 
 //! The [`create_account`] function requires that the account have zero
 //! lamports. [`create_account_allow_prefund`] allows for the account to have
 //! lamports prefunded; it is only included in this interface under the
-//! `create-account-allow-prefund` feature and requires activation of [SIMD-0312]
-//! (https://github.com/solana-foundation/solana-improvement-documents/pull/312).
-//!
-//! [rent exempt]: https://solana.com/docs/core/accounts#rent-exemption
+//! `create-account-allow-prefund` feature and requires activation of SIMD-0312.
+//! 
+//! [SIMD-0312]: https://github.com/solana-foundation/solana-improvement-documents/pull/312
 //!
 //! The accounts created by the System program can either be user-controlled,
 //! where the secret keys are held outside the blockchain,
