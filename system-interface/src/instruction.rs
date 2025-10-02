@@ -267,8 +267,10 @@ pub enum SystemInstruction {
     /// prefunded and you want to complete the creation process with a single CPI.
     ///
     /// **Safety considerations**
-    /// This instruction can brick wallets; do not pass in a wallet system account as
-    /// the new account.
+    /// As with `allocate` and `assign` when invoked manually, this instruction can brick
+    /// a wallet if used incorrectly; do not pass in a wallet system account as the new
+    /// account. This instruction does not prevent the new account from having more
+    /// lamports than required for rent exemption, and all lamports will become locked.
     ///
     /// # Account references
     /// If `lamports > 0`:
@@ -1709,23 +1711,28 @@ pub fn upgrade_nonce_account(nonce_address: Address) -> Instruction {
 
 /// Create a new account without enforcing zero lamports.
 ///
-/// `None` may be passed for `from_pubkey` when `lamports == 0` (no transfer occurs).
+/// # Required signers
+///
+/// The `to_address` signer must sign the transaction. If present, the
+/// `from_address` signer must also sign the transaction.
+/// 
+/// `None` may be passed for `from_address` when `lamports == 0` (no transfer occurs).
 /// When `lamports > 0`, pass `Some(funding_account)` so the transfer can occur, or
 /// the instruction will fail downstream.
 #[cfg(feature = "bincode")]
 pub fn create_account_allow_prefund(
-    from_pubkey: &Option<Address>,
-    to_pubkey: &Address,
+    from_address: &Option<Address>,
+    to_address: &Address,
     lamports: u64,
     space: u64,
     owner: &Address,
 ) -> Instruction {
     let mut account_metas = vec![];
 
-    // Note that the order is swapped, when compared to `create_account`, since
-    // the funding account is optional.
-    account_metas.push(AccountMeta::new(*to_pubkey, true));
-    if let Some(from) = from_pubkey {
+    // Note that the account order is swapped, when compared to `create_account`,
+    // since the funding account is optional.
+    account_metas.push(AccountMeta::new(*to_address, true));
+    if let Some(from) = from_address {
         account_metas.push(AccountMeta::new(*from, true));
     }
     Instruction::new_with_bincode(
