@@ -254,7 +254,7 @@ pub enum SystemInstruction {
     ///   0. `[WRITE]` Nonce account
     UpgradeNonceAccount,
 
-    /// Create a new account **without enforcing the _lamports&nbsp;==&nbsp;0_ invariant**.
+    /// Create a new account **without enforcing the `lamports==0` invariant**.
     ///
     /// This constructor is identical to [`create_account`] with the exception that it
     /// **does not** check that the destination account (`to_pubkey`) has a zero
@@ -262,25 +262,20 @@ pub enum SystemInstruction {
     /// lamports to prefund an account, then use `create_account_allow_prefund` as a single
     /// CPI to transfer additional lamports, allocate space, and assign ownership.
     ///
-    /// ⚠️  **Safety considerations**
-    ///
-    /// • This instruction still performs the same lamport transfer, space allocation, and
-    ///   ownership assignment as [`create_account`]. The only difference is that it skips
-    ///   the initial zero-balance check.
-    ///
-    /// • Use [`create_account`] for typical account creation.
-    ///   Use [`create_account_allow_prefund`] when the target account has already been
-    ///   prefunded and you need to complete the creation process in a single CPI.
-    ///
-    /// Apart from skipping the zero-balance precondition, the semantics (signers, rent-exemption
-    /// rules, etc.) are identical to [`create_account`].
+    /// Use [`create_account`] for typical account creation.
+    /// Use [`create_account_allow_prefund`] when the target account has already been
+    /// prefunded and you want to complete the creation process with a single CPI.
+    /// 
+    /// **Safety considerations**
+    /// This instruction can brick wallets; do not pass in a wallet system account as
+    /// the new account.
     ///
     /// # Account references
     /// If `lamports > 0`:
-    ///   0. `[WRITE, SIGNER]` Funding account
-    ///   1. `[WRITE, SIGNER]` New account
+    ///   0. `[WRITE, SIGNER]` New account
+    ///   1. `[WRITE, SIGNER]` Funding account
     ///
-    /// If `lamports == 0`:
+    /// If `lamports == 0`, you may omit the funding account:
     ///   0. `[WRITE, SIGNER]` New account
     CreateAccountAllowPrefund {
         /// Number of lamports to transfer to the new account
@@ -1714,8 +1709,9 @@ pub fn upgrade_nonce_account(nonce_address: Address) -> Instruction {
 
 /// Create a new account without enforcing zero lamports.
 ///
-/// Pass `None` for `from_pubkey` when `lamports == 0` (no transfer occurs). When
-/// `lamports > 0`, pass `Some(funding_account)` so the transfer can occur.
+/// `None` may be passed for `from_pubkey` when `lamports == 0` (no transfer occurs).
+/// When `lamports > 0`, pass `Some(funding_account)` so the transfer can occur, or
+/// the instruction will fail downstream.
 #[cfg(feature = "bincode")]
 pub fn create_account_allow_prefund(
     from_pubkey: &Option<Address>,
@@ -1725,12 +1721,13 @@ pub fn create_account_allow_prefund(
     owner: &Address,
 ) -> Instruction {
     let mut account_metas = vec![];
-    if lamports > 0 {
-        if let Some(from) = from_pubkey {
-            account_metas.push(AccountMeta::new(*from, true));
-        }
-    }
+    
+    // Note that the order is swapped, when compared to `create_account`, since
+    // the funding account is optional.
     account_metas.push(AccountMeta::new(*to_pubkey, true));
+    if let Some(from) = from_pubkey {
+        account_metas.push(AccountMeta::new(*from, true));
+    }
     Instruction::new_with_bincode(
         ID,
         &SystemInstruction::CreateAccountAllowPrefund {
