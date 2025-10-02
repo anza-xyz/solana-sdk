@@ -71,8 +71,15 @@ const NONCE_STATE_SIZE: usize = 80;
 
 /// An instruction to the system program.
 #[cfg_attr(
+    all(feature = "frozen-abi", feature = "create-account-allow-prefund"),
+    solana_frozen_abi_macro::frozen_abi(digest = "CBvp4X1gf36kwDqnprAa6MpKckptiAHfXSxFRHFnNRVw")
+)]
+#[cfg_attr(
+    all(feature = "frozen-abi", not(feature = "create-account-allow-prefund")),
+    solana_frozen_abi_macro::frozen_abi(digest = "8M189WgLE19cw1iYDAFLNJKoAUKyqF9jsKYennJi5BfK")
+)]
+#[cfg_attr(
     feature = "frozen-abi",
-    solana_frozen_abi_macro::frozen_abi(digest = "CBvp4X1gf36kwDqnprAa6MpKckptiAHfXSxFRHFnNRVw"),
     derive(
         solana_frozen_abi_macro::AbiExample,
         solana_frozen_abi_macro::AbiEnumVisitor
@@ -254,6 +261,7 @@ pub enum SystemInstruction {
     ///   0. `[WRITE]` Nonce account
     UpgradeNonceAccount,
 
+    #[cfg(feature = "create-account-allow-prefund")]
     /// Create a new account **without enforcing the `lamports==0` invariant**.
     ///
     /// This constructor is identical to [`create_account`] with the exception that it
@@ -1719,7 +1727,7 @@ pub fn upgrade_nonce_account(nonce_address: Address) -> Instruction {
 /// `None` may be passed for `from_address` when `lamports == 0` (no transfer occurs).
 /// When `lamports > 0`, pass `Some(funding_account)` so the transfer can occur, or
 /// the instruction will fail downstream.
-#[cfg(feature = "bincode")]
+#[cfg(all(feature = "bincode", feature = "create-account-allow-prefund"))]
 pub fn create_account_allow_prefund(
     from_address: &Option<Address>,
     to_address: &Address,
@@ -1796,5 +1804,61 @@ mod tests {
         let addresss: Vec<_> = ix.accounts.iter().map(|am| am.pubkey).collect();
         assert!(addresss.contains(&from_address));
         assert!(addresss.contains(&nonce_address));
+    }
+
+    #[cfg(feature = "create-account-allow-prefund")]
+    #[test]
+    fn test_create_account_allow_prefund_with_from_address() {
+        let from_address = Address::new_unique();
+        let to_address = Address::new_unique();
+
+        let instr = create_account_allow_prefund(
+            &Some(from_address),
+            &to_address,
+            1, // lamports > 0 triggers transfer
+            8, // arbitrary space
+            &crate::program::ID,
+        );
+
+        // Program id should be system program id
+        assert_eq!(instr.program_id, crate::program::ID);
+
+        // Expect two account metas: [to, from]
+        assert_eq!(instr.accounts.len(), 2);
+
+        let to_meta = &instr.accounts[0];
+        assert_eq!(to_meta.pubkey, to_address);
+        assert!(to_meta.is_signer);
+        assert!(to_meta.is_writable);
+
+        let from_meta = &instr.accounts[1];
+        assert_eq!(from_meta.pubkey, from_address);
+        assert!(from_meta.is_signer);
+        assert!(from_meta.is_writable);
+    }
+
+    #[cfg(feature = "create-account-allow-prefund")]
+    #[test]
+    fn test_create_account_allow_prefund_without_from_address() {
+        let to_address = Address::new_unique();
+
+        let instr = create_account_allow_prefund(
+            &None, // no funding account
+            &to_address,
+            0, // no lamports transferred
+            8, // arbitrary space
+            &crate::program::ID,
+        );
+
+        // Program id should be system program id
+        assert_eq!(instr.program_id, crate::program::ID);
+
+        // Expect a single account meta: [to]
+        assert_eq!(instr.accounts.len(), 1);
+
+        let to_meta = &instr.accounts[0];
+        assert_eq!(to_meta.pubkey, to_address);
+        assert!(to_meta.is_signer);
+        assert!(to_meta.is_writable);
     }
 }
