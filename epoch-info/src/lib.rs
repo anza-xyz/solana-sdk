@@ -1,8 +1,11 @@
+#![no_std]
+
 //! Information about the current epoch.
 //!
 //! As returned by the [`getEpochInfo`] RPC method.
 //!
 //! [`getEpochInfo`]: https://solana.com/docs/rpc/http/getepochinfo
+#![cfg_attr(docsrs, feature(doc_auto_cfg))]
 
 #[cfg_attr(
     feature = "serde",

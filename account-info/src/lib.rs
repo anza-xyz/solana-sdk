@@ -1,9 +1,9 @@
 //! Account information.
 #![cfg_attr(docsrs, feature(doc_auto_cfg))]
 use {
+    solana_address::Address,
     solana_program_error::ProgramError,
     solana_program_memory::sol_memset,
-    solana_pubkey::Pubkey,
     std::{
         cell::{Ref, RefCell, RefMut},
         fmt,
@@ -20,14 +20,14 @@ pub const MAX_PERMITTED_DATA_INCREASE: usize = 1_024 * 10;
 #[derive(Clone)]
 #[repr(C)]
 pub struct AccountInfo<'a> {
-    /// Public key of the account
-    pub key: &'a Pubkey,
+    /// Address of the account
+    pub key: &'a Address,
     /// The lamports in the account.  Modifiable by programs.
     pub lamports: Rc<RefCell<&'a mut u64>>,
     /// The data held in this account.  Modifiable by programs.
     pub data: Rc<RefCell<&'a mut [u8]>>,
     /// Program that owns this account
-    pub owner: &'a Pubkey,
+    pub owner: &'a Address,
     /// Formerly, the epoch at which this account will next owe rent. A field
     /// must remain because the runtime depends on the exact layout of this
     /// struct.
@@ -62,7 +62,7 @@ impl fmt::Debug for AccountInfo<'_> {
 }
 
 impl<'a> AccountInfo<'a> {
-    pub fn signer_key(&self) -> Option<&Pubkey> {
+    pub fn signer_key(&self) -> Option<&Address> {
         if self.is_signer {
             Some(self.key)
         } else {
@@ -70,7 +70,7 @@ impl<'a> AccountInfo<'a> {
         }
     }
 
-    pub fn unsigned_key(&self) -> &Pubkey {
+    pub fn unsigned_key(&self) -> &Address {
         self.key
     }
 
@@ -182,23 +182,23 @@ impl<'a> AccountInfo<'a> {
     }
 
     #[allow(invalid_reference_casting)]
-    pub fn assign(&self, new_owner: &Pubkey) {
+    pub fn assign(&self, new_owner: &Address) {
         // Set the non-mut owner field
         unsafe {
             std::ptr::write_volatile(
-                self.owner as *const Pubkey as *mut [u8; 32],
+                self.owner as *const Address as *mut [u8; 32],
                 new_owner.to_bytes(),
             );
         }
     }
 
     pub fn new(
-        key: &'a Pubkey,
+        key: &'a Address,
         is_signer: bool,
         is_writable: bool,
         lamports: &'a mut u64,
         data: &'a mut [u8],
-        owner: &'a Pubkey,
+        owner: &'a Address,
         executable: bool,
     ) -> Self {
         #[allow(deprecated)]
@@ -241,11 +241,11 @@ impl<'a, T: IntoAccountInfo<'a>> From<T> for AccountInfo<'a> {
 /// Provides information required to construct an `AccountInfo`, used in
 /// conversion implementations.
 pub trait Account {
-    fn get(&mut self) -> (&mut u64, &mut [u8], &Pubkey, bool);
+    fn get(&mut self) -> (&mut u64, &mut [u8], &Address, bool);
 }
 
-/// Convert (&'a Pubkey, &'a mut T) where T: Account into an `AccountInfo`
-impl<'a, T: Account> IntoAccountInfo<'a> for (&'a Pubkey, &'a mut T) {
+/// Convert (&'a Address, &'a mut T) where T: Account into an `AccountInfo`
+impl<'a, T: Account> IntoAccountInfo<'a> for (&'a Address, &'a mut T) {
     fn into_account_info(self) -> AccountInfo<'a> {
         let (key, account) = self;
         let (lamports, data, owner, executable) = account.get();
@@ -253,9 +253,9 @@ impl<'a, T: Account> IntoAccountInfo<'a> for (&'a Pubkey, &'a mut T) {
     }
 }
 
-/// Convert (&'a Pubkey, bool, &'a mut T)  where T: Account into an
+/// Convert (&'a Address, bool, &'a mut T)  where T: Account into an
 /// `AccountInfo`.
-impl<'a, T: Account> IntoAccountInfo<'a> for (&'a Pubkey, bool, &'a mut T) {
+impl<'a, T: Account> IntoAccountInfo<'a> for (&'a Address, bool, &'a mut T) {
     fn into_account_info(self) -> AccountInfo<'a> {
         let (key, is_signer, account) = self;
         let (lamports, data, owner, executable) = account.get();
@@ -263,8 +263,8 @@ impl<'a, T: Account> IntoAccountInfo<'a> for (&'a Pubkey, bool, &'a mut T) {
     }
 }
 
-/// Convert &'a mut (Pubkey, T) where T: Account into an `AccountInfo`.
-impl<'a, T: Account> IntoAccountInfo<'a> for &'a mut (Pubkey, T) {
+/// Convert &'a mut (Address, T) where T: Account into an `AccountInfo`.
+impl<'a, T: Account> IntoAccountInfo<'a> for &'a mut (Address, T) {
     fn into_account_info(self) -> AccountInfo<'a> {
         let (ref key, account) = self;
         let (lamports, data, owner, executable) = account.get();
@@ -288,11 +288,11 @@ impl<'a, T: Account> IntoAccountInfo<'a> for &'a mut (Pubkey, T) {
 /// ```
 /// use solana_program_error::ProgramResult;
 /// use solana_account_info::{AccountInfo, next_account_info};
-/// use solana_pubkey::Pubkey;
+/// use solana_address::Address;
 /// # use solana_program_error::ProgramError;
 ///
 /// pub fn process_instruction(
-///     program_id: &Pubkey,
+///     program_id: &Address,
 ///     accounts: &[AccountInfo],
 ///     instruction_data: &[u8],
 /// ) -> ProgramResult {
@@ -304,13 +304,13 @@ impl<'a, T: Account> IntoAccountInfo<'a> for &'a mut (Pubkey, T) {
 ///
 ///     Ok(())
 /// }
-/// # let p = Pubkey::new_unique();
+/// # let p = Address::new_unique();
 /// # let l = &mut 0;
 /// # let d = &mut [0u8];
 /// # let a = AccountInfo::new(&p, false, false, l, d, &p, false);
 /// # let accounts = &[a.clone(), a];
 /// # process_instruction(
-/// #    &Pubkey::new_unique(),
+/// #    &Address::new_unique(),
 /// #    accounts,
 /// #    &[],
 /// # )?;
@@ -337,11 +337,11 @@ pub fn next_account_info<'a, 'b, I: Iterator<Item = &'a AccountInfo<'b>>>(
 /// ```
 /// use solana_program_error::ProgramResult;
 /// use solana_account_info::{AccountInfo, next_account_info, next_account_infos};
-/// use solana_pubkey::Pubkey;
+/// use solana_address::Address;
 /// # use solana_program_error::ProgramError;
 ///
 /// pub fn process_instruction(
-///     program_id: &Pubkey,
+///     program_id: &Address,
 ///     accounts: &[AccountInfo],
 ///     instruction_data: &[u8],
 /// ) -> ProgramResult {
@@ -354,13 +354,13 @@ pub fn next_account_info<'a, 'b, I: Iterator<Item = &'a AccountInfo<'b>>>(
 ///
 ///     Ok(())
 /// }
-/// # let p = Pubkey::new_unique();
+/// # let p = Address::new_unique();
 /// # let l = &mut 0;
 /// # let d = &mut [0u8];
 /// # let a = AccountInfo::new(&p, false, false, l, d, &p, false);
 /// # let accounts = &[a.clone(), a.clone(), a.clone(), a.clone(), a];
 /// # process_instruction(
-/// #    &Pubkey::new_unique(),
+/// #    &Address::new_unique(),
 /// #    accounts,
 /// #    &[],
 /// # )?;
@@ -390,16 +390,16 @@ impl<'a> AsRef<AccountInfo<'a>> for AccountInfo<'a> {
 pub fn check_type_assumptions() {
     use std::mem::offset_of;
 
-    let key = Pubkey::new_from_array([10; 32]);
+    let key = Address::new_from_array([10; 32]);
     let mut lamports = 31;
     let mut data = vec![1, 2, 3, 4, 5];
-    let owner = Pubkey::new_from_array([22; 32]);
+    let owner = Address::new_from_array([22; 32]);
     let account_info = AccountInfo::new(&key, true, false, &mut lamports, &mut data, &owner, true);
     let account_info_addr = &account_info as *const _ as u64;
 
     // key
     assert_eq!(offset_of!(AccountInfo, key), 0);
-    let key_ptr = (account_info_addr) as *const &Pubkey;
+    let key_ptr = (account_info_addr) as *const &Address;
     unsafe {
         assert_eq!(**key_ptr, key);
     }
@@ -420,7 +420,7 @@ pub fn check_type_assumptions() {
 
     // owner
     assert_eq!(offset_of!(AccountInfo, owner), 24);
-    let owner_ptr = (account_info_addr + 24) as *const &Pubkey;
+    let owner_ptr = (account_info_addr + 24) as *const &Address;
     unsafe {
         assert_eq!(**owner_ptr, owner);
     }
@@ -466,11 +466,11 @@ mod tests {
 
     #[test]
     fn test_next_account_infos() {
-        let k1 = Pubkey::new_unique();
-        let k2 = Pubkey::new_unique();
-        let k3 = Pubkey::new_unique();
-        let k4 = Pubkey::new_unique();
-        let k5 = Pubkey::new_unique();
+        let k1 = Address::new_unique();
+        let k2 = Address::new_unique();
+        let k3 = Address::new_unique();
+        let k4 = Address::new_unique();
+        let k5 = Address::new_unique();
         let l1 = &mut 0;
         let l2 = &mut 0;
         let l3 = &mut 0;
@@ -503,7 +503,7 @@ mod tests {
 
     #[test]
     fn test_account_info_as_ref() {
-        let k = Pubkey::new_unique();
+        let k = Address::new_unique();
         let l = &mut 0;
         let d = &mut [0u8];
         let info = AccountInfo::new(&k, false, false, l, d, &k, false);
@@ -512,7 +512,7 @@ mod tests {
 
     #[test]
     fn test_account_info_debug_data() {
-        let key = Pubkey::new_unique();
+        let key = Address::new_unique();
         let mut lamports = 42;
         let mut data = vec![5; 80];
         let data_str = format!("{:?}", Hex(&data[..MAX_DEBUG_ACCOUNT_DATA]));

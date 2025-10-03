@@ -28,6 +28,9 @@ inputs:
   miri:
     description: Install Miri if `true`. Defaults to `false`.
     required: false
+  rust-src:
+    description: Install rust-src if `true`. Defaults to `false`.
+    required: false
   llvm-tools-preview:
     description: Install llvm-tools-preview if `true`. Defaults to `false`.
     required: false
@@ -117,6 +120,13 @@ runs:
       with:
         toolchain: ${{ env.RUST_NIGHTLY }}
         components: llvm-tools-preview
+
+    - name: Install rust-src
+      if: ${{ inputs.rust-src == 'true' }}
+      uses: dtolnay/rust-toolchain@master
+      with:
+        toolchain: ${{ env.RUST_NIGHTLY }}
+        components: rust-src
 
     - name: Install Agave build dependencies
       if: ${{ inputs.agave == 'true' }}

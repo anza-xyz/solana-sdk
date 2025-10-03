@@ -1,6 +1,7 @@
 //! Calculation of [shred] versions.
 //!
 //! [shred]: https://solana.com/docs/terminology#shred
+#![cfg_attr(docsrs, feature(doc_auto_cfg))]
 
 use {solana_hard_forks::HardForks, solana_hash::Hash, solana_sha256_hasher::hashv};
 

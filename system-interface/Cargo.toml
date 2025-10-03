@@ -25,22 +25,22 @@ frozen-abi = [
     "dep:solana-frozen-abi-macro",
     "dep:solana-logger",
     "serde",
-    "solana-pubkey/frozen-abi",
-    "solana-pubkey/std",
+    "solana-address/frozen-abi",
+    "solana-address/std",
 ]
-serde = ["dep:serde", "dep:serde_derive", "solana-pubkey/serde"]
+serde = ["dep:serde", "dep:serde_derive", "solana-address/serde"]
 
 [dependencies]
 num-traits = { workspace = true }
 serde = { workspace = true, optional = true }
 serde_derive = { workspace = true, optional = true }
+solana-address = { workspace = true, features = ["decode"] }
 solana-frozen-abi = { workspace = true, features = ["frozen-abi"], optional = true }
 solana-frozen-abi-macro = { workspace = true, features = ["frozen-abi"], optional = true }
 solana-instruction = { workspace = true, features = ["bincode", "std"], optional = true }
 solana-logger = { workspace = true, optional = true }
 solana-msg = { workspace = true }
 solana-program-error = { workspace = true }
-solana-pubkey = { workspace = true, default-features = false }
 
 [dev-dependencies]
 anyhow = { workspace = true }
@@ -51,7 +51,6 @@ solana-example-mocks = { path = "../example-mocks" }
 solana-nonce = { workspace = true }
 solana-program-entrypoint = { workspace = true }
 solana-program-error = { workspace = true, features = ["borsh"] }
-solana-pubkey = { workspace = true, features = ["std"] }
 solana-system-interface = { path = ".", features = ["bincode"] }
 solana-sysvar = { workspace = true }
 solana-sysvar-id = { workspace = true }

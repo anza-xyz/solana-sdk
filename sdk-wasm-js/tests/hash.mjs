@@ -78,4 +78,22 @@ describe("Hash", function () {
       ])
     );
   });
+
+  it("input length validation", () => {
+    expect(() => {
+      new Hash(new Uint8Array(HASH_BYTES + 1));
+    }).to.throw(/Invalid Uint8Array length/);
+
+    expect(() => {
+      new Hash(new Uint8Array(HASH_BYTES - 1));
+    }).to.throw(/Invalid Uint8Array length/);
+
+    expect(() => {
+      new Hash(new Array(HASH_BYTES + 1).fill(0));
+    }).to.throw(/Invalid Array length/);
+
+    expect(() => {
+      new Hash(new Array(HASH_BYTES - 1).fill(0));
+    }).to.throw(/Invalid Array length/);
+  });
 });

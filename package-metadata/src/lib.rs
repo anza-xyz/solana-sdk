@@ -1,3 +1,4 @@
+#![cfg_attr(docsrs, feature(doc_auto_cfg))]
 /// Macro for accessing data from the `package.metadata` section of the Cargo manifest
 ///
 /// # Arguments

@@ -54,6 +54,7 @@ solana-address-lookup-table-interface = { path = ".", features = [
     "dev-context-only-utils",
 ] }
 solana-hash = { workspace = true }
+solana-pubkey = { workspace = true, features = ["std"] }
 
 [lints]
 workspace = true

@@ -20,4 +20,4 @@ solana-sdk-ids = { workspace = true }
 
 [dev-dependencies]
 solana-fee-calculator = { workspace = true }
-solana-pubkey = { workspace = true }
+solana-pubkey = { workspace = true, features = ["std"] }

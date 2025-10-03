@@ -1,7 +1,8 @@
 //! Wrapper over `solana_hash::Hash` with wasm-bindgen
 use {
     js_sys::{Array, Uint8Array},
-    std::{boxed::Box, format, string::String, vec},
+    solana_hash::HASH_BYTES,
+    std::{boxed::Box, format, string::String},
     wasm_bindgen::{prelude::*, JsCast},
 };
 
@@ -27,28 +28,41 @@ impl Hash {
                 .map(Into::into)
                 .map_err(|x| JsValue::from(x.to_string()))
         } else if let Some(uint8_array) = value.dyn_ref::<Uint8Array>() {
-            <[u8; solana_hash::HASH_BYTES]>::try_from(uint8_array.to_vec())
-                .map(solana_hash::Hash::new_from_array)
-                .map(Into::into)
-                .map_err(|err| format!("Invalid Hash value: {err:?}").into())
+            if uint8_array.length() as usize != HASH_BYTES {
+                return Err(format!(
+                    "Invalid Uint8Array length: expected {}, got {}",
+                    HASH_BYTES,
+                    uint8_array.length()
+                )
+                .into());
+            }
+            let mut bytes = [0u8; HASH_BYTES];
+            uint8_array.copy_to(&mut bytes);
+            Ok(solana_hash::Hash::new_from_array(bytes).into())
         } else if let Some(array) = value.dyn_ref::<Array>() {
-            let mut bytes = vec![];
+            if array.length() as usize != HASH_BYTES {
+                return Err(format!(
+                    "Invalid Array length: expected {}, got {}",
+                    HASH_BYTES,
+                    array.length()
+                )
+                .into());
+            }
+
+            let mut bytes = [0u8; HASH_BYTES];
             let iterator = js_sys::try_iter(&array.values())?.expect("array to be iterable");
-            for x in iterator {
+            for (i, x) in iterator.enumerate() {
                 let x = x?;
 
                 if let Some(n) = x.as_f64() {
                     if n >= 0. && n <= 255. {
-                        bytes.push(n as u8);
+                        bytes[i] = n as u8;
                         continue;
                     }
                 }
                 return Err(format!("Invalid array argument: {:?}", x).into());
             }
-            <[u8; solana_hash::HASH_BYTES]>::try_from(bytes)
-                .map(solana_hash::Hash::new_from_array)
-                .map(Into::into)
-                .map_err(|err| format!("Invalid Hash value: {err:?}").into())
+            Ok(solana_hash::Hash::new_from_array(bytes).into())
         } else if value.is_undefined() {
             Ok(solana_hash::Hash::default().into())
         } else {

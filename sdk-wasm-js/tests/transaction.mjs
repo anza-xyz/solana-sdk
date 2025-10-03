@@ -10,6 +10,8 @@ import {
 } from "crate";
 solana_program_init();
 
+const MAX_TRANSACTION_SIZE = 1232;
+
 describe("Transaction", function () {
   it("Instruction", () => {
     const payer = Keypair.fromBytes(
@@ -56,5 +58,12 @@ describe("Transaction", function () {
     expect(Buffer.from(transaction.toBytes()).toString("base64")).to.equal(
       "AoZrVzP93eyp3vbl6CU9XQjQfm4Xp/7nSiBlsX/kJmfTQZsGTOrFnt6EUqHVte97fGZ71UAXDfLbR5B31OtRdgdab57BOU8mq0ztMutZAVBPtGJHVly8RPz4TYa+OFU7EIk3Wrv4WUMCb/NR+LxELLH+tQt5SrkvB7rCE2DniM8JAgABBPwcAnjq1ItvYAiozCJIx811pVIzIF3TJO/1i9pj08+xwUDHXd5TrOB0zTYmv7KVR0GELkd+UT/+FWVaNEPMgMcAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAxJrndgN4IFTxep3s6kO0ROug7bEsbx0xxuDkqEvwUusBAwIBAgwCAAAAewAAAAAAAAA="
     );
+  });
+
+  it("input length validation", () => {
+    const oversizedTxBytes = new Uint8Array(MAX_TRANSACTION_SIZE + 1);
+    expect(() => {
+      Transaction.fromBytes(oversizedTxBytes);
+    }).to.throw(/Transaction size too large/);
   });
 });

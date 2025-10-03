@@ -4,6 +4,8 @@ solana_program_init();
 
 // TODO: wasm_bindgen doesn't currently support exporting constants
 const MAX_SEED_LEN = 32;
+const ADDRESS_BYTES = 32;
+const MAX_SEEDS = 16;
 
 describe("Address", function () {
   it("invalid", () => {
@@ -181,5 +183,42 @@ describe("Address", function () {
         )
       )
     ).to.be.true;
+  });
+
+    it("input length validation", () => {
+    expect(() => {
+      new Address(new Uint8Array(ADDRESS_BYTES + 1));
+    }).to.throw(/Invalid Uint8Array length/);
+
+    expect(() => {
+        new Address(new Uint8Array(ADDRESS_BYTES - 1));
+    }).to.throw(/Invalid Uint8Array length/);
+
+    expect(() => {
+      new Address(new Array(ADDRESS_BYTES + 1).fill(0));
+    }).to.throw(/Invalid Array length/);
+
+    expect(() => {
+        new Address(new Array(ADDRESS_BYTES - 1).fill(0));
+    }).to.throw(/Invalid Array length/);
+
+    const programId = new Address("11111111111111111111111111111111");
+
+    const tooManySeeds = new Array(MAX_SEEDS + 1).fill(new Uint8Array(1));
+    expect(() => {
+      Address.createProgramAddress(tooManySeeds, programId);
+    }).to.throw(/Too many seeds/);
+
+    expect(() => {
+      Address.findProgramAddress(tooManySeeds, programId);
+    }).to.throw(/Too many seeds/);
+
+    expect(() => {
+      Address.createProgramAddress([Buffer.alloc(MAX_SEED_LEN + 1)], programId);
+    }).to.throw(/Seed 0 too long/);
+
+    expect(() => {
+      Address.findProgramAddress([Buffer.alloc(MAX_SEED_LEN + 1)], programId);
+    }).to.throw(/Seed 0 too long/);
   });
 });

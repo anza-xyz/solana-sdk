@@ -1,3 +1,4 @@
+#![cfg_attr(docsrs, feature(doc_auto_cfg))]
 #[repr(C)]
 pub struct BigModExpParams {
     pub base: *const u8,

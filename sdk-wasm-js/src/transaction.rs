@@ -4,8 +4,12 @@ use {
     crate::{
         address::Address, hash::Hash, instruction::Instruction, keypair::Keypair, message::Message,
     },
+    js_sys::Uint8Array,
+    solana_packet::PACKET_DATA_SIZE,
     wasm_bindgen::prelude::{wasm_bindgen, JsValue},
 };
+
+const MAX_TRANSACTION_SIZE: usize = PACKET_DATA_SIZE;
 
 /// wasm-bindgen version of the Transaction struct.
 /// This duplication is required until https://github.com/rustwasm/wasm-bindgen/issues/3671
@@ -66,8 +70,19 @@ impl Transaction {
         bincode::serialize(&self.inner).unwrap().into()
     }
 
-    pub fn fromBytes(bytes: &[u8]) -> Result<Self, JsValue> {
-        bincode::deserialize::<solana_transaction::Transaction>(bytes)
+    pub fn fromBytes(uint8_array: Uint8Array) -> Result<Self, JsValue> {
+        if uint8_array.length() as usize > MAX_TRANSACTION_SIZE {
+            return Err(std::format!(
+                "Transaction size too large: {} > {}",
+                uint8_array.length(),
+                MAX_TRANSACTION_SIZE
+            )
+            .into());
+        }
+
+        let bytes_vec = uint8_array.to_vec();
+
+        bincode::deserialize::<solana_transaction::Transaction>(&bytes_vec)
             .map(Into::into)
             .map_err(|x| std::string::ToString::to_string(&x).into())
     }

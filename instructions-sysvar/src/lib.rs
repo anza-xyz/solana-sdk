@@ -94,13 +94,13 @@ bitflags! {
 // Instruction layout:
 //   [0..2]                      num_accounts (u16)
 //   [2..2 + 33*A]               accounts ([AccountMeta; A])
-//   [2 + 33*A..34 + 33*A]       program_id (Pubkey)
+//   [2 + 33*A..34 + 33*A]       program_id (Address)
 //   [34 + 33*A..36 + 33*A]      data_len (u16)
 //   [36 + 33*A..36 + 33*A + D]  data (&[u8])
 //
 // AccountMeta layout:
 //   [0..1]                      meta (u8: bit 0: is_signer, bit 1: is_writable)
-//   [1..33]                     pubkey (Pubkey)
+//   [1..33]                     pubkey (Address)
 //
 // Where:
 // - N = num_instructions
@@ -298,9 +298,9 @@ mod tests {
     use {
         super::*,
         solana_account_info::AccountInfo,
+        solana_address::Address,
         solana_instruction::{AccountMeta, BorrowedAccountMeta, BorrowedInstruction, Instruction},
         solana_program_error::ProgramError,
-        solana_pubkey::Pubkey,
         solana_sanitize::SanitizeError,
         solana_sdk_ids::sysvar::instructions::id,
     };
@@ -324,8 +324,8 @@ mod tests {
 
     #[derive(Copy, Clone)]
     struct MakeInstructionParams {
-        program_id: Pubkey,
-        account_key: Pubkey,
+        program_id: Address,
+        account_key: Address,
         is_signer: bool,
         is_writable: bool,
     }
@@ -368,10 +368,10 @@ mod tests {
 
     #[test]
     fn test_load_instruction_at_checked() {
-        let program_id0 = Pubkey::new_unique();
-        let program_id1 = Pubkey::new_unique();
-        let account_key0 = Pubkey::new_unique();
-        let account_key1 = Pubkey::new_unique();
+        let program_id0 = Address::new_unique();
+        let program_id1 = Address::new_unique();
+        let account_key0 = Address::new_unique();
+        let account_key1 = Address::new_unique();
         let params0 = MakeInstructionParams {
             program_id: program_id0,
             account_key: account_key0,
@@ -408,7 +408,7 @@ mod tests {
             load_instruction_at_checked(2, &account_info)
         );
 
-        let key = Pubkey::new_unique();
+        let key = Address::new_unique();
         account_info.key = &key;
         assert_eq!(
             Err(ProgramError::UnsupportedSysvar),
@@ -418,10 +418,10 @@ mod tests {
 
     #[test]
     fn test_load_current_index_checked() {
-        let program_id0 = Pubkey::new_unique();
-        let program_id1 = Pubkey::new_unique();
-        let account_key0 = Pubkey::new_unique();
-        let account_key1 = Pubkey::new_unique();
+        let program_id0 = Address::new_unique();
+        let program_id1 = Address::new_unique();
+        let account_key0 = Address::new_unique();
+        let account_key1 = Address::new_unique();
         let params0 = MakeInstructionParams {
             program_id: program_id0,
             account_key: account_key0,
@@ -454,7 +454,7 @@ mod tests {
         }
         assert_eq!(0, load_current_index_checked(&account_info).unwrap());
 
-        let key = Pubkey::new_unique();
+        let key = Address::new_unique();
         account_info.key = &key;
         assert_eq!(
             Err(ProgramError::UnsupportedSysvar),
@@ -464,12 +464,12 @@ mod tests {
 
     #[test]
     fn test_get_instruction_relative() {
-        let program_id0 = Pubkey::new_unique();
-        let program_id1 = Pubkey::new_unique();
-        let program_id2 = Pubkey::new_unique();
-        let account_key0 = Pubkey::new_unique();
-        let account_key1 = Pubkey::new_unique();
-        let account_key2 = Pubkey::new_unique();
+        let program_id0 = Address::new_unique();
+        let program_id1 = Address::new_unique();
+        let program_id2 = Address::new_unique();
+        let account_key0 = Address::new_unique();
+        let account_key1 = Address::new_unique();
+        let account_key2 = Address::new_unique();
         let params0 = MakeInstructionParams {
             program_id: program_id0,
             account_key: account_key0,
@@ -554,7 +554,7 @@ mod tests {
             get_instruction_relative(3, &account_info)
         );
 
-        let key = Pubkey::new_unique();
+        let key = Address::new_unique();
         account_info.key = &key;
         assert_eq!(
             Err(ProgramError::UnsupportedSysvar),
@@ -564,12 +564,12 @@ mod tests {
 
     #[test]
     fn test_serialize_instructions() {
-        let program_id0 = Pubkey::new_unique();
-        let program_id1 = Pubkey::new_unique();
-        let id0 = Pubkey::new_unique();
-        let id1 = Pubkey::new_unique();
-        let id2 = Pubkey::new_unique();
-        let id3 = Pubkey::new_unique();
+        let program_id0 = Address::new_unique();
+        let program_id1 = Address::new_unique();
+        let id0 = Address::new_unique();
+        let id1 = Address::new_unique();
+        let id2 = Address::new_unique();
+        let id3 = Address::new_unique();
         let params = vec![
             MakeInstructionParams {
                 program_id: program_id0,
@@ -614,9 +614,9 @@ mod tests {
 
     #[test]
     fn test_decompile_instructions_out_of_bounds() {
-        let program_id0 = Pubkey::new_unique();
-        let id0 = Pubkey::new_unique();
-        let id1 = Pubkey::new_unique();
+        let program_id0 = Address::new_unique();
+        let id0 = Address::new_unique();
+        let id1 = Address::new_unique();
         let params = vec![
             MakeInstructionParams {
                 program_id: program_id0,

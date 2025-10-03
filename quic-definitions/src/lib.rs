@@ -1,4 +1,5 @@
 //! Definitions related to Solana over QUIC.
+#![cfg_attr(docsrs, feature(doc_auto_cfg))]
 use {solana_keypair::Keypair, std::time::Duration};
 
 pub const QUIC_PORT_OFFSET: u16 = 6;

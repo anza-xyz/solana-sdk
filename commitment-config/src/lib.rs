@@ -1,5 +1,6 @@
 //! Definitions of commitment levels.
-
+#![no_std]
+#![cfg_attr(docsrs, feature(doc_auto_cfg))]
 use core::{fmt, str::FromStr};
 
 #[cfg_attr(
@@ -110,8 +111,8 @@ impl FromStr for CommitmentLevel {
     }
 }
 
-impl std::fmt::Display for CommitmentLevel {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+impl fmt::Display for CommitmentLevel {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let s = match self {
             CommitmentLevel::Processed => "processed",
             CommitmentLevel::Confirmed => "confirmed",

@@ -77,7 +77,7 @@ solana-instruction-error = { workspace = true, features = ["num-traits"] }
 solana-instructions-sysvar = { workspace = true }
 solana-keccak-hasher = { workspace = true, features = ["sha3"] }
 solana-last-restart-slot = { workspace = true, features = ["serde", "sysvar"] }
-solana-msg = { workspace = true }
+solana-msg = { workspace = true, features = ["std"] }
 solana-native-token = { workspace = true }
 solana-program-entrypoint = { workspace = true }
 solana-program-error = { workspace = true, features = ["serde"] }

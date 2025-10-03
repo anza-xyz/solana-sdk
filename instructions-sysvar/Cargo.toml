@@ -32,5 +32,8 @@ solana-sysvar-id = { workspace = true }
 [target.'cfg(not(target_os = "solana"))'.dependencies]
 bitflags = { workspace = true }
 
+[dev-dependencies]
+solana-address = { workspace = true, features = ["atomic"] }
+
 [lints]
 workspace = true
