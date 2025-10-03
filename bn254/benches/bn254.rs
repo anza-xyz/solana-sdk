@@ -66,7 +66,7 @@ fn bench_addition_le(c: &mut Criterion) {
     let p_bytes = convert_endianness::<32, 64>(&ADD_P_BYTES_BE);
     let q_bytes = convert_endianness::<32, 64>(&ADD_Q_BYTES_BE);
 
-    let input_bytes = [&p_bytes[..], &q_bytes[..]].concat();
+    let input_bytes = [&p_bytes[..], &q_bytes[..]].concat().try_into().unwrap();
 
     c.bench_function("bn128 addition le", |b| {
         b.iter(|| alt_bn128_g1_addition_le(&input_bytes))
@@ -88,7 +88,10 @@ fn bench_multiplication_le(c: &mut Criterion) {
     let point_bytes = convert_endianness::<32, 64>(&MUL_POINT_BYTES_BE);
     let scalar_bytes = convert_endianness::<32, 32>(&MUL_SCALAR_BYTES_BE);
 
-    let input_bytes = [&point_bytes[..], &scalar_bytes[..]].concat();
+    let input_bytes = [&point_bytes[..], &scalar_bytes[..]]
+        .concat()
+        .try_into()
+        .unwrap();
 
     c.bench_function("bn128 multiplication le", |b| {
         b.iter(|| alt_bn128_g1_multiplication_le(&input_bytes))

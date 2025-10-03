@@ -160,16 +160,15 @@ pub fn alt_bn128_multiplication(input: &[u8]) -> Result<Vec<u8>, AltBn128Error> 
 }
 
 #[inline(always)]
-pub fn alt_bn128_g1_multiplication_le(input: &[u8]) -> Result<Vec<u8>, AltBn128Error> {
+pub fn alt_bn128_g1_multiplication_le(
+    input: &[u8; ALT_BN128_MULTIPLICATION_INPUT_SIZE],
+) -> Result<Vec<u8>, AltBn128Error> {
     #[cfg(not(target_os = "solana"))]
     {
         alt_bn128_versioned_g1_multiplication(VersionedG1Multiplication::V1, input, Endianness::LE)
     }
     #[cfg(target_os = "solana")]
     {
-        if input.len() != ALT_BN128_MULTIPLICATION_INPUT_SIZE {
-            return Err(AltBn128Error::InvalidInputData);
-        }
         let mut result_buffer = [0u8; ALT_BN128_MULTIPLICATION_OUTPUT_SIZE];
         let result = unsafe {
             syscalls::sol_alt_bn128_group_op(

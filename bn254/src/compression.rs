@@ -362,7 +362,7 @@ mod target_arch {
     }
 
     pub fn alt_bn128_g1_compress_le(
-        input: &[u8],
+        input: &[u8; ALT_BN128_G1_POINT_SIZE],
     ) -> Result<[u8; ALT_BN128_G1_COMPRESSED_POINT_SIZE], AltBn128CompressionError> {
         let mut result_buffer = [0; ALT_BN128_G1_COMPRESSED_POINT_SIZE];
         let result = unsafe {
@@ -400,7 +400,7 @@ mod target_arch {
     }
 
     pub fn alt_bn128_g1_decompress_le(
-        input: &[u8],
+        input: &[u8; ALT_BN128_G1_COMPRESSED_POINT_SIZE],
     ) -> Result<[u8; ALT_BN128_G1_POINT_SIZE], AltBn128CompressionError> {
         let mut result_buffer = [0; ALT_BN128_G1_POINT_SIZE];
         let result = unsafe {
@@ -438,7 +438,7 @@ mod target_arch {
     }
 
     pub fn alt_bn128_g2_compress_le(
-        input: &[u8],
+        input: &[u8; ALT_BN128_G2_POINT_SIZE],
     ) -> Result<[u8; ALT_BN128_G2_COMPRESSED_POINT_SIZE], AltBn128CompressionError> {
         let mut result_buffer = [0; ALT_BN128_G2_COMPRESSED_POINT_SIZE];
         let result = unsafe {
