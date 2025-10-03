@@ -7,6 +7,7 @@ use {
         fs::{self, File},
         io::{self, Read},
         path::Path,
+        str::FromStr,
         time::{Duration, Instant},
     },
 };
@@ -61,7 +62,7 @@ pub fn download_file<'a, 'b>(
     use_progress_bar: bool,
     progress_notify_callback: &'a mut DownloadProgressCallbackOption<'b>,
 ) -> Result<(), String> {
-    download_file_with_headers(
+    download_file_with_headers::<&str>(
         url,
         destination_file,
         use_progress_bar,
@@ -71,12 +72,12 @@ pub fn download_file<'a, 'b>(
 }
 
 /// This function works like `download_file`, but accepts HTTP headers.
-pub fn download_file_with_headers<'a, 'b>(
+pub fn download_file_with_headers<'a, 'b, S: AsRef<str>>(
     url: &str,
     destination_file: &Path,
     use_progress_bar: bool,
     progress_notify_callback: &'a mut DownloadProgressCallbackOption<'b>,
-    headers: &[(&'static str, &'static str)],
+    headers: &[(S, S)],
 ) -> Result<(), String> {
     if destination_file.is_file() {
         return Err(format!("{destination_file:?} already exists"));
@@ -103,7 +104,10 @@ pub fn download_file_with_headers<'a, 'b>(
 
     let mut header_map = reqwest::header::HeaderMap::new();
     for (key, value) in headers {
-        header_map.insert(*key, value.parse().unwrap());
+        header_map.insert(
+            reqwest::header::HeaderName::from_str(key.as_ref()).map_err(|e| format!("{e}"))?,
+            value.as_ref().parse().map_err(|e| format!("{e}"))?,
+        );
     }
 
     let response = reqwest::blocking::Client::new()
