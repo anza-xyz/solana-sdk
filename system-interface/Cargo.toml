@@ -20,7 +20,6 @@ crate-type = ["rlib"]
 
 [features]
 bincode = ["dep:solana-instruction", "serde"]
-create-account-allow-prefund = []
 frozen-abi = [
     "dep:solana-frozen-abi",
     "dep:solana-frozen-abi-macro",

@@ -1,7 +1,3 @@
-#![cfg_attr(
-    not(feature = "create-account-allow-prefund"),
-    allow(rustdoc::broken_intra_doc_links)
-)]
 //! Instructions and constructors for the system program.
 //!
 //! The system program is responsible for the creation of accounts and [nonce
@@ -20,8 +16,8 @@
 //!
 //! The [`create_account`] function requires that the account have zero
 //! lamports. [`create_account_allow_prefund`] allows for the account to have
-//! lamports prefunded; it is only included in this interface under the
-//! `create-account-allow-prefund` feature and requires activation of SIMD-0312.
+//! lamports prefunded; note that without feature activation of SIMD-0312, the
+//! instruction will fail downstream.
 //!
 //! [SIMD-0312]: https://github.com/solana-foundation/solana-improvement-documents/pull/312
 //!
@@ -78,15 +74,8 @@ const NONCE_STATE_SIZE: usize = 80;
 
 /// An instruction to the system program.
 #[cfg_attr(
-    all(feature = "frozen-abi", feature = "create-account-allow-prefund"),
-    solana_frozen_abi_macro::frozen_abi(digest = "CBvp4X1gf36kwDqnprAa6MpKckptiAHfXSxFRHFnNRVw")
-)]
-#[cfg_attr(
-    all(feature = "frozen-abi", not(feature = "create-account-allow-prefund")),
-    solana_frozen_abi_macro::frozen_abi(digest = "8M189WgLE19cw1iYDAFLNJKoAUKyqF9jsKYennJi5BfK")
-)]
-#[cfg_attr(
     feature = "frozen-abi",
+    solana_frozen_abi_macro::frozen_abi(digest = "CBvp4X1gf36kwDqnprAa6MpKckptiAHfXSxFRHFnNRVw"),
     derive(
         solana_frozen_abi_macro::AbiExample,
         solana_frozen_abi_macro::AbiEnumVisitor
@@ -268,7 +257,6 @@ pub enum SystemInstruction {
     ///   0. `[WRITE]` Nonce account
     UpgradeNonceAccount,
 
-    #[cfg(feature = "create-account-allow-prefund")]
     /// Create a new account **without enforcing the `lamports==0` invariant**.
     ///
     /// This constructor is identical to [`create_account`] with the exception that it
@@ -1734,7 +1722,7 @@ pub fn upgrade_nonce_account(nonce_address: Address) -> Instruction {
 /// `None` may be passed for `from_address` when `lamports == 0` (no transfer occurs).
 /// When `lamports > 0`, pass `Some(funding_account)` so the transfer can occur, or
 /// the instruction will fail downstream.
-#[cfg(all(feature = "bincode", feature = "create-account-allow-prefund"))]
+#[cfg(feature = "bincode")]
 pub fn create_account_allow_prefund(
     from_address: &Option<Address>,
     to_address: &Address,
@@ -1813,7 +1801,6 @@ mod tests {
         assert!(addresss.contains(&nonce_address));
     }
 
-    #[cfg(feature = "create-account-allow-prefund")]
     #[test]
     fn test_create_account_allow_prefund_with_from_address() {
         let from_address = Address::new_unique();
@@ -1842,7 +1829,6 @@ mod tests {
         assert!(from_meta.is_writable);
     }
 
-    #[cfg(feature = "create-account-allow-prefund")]
     #[test]
     fn test_create_account_allow_prefund_without_from_address() {
         let to_address = Address::new_unique();
