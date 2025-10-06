@@ -1729,12 +1729,8 @@ pub fn upgrade_nonce_account(nonce_address: Address) -> Instruction {
 ///
 /// # Required signers
 ///
-/// The `to_address` signer must sign the transaction. If present, the
-/// `from_address` signer must also sign the transaction.
-///
-/// `None` may be passed for `from_address` when `lamports == 0` (no transfer occurs).
-/// When `lamports > 0`, pass `Some(funding_account)` so the transfer can occur, or
-/// the instruction will fail downstream.
+/// The `new_account_address` signer must sign the transaction. If present,
+/// the `funding.from` signer must also sign the transaction.
 #[cfg(feature = "bincode")]
 pub fn create_account_allow_prefund(
     new_account_address: &Address,
