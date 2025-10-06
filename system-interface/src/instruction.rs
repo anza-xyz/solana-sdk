@@ -296,7 +296,7 @@ pub enum SystemInstruction {
 }
 
 /// A funding argument where any amount of `lamports` requires a `from`
-/// address. Currently only for use with`create_account_allow_prefund`.
+/// address. Currently only for use with `create_account_allow_prefund`.
 #[cfg_attr(
     feature = "serde",
     derive(serde_derive::Deserialize, serde_derive::Serialize)
