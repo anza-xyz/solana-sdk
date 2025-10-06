@@ -59,7 +59,7 @@ impl Transaction {
 
     pub fn partialSign(&mut self, keypair: &Keypair, recent_blockhash: &Hash) {
         self.inner
-            .partial_sign(&[&keypair.inner], recent_blockhash.inner);
+            .partial_sign(&[&keypair.inner], recent_blockhash.inner.clone());
     }
 
     pub fn isSigned(&self) -> bool {

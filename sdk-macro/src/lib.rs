@@ -240,7 +240,7 @@ pub fn derive_clone_zeroed(input: proc_macro::TokenStream) -> proc_macro::TokenS
                 syn::Fields::Named(ref fields) => fields.named.iter().map(|f| {
                     let name = &f.ident;
                     quote! {
-                        core::ptr::addr_of_mut!((*ptr).#name).write(self.#name);
+                        core::ptr::addr_of_mut!((*ptr).#name).write(self.#name.clone());
                     }
                 }),
                 _ => unimplemented!(),

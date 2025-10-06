@@ -281,12 +281,14 @@ impl Message {
             .try_into_message_components()
             .expect("overflow when compiling message keys");
         let instructions = compile_instructions(instructions, &account_keys);
+        // Builds that enable copy on hash will trip this
+        #[allow(clippy::clone_on_copy)]
         Self::new_with_compiled_instructions(
             header.num_required_signatures,
             header.num_readonly_signed_accounts,
             header.num_readonly_unsigned_accounts,
             account_keys,
-            *blockhash,
+            blockhash.clone(),
             instructions,
         )
     }
