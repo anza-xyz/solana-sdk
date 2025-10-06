@@ -16,8 +16,8 @@
 //!
 //! The [`create_account`] function requires that the account have zero
 //! lamports. [`create_account_allow_prefund`] allows for the account to have
-//! lamports prefunded; note that without feature activation of SIMD-0312, the
-//! instruction will fail downstream.
+//! lamports prefunded; note that without feature activation of SIMD-0312,
+//! [`create_account_allow_prefund`] will fail downstream.
 //!
 //! [SIMD-0312]: https://github.com/solana-foundation/solana-improvement-documents/pull/312
 //!
@@ -257,7 +257,8 @@ pub enum SystemInstruction {
     ///   0. `[WRITE]` Nonce account
     UpgradeNonceAccount,
 
-    /// Create a new account **without enforcing the `lamports==0` invariant**.
+    /// Create a new account **without enforcing the invariant that the account's
+    /// current lamports must be 0.
     ///
     /// This constructor is identical to [`create_account`] with the exception that it
     /// **does not** check that the destination account (`to_pubkey`) has a zero
@@ -276,11 +277,11 @@ pub enum SystemInstruction {
     /// lamports than required for rent exemption, and all lamports will become locked.
     ///
     /// # Account references
-    /// If `lamports > 0`:
+    /// If `lamports > 0` (meaning lamports are being transferred):
     ///   0. `[WRITE, SIGNER]` New account
     ///   1. `[WRITE, SIGNER]` Funding account
     ///
-    /// If `lamports == 0`, you may omit the funding account:
+    /// If `lamports == 0` (no lamports to be transferred), you may omit funding account:
     ///   0. `[WRITE, SIGNER]` New account
     CreateAccountAllowPrefund {
         /// Number of lamports to transfer to the new account
