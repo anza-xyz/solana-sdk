@@ -1807,7 +1807,7 @@ mod tests {
 
         let instr = create_account_allow_prefund(
             &to_address,
-            Some((1, &from_address)),
+            Some((&from_address, 1)),
             8, // arbitrary space
             &crate::program::ID,
         );
