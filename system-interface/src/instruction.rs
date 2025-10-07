@@ -16,7 +16,7 @@
 //!
 //! The [`create_account`] function requires that the account have zero
 //! lamports. [`create_account_allow_prefund`] allows for the account to have
-//! lamports prefunded; note that without feature activation of SIMD-0312,
+//! lamports prefunded; note that without feature activation of [SIMD-0312],
 //! [`create_account_allow_prefund`] will fail downstream.
 //!
 //! [SIMD-0312]: https://github.com/solana-foundation/solana-improvement-documents/pull/312
@@ -1714,23 +1714,24 @@ pub fn upgrade_nonce_account(nonce_address: Address) -> Instruction {
     Instruction::new_with_bincode(ID, &SystemInstruction::UpgradeNonceAccount, account_metas)
 }
 
-/// Create a new account without enforcing zero lamports.
+/// Create a new account without enforcing zero lamports on the destination
+/// account.
 ///
 /// # Required signers
 ///
 /// The `new_account_address` signer must sign the transaction. If present,
-/// the `funding.from` signer must also sign the transaction.
+/// the signer for the address in `funding` must also sign the transaction.
 #[cfg(feature = "bincode")]
 pub fn create_account_allow_prefund(
     new_account_address: &Address,
-    funding: Option<(u64, &Address)>,
+    funding: Option<(&Address, u64)>,
     space: u64,
     owner: &Address,
 ) -> Instruction {
     let mut account_metas = vec![AccountMeta::new(*new_account_address, true)];
     let lamports = match funding {
         None => 0,
-        Some((lamports, from)) => {
+        Some((from, lamports)) => {
             account_metas.push(AccountMeta::new(*from, true));
             lamports
         }
