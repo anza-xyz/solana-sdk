@@ -1720,16 +1720,16 @@ pub fn upgrade_nonce_account(nonce_address: Address) -> Instruction {
 /// # Required signers
 ///
 /// The `new_account_address` signer must sign the transaction. If present,
-/// the signer for the address in `funding` must also sign the transaction.
+/// the payer in `payer_and_lamports` must also sign the transaction.
 #[cfg(feature = "bincode")]
 pub fn create_account_allow_prefund(
     new_account_address: &Address,
-    funding: Option<(&Address, u64)>,
+    payer_and_lamports: Option<(&Address, u64)>,
     space: u64,
     owner: &Address,
 ) -> Instruction {
     let mut account_metas = vec![AccountMeta::new(*new_account_address, true)];
-    let lamports = match funding {
+    let lamports = match payer_and_lamports {
         None => 0,
         Some((from, lamports)) => {
             account_metas.push(AccountMeta::new(*from, true));
