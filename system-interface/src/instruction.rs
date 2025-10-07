@@ -295,22 +295,11 @@ pub enum SystemInstruction {
     },
 }
 
-/// A funding argument where any amount of `lamports` requires a `from`
-/// address. Currently only for use with `create_account_allow_prefund`.
-#[cfg_attr(
-    feature = "serde",
-    derive(serde_derive::Deserialize, serde_derive::Serialize)
-)]
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub enum Funding {
-    None,
-    Transfer { from: Address, lamports: u64 },
-}
-
 /// Create an account.
 ///
 /// This function produces an [`Instruction`] which must be submitted in a
 /// [`Transaction`] or [invoked] to take effect, containing a serialized
+///
 /// [`SystemInstruction::CreateAccount`].
 ///
 /// [`Transaction`]: https://docs.rs/solana-sdk/latest/solana_sdk/transaction/struct.Transaction.html
@@ -1734,17 +1723,15 @@ pub fn upgrade_nonce_account(nonce_address: Address) -> Instruction {
 #[cfg(feature = "bincode")]
 pub fn create_account_allow_prefund(
     new_account_address: &Address,
-    funding: Funding,
+    funding: Option<(u64, &Address)>,
     space: u64,
     owner: &Address,
 ) -> Instruction {
-    let mut account_metas = vec![];
-
-    account_metas.push(AccountMeta::new(*new_account_address, true));
+    let mut account_metas = vec![AccountMeta::new(*new_account_address, true)];
     let lamports = match funding {
-        Funding::None => 0,
-        Funding::Transfer { from, lamports } => {
-            account_metas.push(AccountMeta::new(from, true));
+        None => 0,
+        Some((lamports, from)) => {
+            account_metas.push(AccountMeta::new(*from, true));
             lamports
         }
     };
@@ -1819,10 +1806,7 @@ mod tests {
 
         let instr = create_account_allow_prefund(
             &to_address,
-            Funding::Transfer {
-                from: from_address,
-                lamports: 1,
-            },
+            Some((1, &from_address)),
             8, // arbitrary space
             &crate::program::ID,
         );
@@ -1848,7 +1832,7 @@ mod tests {
 
         let instr = create_account_allow_prefund(
             &to_address,
-            Funding::None,
+            None,
             8, // arbitrary space
             &crate::program::ID,
         );
