@@ -1,3 +1,9 @@
+<p align="center">
+  <a href="https://solana.com">
+    <img alt="Solana" src="https://github.com/user-attachments/assets/31bfc6b9-fdaa-4f3c-b802-2de70548b943" height="80" />
+  </a>
+</p>
+
 # `solana-program-log`
 <a href="https://crates.io/crates/solana-program-log"><img src="https://img.shields.io/crates/v/solana-program-log?logo=rust" /></a>
 <a href="https://docs.rs/solana-program-log"><img src="https://img.shields.io/docsrs/solana-program-log?logo=docsdotrs" /></a>
@@ -54,7 +60,7 @@ logger.log();
 
  or via the `log!` macro:
  ```rust
-use solana_program_log::log
+use solana_program_log::log;
 
 let lamports = 1_000_000_000;
 log!("transfer amount: {}", lamports);
@@ -65,7 +71,7 @@ log!("transfer amount (SOL): {:.9}", lamports);
 Since the formatting routine does not perform additional allocations, the `Logger` type has a fixed size specified on its creation. When using the `log!` macro, it is also possible to specify the size of the logger buffer:
 
 ```rust
-use solana_program_log::log
+use solana_program_log::log;
 
 let lamports = 1_000_000_000;
 log!(50, "transfer amount: {}", lamports);
@@ -91,12 +97,12 @@ let lamports = 1_000_000_000;
 let mut logger = Logger::<100>::default();
 logger.append("SOL: ");
 logger.append_with_args(amount, &[Argument::Precision(9)]);
-logger.log()
+logger.log();
 ```
 
 or a formatting string on the `log!` macro:
 ```rust
-use solana_program_log::log
+use solana_program_log::log;
 
 let lamports = 1_000_000_000;
 log!("transfer amount (SOL: {:.9}", lamports);
@@ -120,13 +126,13 @@ logger.log();
 
 or a formatting string on the `log!` macro:
 ```rust
-use solana_program_log::log
+use solana_program_log::log;
 
 let program_name = "solana-program";
 // log message: "...program"
-log!("{:<.10}", program_name); 
+log!("{:<.10}", program_name);
 // log message: "solana-..."
-log!("{:>.10}", program_name); 
+log!("{:>.10}", program_name);
 ```
 
 ## Formatting Options
