@@ -149,4 +149,4 @@ Formatting options are represented by `Attribute` variants and can be passed to 
 
 ## License
 
-The code is licensed under the [Apache License Version 2.0](LICENSE)
+The code is licensed under the [Apache License Version 2.0](../LICENSE)

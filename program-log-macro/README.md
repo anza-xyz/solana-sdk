@@ -78,4 +78,4 @@ Program log: Function `my_function` consumed 36 compute units
 
 ## License
 
-The code is licensed under the [Apache License Version 2.0](LICENSE)
+The code is licensed under the [Apache License Version 2.0](../LICENSE)
