@@ -21,6 +21,8 @@ pub mod vote_state_1_14_11;
 pub use vote_state_1_14_11::*;
 pub mod vote_state_versions;
 pub use vote_state_versions::*;
+pub mod vote_state_read;
+pub use vote_state_read::VoteStateRead;
 pub mod vote_state_v3;
 pub use vote_state_v3::VoteStateV3;
 pub mod vote_state_v4;

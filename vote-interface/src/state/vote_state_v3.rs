@@ -8,8 +8,9 @@ use serde_derive::{Deserialize, Serialize};
 use solana_frozen_abi_macro::{frozen_abi, AbiExample};
 use {
     super::{
-        BlockTimestamp, CircBuf, LandedVote, Lockout, VoteInit, MAX_EPOCH_CREDITS_HISTORY,
-        MAX_LOCKOUT_HISTORY, VOTE_CREDITS_GRACE_SLOTS, VOTE_CREDITS_MAXIMUM_PER_SLOT,
+        BlockTimestamp, CircBuf, LandedVote, Lockout, VoteInit, VoteStateRead,
+        MAX_EPOCH_CREDITS_HISTORY, MAX_LOCKOUT_HISTORY, VOTE_CREDITS_GRACE_SLOTS,
+        VOTE_CREDITS_MAXIMUM_PER_SLOT,
     },
     crate::{
         authorized_voters::AuthorizedVoters, error::VoteError, state::DEFAULT_PRIOR_VOTERS_OFFSET,
@@ -511,5 +512,40 @@ impl VoteStateV3 {
         const DEFAULT_PRIOR_VOTERS_END: usize = VERSION_OFFSET + DEFAULT_PRIOR_VOTERS_OFFSET;
         data.len() == VoteStateV3::size_of()
             && data[VERSION_OFFSET..DEFAULT_PRIOR_VOTERS_END] != [0; DEFAULT_PRIOR_VOTERS_OFFSET]
+    }
+}
+
+impl VoteStateRead for VoteStateV3 {
+    fn authorized_voters(&self) -> &AuthorizedVoters {
+        &self.authorized_voters
+    }
+
+    fn authorized_withdrawer(&self) -> &Pubkey {
+        &self.authorized_withdrawer
+    }
+
+    fn epoch_credits(&self) -> &Vec<(Epoch, u64, u64)> {
+        &self.epoch_credits
+    }
+
+    #[allow(clippy::arithmetic_side_effects)]
+    fn inflation_rewards_commission_bps(&self) -> u16 {
+        self.commission as u16 * 100
+    }
+
+    fn last_timestamp(&self) -> &BlockTimestamp {
+        &self.last_timestamp
+    }
+
+    fn node_pubkey(&self) -> &Pubkey {
+        &self.node_pubkey
+    }
+
+    fn root_slot(&self) -> Option<Slot> {
+        self.root_slot
+    }
+
+    fn votes(&self) -> &VecDeque<LandedVote> {
+        &self.votes
     }
 }

@@ -11,7 +11,7 @@ use solana_frozen_abi_macro::{frozen_abi, AbiExample};
 #[cfg(any(target_os = "solana", feature = "bincode"))]
 use solana_instruction::error::InstructionError;
 use {
-    super::{BlockTimestamp, LandedVote, BLS_PUBLIC_KEY_COMPRESSED_SIZE},
+    super::{BlockTimestamp, LandedVote, VoteStateRead, BLS_PUBLIC_KEY_COMPRESSED_SIZE},
     crate::authorized_voters::AuthorizedVoters,
     solana_clock::{Epoch, Slot},
     solana_pubkey::Pubkey,
@@ -213,5 +213,39 @@ impl VoteStateV4 {
             authorized_voters,
             ..Self::default()
         }
+    }
+}
+
+impl VoteStateRead for VoteStateV4 {
+    fn authorized_voters(&self) -> &AuthorizedVoters {
+        &self.authorized_voters
+    }
+
+    fn authorized_withdrawer(&self) -> &Pubkey {
+        &self.authorized_withdrawer
+    }
+
+    fn epoch_credits(&self) -> &Vec<(Epoch, u64, u64)> {
+        &self.epoch_credits
+    }
+
+    fn inflation_rewards_commission_bps(&self) -> u16 {
+        self.inflation_rewards_commission_bps
+    }
+
+    fn last_timestamp(&self) -> &BlockTimestamp {
+        &self.last_timestamp
+    }
+
+    fn node_pubkey(&self) -> &Pubkey {
+        &self.node_pubkey
+    }
+
+    fn root_slot(&self) -> Option<Slot> {
+        self.root_slot
+    }
+
+    fn votes(&self) -> &VecDeque<LandedVote> {
+        &self.votes
     }
 }

@@ -1,18 +1,18 @@
-use crate::state::{
-    vote_state_0_23_5::VoteState0_23_5, vote_state_1_14_11::VoteState1_14_11, VoteStateV3,
-    VoteStateV4,
-};
 #[cfg(test)]
 use arbitrary::{Arbitrary, Unstructured};
-#[cfg(any(test, all(not(target_os = "solana"), feature = "bincode")))]
 use {
-    crate::{
-        authorized_voters::AuthorizedVoters,
-        state::{CircBuf, LandedVote, Lockout},
+    crate::state::{
+        vote_state_0_23_5::VoteState0_23_5, vote_state_1_14_11::VoteState1_14_11, AuthorizedVoters,
+        BlockTimestamp, LandedVote, VoteStateRead, VoteStateV3, VoteStateV4,
     },
-    solana_instruction::error::InstructionError,
+    solana_clock::{Epoch, Slot},
     solana_pubkey::Pubkey,
     std::collections::VecDeque,
+};
+#[cfg(any(test, all(not(target_os = "solana"), feature = "bincode")))]
+use {
+    crate::state::{CircBuf, Lockout},
+    solana_instruction::error::InstructionError,
 };
 
 #[cfg_attr(
@@ -189,6 +189,89 @@ impl VoteStateVersions {
         VoteStateV4::is_correct_size_and_initialized(data)
             || VoteStateV3::is_correct_size_and_initialized(data)
             || VoteState1_14_11::is_correct_size_and_initialized(data)
+    }
+}
+
+impl VoteStateRead for VoteStateVersions {
+    fn authorized_voters(&self) -> &AuthorizedVoters {
+        match self {
+            VoteStateVersions::V0_23_5(_state) => {
+                // V0_23_5 does not have AuthorizedVoters struct.
+                unimplemented!("V0_23_5 does not support authorized_voters.")
+            }
+            VoteStateVersions::V1_14_11(state) => &state.authorized_voters,
+            VoteStateVersions::V3(state) => state.authorized_voters(),
+            VoteStateVersions::V4(state) => state.authorized_voters(),
+        }
+    }
+
+    fn authorized_withdrawer(&self) -> &Pubkey {
+        match self {
+            VoteStateVersions::V0_23_5(state) => &state.authorized_withdrawer,
+            VoteStateVersions::V1_14_11(state) => &state.authorized_withdrawer,
+            VoteStateVersions::V3(state) => state.authorized_withdrawer(),
+            VoteStateVersions::V4(state) => state.authorized_withdrawer(),
+        }
+    }
+
+    fn epoch_credits(&self) -> &Vec<(Epoch, u64, u64)> {
+        match self {
+            VoteStateVersions::V0_23_5(state) => &state.epoch_credits,
+            VoteStateVersions::V1_14_11(state) => &state.epoch_credits,
+            VoteStateVersions::V3(state) => state.epoch_credits(),
+            VoteStateVersions::V4(state) => state.epoch_credits(),
+        }
+    }
+
+    fn inflation_rewards_commission_bps(&self) -> u16 {
+        match self {
+            VoteStateVersions::V0_23_5(state) => (state.commission as u16).saturating_mul(100),
+            VoteStateVersions::V1_14_11(state) => (state.commission as u16).saturating_mul(100),
+            VoteStateVersions::V3(state) => state.inflation_rewards_commission_bps(),
+            VoteStateVersions::V4(state) => state.inflation_rewards_commission_bps(),
+        }
+    }
+
+    fn last_timestamp(&self) -> &BlockTimestamp {
+        match self {
+            VoteStateVersions::V0_23_5(state) => &state.last_timestamp,
+            VoteStateVersions::V1_14_11(state) => &state.last_timestamp,
+            VoteStateVersions::V3(state) => state.last_timestamp(),
+            VoteStateVersions::V4(state) => state.last_timestamp(),
+        }
+    }
+
+    fn node_pubkey(&self) -> &Pubkey {
+        match self {
+            VoteStateVersions::V0_23_5(state) => &state.node_pubkey,
+            VoteStateVersions::V1_14_11(state) => &state.node_pubkey,
+            VoteStateVersions::V3(state) => state.node_pubkey(),
+            VoteStateVersions::V4(state) => state.node_pubkey(),
+        }
+    }
+
+    fn root_slot(&self) -> Option<Slot> {
+        match self {
+            VoteStateVersions::V0_23_5(state) => state.root_slot,
+            VoteStateVersions::V1_14_11(state) => state.root_slot,
+            VoteStateVersions::V3(state) => state.root_slot(),
+            VoteStateVersions::V4(state) => state.root_slot(),
+        }
+    }
+
+    fn votes(&self) -> &VecDeque<LandedVote> {
+        match self {
+            VoteStateVersions::V0_23_5(_state) => {
+                // V0_23_5 uses VecDeque<Lockout>, not VecDeque<LandedVote>.
+                unimplemented!("V0_23_5 does not support votes.")
+            }
+            VoteStateVersions::V1_14_11(_state) => {
+                // V1_14_11 uses VecDeque<Lockout>, not VecDeque<LandedVote>.
+                unimplemented!("V1_14_11 does not support votes.")
+            }
+            VoteStateVersions::V3(state) => state.votes(),
+            VoteStateVersions::V4(state) => state.votes(),
+        }
     }
 }
 
