@@ -21,7 +21,7 @@ declare print_free_tree=(
   ':^address/src/lib.rs'
   ':^logger/src/lib.rs'
   ':^msg/src/lib.rs'
-  ':^program-log/crate/src/logger.rs'
+  ':^program-log/src/logger.rs'
   ':^program-option/src/lib.rs'
   ':^sysvar/src/program_stubs.rs'
   ':^**bin**.rs'
