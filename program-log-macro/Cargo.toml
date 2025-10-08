@@ -20,5 +20,5 @@ proc-macro = true
 
 [dependencies]
 quote = { workspace = true }
-regex = "1.11"
+regex = { workspace = true }
 syn = { workspace = true, features = ["extra-traits", "full"] }

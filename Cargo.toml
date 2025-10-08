@@ -202,6 +202,7 @@ qualifier_attr = { version = "0.2.2", default-features = false }
 quote = "1.0.35"
 rand = "0.8.5"
 rayon = "1.10.0"
+regex = "1.11"
 reqwest = { version = "0.11.27", default-features = false }
 serde = "1.0.226" # must match the serde_derive version, see https://github.com/serde-rs/serde/issues/2584#issuecomment-1685252251
 serde-big-array = "0.5.1"
