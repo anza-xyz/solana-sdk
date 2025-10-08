@@ -1,9 +1,8 @@
 use core::{
     cmp::min, mem::MaybeUninit, ops::Deref, ptr::copy_nonoverlapping, slice::from_raw_parts,
 };
-
 #[cfg(target_os = "solana")]
-pub use solana_define_syscall::definitions::{
+use solana_define_syscall::definitions::{
     sol_log_, sol_memcpy_, sol_memset_, sol_remaining_compute_units,
 };
 

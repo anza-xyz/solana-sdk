@@ -45,12 +45,12 @@
 
 #![no_std]
 #![cfg_attr(docsrs, feature(doc_auto_cfg))]
+#![allow(clippy::arithmetic_side_effects)]
 
 pub mod logger;
 
 // Re-export for easier access.
 pub use logger::{Argument, Logger};
-
 #[cfg(feature = "macro")]
 pub use solana_program_log_macro::*;
 

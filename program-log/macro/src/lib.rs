@@ -1,17 +1,20 @@
 #![no_std]
 #![cfg_attr(docsrs, feature(doc_auto_cfg))]
+#![allow(clippy::arithmetic_side_effects)]
 
 extern crate alloc;
 
-use alloc::{format, string::ToString, vec::Vec};
-use proc_macro::TokenStream;
-use quote::quote;
-use regex::Regex;
-use syn::{
-    parse::{Parse, ParseStream},
-    parse_macro_input, parse_str,
-    punctuated::Punctuated,
-    Error, Expr, ItemFn, LitInt, LitStr, Token,
+use {
+    alloc::{format, string::ToString, vec::Vec},
+    proc_macro::TokenStream,
+    quote::quote,
+    regex::Regex,
+    syn::{
+        parse::{Parse, ParseStream},
+        parse_macro_input, parse_str,
+        punctuated::Punctuated,
+        Error, Expr, ItemFn, LitInt, LitStr, Token,
+    },
 };
 
 /// The default buffer size for the logger.
@@ -153,17 +156,14 @@ pub fn log(input: TokenStream) -> TokenStream {
                         replaced_parts.push(quote! { logger.append(#arg) });
                     }
                     value if value.starts_with("{:.") => {
-                        let precision =
-                            if let Ok(precision) = value[3..value.len() - 1].parse::<u8>() {
-                                precision
-                            } else {
-                                return Error::new_spanned(
-                                    format_string,
-                                    format!("invalid precision format: {value}"),
-                                )
-                                .to_compile_error()
-                                .into();
-                            };
+                        let Ok(precision) = value[3..value.len() - 1].parse::<u8>() else {
+                            return Error::new_spanned(
+                                format_string,
+                                format!("invalid precision format: {value}"),
+                            )
+                            .to_compile_error()
+                            .into();
+                        };
 
                         replaced_parts.push(quote! {
                             logger.append_with_args(
@@ -173,9 +173,7 @@ pub fn log(input: TokenStream) -> TokenStream {
                         });
                     }
                     value if value.starts_with("{:<.") || value.starts_with("{:>.") => {
-                        let size = if let Ok(size) = value[4..value.len() - 1].parse::<usize>() {
-                            size
-                        } else {
+                        let Ok(size) = value[4..value.len() - 1].parse::<usize>() else {
                             return Error::new_spanned(
                                 format_string,
                                 format!("invalid truncate size format: {value}"),
