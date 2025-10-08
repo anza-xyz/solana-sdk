@@ -68,7 +68,7 @@ impl Parse for LogArgs {
     }
 }
 
-/// Companion `log!` macro for `pinocchio-log`.
+/// Companion `log!` macro for `solana-program-log`.
 ///
 /// The macro automates the creation of a `Logger` object to log a message.
 /// It support a limited subset of the [`format!`](https://doc.rust-lang.org/std/fmt/) syntax.
@@ -158,7 +158,7 @@ pub fn log(input: TokenStream) -> TokenStream {
                             } else {
                                 return Error::new_spanned(
                                     format_string,
-                                    format!("invalid precision format: {}", value),
+                                    format!("invalid precision format: {value}"),
                                 )
                                 .to_compile_error()
                                 .into();
@@ -167,7 +167,7 @@ pub fn log(input: TokenStream) -> TokenStream {
                         replaced_parts.push(quote! {
                             logger.append_with_args(
                                 #arg,
-                                &[pinocchio_log::logger::Argument::Precision(#precision)]
+                                &[solana_program_log::logger::Argument::Precision(#precision)]
                             )
                         });
                     }
@@ -177,7 +177,7 @@ pub fn log(input: TokenStream) -> TokenStream {
                         } else {
                             return Error::new_spanned(
                                 format_string,
-                                format!("invalid truncate size format: {}", value),
+                                format!("invalid truncate size format: {value}"),
                             )
                             .to_compile_error()
                             .into();
@@ -188,7 +188,7 @@ pub fn log(input: TokenStream) -> TokenStream {
                                 replaced_parts.push(quote! {
                                     logger.append_with_args(
                                         #arg,
-                                        &[pinocchio_log::logger::Argument::TruncateStart(#size)]
+                                        &[solana_program_log::logger::Argument::TruncateStart(#size)]
                                     )
                                 });
                             }
@@ -196,7 +196,7 @@ pub fn log(input: TokenStream) -> TokenStream {
                                 replaced_parts.push(quote! {
                                     logger.append_with_args(
                                         #arg,
-                                        &[pinocchio_log::logger::Argument::TruncateEnd(#size)]
+                                        &[solana_program_log::logger::Argument::TruncateEnd(#size)]
                                     )
                                 });
                             }
@@ -204,7 +204,7 @@ pub fn log(input: TokenStream) -> TokenStream {
                                 // This should not happen since we already checked the format.
                                 return Error::new_spanned(
                                     format_string,
-                                    format!("invalid truncate format: {}", value),
+                                    format!("invalid truncate format: {value}"),
                                 )
                                 .to_compile_error()
                                 .into();
@@ -214,7 +214,7 @@ pub fn log(input: TokenStream) -> TokenStream {
                     _ => {
                         return Error::new_spanned(
                             format_string,
-                            format!("invalid placeholder: {}", placeholder),
+                            format!("invalid placeholder: {placeholder}"),
                         )
                         .to_compile_error()
                         .into();
@@ -226,13 +226,15 @@ pub fn log(input: TokenStream) -> TokenStream {
         // Generate the output string as a compile-time constant
         TokenStream::from(quote! {
             {
-                let mut logger = pinocchio_log::logger::Logger::<#buffer_len>::default();
+                let mut logger = ::solana_program_log::logger::Logger::<#buffer_len>::default();
                 #(#replaced_parts;)*
                 logger.log();
             }
         })
     } else {
-        TokenStream::from(quote! {pinocchio_log::logger::log_message(#format_string.as_bytes());})
+        TokenStream::from(
+            quote! {::solana_program_log::logger::log_message(#format_string.as_bytes());},
+        )
     }
 }
 
@@ -253,7 +255,7 @@ pub fn log(input: TokenStream) -> TokenStream {
 ///  # Example
 ///
 /// ```rust,ignore
-/// #[pinocchio_log::log_cu_usage]
+/// #[solana_program_log::log_cu_usage]
 /// fn my_function() {
 ///     // Function body
 /// }
@@ -275,16 +277,16 @@ pub fn log_cu_usage(_attr: TokenStream, item: TokenStream) -> TokenStream {
     let block = &input.block;
 
     input.block = syn::parse_quote!({
-        let cu_before = unsafe { ::pinocchio_log::logger::remaining_compute_units() };
+        let cu_before = unsafe { ::solana_program_log::logger::remaining_compute_units() };
 
         let __result = (|| #block)();
 
-        let cu_after = unsafe { ::pinocchio_log::logger::remaining_compute_units() };
+        let cu_after = unsafe { ::solana_program_log::logger::remaining_compute_units() };
         let introspection_cost = 102; // 100 - compute budget syscall_base_cost,  2 - extra calculations
 
         let consumed = cu_before - cu_after - introspection_cost;
 
-        ::pinocchio_log::log!("Function {} consumed {} compute units", stringify!(#fn_name), consumed);
+        ::solana_program_log::log!("Function {} consumed {} compute units", stringify!(#fn_name), consumed);
 
         __result
     });

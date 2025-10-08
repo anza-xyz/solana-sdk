@@ -1,18 +1,6 @@
-<p align="center">
- <img alt="pinocchio-log" src="https://github.com/user-attachments/assets/4048fe96-9096-4441-85c3-5deffeb089a6" height="100"/>
-</p>
-<h3 align="center">
-  <code>pinocchio-log</code>
-</h3>
-<p align="center">
- Lightweight log utility for Solana programs.
-</p>
-<p align="center">
-  <a href="https://crates.io/crates/pinocchio-log"><img src="https://img.shields.io/crates/v/pinocchio-log?logo=rust" /></a>
-  <a href="https://docs.rs/pinocchio-log"><img src="https://img.shields.io/docsrs/pinocchio-log?logo=docsdotrs" /></a>
-</p>
-
-## Overview
+# `solana-program-log`
+<a href="https://crates.io/crates/solana-program-log"><img src="https://img.shields.io/crates/v/solana-program-log?logo=rust" /></a>
+<a href="https://docs.rs/solana-program-log"><img src="https://img.shields.io/docsrs/solana-program-log?logo=docsdotrs" /></a>
 
 Currently, logging messages that require formatting are a bit heavy on the CU consumption. There are two aspects when comes to determining the cost of a log message:
 
@@ -28,18 +16,15 @@ This crate defines a lightweight `Logger` type to format log messages and a comp
 
 Below is a sample of the improvements observed when formatting log messages, measured in terms of compute units (CU):
 | Output message                      | `log!` | `msg!`          | Improvement (%) |
-|------------------------------------|--------|-----------------|-----------------|
-| `"Hello world!"`                   | 104    | 104             | -               |
-| `"lamports={}"` + `u64`            | 286    | 625 (+339)      | 55%             |
-| `"{}"` + `[&str; 2]`               | 119    | 1610 (+1491)    | 93%             |
-| `"{}"` + `[u64; 2]`                | 483    | 1154 (+671)     | 49%             |
-| `"lamports={}"` + `i64`            | 299    | 659 (+360)      | 55%             |
-| `"{}"` + `[u8; 32]` (pubkey bytes) | 2783   | 8397 (+5614)    | 67%             |
-| `"lamports={:.9}"` + `u64`         | 438    | 2656 (+2218)`*` | 84%             |
+|-------------------------------------|--------|-----------------|-----------------|
+| `"Hello world!"`                    | 104    | 104             | -               |
+| `"lamports={}"` + `u64`             | 286    | 625 (+339)      | 55%             |
+| `"{}"` + `[&str; 2]`                | 119    | 1610 (+1491)    | 93%             |
+| `"lamports={}"` + `i64`             | 299    | 659 (+360)      | 55%             |
+| `"{}"` + `[u8; 32]` (address bytes) | 2783   | 8397 (+5614)    | 67%             |
+| `"lamports={:.9}"` + `u64`          | 438    | 2656 (+2218)`*` | 84%             |
 
 `*` For `msg!`, the value is logged as a `f64` otherwise the precision formatting is ignored.
-
-> Note: The improvement in CU is accumulative, meaning that if you are logging multiple `u64` values, there will be a 40% improvement per formatted `u64` value.
 
 ## Features
 
@@ -52,14 +37,14 @@ Below is a sample of the improvements observed when formatting log messages, mea
 
 From your project folder:
 ```bash
-cargo add pinocchio-log
+cargo add solana-program-log
 ```
 
 ## Usage
 
 The `Logger` can be used directly:
 ```rust
-use pinocchio_log::logger::Logger;
+use solana_program_log::Logger;
 
 let mut logger = Logger::<100>::default();
 logger.append("Hello ");
@@ -69,7 +54,7 @@ logger.log();
 
  or via the `log!` macro:
  ```rust
-use pinocchio_log::log
+use solana_program_log::log
 
 let lamports = 1_000_000_000;
 log!("transfer amount: {}", lamports);
@@ -80,7 +65,7 @@ log!("transfer amount (SOL): {:.9}", lamports);
 Since the formatting routine does not perform additional allocations, the `Logger` type has a fixed size specified on its creation. When using the `log!` macro, it is also possible to specify the size of the logger buffer:
 
 ```rust
-use pinocchio_log::log
+use solana_program_log::log
 
 let lamports = 1_000_000_000;
 log!(50, "transfer amount: {}", lamports);
@@ -88,7 +73,7 @@ log!(50, "transfer amount: {}", lamports);
 
 It is also possible to dereference the `Logger` into a `&[u8]` slice and use the result for other purposes:
 ```rust
-use pinocchio_log::logger::Logger;
+use solana_program_log::Logger;
 
 let amount = 1_000_000_000;
 let mut logger = Logger::<100>::default();
@@ -100,7 +85,7 @@ let prize_title = core::str::from_utf8(&logger)?;
 
 When using the `Logger` directly, it is possible to include a precision formatting for numeric values:
 ```rust
-use pinocchio_log::logger::{Attribute, Logger};
+use solana_program_log::{Attribute, Logger};
 
 let lamports = 1_000_000_000;
 let mut logger = Logger::<100>::default();
@@ -111,7 +96,7 @@ logger.log()
 
 or a formatting string on the `log!` macro:
 ```rust
-use pinocchio_log::log
+use solana_program_log::log
 
 let lamports = 1_000_000_000;
 log!("transfer amount (SOL: {:.9}", lamports);
@@ -119,9 +104,9 @@ log!("transfer amount (SOL: {:.9}", lamports);
 
 For `&str` types, it is possible to specify a maximum length and a truncation strategy using one of the `Argument::Truncate*` variants:
 ```rust
-use pinocchio_log::logger::{Attribute, Logger};
+use solana_program_log::{Attribute, Logger};
 
-let program_name = "pinocchio-program";
+let program_name = "solana-program";
 let mut logger = Logger::<100>::default();
 logger.append_with_args(program_name, &[Argument::TruncateStart(10)]);
 // log message: "...program"
@@ -129,18 +114,18 @@ logger.log();
 
 let mut logger = Logger::<100>::default();
 logger.append_with_args(program_name, &[Argument::TruncateEnd(10)]);
-// log message: "pinocchio-..."
+// log message: "solana-..."
 logger.log();
 ```
 
 or a formatting string on the `log!` macro:
 ```rust
-use pinocchio_log::log
+use solana_program_log::log
 
-let program_name = "pinocchio-program";
+let program_name = "solana-program";
 // log message: "...program"
 log!("{:<.10}", program_name); 
-// log message: "pinocchio-..."
+// log message: "solana-..."
 log!("{:>.10}", program_name); 
 ```
 

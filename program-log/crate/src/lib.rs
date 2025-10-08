@@ -15,7 +15,7 @@
 //! `u64` value:
 //!
 //! ```
-//! use pinocchio_log::logger::Logger;
+//! use solana_program_log::Logger;
 //!
 //! let mut logger = Logger::<100>::default();
 //! logger.append("balance=");
@@ -32,7 +32,7 @@
 //! It also support adding precision to numeric types:
 //!
 //! ```
-//! use pinocchio_log::logger::{Argument, Logger};
+//! use solana_program_log::{Argument, Logger};
 //!
 //! let mut logger = Logger::<100>::default();
 //!
@@ -47,12 +47,15 @@
 
 pub mod logger;
 
+// Re-export for easier access.
+pub use logger::{Argument, Logger};
+
 #[cfg(feature = "macro")]
-pub use pinocchio_log_macro::*;
+pub use solana_program_log_macro::*;
 
 #[cfg(test)]
 mod tests {
-    use crate::logger::{Argument, Logger};
+    use super::{Argument, Logger};
 
     /// Helper macro to generate test cases for numeric types.
     ///

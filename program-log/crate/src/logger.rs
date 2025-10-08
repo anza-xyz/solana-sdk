@@ -2,45 +2,10 @@ use core::{
     cmp::min, mem::MaybeUninit, ops::Deref, ptr::copy_nonoverlapping, slice::from_raw_parts,
 };
 
-#[cfg(all(target_os = "solana", not(target_feature = "static-syscalls")))]
-mod syscalls {
-    // Syscalls provided by the SVM runtime (SBPFv0, SBPFv1 and SBPFv2).
-    extern "C" {
-        pub fn sol_log_(message: *const u8, len: u64);
-
-        pub fn sol_memcpy_(dst: *mut u8, src: *const u8, n: u64);
-
-        pub fn sol_memset_(s: *mut u8, c: u8, n: u64);
-
-        pub fn sol_remaining_compute_units() -> u64;
-    }
-}
-
-#[cfg(all(target_os = "solana", target_feature = "static-syscalls"))]
-mod syscalls {
-    // Syscalls provided by the SVM runtime (SBPFv3 and newer).
-    pub(crate) fn sol_log_(message: *const u8, length: u64) {
-        let syscall: extern "C" fn(*const u8, u64) = unsafe { core::mem::transmute(544561597u64) }; // murmur32 hash of "sol_log_"
-        syscall(message, length)
-    }
-
-    pub(crate) fn sol_memcpy_(dest: *mut u8, src: *const u8, n: u64) {
-        let syscall: extern "C" fn(*mut u8, *const u8, u64) =
-            unsafe { core::mem::transmute(1904002211u64) }; // murmur32 hash of "sol_memcpy_"
-        syscall(dest, src, n)
-    }
-
-    pub(crate) fn sol_memset_(s: *mut u8, c: u8, n: u64) {
-        let syscall: extern "C" fn(*mut u8, u8, u64) =
-            unsafe { core::mem::transmute(930151202u64) }; // murmur32 hash of "sol_memset_"
-        syscall(s, c, n)
-    }
-
-    pub(crate) fn sol_remaining_compute_units() -> u64 {
-        let syscall: extern "C" fn() -> u64 = unsafe { core::mem::transmute(3991886574u64) }; // murmur32 hash of "sol_remaining_compute_units"
-        syscall()
-    }
-}
+#[cfg(target_os = "solana")]
+pub use solana_define_syscall::definitions::{
+    sol_log_, sol_memcpy_, sol_memset_, sol_remaining_compute_units,
+};
 
 #[cfg(not(target_os = "solana"))]
 extern crate std;
@@ -155,12 +120,12 @@ pub fn log_message(message: &[u8]) {
     // SAFETY: the message is always a valid pointer to a slice of bytes
     // and `sol_log_` is a syscall.
     unsafe {
-        syscalls::sol_log_(message.as_ptr(), message.len() as u64);
+        sol_log_(message.as_ptr(), message.len() as u64);
     }
     #[cfg(not(target_os = "solana"))]
     {
         let message = core::str::from_utf8(message).unwrap();
-        std::println!("{}", message);
+        std::println!("{message}");
     }
 }
 
@@ -170,7 +135,7 @@ pub fn remaining_compute_units() -> u64 {
     #[cfg(target_os = "solana")]
     // SAFETY: `sol_remaining_compute_units` is a syscall that returns the remaining compute units.
     unsafe {
-        syscalls::sol_remaining_compute_units()
+        sol_remaining_compute_units()
     }
     #[cfg(not(target_os = "solana"))]
     core::hint::black_box(0u64)
@@ -305,7 +270,7 @@ macro_rules! impl_log_for_unsigned_integer {
                             // Copy the number to the buffer if no precision is specified.
                             if precision == 0 {
                                 #[cfg(target_os = "solana")]
-                                syscalls::sol_memcpy_(
+                                sol_memcpy_(
                                     ptr as *mut _,
                                     source as *const _,
                                     digits_to_write as u64,
@@ -325,11 +290,7 @@ macro_rules! impl_log_for_unsigned_integer {
 
                                     // Precision padding.
                                     #[cfg(target_os = "solana")]
-                                    syscalls::sol_memset_(
-                                        ptr.add(2) as *mut _,
-                                        b'0',
-                                        padding as u64,
-                                    );
+                                    sol_memset_(ptr.add(2) as *mut _, b'0', padding as u64);
                                     #[cfg(not(target_os = "solana"))]
                                     (ptr.add(2) as *mut u8).write_bytes(b'0', padding);
 
@@ -341,7 +302,7 @@ macro_rules! impl_log_for_unsigned_integer {
 
                                         // Number part.
                                         #[cfg(target_os = "solana")]
-                                        syscalls::sol_memcpy_(
+                                        sol_memcpy_(
                                             ptr.add(current) as *mut _,
                                             source as *const _,
                                             remaining as u64,
@@ -358,11 +319,7 @@ macro_rules! impl_log_for_unsigned_integer {
 
                                 // Integer part of the number.
                                 #[cfg(target_os = "solana")]
-                                syscalls::sol_memcpy_(
-                                    ptr as *mut _,
-                                    source as *const _,
-                                    integer_part as u64,
-                                );
+                                sol_memcpy_(ptr as *mut _, source as *const _, integer_part as u64);
                                 #[cfg(not(target_os = "solana"))]
                                 copy_nonoverlapping(source, ptr, integer_part);
 
@@ -376,7 +333,7 @@ macro_rules! impl_log_for_unsigned_integer {
 
                                     // Fractional part of the number.
                                     #[cfg(target_os = "solana")]
-                                    syscalls::sol_memcpy_(
+                                    sol_memcpy_(
                                         ptr.add(current) as *mut _,
                                         source.add(integer_part) as *const _,
                                         remaining as u64,
@@ -618,7 +575,7 @@ unsafe impl Log for &str {
             // SAFETY: the `destination` is always within `length_to_write` bounds.
             unsafe {
                 #[cfg(target_os = "solana")]
-                syscalls::sol_memcpy_(
+                sol_memcpy_(
                     destination as *mut _,
                     source as *const _,
                     length_to_write as u64,

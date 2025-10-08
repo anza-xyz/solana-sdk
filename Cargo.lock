@@ -3593,6 +3593,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "solana-program-log"
+version = "0.0.0"
+dependencies = [
+ "solana-define-syscall",
+ "solana-program-log-macro",
+]
+
+[[package]]
+name = "solana-program-log-macro"
+version = "0.0.0"
+dependencies = [
+ "quote",
+ "regex",
+ "syn 2.0.98",
+]
+
+[[package]]
 name = "solana-program-memory"
 version = "3.0.0"
 dependencies = [
