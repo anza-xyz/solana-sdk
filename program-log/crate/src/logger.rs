@@ -7,9 +7,6 @@ pub use solana_define_syscall::definitions::{
     sol_log_, sol_memcpy_, sol_memset_, sol_remaining_compute_units,
 };
 
-#[cfg(not(target_os = "solana"))]
-extern crate std;
-
 /// Bytes for a truncated `str` log message.
 const TRUNCATED_SLICE: [u8; 3] = [b'.', b'.', b'.'];
 
@@ -123,10 +120,7 @@ pub fn log_message(message: &[u8]) {
         sol_log_(message.as_ptr(), message.len() as u64);
     }
     #[cfg(not(target_os = "solana"))]
-    {
-        let message = core::str::from_utf8(message).unwrap();
-        std::println!("{message}");
-    }
+    core::hint::black_box(message);
 }
 
 /// Remaining CUs.
