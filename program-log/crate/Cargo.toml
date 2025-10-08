@@ -15,6 +15,7 @@ crate-type = ["rlib"]
 [features]
 default = ["macro"]
 macro = ["dep:solana-program-log-macro"]
+std = []
 
 [dependencies]
 solana-program-log-macro = { workspace = true, optional = true }

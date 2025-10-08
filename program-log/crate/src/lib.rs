@@ -53,6 +53,9 @@ pub use logger::{Argument, Logger};
 #[cfg(feature = "macro")]
 pub use solana_program_log_macro::*;
 
+#[cfg(feature = "std")]
+extern crate std;
+
 #[cfg(test)]
 mod tests {
     use super::{Argument, Logger};

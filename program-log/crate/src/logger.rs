@@ -119,7 +119,13 @@ pub fn log_message(message: &[u8]) {
     unsafe {
         sol_log_(message.as_ptr(), message.len() as u64);
     }
-    #[cfg(not(target_os = "solana"))]
+    #[cfg(all(not(target_os = "solana"), feature = "std"))]
+    {
+        let message = core::str::from_utf8(message).unwrap();
+        std::println!("{message}");
+    }
+
+    #[cfg(all(not(target_os = "solana"), not(feature = "std")))]
     core::hint::black_box(message);
 }
 
