@@ -54,7 +54,8 @@ pub use logger::{Argument, Logger};
 #[cfg(feature = "macro")]
 pub use solana_program_log_macro::*;
 
-#[cfg(feature = "std")]
+// Enabling the "std" feature when the target is "solana" has no effect.
+#[cfg(all(not(target_os = "solana"), feature = "std"))]
 extern crate std;
 
 #[cfg(test)]
