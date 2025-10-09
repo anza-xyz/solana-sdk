@@ -279,8 +279,6 @@ fn quote_for_test(
     type_name: &Ident,
     expected_digest: &str,
 ) -> TokenStream2 {
-    // escape from nits.sh...
-    let p = Ident::new(&("ep".to_owned() + "rintln"), Span::call_site());
     quote! {
         #[cfg(test)]
         mod #test_mod_ident {
@@ -302,7 +300,7 @@ fn quote_for_test(
                 let actual_digest = ::std::format!("{}", hash);
                 if ::std::env::var("SOLANA_ABI_BULK_UPDATE").is_ok() {
                     if #expected_digest != actual_digest {
-                        #p!("sed -i -e 's/{}/{}/g' $(git grep --files-with-matches frozen_abi)", #expected_digest, hash);
+                        ::std::eprintln!("sed -i -e 's/{}/{}/g' $(git grep --files-with-matches frozen_abi)", #expected_digest, hash);
                     }
                     ::solana_frozen_abi::__private::log::warn!("Not testing the abi digest under SOLANA_ABI_BULK_UPDATE!");
                 } else {

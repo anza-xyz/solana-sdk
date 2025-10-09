@@ -46,12 +46,14 @@
 //! [`Instruction`]:
 //! https://docs.rs/solana-instruction/latest/solana_instruction/struct.Instruction.html
 
-use solana_address::Address;
 #[cfg(feature = "bincode")]
 use {
     crate::program::ID,
+    alloc::{string::ToString, vec, vec::Vec},
     solana_instruction::{AccountMeta, Instruction},
 };
+#[cfg(feature = "alloc")]
+use {alloc::string::String, solana_address::Address};
 
 // Inline some constants to avoid dependencies.
 //
@@ -85,6 +87,7 @@ const NONCE_STATE_SIZE: usize = 80;
     feature = "serde",
     derive(serde_derive::Deserialize, serde_derive::Serialize)
 )]
+#[cfg(feature = "alloc")]
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum SystemInstruction {
     /// Create a new account

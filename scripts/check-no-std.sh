@@ -24,6 +24,7 @@ no_std_crates=(
   -p solana-sdk-ids
   -p solana-signature
   -p solana-sysvar-id
+  -p solana-system-interface
 )
 # Use the upstream BPF target, which doesn't support std, to make sure that our
 # no_std support really works.

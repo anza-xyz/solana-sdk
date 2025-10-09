@@ -189,7 +189,7 @@ memmap2 = "0.5.10"
 memoffset = "0.9"
 num-bigint = "0.4.6"
 num-derive = "0.4"
-num-traits = "0.2.18"
+num-traits = { version = "0.2.18", default-features = false }
 num_enum = "0.7.3"
 openssl = "0.10.72"
 pairing = "0.23.0"

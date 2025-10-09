@@ -19,6 +19,7 @@ declare print_free_tree=(
   ':**.rs'
   ':^address/src/hasher.rs'
   ':^address/src/lib.rs'
+  ':^frozen-abi-macro/src/lib.rs'
   ':^logger/src/lib.rs'
   ':^msg/src/lib.rs'
   ':^program-log/src/logger.rs'

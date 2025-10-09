@@ -19,16 +19,19 @@ rustdoc-args = ["--cfg=docsrs"]
 crate-type = ["rlib"]
 
 [features]
-bincode = ["dep:solana-instruction", "serde"]
+alloc = []
+bincode = ["dep:solana-instruction", "alloc", "serde"]
 frozen-abi = [
     "dep:solana-frozen-abi",
     "dep:solana-frozen-abi-macro",
     "dep:solana-logger",
     "serde",
+    "std",
     "solana-address/frozen-abi",
     "solana-address/std",
 ]
 serde = ["dep:serde", "dep:serde_derive", "solana-address/serde"]
+std = []
 
 [dependencies]
 num-traits = { workspace = true }
