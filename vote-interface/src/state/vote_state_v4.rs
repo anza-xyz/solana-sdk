@@ -11,9 +11,9 @@ use solana_frozen_abi_macro::{frozen_abi, AbiExample};
 #[cfg(any(target_os = "solana", feature = "bincode"))]
 use solana_instruction::error::InstructionError;
 use {
-    super::{BlockTimestamp, LandedVote, BLS_PUBLIC_KEY_COMPRESSED_SIZE},
+    super::{BlockTimestamp, LandedVote, VoteInit, BLS_PUBLIC_KEY_COMPRESSED_SIZE},
     crate::authorized_voters::AuthorizedVoters,
-    solana_clock::{Epoch, Slot},
+    solana_clock::{Clock, Epoch, Slot},
     solana_pubkey::Pubkey,
     std::{collections::VecDeque, fmt::Debug},
 };
@@ -75,6 +75,21 @@ impl VoteStateV4 {
     /// when votes.len() is MAX_LOCKOUT_HISTORY.
     pub const fn size_of() -> usize {
         3762 // Same size as V3 to avoid account resizing
+    }
+
+    pub fn new(vote_pubkey: &Pubkey, vote_init: &VoteInit, clock: &Clock) -> Self {
+        Self {
+            node_pubkey: vote_init.node_pubkey,
+            authorized_voters: AuthorizedVoters::new(clock.epoch, vote_init.authorized_voter),
+            authorized_withdrawer: vote_init.authorized_withdrawer,
+            // SAFETY: u16::MAX > u8::MAX * 100
+            inflation_rewards_commission_bps: (vote_init.commission as u16).saturating_mul(100),
+            // Per SIMD-0185, set default collectors and commission.
+            inflation_rewards_collector: *vote_pubkey,
+            block_revenue_collector: vote_init.node_pubkey,
+            block_revenue_commission_bps: 10_000, // 100%
+            ..Self::default()
+        }
     }
 
     #[cfg(any(target_os = "solana", feature = "bincode"))]
