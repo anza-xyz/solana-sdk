@@ -1,9 +1,13 @@
 use solana_pubkey::Pubkey;
 
-#[repr(u64)]
+#[repr(u32)]
 #[cfg_attr(feature = "frozen-abi", derive(solana_frozen_abi_macro::AbiExample))]
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum LoaderV4Status {
+    /// Account was zero-filled externally
+    Uninitialized,
+    /// Used as write buffer
+    Buffered,
     /// Program is in maintenance
     Retracted,
     /// Program is ready to be executed
