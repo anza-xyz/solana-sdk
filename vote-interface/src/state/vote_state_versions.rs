@@ -2,17 +2,17 @@
 use arbitrary::{Arbitrary, Unstructured};
 use {
     crate::state::{
-        vote_state_0_23_5::VoteState0_23_5, vote_state_1_14_11::VoteState1_14_11, AuthorizedVoters,
-        BlockTimestamp, LandedVote, VoteStateRead, VoteStateV3, VoteStateV4,
+        vote_state_0_23_5::VoteState0_23_5, vote_state_1_14_11::VoteState1_14_11, BlockTimestamp,
+        VoteStateRead, VoteStateV3, VoteStateV4,
     },
     solana_clock::{Epoch, Slot},
     solana_pubkey::Pubkey,
-    std::collections::VecDeque,
 };
 #[cfg(any(test, all(not(target_os = "solana"), feature = "bincode")))]
 use {
-    crate::state::{CircBuf, Lockout},
+    crate::state::{AuthorizedVoters, CircBuf, LandedVote, Lockout},
     solana_instruction::error::InstructionError,
+    std::collections::VecDeque,
 };
 
 #[cfg_attr(
@@ -193,18 +193,6 @@ impl VoteStateVersions {
 }
 
 impl VoteStateRead for VoteStateVersions {
-    fn authorized_voters(&self) -> &AuthorizedVoters {
-        match self {
-            VoteStateVersions::V0_23_5(_state) => {
-                // V0_23_5 does not have AuthorizedVoters struct.
-                unimplemented!("V0_23_5 does not support authorized_voters.")
-            }
-            VoteStateVersions::V1_14_11(state) => &state.authorized_voters,
-            VoteStateVersions::V3(state) => state.authorized_voters(),
-            VoteStateVersions::V4(state) => state.authorized_voters(),
-        }
-    }
-
     fn authorized_withdrawer(&self) -> &Pubkey {
         match self {
             VoteStateVersions::V0_23_5(state) => &state.authorized_withdrawer,
@@ -256,21 +244,6 @@ impl VoteStateRead for VoteStateVersions {
             VoteStateVersions::V1_14_11(state) => state.root_slot,
             VoteStateVersions::V3(state) => state.root_slot(),
             VoteStateVersions::V4(state) => state.root_slot(),
-        }
-    }
-
-    fn votes(&self) -> &VecDeque<LandedVote> {
-        match self {
-            VoteStateVersions::V0_23_5(_state) => {
-                // V0_23_5 uses VecDeque<Lockout>, not VecDeque<LandedVote>.
-                unimplemented!("V0_23_5 does not support votes.")
-            }
-            VoteStateVersions::V1_14_11(_state) => {
-                // V1_14_11 uses VecDeque<Lockout>, not VecDeque<LandedVote>.
-                unimplemented!("V1_14_11 does not support votes.")
-            }
-            VoteStateVersions::V3(state) => state.votes(),
-            VoteStateVersions::V4(state) => state.votes(),
         }
     }
 }

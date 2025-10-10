@@ -516,10 +516,6 @@ impl VoteStateV3 {
 }
 
 impl VoteStateRead for VoteStateV3 {
-    fn authorized_voters(&self) -> &AuthorizedVoters {
-        &self.authorized_voters
-    }
-
     fn authorized_withdrawer(&self) -> &Pubkey {
         &self.authorized_withdrawer
     }
@@ -543,9 +539,5 @@ impl VoteStateRead for VoteStateV3 {
 
     fn root_slot(&self) -> Option<Slot> {
         self.root_slot
-    }
-
-    fn votes(&self) -> &VecDeque<LandedVote> {
-        &self.votes
     }
 }

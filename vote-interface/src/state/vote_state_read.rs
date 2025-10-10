@@ -1,17 +1,13 @@
 //! Vote state reader API.
 
 use {
-    super::{AuthorizedVoters, BlockTimestamp, LandedVote},
+    super::BlockTimestamp,
     solana_clock::{Epoch, Slot},
     solana_pubkey::Pubkey,
-    std::collections::VecDeque,
 };
 
 /// Read-only trait for accessing vote state data.
 pub trait VoteStateRead {
-    /// Returns the authorized voters.
-    fn authorized_voters(&self) -> &AuthorizedVoters;
-
     /// Returns the authorized withdrawer.
     fn authorized_withdrawer(&self) -> &Pubkey;
 
@@ -38,7 +34,4 @@ pub trait VoteStateRead {
 
     /// Returns the root slot.
     fn root_slot(&self) -> Option<Slot>;
-
-    /// Returns the votes deque.
-    fn votes(&self) -> &VecDeque<LandedVote>;
 }
