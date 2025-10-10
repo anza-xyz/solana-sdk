@@ -8,6 +8,14 @@ validator.
 
 ## Upgrading from v2 to v3
 
+The easiest way to upgrade to v3 is:
+
+* upgrade to the latest v2 crates
+* fix all deprecation warnings
+* (optional) switch to using SPL interface crates v1
+* upgrade to v3-compatible crates
+* (optional) upgrade SPL interface crates to v2
+
 ### solana-sdk
 
 The following modules have been removed, please use their component crates
@@ -75,6 +83,81 @@ directly:
 * [`system_instruction`](https://docs.rs/solana-program/latest/solana_program/system_instruction) -> [`solana_system_interface::instruction`](https://docs.rs/solana-system-interface/latest/solana_system_interface/instruction)
 * [`system_program`](https://docs.rs/solana-program/latest/solana_program/system_program) -> [`solana_system_interface::program`](https://docs.rs/solana-system-interface/latest/solana_system_interface/program)
 * [`vote`](https://docs.rs/solana-program/latest/solana_program/vote) -> [`solana_vote_interface`](https://docs.rs/solana-vote-interface/latest/solana_vote_interface)
+
+### Breaking Changes
+
+#### Address / Pubkey
+
+SDK v3 introduces the `Address` type, a better named and more flexible version
+of `Pubkey`. `Pubkey` is a type alias of `Address`, so if you see errors related
+to `Address` vs `Pubkey` in your build, it simply means that one of your
+dependencies hasn't been upgraded to v3.
+
+#### AccountInfo
+
+Removed `rent_epoch` field, now called `_unused`. This field can be completely
+ignored. The final parameter in `AccountInfo::new` was removed.
+
+#### Hash
+
+The inner bytes were made private, so use `Hash::as_bytes()` to access them.
+
+#### Genesis
+
+Moved `ClusterType` to `solana-cluster-type`.
+
+#### Keypair
+
+Use `Keypair::try_from` instead of `Keypair::from_bytes`.
+
+#### Instruction-Error / Program-Error
+
+Changed `BorshIoError(String)` -> `BorshIoError`, so no more string parameter
+exists in either `InstructionError` or `ProgramError`.
+
+#### Program Memory
+
+Marked all onchain memory operations usage as unsafe, so all usages of memory
+operations need to be in an `unsafe` block.
+
+#### Sysvar
+
+If you're using `Sysvar::from_account_info`, you'll need to also import
+`solana_sysvar::SysvarSerialize`.
+
+#### Stake
+
+`StakeHistory` now lives in `solana_stake_interface` instead of `solana_sysvar`.
+
+#### Vote Interface
+
+* `VoteState` -> `VoteStateV3`
+* `convert_to_current` -> `convert_to_v3`
+* `new_current` -> `new_v3`
+
+### SPL Dependencies
+
+SPL libraries have been broken up between an interface and program crate for
+lighter dependency management and to allow LTO on builds.
+
+When upgrading to SDK v3 crates, replace the following with v2 of the corresponding
+interface crate:
+
+* `spl-token` -> `spl-token-interface`
+* `spl-token-2022` -> `spl-token-2022-interface`
+* `spl-associated-token-account` -> `spl-associated-token-account-interface`
+* `spl-memo` -> `spl-memo-interface`
+
+For example, if you're using `spl-token` v8, you should switch to
+`spl-token-interface` v2 when upgrading to SDK v3. The state, instruction, and
+error modules mimic the program crates, so no other changes should be required.
+
+Program crates, like `spl-token`, contain a `cdylib` target, so the Rust
+compiler cannot run LTO. Interface crates only declare a `lib` target, and
+contain fewer dependencies. You can run LTO with `cargo build-sbf --lto`.
+
+NOTE: Results with `--lto` are mixed, so be sure to profile your program's size
+and CU usage with and without the flag.
 
 ## Building
 
