@@ -204,6 +204,20 @@ To patch all of the crates in this repo for Agave, just run:
 ./scripts/patch-crates-no-header.sh <AGAVE_PATH> <SOLANA_SDK_PATH>
 ```
 
+To patch just one crate, specify its path:
+
+```console
+./scripts/patch-crates-no-header.sh <AGAVE_PATH> <SOLANA_SDK_PATH> <RELATIVE_PATH>
+```
+
+For example, to patch `solana-bn254`, run:
+
+```console
+./scripts/patch-crates-no-header.sh ../agave . bn254
+```
+
+It's possible to run the script multiple times for different crates.
+
 ### Publishing a crate from this repository
 
 NOTE: The repo currently contains unpublished breaking changes, so please

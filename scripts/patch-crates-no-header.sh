@@ -9,11 +9,12 @@ source "$here"/patch-crates-functions.sh
 usage() {
   cat <<EOF >&2
 USAGE:
-    $0 <AGAVE_PATH> <SOLANA_SDK_PATH>
+    $0 <AGAVE_PATH> <SOLANA_SDK_PATH> [<CRATE_PATH>]
 
 ARGS:
     <AGAVE_PATH>        Path to the root of an agave repo
     <SOLANA_SDK_PATH>   Path to the root of a solana-sdk repo
+    [<CRATE_PATH>]      (Optional) Relative path to one crate to patch, ie. "address". By default, all crates are patched.
 EOF
 }
 
@@ -29,5 +30,7 @@ if [ -z "$solana_sdk_path" ]; then
   exit 1
 fi
 
-update_solana_sdk_dependencies "$agave_path" "$solana_sdk_path"
-patch_crates_io_solana_sdk_no_header "$agave_path"/Cargo.toml "$solana_sdk_path"
+crate_dir="$3"
+
+update_solana_sdk_dependencies "$agave_path" "$solana_sdk_path" "$crate_dir"
+patch_crates_io_solana_sdk_no_header "$agave_path"/Cargo.toml "$solana_sdk_path" "$crate_dir"
