@@ -33,6 +33,21 @@ define_syscall!(fn sol_get_sysvar(sysvar_id_addr: *const u8, result: *mut u8, of
 define_syscall!(fn sol_get_epoch_stake(vote_address: *const u8) -> u64);
 define_syscall!(fn sol_panic_(filename: *const u8, filename_len: u64, line: u64, column: u64));
 
+// `program_id` points to an `Address` (`[u8; 32]`).
+define_syscall!(fn sol_get_return_data(data: *mut u8, length: u64, program_id: *mut u8) -> u64);
+
+// `meta` points to a structure containing:
+// - `data_len` (`u64`): length of the instruction data
+// - `accounts_len` (`u64`): number of `AccountMeta` entries
+//
+// `program_id` points to an `Address` (`[u8; 32]`).
+//
+// `accounts` is a pointer to an array of `AccountMeta`, each containing:
+// - `address` (`[u8; 32]`): account address
+// - `is_signer` (`u8`): `true` if the instruction requires a signature
+// - `is_writable` (`u8`): `true` if the instruction requires the account to be writable
+define_syscall!(fn sol_get_processed_sibling_instruction(index: u64, meta: *mut u8, program_id: *mut u8, data: *mut u8, accounts: *mut u8) -> u64);
+
 // these are deprecated - use sol_get_sysvar instead
 define_syscall!(#[deprecated(since = "3.0.0", note = "Use `sol_get_sysvar` with `Clock` sysvar address instead")] fn sol_get_clock_sysvar(addr: *mut u8) -> u64);
 define_syscall!(#[deprecated(since = "3.0.0", note = "Use `sol_get_sysvar` with `EpochSchedule` sysvar address instead")] fn sol_get_epoch_schedule_sysvar(addr: *mut u8) -> u64);

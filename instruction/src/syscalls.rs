@@ -3,12 +3,32 @@ use crate::Instruction;
 #[cfg(target_os = "solana")]
 pub use {
     crate::{AccountMeta, ProcessedSiblingInstruction},
-    solana_define_syscall::{define_syscall, definitions::sol_get_stack_height},
+    solana_define_syscall::definitions::sol_get_stack_height,
     solana_pubkey::Pubkey,
 };
 
 #[cfg(target_os = "solana")]
-define_syscall!(fn sol_get_processed_sibling_instruction(index: u64, meta: *mut ProcessedSiblingInstruction, program_id: *mut Pubkey, data: *mut u8, accounts: *mut AccountMeta) -> u64);
+#[deprecated(
+    since = "3.1.0",
+    note = "Use `solana_define_syscall::definitions::get_processed_sibling_instruction` instead"
+)]
+pub unsafe fn sol_get_processed_sibling_instruction(
+    index: u64,
+    meta: *mut ProcessedSiblingInstruction,
+    program_id: *mut Pubkey,
+    data: *mut u8,
+    accounts: *mut AccountMeta,
+) -> u64 {
+    unsafe {
+        solana_define_syscall::definitions::sol_get_processed_sibling_instruction(
+            index,
+            meta as *mut u8,
+            program_id as *mut u8,
+            data,
+            accounts as *mut u8,
+        )
+    }
+}
 
 /// Returns a sibling instruction from the processed sibling instruction list.
 ///
@@ -28,14 +48,15 @@ pub fn get_processed_sibling_instruction(index: usize) -> Option<Instruction> {
     {
         let mut meta = ProcessedSiblingInstruction::default();
         let mut program_id = solana_pubkey::Pubkey::default();
+        let mut account_meta = AccountMeta::default();
 
         if 1 == unsafe {
-            sol_get_processed_sibling_instruction(
+            solana_define_syscall::definitions::sol_get_processed_sibling_instruction(
                 index as u64,
-                &mut meta,
-                &mut program_id,
+                &mut meta as *mut _ as *mut u8,
+                &mut program_id as *mut _ as *mut u8,
                 &mut u8::default(),
-                &mut AccountMeta::default(),
+                &mut account_meta as *mut _ as *mut u8,
             )
         } {
             let mut data = std::vec::Vec::new();
@@ -44,12 +65,12 @@ pub fn get_processed_sibling_instruction(index: usize) -> Option<Instruction> {
             accounts.resize_with(meta.accounts_len as usize, AccountMeta::default);
 
             let _ = unsafe {
-                sol_get_processed_sibling_instruction(
+                solana_define_syscall::definitions::sol_get_processed_sibling_instruction(
                     index as u64,
-                    &mut meta,
-                    &mut program_id,
+                    &mut meta as *mut _ as *mut u8,
+                    &mut program_id as *mut _ as *mut u8,
                     data.as_mut_ptr(),
-                    accounts.as_mut_ptr(),
+                    accounts.as_mut_ptr() as *mut u8,
                 )
             };
 
