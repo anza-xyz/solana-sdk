@@ -46,18 +46,10 @@ pub struct VoteState1_14_11 {
 }
 
 impl VoteState1_14_11 {
-    pub fn get_rent_exempt_reserve(rent: &Rent) -> u64 {
-        rent.minimum_balance(Self::size_of())
-    }
-
     /// Upper limit on the size of the Vote State
     /// when votes.len() is MAX_LOCKOUT_HISTORY.
     pub fn size_of() -> usize {
         3731 // see test_vote_state_size_of
-    }
-
-    pub fn is_uninitialized(&self) -> bool {
-        self.authorized_voters.is_empty()
     }
 
     pub fn is_correct_size_and_initialized(data: &[u8]) -> bool {
