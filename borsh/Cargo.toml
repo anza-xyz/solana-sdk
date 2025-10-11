@@ -13,7 +13,7 @@ edition = { workspace = true }
 targets = ["x86_64-unknown-linux-gnu"]
 
 [dependencies]
-borsh = { workspace = true }
+borsh = { workspace = true, features = ["std"] }
 
 [lints]
 workspace = true

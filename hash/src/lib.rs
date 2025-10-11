@@ -9,8 +9,11 @@ extern crate std;
 use bytemuck_derive::{Pod, Zeroable};
 #[cfg(feature = "serde")]
 use serde_derive::{Deserialize, Serialize};
-#[cfg(all(feature = "borsh", feature = "std"))]
-use std::string::ToString;
+#[cfg(feature = "borsh")]
+extern crate alloc;
+#[cfg(feature = "borsh")]
+use alloc::string::ToString;
+
 use {
     core::{
         fmt,
@@ -37,7 +40,7 @@ pub const MAX_BASE58_LEN: usize = 44;
     derive(BorshSerialize, BorshDeserialize),
     borsh(crate = "borsh")
 )]
-#[cfg_attr(all(feature = "borsh", feature = "std"), derive(BorshSchema))]
+#[cfg_attr(feature = "borsh", derive(BorshSchema))]
 #[cfg_attr(feature = "bytemuck", derive(Pod, Zeroable))]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize,))]
 #[derive(Clone, Copy, Default, Eq, PartialEq, Ord, PartialOrd, Hash)]

@@ -1,9 +1,10 @@
+#![no_std]
 #![cfg_attr(docsrs, feature(doc_auto_cfg))]
 pub use implementation::AtomicU64;
 
 #[cfg(target_pointer_width = "64")]
 mod implementation {
-    use std::sync::atomic;
+    use core::sync::atomic;
 
     pub struct AtomicU64(atomic::AtomicU64);
 

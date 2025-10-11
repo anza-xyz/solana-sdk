@@ -14,7 +14,8 @@ targets = ["x86_64-unknown-linux-gnu"]
 
 [features]
 default = ["std"]
-std = []
+alloc = []
+std = ["alloc"]
 
 [target.'cfg(target_os = "solana")'.dependencies]
 solana-define-syscall = { workspace = true }

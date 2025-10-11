@@ -22,8 +22,12 @@ use crate::error::ParseAddressError;
 #[cfg(all(feature = "rand", not(target_os = "solana")))]
 pub use crate::hasher::{AddressHasher, AddressHasherBuilder};
 
+#[cfg(feature = "alloc")]
+extern crate alloc;
 #[cfg(feature = "std")]
 extern crate std;
+#[cfg(feature = "alloc")]
+use alloc::vec::Vec;
 #[cfg(feature = "dev-context-only-utils")]
 use arbitrary::Arbitrary;
 #[cfg(feature = "bytemuck")]
@@ -38,12 +42,10 @@ use core::{
 };
 #[cfg(feature = "serde")]
 use serde_derive::{Deserialize, Serialize};
-#[cfg(feature = "std")]
-use std::vec::Vec;
 #[cfg(feature = "borsh")]
 use {
+    alloc::string::ToString,
     borsh::{BorshDeserialize, BorshSchema, BorshSerialize},
-    std::string::ToString,
 };
 
 /// Number of bytes in an address.
@@ -79,7 +81,7 @@ pub const PDA_MARKER: &[u8; 21] = b"ProgramDerivedAddress";
     derive(BorshSerialize, BorshDeserialize),
     borsh(crate = "borsh")
 )]
-#[cfg_attr(all(feature = "borsh", feature = "std"), derive(BorshSchema))]
+#[cfg_attr(feature = "borsh", derive(BorshSchema))]
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[cfg_attr(feature = "bytemuck", derive(Pod, Zeroable))]
 #[cfg_attr(feature = "dev-context-only-utils", derive(Arbitrary))]
@@ -144,7 +146,7 @@ impl TryFrom<&[u8]> for Address {
     }
 }
 
-#[cfg(feature = "std")]
+#[cfg(feature = "alloc")]
 impl TryFrom<Vec<u8>> for Address {
     type Error = Vec<u8>;
 

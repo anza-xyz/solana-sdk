@@ -17,7 +17,7 @@ rustdoc-args = ["--cfg=docsrs"]
 
 [features]
 atomic = ["dep:solana-atomic-u64"]
-borsh = ["dep:borsh", "std"]
+borsh = ["dep:borsh", "alloc"]
 bytemuck = ["dep:bytemuck", "dep:bytemuck_derive"]
 curve25519 = ["dep:curve25519-dalek", "error", "sha2"]
 decode = ["dep:five8", "dep:five8_const", "error"]
@@ -33,7 +33,8 @@ rand = ["dep:rand", "atomic", "std"]
 sanitize = ["dep:solana-sanitize"]
 serde = ["dep:serde", "dep:serde_derive"]
 sha2 = ["dep:solana-sha256-hasher", "error"]
-std = ["decode"]
+std = ["decode", "borsh?/std", "serde?/std", "alloc"]
+alloc = []
 syscalls = ["dep:solana-define-syscall", "error"]
 
 [dependencies]
@@ -72,7 +73,7 @@ solana-address = { path = ".", features = [
     "error",
     "sanitize",
     "std",
-    "syscalls"
+    "syscalls",
 ] }
 solana-cpi = { path = "../cpi" }
 solana-example-mocks = { path = "../example-mocks" }

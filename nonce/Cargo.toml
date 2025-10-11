@@ -19,6 +19,7 @@ dev-context-only-utils = ["serde"]
 serde = [
     "dep:serde",
     "dep:serde_derive",
+    "serde/alloc",
     "solana-fee-calculator/serde",
     "solana-hash/serde",
     "solana-pubkey/serde",

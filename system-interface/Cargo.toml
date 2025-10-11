@@ -30,7 +30,7 @@ frozen-abi = [
     "solana-address/frozen-abi",
     "solana-address/std",
 ]
-serde = ["dep:serde", "dep:serde_derive", "solana-address/serde"]
+serde = ["dep:serde", "dep:serde_derive", "serde/alloc", "solana-address/serde"]
 std = []
 
 [dependencies]

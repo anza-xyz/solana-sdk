@@ -18,14 +18,9 @@ rustdoc-args = ["--cfg=docsrs"]
 bincode = ["dep:bincode", "dep:serde"]
 borsh = ["dep:borsh"]
 default = ["std"]
-frozen-abi = [
-    "dep:solana-frozen-abi",
-    "dep:solana-frozen-abi-macro",
-    "serde",
-    "std",
-]
+frozen-abi = ["dep:solana-frozen-abi", "dep:solana-frozen-abi-macro", "serde", "std"]
 serde = ["dep:serde", "dep:serde_derive", "solana-pubkey/serde"]
-std = []
+std = ["serde?/std", "borsh?/std"]
 syscalls = ["std"]
 
 [dependencies]

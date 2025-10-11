@@ -31,6 +31,7 @@ serde = [
     "dep:serde",
     "dep:serde_derive",
     "dep:solana-short-vec",
+    "serde/alloc",
     "solana-address/serde",
     "solana-hash/serde",
 ]
@@ -58,7 +59,10 @@ bitflags = { workspace = true }
 borsh = { workspace = true }
 itertools = { workspace = true }
 serde_json = { workspace = true }
-solana-address-lookup-table-interface = { workspace = true, features = ["bincode", "bytemuck"] }
+solana-address-lookup-table-interface = { workspace = true, features = [
+    "bincode",
+    "bytemuck",
+] }
 solana-example-mocks = { path = "../example-mocks" }
 solana-instruction = { workspace = true, features = ["borsh"] }
 solana-instruction-error = { workspace = true }

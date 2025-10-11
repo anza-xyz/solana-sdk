@@ -14,7 +14,7 @@ targets = ["x86_64-unknown-linux-gnu"]
 
 [features]
 frozen-abi = ["dep:solana-frozen-abi", "dep:solana-frozen-abi-macro"]
-serde = ["dep:serde", "dep:serde_derive"]
+serde = ["dep:serde", "dep:serde_derive", "serde/alloc"]
 
 [dependencies]
 serde = { workspace = true, optional = true }

@@ -26,7 +26,7 @@ bincode = [
 bytemuck = ["dep:bytemuck", "solana-pubkey/bytemuck"]
 dev-context-only-utils = ["bincode", "bytemuck"]
 frozen-abi = ["dep:solana-frozen-abi", "dep:solana-frozen-abi-macro", "serde"]
-serde = ["dep:serde", "dep:serde_derive", "solana-pubkey/serde"]
+serde = ["dep:serde", "dep:serde_derive", "serde/alloc", "solana-pubkey/serde"]
 
 [dependencies]
 bincode = { workspace = true, optional = true }
@@ -34,12 +34,8 @@ bytemuck = { workspace = true, optional = true }
 serde = { workspace = true, optional = true }
 serde_derive = { workspace = true, optional = true }
 solana-clock = { workspace = true }
-solana-frozen-abi = { workspace = true, features = [
-    "frozen-abi",
-], optional = true }
-solana-frozen-abi-macro = { workspace = true, features = [
-    "frozen-abi",
-], optional = true }
+solana-frozen-abi = { workspace = true, features = ["frozen-abi"], optional = true }
+solana-frozen-abi-macro = { workspace = true, features = ["frozen-abi"], optional = true }
 solana-instruction = { workspace = true, features = ["std"], optional = true }
 solana-instruction-error = { workspace = true, optional = true }
 solana-pubkey = { workspace = true }

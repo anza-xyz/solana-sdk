@@ -1,7 +1,15 @@
 #![no_std]
 #![cfg_attr(docsrs, feature(doc_auto_cfg))]
+#[cfg(feature = "alloc")]
+extern crate alloc;
 #[cfg(feature = "std")]
 extern crate std;
+
+/// We re-export the `format!` macro from `alloc` for use in the `msg!` macro
+#[cfg(feature = "alloc")]
+#[doc(hidden)]
+pub use alloc::format;
+
 /// Print a message to the log.
 ///
 /// Supports simple strings as well as Rust [format strings][fs]. When passed a
@@ -11,8 +19,8 @@ extern crate std;
 /// a sequence of expressions, the tokens will be passed through the
 /// [`format!`] macro before being logged with `sol_log`.
 ///
-/// [fs]: https://doc.rust-lang.org/std/fmt/
-/// [`format!`]: https://doc.rust-lang.org/std/fmt/fn.format.html
+/// [fs]: https://doc.rust-lang.org/alloc/fmt/
+/// [`format!`]: https://doc.rust-lang.org/alloc/fmt/fn.format.html
 ///
 /// Note that Rust's formatting machinery is relatively CPU-intensive
 /// for constrained environments like the Solana VM.
@@ -29,13 +37,13 @@ extern crate std;
 /// let err = "not enough signers";
 /// msg!("multisig failed: {}", err);
 /// ```
-#[cfg(feature = "std")]
+#[cfg(feature = "alloc")]
 #[macro_export]
 macro_rules! msg {
     ($msg:expr) => {
         $crate::sol_log($msg)
     };
-    ($($arg:tt)*) => ($crate::sol_log(&format!($($arg)*)));
+    ($($arg:tt)*) => ($crate::sol_log(&$crate::format!($($arg)*)));
 }
 
 #[cfg(target_os = "solana")]

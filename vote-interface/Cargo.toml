@@ -42,6 +42,7 @@ serde = [
     "dep:serde_with",
     "dep:solana-serde-varint",
     "dep:solana-short-vec",
+    "serde/alloc",
     "solana-hash/serde",
     "solana-pubkey/serde",
 ]
@@ -56,12 +57,8 @@ serde = { workspace = true, optional = true }
 serde_derive = { workspace = true, optional = true }
 serde_with = { workspace = true, features = ["macros"], optional = true }
 solana-clock = { workspace = true }
-solana-frozen-abi = { workspace = true, features = [
-    "frozen-abi",
-], optional = true }
-solana-frozen-abi-macro = { workspace = true, features = [
-    "frozen-abi",
-], optional = true }
+solana-frozen-abi = { workspace = true, features = ["frozen-abi"], optional = true }
+solana-frozen-abi-macro = { workspace = true, features = ["frozen-abi"], optional = true }
 solana-hash = { workspace = true }
 solana-instruction = { workspace = true, features = ["std"] }
 solana-instruction-error = { workspace = true, features = ["num-traits"] }
