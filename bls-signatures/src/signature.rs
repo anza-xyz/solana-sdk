@@ -81,9 +81,9 @@ impl SignatureProjective {
 
     /// Aggregate a list of signatures into an existing aggregate
     #[allow(clippy::arithmetic_side_effects)]
-    pub fn aggregate_with<S: AsSignatureProjective + ?Sized>(
+    pub fn aggregate_with<'a, S: AsSignatureProjective + ?Sized + 'a>(
         &mut self,
-        signatures: &[&S],
+        signatures: impl Iterator<Item = &'a S>,
     ) -> Result<(), BlsError> {
         for signature in signatures {
             self.0 += signature.try_as_projective()?.0;
@@ -92,23 +92,27 @@ impl SignatureProjective {
     }
 
     /// Aggregate a list of signatures
-    #[allow(clippy::arithmetic_side_effects)]
-    pub fn aggregate<S: AsSignatureProjective + ?Sized>(
-        signatures: &[&S],
+    pub fn aggregate<'a, S: AsSignatureProjective + ?Sized + 'a>(
+        mut signatures: impl Iterator<Item = &'a S>,
     ) -> Result<SignatureProjective, BlsError> {
-        if let Some((first, rest)) = signatures.split_first() {
-            let mut aggregate = first.try_as_projective()?;
-            aggregate.aggregate_with(rest)?;
-            Ok(aggregate)
-        } else {
-            Err(BlsError::EmptyAggregation)
+        match signatures.next() {
+            Some(first) => {
+                let mut aggregate = first.try_as_projective()?;
+                aggregate.aggregate_with(signatures)?;
+                Ok(aggregate)
+            }
+            None => Err(BlsError::EmptyAggregation),
         }
     }
 
     /// Verify a list of signatures against a message and a list of public keys
-    pub fn verify_aggregate<P: AsPubkeyProjective + ?Sized, S: AsSignatureProjective + ?Sized>(
-        public_keys: &[&P],
-        signatures: &[&S],
+    pub fn verify_aggregate<
+        'a,
+        P: AsPubkeyProjective + ?Sized + 'a,
+        S: AsSignatureProjective + ?Sized + 'a,
+    >(
+        public_keys: impl Iterator<Item = &'a P>,
+        signatures: impl Iterator<Item = &'a S>,
         message: &[u8],
     ) -> Result<bool, BlsError> {
         let aggregate_pubkey = PubkeyProjective::aggregate(public_keys)?;
@@ -121,7 +125,7 @@ impl SignatureProjective {
     /// public keys.
     pub fn verify_distinct(
         public_keys: &[&Pubkey],
-        signatures: &[&Signature],
+        signatures: &[Signature],
         messages: &[&[u8]],
     ) -> Result<bool, BlsError> {
         if public_keys.len() != messages.len() || public_keys.len() != signatures.len() {
@@ -130,7 +134,7 @@ impl SignatureProjective {
         if public_keys.is_empty() {
             return Err(BlsError::EmptyAggregation);
         }
-        let aggregate_signature = SignatureProjective::aggregate(signatures)?;
+        let aggregate_signature = SignatureProjective::aggregate(signatures.iter())?;
         Self::verify_distinct_aggregated(public_keys, &aggregate_signature.into(), messages)
     }
 
@@ -486,11 +490,11 @@ mod tests {
         let signature1_affine: Signature = signature1.into();
 
         let aggregate_signature =
-            SignatureProjective::aggregate(&[&signature0, &signature1]).unwrap();
+            SignatureProjective::aggregate([&signature0, &signature1].into_iter()).unwrap();
 
         let mut aggregate_signature_with = signature0;
         aggregate_signature_with
-            .aggregate_with(&[&signature1_affine])
+            .aggregate_with([&signature1_affine].into_iter())
             .unwrap();
 
         assert_eq!(aggregate_signature, aggregate_signature_with);
@@ -516,8 +520,8 @@ mod tests {
 
         // basic case
         assert!(SignatureProjective::verify_aggregate(
-            &[&keypair0.public, &keypair1.public],
-            &[&signature0, &signature1],
+            [&keypair0.public, &keypair1.public].into_iter(),
+            [&signature0, &signature1].into_iter(),
             test_message,
         )
         .unwrap());
@@ -528,44 +532,46 @@ mod tests {
         let signature0_affine: Signature = signature0.into();
         let signature1_affine: Signature = signature1.into();
         assert!(SignatureProjective::verify_aggregate(
-            &[&pubkey0_affine, &pubkey1_affine],
-            &[&signature0_affine, &signature1_affine],
+            [&pubkey0_affine, &pubkey1_affine].into_iter(),
+            [&signature0_affine, &signature1_affine].into_iter(),
             test_message,
         )
         .unwrap());
 
         // pre-aggregate the signatures
         let aggregate_signature =
-            SignatureProjective::aggregate(&[&signature0, &signature1]).unwrap();
+            SignatureProjective::aggregate([&signature0, &signature1].into_iter()).unwrap();
         assert!(SignatureProjective::verify_aggregate(
-            &[&keypair0.public, &keypair1.public],
-            &[&aggregate_signature],
+            [&keypair0.public, &keypair1.public].into_iter(),
+            [&aggregate_signature].into_iter(),
             test_message,
         )
         .unwrap());
 
         // pre-aggregate the public keys
         let aggregate_pubkey =
-            PubkeyProjective::aggregate(&[&keypair0.public, &keypair1.public]).unwrap();
+            PubkeyProjective::aggregate([&keypair0.public, &keypair1.public].into_iter()).unwrap();
         assert!(SignatureProjective::verify_aggregate(
-            &[&aggregate_pubkey],
-            &[&signature0, &signature1],
+            [&aggregate_pubkey].into_iter(),
+            [&signature0, &signature1].into_iter(),
             test_message,
         )
         .unwrap());
+        let pubkeys = Vec::new() as Vec<PubkeyProjective>;
 
         // empty set of public keys or signatures
         let err = SignatureProjective::verify_aggregate(
-            &[] as &[&PubkeyProjective],
-            &[&signature0, &signature1],
+            pubkeys.iter(),
+            [&signature0, &signature1].into_iter(),
             test_message,
         )
         .unwrap_err();
         assert_eq!(err, BlsError::EmptyAggregation);
 
+        let signatures = Vec::new() as Vec<&SignatureProjective>;
         let err = SignatureProjective::verify_aggregate(
-            &[&keypair0.public, &keypair1.public],
-            &[] as &[&SignatureProjective],
+            [&keypair0.public, &keypair1.public].into_iter(),
+            signatures.into_iter(),
             test_message,
         )
         .unwrap_err();
@@ -593,7 +599,7 @@ mod tests {
         // Success cases
         let pubkeys_refs = [&keypair0.public, &keypair1.public, &keypair2.public];
         let messages_refs_vec: Vec<&[u8]> = std::vec![message0, message1, message2];
-        let signatures_refs = [&signature0, &signature1, &signature2];
+        let signatures_refs = std::vec![signature0, signature1, signature2];
 
         assert!(SignatureProjective::verify_distinct(
             &pubkeys_refs,
@@ -630,7 +636,7 @@ mod tests {
 
         let wrong_signature_proj = wrong_keypair.sign(message1);
         let wrong_signature: Signature = wrong_signature_proj.into();
-        let wrong_signatures = [&signature0, &wrong_signature, &signature2];
+        let wrong_signatures = [signature0, wrong_signature, signature2];
         assert!(!SignatureProjective::verify_distinct(
             &pubkeys_refs,
             &wrong_signatures,
@@ -656,7 +662,7 @@ mod tests {
 
         let err = SignatureProjective::verify_distinct(
             &[] as &[&Pubkey],
-            &[] as &[&Signature],
+            &[] as &[Signature],
             &[] as &[&[u8]],
         )
         .unwrap_err();
@@ -689,10 +695,12 @@ mod tests {
         let dyn_signatures: Vec<&dyn AsSignatureProjective> =
             std::vec![&signature0, &signature1_affine, &signature2_compressed];
 
-        assert!(
-            SignatureProjective::verify_aggregate(&dyn_pubkeys, &dyn_signatures, test_message)
-                .unwrap()
-        );
+        assert!(SignatureProjective::verify_aggregate(
+            dyn_pubkeys.into_iter(),
+            dyn_signatures.into_iter(),
+            test_message
+        )
+        .unwrap());
 
         let wrong_message = b"this is not the correct message";
         let dyn_pubkeys_fail: Vec<&dyn AsPubkeyProjective> =
@@ -700,8 +708,8 @@ mod tests {
         let dyn_signatures_fail: Vec<&dyn AsSignatureProjective> =
             std::vec![&signature0, &signature1_affine, &signature2_compressed];
         assert!(!SignatureProjective::verify_aggregate(
-            &dyn_pubkeys_fail,
-            &dyn_signatures_fail,
+            dyn_pubkeys_fail.into_iter(),
+            dyn_signatures_fail.into_iter(),
             wrong_message
         )
         .unwrap());
