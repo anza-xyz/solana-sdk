@@ -39,12 +39,9 @@ fn bench_aggregate(c: &mut Criterion) {
         let signatures: Vec<SignatureProjective> =
             keypairs.iter().map(|kp| kp.sign(message)).collect();
 
-        let pubkey_refs: Vec<&PubkeyProjective> = pubkeys.iter().collect();
-        let signature_refs: Vec<&SignatureProjective> = signatures.iter().collect();
-
         // Benchmark for aggregating multiple signatures
         group.bench_function(format!("{num_validators} signature aggregation"), |b| {
-            b.iter(|| black_box(SignatureProjective::aggregate(&signature_refs)));
+            b.iter(|| black_box(SignatureProjective::aggregate(signatures.iter())));
         });
 
         #[cfg(feature = "parallel")]
@@ -57,7 +54,7 @@ fn bench_aggregate(c: &mut Criterion) {
 
         // Benchmark for aggregating multiple public keys
         group.bench_function(format!("{num_validators} pubkey aggregation"), |b| {
-            b.iter(|| black_box(PubkeyProjective::aggregate(&pubkey_refs)));
+            b.iter(|| black_box(PubkeyProjective::aggregate(pubkeys.iter())));
         });
 
         // Benchmark for aggregate verify
@@ -75,8 +72,8 @@ fn bench_aggregate(c: &mut Criterion) {
                 b.iter(|| {
                     let verification_result = black_box(
                         SignatureProjective::verify_aggregate(
-                            &pubkey_refs,
-                            &signature_refs,
+                            pubkeys.iter(),
+                            signatures.iter(),
                             message,
                         )
                         .unwrap(),
@@ -149,7 +146,6 @@ fn bench_batch_verification(c: &mut Criterion) {
             .zip(message_refs.iter())
             .map(|(kp, msg)| kp.sign(msg).into())
             .collect();
-        let signature_refs: Vec<&Signature> = signatures.iter().collect();
 
         group.bench_function(
             format!("{num_validators} sequential batch verification"),
@@ -158,7 +154,7 @@ fn bench_batch_verification(c: &mut Criterion) {
                     let verification_result = black_box(
                         SignatureProjective::verify_distinct(
                             &pubkey_refs,
-                            &signature_refs,
+                            &signatures,
                             &message_refs,
                         )
                         .unwrap(),

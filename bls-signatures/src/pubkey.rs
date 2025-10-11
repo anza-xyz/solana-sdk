@@ -105,9 +105,9 @@ impl PubkeyProjective {
 
     /// Aggregate a list of public keys into an existing aggregate
     #[allow(clippy::arithmetic_side_effects)]
-    pub fn aggregate_with<P: AsPubkeyProjective + ?Sized>(
+    pub fn aggregate_with<'a, P: AsPubkeyProjective + ?Sized + 'a>(
         &mut self,
-        pubkeys: &[&P],
+        pubkeys: impl Iterator<Item = &'a P>,
     ) -> Result<(), BlsError> {
         for pubkey in pubkeys {
             self.0 += pubkey.try_as_projective()?.0;
@@ -117,18 +117,16 @@ impl PubkeyProjective {
 
     /// Aggregate a list of public keys
     #[allow(clippy::arithmetic_side_effects)]
-    pub fn aggregate<P: AsPubkeyProjective + ?Sized>(
-        pubkeys: &[&P],
+    pub fn aggregate<'a, P: AsPubkeyProjective + ?Sized + 'a>(
+        mut pubkeys: impl Iterator<Item = &'a P>,
     ) -> Result<PubkeyProjective, BlsError> {
-        if pubkeys.is_empty() {
-            return Err(BlsError::EmptyAggregation);
-        }
-        if let Some((first, rest)) = pubkeys.split_first() {
-            let mut aggregate = first.try_as_projective()?;
-            aggregate.aggregate_with(rest)?;
-            Ok(aggregate)
-        } else {
-            Err(BlsError::EmptyAggregation)
+        match pubkeys.next() {
+            Some(first) => {
+                let mut aggregate = first.try_as_projective()?;
+                aggregate.aggregate_with(pubkeys)?;
+                Ok(aggregate)
+            }
+            None => Err(BlsError::EmptyAggregation),
         }
     }
 
@@ -471,9 +469,10 @@ mod tests {
         let dyn_pubkeys: std::vec::Vec<&dyn AsPubkeyProjective> =
             std::vec![&pubkey_projective, &pubkey_affine, &pubkey_compressed];
 
-        let aggregate_from_dyn = PubkeyProjective::aggregate(&dyn_pubkeys).unwrap();
+        let aggregate_from_dyn = PubkeyProjective::aggregate(dyn_pubkeys.into_iter()).unwrap();
         let pubkeys_for_baseline = [&keypair0.public, &keypair1.public, &keypair1.public];
-        let baseline_aggregate = PubkeyProjective::aggregate(&pubkeys_for_baseline).unwrap();
+        let baseline_aggregate =
+            PubkeyProjective::aggregate(pubkeys_for_baseline.into_iter()).unwrap();
 
         assert_eq!(aggregate_from_dyn, baseline_aggregate);
     }
