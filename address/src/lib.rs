@@ -236,10 +236,11 @@ impl Address {
     #[cfg(feature = "sha2")]
     pub fn create_with_seed(
         base: &Address,
-        seed: &str,
+        seed: &(impl AsRef<[u8]> + ?Sized),
         owner: &Address,
     ) -> Result<Address, AddressError> {
-        if seed.len() > MAX_SEED_LEN {
+        let seed_bytes: &[u8] = seed.as_ref();
+        if seed_bytes.len() > MAX_SEED_LEN {
             return Err(AddressError::MaxSeedLengthExceeded);
         }
 
@@ -250,7 +251,7 @@ impl Address {
                 return Err(AddressError::IllegalOwner);
             }
         }
-        let hash = solana_sha256_hasher::hashv(&[base.as_ref(), seed.as_ref(), owner]);
+        let hash = solana_sha256_hasher::hashv(&[base.as_ref(), seed_bytes, owner]);
         Ok(Address::from(hash.to_bytes()))
     }
 
