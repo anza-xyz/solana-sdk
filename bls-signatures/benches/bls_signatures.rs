@@ -137,12 +137,11 @@ fn bench_batch_verification(c: &mut Criterion) {
         let messages: Vec<Vec<u8>> = (0..*num_validators)
             .map(|i| format!("message_{i}").into_bytes())
             .collect();
-        let message_refs: Vec<&[u8]> = messages.iter().map(|m| m.as_slice()).collect();
 
         // Create a signature for each message
         let signatures: Vec<Signature> = keypairs
             .iter()
-            .zip(message_refs.iter())
+            .zip(messages.iter())
             .map(|(kp, msg)| kp.sign(msg).into())
             .collect();
 
@@ -151,8 +150,12 @@ fn bench_batch_verification(c: &mut Criterion) {
             |b| {
                 b.iter(|| {
                     let verification_result = black_box(
-                        SignatureProjective::verify_distinct(&pubkeys, &signatures, &message_refs)
-                            .unwrap(),
+                        SignatureProjective::verify_distinct(
+                            pubkeys.iter(),
+                            signatures.iter(),
+                            messages.iter().map(Vec::as_slice),
+                        )
+                        .unwrap(),
                     );
                     assert!(verification_result);
                 });

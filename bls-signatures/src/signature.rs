@@ -123,37 +123,38 @@ impl SignatureProjective {
 
     /// Verifies an aggregated signature over a set of distinct messages and
     /// public keys.
-    pub fn verify_distinct(
-        public_keys: &[Pubkey],
-        signatures: &[Signature],
-        messages: &[&[u8]],
+    pub fn verify_distinct<'a>(
+        public_keys: impl ExactSizeIterator<Item = &'a Pubkey>,
+        signatures: impl ExactSizeIterator<Item = &'a Signature>,
+        messages: impl ExactSizeIterator<Item = &'a [u8]>,
     ) -> Result<bool, BlsError> {
         if public_keys.len() != messages.len() || public_keys.len() != signatures.len() {
             return Err(BlsError::InputLengthMismatch);
         }
-        if public_keys.is_empty() {
+        if public_keys.len() == 0 {
             return Err(BlsError::EmptyAggregation);
         }
-        let aggregate_signature = SignatureProjective::aggregate(signatures.iter())?;
+        let aggregate_signature = SignatureProjective::aggregate(signatures)?;
         Self::verify_distinct_aggregated(public_keys, &aggregate_signature.into(), messages)
     }
 
     /// Verifies a pre-aggregated signature over a set of distinct messages and
     /// public keys.
-    pub fn verify_distinct_aggregated(
-        public_keys: &[Pubkey],
+    pub fn verify_distinct_aggregated<'a>(
+        public_keys: impl ExactSizeIterator<Item = &'a Pubkey>,
         aggregate_signature: &Signature,
-        messages: &[&[u8]],
+        messages: impl ExactSizeIterator<Item = &'a [u8]>,
     ) -> Result<bool, BlsError> {
         if public_keys.len() != messages.len() {
             return Err(BlsError::InputLengthMismatch);
         }
-        if public_keys.is_empty() {
+        if public_keys.len() == 0 {
             return Err(BlsError::EmptyAggregation);
         }
 
         // TODO: remove `Vec` allocation if possible for efficiency
         let mut pubkeys_affine = alloc::vec::Vec::with_capacity(public_keys.len());
+        let public_keys_len = public_keys.len();
         for pubkey in public_keys {
             let maybe_g1_affine: Option<_> = G1Affine::from_uncompressed(&pubkey.0).into();
             let g1_affine: G1Affine = maybe_g1_affine.ok_or(BlsError::PointConversion)?;
@@ -179,9 +180,8 @@ impl SignatureProjective {
         #[cfg(not(feature = "std"))]
         let neg_g1_generator = &neg_g1_generator_val;
 
-        #[allow(clippy::arithmetic_side_effects)]
-        let mut terms = alloc::vec::Vec::with_capacity(public_keys.len() + 1);
-        for i in 0..public_keys.len() {
+        let mut terms = alloc::vec::Vec::with_capacity(public_keys_len.saturating_add(1));
+        for i in 0..public_keys_len {
             terms.push((&pubkeys_affine[i], &prepared_hashes[i]));
         }
         terms.push((neg_g1_generator, &signature_prepared));
@@ -430,7 +430,7 @@ mod tests {
             keypair::Keypair,
             pubkey::{Pubkey, PubkeyCompressed},
         },
-        core::str::FromStr,
+        core::{iter::empty, str::FromStr},
         std::{string::ToString, vec::Vec},
     };
 
@@ -598,39 +598,39 @@ mod tests {
 
         // Success cases
         let pubkeys = [keypair0.public, keypair1.public, keypair2.public];
-        let messages_refs_vec: Vec<&[u8]> = std::vec![message0, message1, message2];
-        let signatures_refs = std::vec![signature0, signature1, signature2];
+        let messages: Vec<&[u8]> = std::vec![message0, message1, message2];
+        let signatures = std::vec![signature0, signature1, signature2];
 
         assert!(SignatureProjective::verify_distinct(
-            &pubkeys,
-            &signatures_refs,
-            &messages_refs_vec
+            pubkeys.iter(),
+            signatures.iter(),
+            messages.iter().cloned()
         )
         .unwrap());
 
         // Failure cases
-        let wrong_order_messages_refs: Vec<&[u8]> = std::vec![message1, message0, message2];
+        let wrong_order_messages: Vec<&[u8]> = std::vec![message1, message0, message2];
         assert!(!SignatureProjective::verify_distinct(
-            &pubkeys,
-            &signatures_refs,
-            &wrong_order_messages_refs,
+            pubkeys.iter(),
+            signatures.iter(),
+            wrong_order_messages.into_iter()
         )
         .unwrap());
 
         let one_wrong_message_refs: Vec<&[u8]> = std::vec![message0, b"this is wrong", message2];
         assert!(!SignatureProjective::verify_distinct(
-            &pubkeys,
-            &signatures_refs,
-            &one_wrong_message_refs
+            pubkeys.iter(),
+            signatures.iter(),
+            one_wrong_message_refs.into_iter()
         )
         .unwrap());
 
         let wrong_keypair = Keypair::new();
         let wrong_pubkeys = [keypair0.public, wrong_keypair.public, keypair2.public];
         assert!(!SignatureProjective::verify_distinct(
-            &wrong_pubkeys,
-            &signatures_refs,
-            &messages_refs_vec,
+            wrong_pubkeys.iter(),
+            signatures.iter(),
+            messages.iter().cloned()
         )
         .unwrap());
 
@@ -638,29 +638,29 @@ mod tests {
         let wrong_signature: Signature = wrong_signature_proj.into();
         let wrong_signatures = [signature0, wrong_signature, signature2];
         assert!(!SignatureProjective::verify_distinct(
-            &pubkeys,
-            &wrong_signatures,
-            &messages_refs_vec,
+            pubkeys.iter(),
+            wrong_signatures.iter(),
+            messages.iter().cloned()
         )
         .unwrap());
 
         let err = SignatureProjective::verify_distinct(
-            &pubkeys,
-            &signatures_refs,
-            &messages_refs_vec[..2],
+            pubkeys.iter(),
+            signatures.iter(),
+            messages[..2].iter().cloned(),
         )
         .unwrap_err();
         assert_eq!(err, BlsError::InputLengthMismatch);
 
         let err = SignatureProjective::verify_distinct(
-            &pubkeys,
-            &signatures_refs[..2],
-            &messages_refs_vec,
+            pubkeys.iter(),
+            signatures[..2].iter(),
+            messages.into_iter(),
         )
         .unwrap_err();
         assert_eq!(err, BlsError::InputLengthMismatch);
 
-        let err = SignatureProjective::verify_distinct(&[], &[], &[]).unwrap_err();
+        let err = SignatureProjective::verify_distinct(empty(), empty(), empty()).unwrap_err();
         assert_eq!(err, BlsError::EmptyAggregation);
     }
 
