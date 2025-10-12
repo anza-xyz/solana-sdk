@@ -133,13 +133,10 @@ impl PubkeyProjective {
     /// Aggregate a list of public keys into an existing aggregate
     #[allow(clippy::arithmetic_side_effects)]
     #[cfg(feature = "parallel")]
-    pub fn par_aggregate_with<P: AsPubkeyProjective + Sync>(
+    pub fn par_aggregate_with<'a, P: AsPubkeyProjective + Sync + 'a>(
         &mut self,
-        pubkeys: &[&P],
+        pubkeys: impl ParallelIterator<Item = &'a P>,
     ) -> Result<(), BlsError> {
-        if pubkeys.is_empty() {
-            return Ok(());
-        }
         let aggregate = PubkeyProjective::par_aggregate(pubkeys)?;
         self.0 += &aggregate.0;
         Ok(())
@@ -148,24 +145,26 @@ impl PubkeyProjective {
     /// Aggregate a list of public keys
     #[allow(clippy::arithmetic_side_effects)]
     #[cfg(feature = "parallel")]
-    pub fn par_aggregate<P: AsPubkeyProjective + Sync>(
-        pubkeys: &[&P],
+    pub fn par_aggregate<'a, P: AsPubkeyProjective + Sync + 'a>(
+        pubkeys: impl ParallelIterator<Item = &'a P>,
     ) -> Result<PubkeyProjective, BlsError> {
-        if pubkeys.is_empty() {
+        // cnt is used to detect empty iterator which should return an error
+        let (cnt, res) = pubkeys
+            .into_par_iter()
+            .map(|key| key.try_as_projective().map(|r| (1, r)))
+            .reduce(
+                || Ok((0, PubkeyProjective::identity())),
+                |a, b| {
+                    let (a_cnt, mut a) = a?;
+                    let (b_cnt, b) = b?;
+                    a.0 += &b.0;
+                    Ok((a_cnt + b_cnt, a))
+                },
+            )?;
+        if cnt == 0 {
             return Err(BlsError::EmptyAggregation);
         }
-        pubkeys
-            .into_par_iter()
-            .map(|key| key.try_as_projective())
-            .reduce(
-                || Ok(PubkeyProjective::identity()),
-                |a, b| {
-                    let mut a = a?;
-                    let b = b?;
-                    a.0 += &b.0;
-                    Ok(a)
-                },
-            )
+        Ok(res)
     }
 }
 
@@ -529,18 +528,20 @@ mod tests {
 
         // Test `aggregate`
         let sequential_agg = PubkeyProjective::aggregate([pubkey0, pubkey1].iter()).unwrap();
-        let parallel_agg = PubkeyProjective::par_aggregate(&[&pubkey0, &pubkey1]).unwrap();
+        let parallel_agg = PubkeyProjective::par_aggregate([pubkey0, pubkey1].par_iter()).unwrap();
         assert_eq!(sequential_agg, parallel_agg);
 
         // Test `aggregate_with`
         let mut parallel_agg_with = pubkey0;
-        parallel_agg_with.par_aggregate_with(&[&pubkey1]).unwrap();
+        parallel_agg_with
+            .par_aggregate_with([pubkey1].par_iter())
+            .unwrap();
         assert_eq!(sequential_agg, parallel_agg_with);
 
         // Test empty case
-        let empty_slice: &[&PubkeyProjective] = &[];
+        let empty: std::vec::Vec<PubkeyProjective> = std::vec![];
         assert_eq!(
-            PubkeyProjective::par_aggregate(empty_slice).unwrap_err(),
+            PubkeyProjective::par_aggregate(empty.par_iter()).unwrap_err(),
             BlsError::EmptyAggregation
         );
     }
