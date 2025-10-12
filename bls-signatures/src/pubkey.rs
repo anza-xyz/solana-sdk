@@ -528,7 +528,7 @@ mod tests {
         let pubkey1 = PubkeyProjective::try_from(&keypair1.public).unwrap();
 
         // Test `aggregate`
-        let sequential_agg = PubkeyProjective::aggregate(&[&pubkey0, &pubkey1]).unwrap();
+        let sequential_agg = PubkeyProjective::aggregate([pubkey0, pubkey1].iter()).unwrap();
         let parallel_agg = PubkeyProjective::par_aggregate(&[&pubkey0, &pubkey1]).unwrap();
         assert_eq!(sequential_agg, parallel_agg);
 

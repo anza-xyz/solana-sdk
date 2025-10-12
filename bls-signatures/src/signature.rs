@@ -738,7 +738,8 @@ mod tests {
         let signature1 = keypair1.sign(b"");
 
         // Test `aggregate`
-        let sequential_agg = SignatureProjective::aggregate(&[&signature0, &signature1]).unwrap();
+        let sequential_agg =
+            SignatureProjective::aggregate([signature0, signature1].iter()).unwrap();
         let parallel_agg = SignatureProjective::par_aggregate(&[&signature0, &signature1]).unwrap();
         assert_eq!(sequential_agg, parallel_agg);
 
