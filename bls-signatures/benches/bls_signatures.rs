@@ -132,7 +132,6 @@ fn bench_batch_verification(c: &mut Criterion) {
     for num_validators in [64, 128, 256, 512, 1024, 2048].iter() {
         let keypairs: Vec<Keypair> = (0..*num_validators).map(|_| Keypair::new()).collect();
         let pubkeys: Vec<Pubkey> = keypairs.iter().map(|kp| kp.public).collect();
-        let pubkey_refs: Vec<&Pubkey> = pubkeys.iter().collect();
 
         // Create a unique message for each validator
         let messages: Vec<Vec<u8>> = (0..*num_validators)
@@ -152,12 +151,8 @@ fn bench_batch_verification(c: &mut Criterion) {
             |b| {
                 b.iter(|| {
                     let verification_result = black_box(
-                        SignatureProjective::verify_distinct(
-                            &pubkey_refs,
-                            &signatures,
-                            &message_refs,
-                        )
-                        .unwrap(),
+                        SignatureProjective::verify_distinct(&pubkeys, &signatures, &message_refs)
+                            .unwrap(),
                     );
                     assert!(verification_result);
                 });

@@ -124,7 +124,7 @@ impl SignatureProjective {
     /// Verifies an aggregated signature over a set of distinct messages and
     /// public keys.
     pub fn verify_distinct(
-        public_keys: &[&Pubkey],
+        public_keys: &[Pubkey],
         signatures: &[Signature],
         messages: &[&[u8]],
     ) -> Result<bool, BlsError> {
@@ -141,7 +141,7 @@ impl SignatureProjective {
     /// Verifies a pre-aggregated signature over a set of distinct messages and
     /// public keys.
     pub fn verify_distinct_aggregated(
-        public_keys: &[&Pubkey],
+        public_keys: &[Pubkey],
         aggregate_signature: &Signature,
         messages: &[&[u8]],
     ) -> Result<bool, BlsError> {
@@ -597,12 +597,12 @@ mod tests {
         let signature2: Signature = signature2_proj.into();
 
         // Success cases
-        let pubkeys_refs = [&keypair0.public, &keypair1.public, &keypair2.public];
+        let pubkeys = [keypair0.public, keypair1.public, keypair2.public];
         let messages_refs_vec: Vec<&[u8]> = std::vec![message0, message1, message2];
         let signatures_refs = std::vec![signature0, signature1, signature2];
 
         assert!(SignatureProjective::verify_distinct(
-            &pubkeys_refs,
+            &pubkeys,
             &signatures_refs,
             &messages_refs_vec
         )
@@ -611,7 +611,7 @@ mod tests {
         // Failure cases
         let wrong_order_messages_refs: Vec<&[u8]> = std::vec![message1, message0, message2];
         assert!(!SignatureProjective::verify_distinct(
-            &pubkeys_refs,
+            &pubkeys,
             &signatures_refs,
             &wrong_order_messages_refs,
         )
@@ -619,14 +619,14 @@ mod tests {
 
         let one_wrong_message_refs: Vec<&[u8]> = std::vec![message0, b"this is wrong", message2];
         assert!(!SignatureProjective::verify_distinct(
-            &pubkeys_refs,
+            &pubkeys,
             &signatures_refs,
             &one_wrong_message_refs
         )
         .unwrap());
 
         let wrong_keypair = Keypair::new();
-        let wrong_pubkeys = [&keypair0.public, &wrong_keypair.public, &keypair2.public];
+        let wrong_pubkeys = [keypair0.public, wrong_keypair.public, keypair2.public];
         assert!(!SignatureProjective::verify_distinct(
             &wrong_pubkeys,
             &signatures_refs,
@@ -638,14 +638,14 @@ mod tests {
         let wrong_signature: Signature = wrong_signature_proj.into();
         let wrong_signatures = [signature0, wrong_signature, signature2];
         assert!(!SignatureProjective::verify_distinct(
-            &pubkeys_refs,
+            &pubkeys,
             &wrong_signatures,
             &messages_refs_vec,
         )
         .unwrap());
 
         let err = SignatureProjective::verify_distinct(
-            &pubkeys_refs,
+            &pubkeys,
             &signatures_refs,
             &messages_refs_vec[..2],
         )
@@ -653,19 +653,14 @@ mod tests {
         assert_eq!(err, BlsError::InputLengthMismatch);
 
         let err = SignatureProjective::verify_distinct(
-            &pubkeys_refs,
+            &pubkeys,
             &signatures_refs[..2],
             &messages_refs_vec,
         )
         .unwrap_err();
         assert_eq!(err, BlsError::InputLengthMismatch);
 
-        let err = SignatureProjective::verify_distinct(
-            &[] as &[&Pubkey],
-            &[] as &[Signature],
-            &[] as &[&[u8]],
-        )
-        .unwrap_err();
+        let err = SignatureProjective::verify_distinct(&[], &[], &[]).unwrap_err();
         assert_eq!(err, BlsError::EmptyAggregation);
     }
 
