@@ -62,7 +62,7 @@ fi
 # macro code green always. Also, forcibly discard the vast amount of log by
 # redirecting the stderr.
 RUST_LOG="solana=trace,$RUST_LOG" \
-  ./cargo nightly test --features frozen-abi --target-dir "./target/cov" "${PACKAGES[@]}" 2>/dev/null
+  ./cargo nightly test --all-features --target-dir "./target/cov" "${PACKAGES[@]}" 2>/dev/null
 
 # Generate test reports
 echo "--- grcov"
