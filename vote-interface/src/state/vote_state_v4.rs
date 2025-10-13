@@ -203,17 +203,6 @@ impl VoteStateV4 {
         }
     }
 
-    /// Number of credits owed to this account on a per-epoch basis, starting
-    /// from credits observed.
-    ///
-    /// Each tuple of (Epoch, u64, u64) is read as (epoch, credits,
-    /// prev_credits), where credits for each epoch is credits - prev_credits;
-    /// while redundant this makes calculating rewards over partial epochs nice
-    /// and simple
-    pub fn epoch_credits(&self) -> &Vec<(Epoch, u64, u64)> {
-        &self.epoch_credits
-    }
-
     #[cfg(test)]
     pub(crate) fn get_max_sized_vote_state() -> Self {
         use super::{MAX_EPOCH_CREDITS_HISTORY, MAX_LOCKOUT_HISTORY};
