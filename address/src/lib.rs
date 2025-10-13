@@ -322,7 +322,8 @@ impl core::fmt::Display for Address {
 /// This isn't the implementation for the `PartialEq` trait because we can't do
 /// structural equality with a trait implementation.
 ///
-/// More information at https://github.com/anza-xyz/solana-sdk/issues/345
+/// [Issue #345](https://github.com/anza-xyz/solana-sdk/issues/345) contains
+/// more information about the problem.
 #[inline(always)]
 pub fn address_eq(a1: &Address, a2: &Address) -> bool {
     let p1_ptr = a1.0.as_ptr().cast::<u64>();
