@@ -35,9 +35,9 @@ target="bpfel-unknown-none"
   --no-default-features \
   "${no_std_crates[@]}"
 
-# Check that `solana-address` w/ all features that work with no_std + alloc still works!
+# Check that all crates with features that work with no_std + alloc still work!
 ./cargo nightly check -Zbuild-std=alloc,core \
   "--target=${target}" \
   --no-default-features \
-  --features "decode, error, sanitize, syscalls, borsh, serde, bytemuck" \
-  -p solana-address
+  --features "decode, error, sanitize, syscalls, borsh, serde, bytemuck, alloc" \
+  "${no_std_crates[@]}"
