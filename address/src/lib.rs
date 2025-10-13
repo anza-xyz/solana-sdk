@@ -84,7 +84,7 @@ pub const PDA_MARKER: &[u8; 21] = b"ProgramDerivedAddress";
 #[cfg_attr(feature = "bytemuck", derive(Pod, Zeroable))]
 #[cfg_attr(feature = "dev-context-only-utils", derive(Arbitrary))]
 #[cfg_attr(not(feature = "decode"), derive(Debug))]
-#[derive(Clone, Copy, Default, Eq, Ord, PartialOrd)]
+#[derive(Clone, Copy, Default, Eq, Ord, PartialEq, PartialOrd)]
 pub struct Address(pub(crate) [u8; 32]);
 
 #[cfg(feature = "sanitize")]
@@ -314,22 +314,25 @@ impl core::fmt::Display for Address {
     }
 }
 
-/// Custom impl of `PartialEq` for `Address`.
+/// Custom implementation of equality for `Address`.
 ///
 /// The implementation compares the address in 4 chunks of 8 bytes (`u64` values),
 /// which is currently more efficient (CU-wise) than the default implementation.
-impl PartialEq for Address {
-    #[inline(always)]
-    fn eq(&self, other: &Self) -> bool {
-        let p1_ptr = self.0.as_ptr().cast::<u64>();
-        let p2_ptr = other.0.as_ptr().cast::<u64>();
+///
+/// This isn't the implementation for the `PartialEq` trait because we can't do
+/// structural equality with a trait implementation.
+///
+/// More information at https://github.com/anza-xyz/solana-sdk/issues/345
+#[inline(always)]
+pub fn address_eq(a1: &Address, a2: &Address) -> bool {
+    let p1_ptr = a1.0.as_ptr().cast::<u64>();
+    let p2_ptr = a2.0.as_ptr().cast::<u64>();
 
-        unsafe {
-            read_unaligned(p1_ptr) == read_unaligned(p2_ptr)
-                && read_unaligned(p1_ptr.add(1)) == read_unaligned(p2_ptr.add(1))
-                && read_unaligned(p1_ptr.add(2)) == read_unaligned(p2_ptr.add(2))
-                && read_unaligned(p1_ptr.add(3)) == read_unaligned(p2_ptr.add(3))
-        }
+    unsafe {
+        read_unaligned(p1_ptr) == read_unaligned(p2_ptr)
+            && read_unaligned(p1_ptr.add(1)) == read_unaligned(p2_ptr.add(1))
+            && read_unaligned(p1_ptr.add(2)) == read_unaligned(p2_ptr.add(2))
+            && read_unaligned(p1_ptr.add(3)) == read_unaligned(p2_ptr.add(3))
     }
 }
 
@@ -726,6 +729,7 @@ mod tests {
             assert!(p1 == p2);
             assert!(p1.eq(&p2));
             assert_eq!(p1.eq(&p2), p1.0 == p2.0);
+            assert!(address_eq(&p1, &p2));
 
             let p3 = Address::from([u8::MAX - i; ADDRESS_BYTES]);
 
@@ -733,6 +737,7 @@ mod tests {
             assert!(p1 != p3);
             assert!(!p1.eq(&p3));
             assert_eq!(!p1.eq(&p3), p1.0 != p3.0);
+            assert!(!address_eq(&p1, &p3));
         }
     }
 }
