@@ -219,21 +219,16 @@ impl VoteInstruction {
     /// Only to be used on vote instructions (guard with is_simple_vote), panics otherwise
     pub fn hash(&self) -> Hash {
         assert!(self.is_simple_vote());
-        // Builds that enable copy on hash will trip this
-        #[allow(clippy::clone_on_copy)]
-        match self {
-            Self::Vote(v) | Self::VoteSwitch(v, _) => v.hash.clone(),
+        let hash = match self {
+            Self::Vote(v) | Self::VoteSwitch(v, _) => &v.hash,
             Self::UpdateVoteState(vote_state_update)
             | Self::UpdateVoteStateSwitch(vote_state_update, _)
             | Self::CompactUpdateVoteState(vote_state_update)
-            | Self::CompactUpdateVoteStateSwitch(vote_state_update, _) => {
-                vote_state_update.hash.clone()
-            }
-            Self::TowerSync(tower_sync) | Self::TowerSyncSwitch(tower_sync, _) => {
-                tower_sync.hash.clone()
-            }
+            | Self::CompactUpdateVoteStateSwitch(vote_state_update, _) => &vote_state_update.hash,
+            Self::TowerSync(tower_sync) | Self::TowerSyncSwitch(tower_sync, _) => &tower_sync.hash,
             _ => panic!("Tried to get hash on non simple vote instruction"),
-        }
+        };
+        Hash::new_from_array(hash.to_bytes())
     }
     /// Only to be used on vote instructions (guard with is_simple_vote),  panics otherwise
     pub fn timestamp(&self) -> Option<UnixTimestamp> {

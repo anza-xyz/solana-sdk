@@ -251,12 +251,10 @@ pub mod serde_compact_vote_state_update {
                 Some(Ok(lockout_offset))
             },
         );
-        // Builds that enable copy on hash will trip this
-        #[allow(clippy::clone_on_copy)]
         let compact_vote_state_update = CompactVoteStateUpdate {
             root: vote_state_update.root.unwrap_or(Slot::MAX),
             lockout_offsets: lockout_offsets.collect::<Result<_, _>>()?,
-            hash: vote_state_update.hash.clone(),
+            hash: Hash::new_from_array(vote_state_update.hash.to_bytes()),
             timestamp: vote_state_update.timestamp,
         };
         compact_vote_state_update.serialize(serializer)
@@ -347,14 +345,12 @@ pub mod serde_tower_sync {
                 Some(Ok(lockout_offset))
             },
         );
-        // Builds that enable copy on hash will trip this
-        #[allow(clippy::clone_on_copy)]
         let compact_tower_sync = CompactTowerSync {
             root: tower_sync.root.unwrap_or(Slot::MAX),
             lockout_offsets: lockout_offsets.collect::<Result<_, _>>()?,
-            hash: tower_sync.hash.clone(),
+            hash: Hash::new_from_array(tower_sync.hash.to_bytes()),
             timestamp: tower_sync.timestamp,
-            block_id: tower_sync.block_id.clone(),
+            block_id: Hash::new_from_array(tower_sync.block_id.to_bytes()),
         };
         compact_tower_sync.serialize(serializer)
     }

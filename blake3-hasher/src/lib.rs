@@ -76,9 +76,7 @@ mod tests {
         let val_hash = hash(val.as_bytes());
 
         let ext = "lM890t";
-        // Builds that enable copy on hash will trip this
-        #[allow(clippy::clone_on_copy)]
-        let ext_hash = hashv(&[&val_hash.clone().to_bytes(), ext.as_bytes()]);
+        let ext_hash = hashv(&[val_hash.as_bytes(), ext.as_bytes()]);
 
         let hash_ext = [&val_hash.to_bytes(), ext.as_bytes()].concat();
         assert!(ext_hash == hash(&hash_ext));
