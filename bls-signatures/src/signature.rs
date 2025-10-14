@@ -208,23 +208,14 @@ impl SignatureProjective {
     pub fn par_aggregate<'a, S: AsSignatureProjective + Sync + 'a>(
         signatures: impl ParallelIterator<Item = &'a S>,
     ) -> Result<SignatureProjective, BlsError> {
-        // cnt is used to detect empty iterator which should return an error
-        let (cnt, res) = signatures
+        signatures
             .into_par_iter()
-            .map(|sig| sig.try_as_projective().map(|r| (1, r)))
-            .reduce(
-                || Ok((0, SignatureProjective::identity())),
-                |a, b| {
-                    let (a_cnt, mut a) = a?;
-                    let (b_cnt, b) = b?;
-                    a.0 += &b.0;
-                    Ok((a_cnt + b_cnt, a))
-                },
-            )?;
-        if cnt == 0 {
-            return Err(BlsError::EmptyAggregation);
-        }
-        Ok(res)
+            .map(|sig| sig.try_as_projective())
+            .try_reduce_with(|mut a, b| {
+                a.0 += b.0;
+                Ok(a)
+            })
+            .ok_or(BlsError::EmptyAggregation)?
     }
 
     /// Verify a list of signatures against a message and a list of public keys

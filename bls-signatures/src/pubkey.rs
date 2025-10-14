@@ -148,23 +148,14 @@ impl PubkeyProjective {
     pub fn par_aggregate<'a, P: AsPubkeyProjective + Sync + 'a>(
         pubkeys: impl ParallelIterator<Item = &'a P>,
     ) -> Result<PubkeyProjective, BlsError> {
-        // cnt is used to detect empty iterator which should return an error
-        let (cnt, res) = pubkeys
+        pubkeys
             .into_par_iter()
-            .map(|key| key.try_as_projective().map(|r| (1, r)))
-            .reduce(
-                || Ok((0, PubkeyProjective::identity())),
-                |a, b| {
-                    let (a_cnt, mut a) = a?;
-                    let (b_cnt, b) = b?;
-                    a.0 += &b.0;
-                    Ok((a_cnt + b_cnt, a))
-                },
-            )?;
-        if cnt == 0 {
-            return Err(BlsError::EmptyAggregation);
-        }
-        Ok(res)
+            .map(|key| key.try_as_projective())
+            .try_reduce_with(|mut a, b| {
+                a.0 += b.0;
+                Ok(a)
+            })
+            .ok_or(BlsError::EmptyAggregation)?
     }
 }
 
