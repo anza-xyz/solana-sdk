@@ -39,7 +39,7 @@ solana-sanitize = { workspace = true }
 
 [dev-dependencies]
 bs58 = { workspace = true, default-features = false, features = ["alloc"] }
-solana-hash = { path = ".", features = ["atomic"] }
+solana-hash = { path = ".", features = ["atomic", "copy"] }
 
 [lints]
 workspace = true
