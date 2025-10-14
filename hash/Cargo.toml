@@ -16,6 +16,7 @@ all-features = true
 rustdoc-args = ["--cfg=docsrs"]
 
 [features]
+atomic = ["dep:solana-atomic-u64"]
 borsh = ["dep:borsh"]
 bytemuck = ["dep:bytemuck", "dep:bytemuck_derive"]
 default = ["std"]
@@ -30,13 +31,14 @@ bytemuck_derive = { workspace = true, optional = true }
 five8 = { workspace = true }
 serde = { workspace = true, optional = true }
 serde_derive = { workspace = true, optional = true }
-solana-atomic-u64 = { workspace = true }
+solana-atomic-u64 = { workspace = true, optional = true }
 solana-frozen-abi = { workspace = true, optional = true, features = ["frozen-abi"] }
 solana-frozen-abi-macro = { workspace = true, optional = true, features = ["frozen-abi"] }
 solana-sanitize = { workspace = true }
 
 [dev-dependencies]
 bs58 = { workspace = true, default-features = false, features = ["alloc"] }
+solana-hash = { path = ".", features = ["atomic"] }
 
 [lints]
 workspace = true

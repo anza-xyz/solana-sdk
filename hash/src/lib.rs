@@ -123,6 +123,7 @@ impl Hash {
     }
 
     /// unique Hash for tests and benchmarks.
+    #[cfg(feature = "atomic")]
     pub fn new_unique() -> Self {
         use solana_atomic_u64::AtomicU64;
         static I: AtomicU64 = AtomicU64::new(1);

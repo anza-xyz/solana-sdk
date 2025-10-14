@@ -3218,6 +3218,7 @@ dependencies = [
  "solana-atomic-u64",
  "solana-frozen-abi",
  "solana-frozen-abi-macro",
+ "solana-hash",
  "solana-sanitize",
 ]
 

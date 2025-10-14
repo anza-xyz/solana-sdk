@@ -19,6 +19,7 @@ solana-hash = { workspace = true }
 
 [dev-dependencies]
 solana-address = { workspace = true, features = ["atomic"] }
+solana-hash = { workspace = true, features = ["atomic"] }
 
 [lints]
 workspace = true

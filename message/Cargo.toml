@@ -64,6 +64,7 @@ solana-address-lookup-table-interface = { workspace = true, features = [
     "bytemuck",
 ] }
 solana-example-mocks = { path = "../example-mocks" }
+solana-hash = { workspace = true, features = ["atomic"] }
 solana-instruction = { workspace = true, features = ["borsh"] }
 solana-instruction-error = { workspace = true }
 solana-message = { path = ".", features = ["dev-context-only-utils"] }
