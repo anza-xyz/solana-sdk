@@ -22,7 +22,7 @@ bincode = [
     "solana-message/bincode",
 ]
 blake3 = ["bincode", "solana-message/blake3"]
-dev-context-only-utils = ["blake3", "serde", "verify"]
+dev-context-only-utils = ["blake3", "serde", "verify", "solana-hash/atomic"]
 frozen-abi = [
     "dep:solana-frozen-abi",
     "dep:solana-frozen-abi-macro",
