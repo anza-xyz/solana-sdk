@@ -53,7 +53,7 @@ pub const MESSAGE_VERSION_PREFIX: u8 = 0x80;
 /// format.
 #[cfg_attr(
     feature = "frozen-abi",
-    frozen_abi(digest = "6CoVPUxkUvDrAvAkfyVXwVDHCSf77aufm7DEZy5mBVeX"),
+    frozen_abi(digest = "AhtHE2kgteii32oVSM2cMtmKx29AZPR5fqekfBfDvxNd"),
     derive(AbiEnumVisitor, AbiExample)
 )]
 #[derive(Debug, PartialEq, Eq, Clone)]
@@ -207,25 +207,46 @@ impl serde::Serialize for VersionedMessage {
     where
         S: Serializer,
     {
-        match self {
-            Self::Legacy(message) => {
-                let mut seq = serializer.serialize_tuple(1)?;
-                seq.serialize_element(message)?;
-                seq.end()
+        if serializer.is_human_readable() {
+            #[derive(Serialize)]
+            #[serde(tag = "version")]
+            enum HR<'a> {
+                #[serde(rename = "legacy")]
+                Legacy { message: &'a LegacyMessage },
+                #[serde(rename = "0")]
+                V0 { message: &'a v0::Message },
+                #[serde(rename = "1")]
+                V1 { message: &'a v1::Message },
             }
-            Self::V0(message) => {
-                let mut seq = serializer.serialize_tuple(2)?;
-                seq.serialize_element(&MESSAGE_VERSION_PREFIX)?;
-                seq.serialize_element(message)?;
-                seq.end()
-            }
-            Self::V1(message) => {
-                // Note that this format does not match the wire format per SIMD-0385.
 
-                let mut seq = serializer.serialize_tuple(2)?;
-                seq.serialize_element(&crate::v1::V1_PREFIX)?;
-                seq.serialize_element(message)?;
-                seq.end()
+            let hr = match self {
+                Self::Legacy(message) => HR::Legacy { message },
+                Self::V0(message) => HR::V0 { message },
+                Self::V1(message) => HR::V1 { message },
+            };
+
+            HR::serialize(&hr, serializer)
+        } else {
+            match self {
+                Self::Legacy(message) => {
+                    let mut seq = serializer.serialize_tuple(1)?;
+                    seq.serialize_element(message)?;
+                    seq.end()
+                }
+                Self::V0(message) => {
+                    let mut seq = serializer.serialize_tuple(2)?;
+                    seq.serialize_element(&MESSAGE_VERSION_PREFIX)?;
+                    seq.serialize_element(message)?;
+                    seq.end()
+                }
+                Self::V1(message) => {
+                    // Note that this format does not match the wire format per SIMD-0385.
+
+                    let mut seq = serializer.serialize_tuple(2)?;
+                    seq.serialize_element(&crate::v1::V1_PREFIX)?;
+                    seq.serialize_element(message)?;
+                    seq.end()
+                }
             }
         }
     }
@@ -281,7 +302,6 @@ impl<'de> serde::Deserialize<'de> for VersionedMessage {
         D: Deserializer<'de>,
     {
         struct MessageVisitor;
-
         impl<'de> Visitor<'de> for MessageVisitor {
             type Value = VersionedMessage;
 
@@ -296,7 +316,6 @@ impl<'de> serde::Deserialize<'de> for VersionedMessage {
                 let prefix: MessagePrefix = seq
                     .next_element()?
                     .ok_or_else(|| de::Error::invalid_length(0, &self))?;
-
                 match prefix {
                     MessagePrefix::Legacy(num_required_signatures) => {
                         // The remaining fields of the legacy Message struct after the first byte.
@@ -364,7 +383,23 @@ impl<'de> serde::Deserialize<'de> for VersionedMessage {
             }
         }
 
-        deserializer.deserialize_tuple(2, MessageVisitor)
+        if deserializer.is_human_readable() {
+            #[derive(Deserialize)]
+            #[serde(tag = "version")]
+            enum HR {
+                #[serde(rename = "legacy")]
+                Legacy { message: LegacyMessage },
+                #[serde(rename = "0")]
+                V0 { message: v0::Message },
+            }
+
+            match HR::deserialize(deserializer)? {
+                HR::Legacy { message } => Ok(VersionedMessage::Legacy(message)),
+                HR::V0 { message } => Ok(VersionedMessage::V0(message)),
+            }
+        } else {
+            deserializer.deserialize_tuple(2, MessageVisitor)
+        }
     }
 }
 
@@ -512,6 +547,21 @@ mod tests {
     }
 
     #[test]
+    fn test_versioned_message_human_readable_serialization() {
+        let message = LegacyMessage::default();
+        let message_string = serde_json::to_string(&message).unwrap();
+        let string = serde_json::to_string(&VersionedMessage::Legacy(message)).unwrap();
+        let expected_string = format!(r#"{{"version":"legacy","message":{message_string}}}"#);
+        assert_eq!(string, expected_string);
+
+        let message = v0::Message::default();
+        let message_string = serde_json::to_string(&message).unwrap();
+        let string = serde_json::to_string(&VersionedMessage::V0(message)).unwrap();
+        let expected_string = format!(r#"{{"version":"0","message":{message_string}}}"#);
+        assert_eq!(string, expected_string);
+    }
+
+    #[test]
     fn test_legacy_message_serialization() {
         let program_id0 = Address::new_unique();
         let program_id1 = Address::new_unique();
@@ -544,10 +594,10 @@ mod tests {
             assert_eq!(bytes, bincode::serialize(&wrapped_message).unwrap());
 
             let message_from_bytes: LegacyMessage = bincode::deserialize(&bytes).unwrap();
+            assert_eq!(message, message_from_bytes);
+
             let wrapped_message_from_bytes: VersionedMessage =
                 bincode::deserialize(&bytes).unwrap();
-
-            assert_eq!(message, message_from_bytes);
             assert_eq!(wrapped_message, wrapped_message_from_bytes);
         }
 
@@ -556,12 +606,17 @@ mod tests {
             let string = serde_json::to_string(&message).unwrap();
             let message_from_string: LegacyMessage = serde_json::from_str(&string).unwrap();
             assert_eq!(message, message_from_string);
+
+            let wrapped_string = serde_json::to_string(&wrapped_message).unwrap();
+            let wrapped_message_from_string: VersionedMessage =
+                serde_json::from_str(&wrapped_string).unwrap();
+            assert_eq!(wrapped_message, wrapped_message_from_string);
         }
     }
 
     #[test]
     fn test_versioned_message_serialization() {
-        let message = VersionedMessage::V0(v0::Message {
+        let message = v0::Message {
             header: MessageHeader {
                 num_required_signatures: 1,
                 num_readonly_signed_accounts: 0,
@@ -586,15 +641,32 @@ mod tests {
                 accounts: vec![0, 2, 3, 4],
                 data: vec![],
             }],
-        });
+        };
+        let wrapped_message = VersionedMessage::V0(message.clone());
 
-        let bytes = bincode::serialize(&message).unwrap();
-        let message_from_bytes: VersionedMessage = bincode::deserialize(&bytes).unwrap();
-        assert_eq!(message, message_from_bytes);
+        // bincode
+        {
+            let bytes = bincode::serialize(&message).unwrap();
+            let message_from_bytes: v0::Message = bincode::deserialize(&bytes).unwrap();
+            assert_eq!(message, message_from_bytes);
 
-        let string = serde_json::to_string(&message).unwrap();
-        let message_from_string: VersionedMessage = serde_json::from_str(&string).unwrap();
-        assert_eq!(message, message_from_string);
+            let wrapped_bytes = bincode::serialize(&wrapped_message).unwrap();
+            let wrapped_message_from_bytes: VersionedMessage =
+                bincode::deserialize(&wrapped_bytes).unwrap();
+            assert_eq!(wrapped_message, wrapped_message_from_bytes);
+        }
+
+        // serde_json
+        {
+            let string = serde_json::to_string(&message).unwrap();
+            let message_from_string: v0::Message = serde_json::from_str(&string).unwrap();
+            assert_eq!(message, message_from_string);
+
+            let wrapped_string = serde_json::to_string(&wrapped_message).unwrap();
+            let wrapped_message_from_string: VersionedMessage =
+                serde_json::from_str(&wrapped_string).unwrap();
+            assert_eq!(wrapped_message, wrapped_message_from_string);
+        }
     }
 
     prop_compose! {
