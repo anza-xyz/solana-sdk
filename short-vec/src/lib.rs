@@ -26,6 +26,10 @@ impl Serialize for ShortU16 {
     where
         S: Serializer,
     {
+        if serializer.is_human_readable() {
+            return serializer.serialize_u16(self.0);
+        }
+
         // Pass a non-zero value to serialize_tuple() so that serde_json will
         // generate an open bracket.
         let mut seq = serializer.serialize_tuple(1)?;
@@ -155,7 +159,11 @@ impl<'de> Deserialize<'de> for ShortU16 {
     where
         D: Deserializer<'de>,
     {
-        deserializer.deserialize_tuple(3, ShortU16Visitor)
+        if deserializer.is_human_readable() {
+            Ok(ShortU16(u16::deserialize(deserializer)?))
+        } else {
+            deserializer.deserialize_tuple(3, ShortU16Visitor)
+        }
     }
 }
 
@@ -168,6 +176,15 @@ pub fn serialize<S: Serializer, T: Serialize>(
     elements: &[T],
     serializer: S,
 ) -> Result<S::Ok, S::Error> {
+    if serializer.is_human_readable() {
+        use serde_core::ser::SerializeSeq;
+        let mut seq = serializer.serialize_seq(Some(elements.len()))?;
+        for element in elements {
+            seq.serialize_element(element)?;
+        }
+        return seq.end();
+    }
+
     // Pass a non-zero value to serialize_tuple() so that serde_json will
     // generate an open bracket.
     let mut seq = serializer.serialize_tuple(1)?;
@@ -229,6 +246,9 @@ where
     D: Deserializer<'de>,
     T: Deserialize<'de>,
 {
+    if deserializer.is_human_readable() {
+        return <Vec<T> as Deserialize<'de>>::deserialize(deserializer);
+    }
     let visitor = ShortVecVisitor { _t: PhantomData };
     deserializer.deserialize_tuple(usize::MAX, visitor)
 }
@@ -274,7 +294,42 @@ mod tests {
         super::*,
         assert_matches::assert_matches,
         bincode::{deserialize, serialize},
+        std::u16,
     };
+
+    #[test]
+    fn test_short_u16_human_readable_serialization() {
+        let value = ShortU16(0u16);
+        let string = serde_json::to_string(&value).unwrap();
+        let expected_string = String::from("0");
+        assert_eq!(string, expected_string);
+        let deser_value: ShortU16 = serde_json::from_str(&string).unwrap();
+        assert_eq!(value.0, deser_value.0);
+
+        let value = ShortU16(u16::MAX);
+        let string = serde_json::to_string(&value).unwrap();
+        let expected_string = String::from("65535");
+        assert_eq!(string, expected_string);
+        let deser_value: ShortU16 = serde_json::from_str(&string).unwrap();
+        assert_eq!(value.0, deser_value.0);
+    }
+
+    #[test]
+    fn test_short_vec_human_readable_serialization() {
+        let value = ShortVec::<()>(vec![]);
+        let string = serde_json::to_string(&value).unwrap();
+        let expected_string = String::from("[]");
+        assert_eq!(string, expected_string);
+        let deser_value: ShortVec<()> = serde_json::from_str(&string).unwrap();
+        assert_eq!(value.0, deser_value.0);
+
+        let value = ShortVec(vec![1, 2, 3]);
+        let string = serde_json::to_string(&value).unwrap();
+        let expected_string = String::from("[1,2,3]");
+        assert_eq!(string, expected_string);
+        let deser_value: ShortVec<usize> = serde_json::from_str(&string).unwrap();
+        assert_eq!(value.0, deser_value.0);
+    }
 
     /// Return the serialized length.
     fn encode_len(len: u16) -> Vec<u8> {
@@ -370,13 +425,6 @@ mod tests {
 
         let vec = ShortVec(vec![4u8; u16::MAX as usize + 1]);
         assert_matches!(serialize(&vec), Err(_));
-    }
-
-    #[test]
-    fn test_short_vec_json() {
-        let vec = ShortVec(vec![0, 1, 2]);
-        let s = serde_json::to_string(&vec).unwrap();
-        assert_eq!(s, "[[3],0,1,2]");
     }
 
     #[test]

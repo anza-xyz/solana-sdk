@@ -13,7 +13,7 @@ pub use loaded::*;
 #[cfg(feature = "serde")]
 use serde_derive::{Deserialize, Serialize};
 #[cfg(feature = "frozen-abi")]
-use solana_frozen_abi_macro::AbiExample;
+use solana_frozen_abi_macro::{frozen_abi, AbiExample};
 use {
     crate::{
         compiled_instruction::CompiledInstruction,
@@ -57,7 +57,11 @@ pub struct MessageAddressTableLookup {
 ///
 /// See the crate documentation for further description.
 ///
-#[cfg_attr(feature = "frozen-abi", derive(AbiExample))]
+#[cfg_attr(
+    feature = "frozen-abi",
+    frozen_abi(digest = "4Mr6qK8Srdgr7PyeZjXy99ekj5pwHQSbNCVD3TmzcxTM"),
+    derive(AbiExample)
+)]
 #[cfg_attr(
     feature = "serde",
     derive(Deserialize, Serialize),
