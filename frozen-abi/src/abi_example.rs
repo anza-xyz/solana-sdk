@@ -613,6 +613,14 @@ impl<O: AbiEnumVisitor, E: AbiEnumVisitor> AbiEnumVisitor for Result<O, E> {
     }
 }
 
+impl AbiEnumVisitor for str {
+    fn visit_for_abi(&self, digester: &mut AbiDigester) -> DigestResult {
+        info!("AbiEnumVisitor for str");
+        "".serialize(digester.create_new())
+            .map_err(DigestError::wrap_by_type::<str>)
+    }
+}
+
 #[cfg(not(target_os = "solana"))]
 impl<T: AbiExample> AbiExample for std::sync::OnceLock<T> {
     fn example() -> Self {
