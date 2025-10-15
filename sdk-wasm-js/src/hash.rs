@@ -82,6 +82,6 @@ impl Hash {
 
     /// Return the `Uint8Array` representation of the hash
     pub fn toBytes(&self) -> Box<[u8]> {
-        self.inner.clone().to_bytes().into()
+        self.inner.to_bytes().into()
     }
 }
