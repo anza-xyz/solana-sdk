@@ -19,7 +19,7 @@ sysvar = ["dep:solana-sdk-ids", "dep:solana-sysvar-id"]
 [dependencies]
 serde = { workspace = true, optional = true }
 serde_derive = { workspace = true, optional = true }
-solana-hash = { workspace = true, default-features = false }
+solana-hash = { workspace = true }
 solana-sdk-ids = { workspace = true, optional = true }
 solana-sysvar-id = { workspace = true, optional = true }
 

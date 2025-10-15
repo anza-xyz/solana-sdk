@@ -29,7 +29,7 @@ serde = [
 serde = { workspace = true, optional = true }
 serde_derive = { workspace = true, optional = true }
 solana-fee-calculator = { workspace = true }
-solana-hash = { workspace = true, default-features = false, features = ["copy"] }
+solana-hash = { workspace = true, features = ["copy"] }
 solana-pubkey = { workspace = true, default-features = false }
 solana-sha256-hasher = { workspace = true }
 
