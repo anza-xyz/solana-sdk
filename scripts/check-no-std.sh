@@ -23,6 +23,7 @@ no_std_crates=(
   -p solana-rent
   -p solana-sanitize
   -p solana-sdk-ids
+  -p solana-sha256-hasher
   -p solana-signature
   -p solana-sysvar-id
   -p solana-system-interface
@@ -31,14 +32,22 @@ no_std_crates=(
 # no_std support really works.
 target="bpfel-unknown-none"
 
-./cargo nightly check -Zbuild-std=core \
+# These features require alloc
+exclude_features_no_alloc="alloc,borsh,curve25519,serde"
+# These features never work on upstream BPF
+exclude_features="atomic,bincode,default,dev-context-only-utils,frozen-abi,rand,std,verify"
+
+./cargo nightly hack check \
+  -Zbuild-std=core \
   "--target=$target" \
-  --no-default-features \
+  "--exclude-features=${exclude_features},${exclude_features_no_alloc}" \
+  --each-feature \
   "${no_std_crates[@]}"
 
 # Check that all crates with features that work with no_std + alloc still work!
-./cargo nightly check -Zbuild-std=alloc,core \
+./cargo nightly hack check \
+  -Zbuild-std=alloc,core \
   "--target=${target}" \
-  --no-default-features \
-  --features "decode, error, sanitize, syscalls, borsh, serde, bytemuck, alloc" \
+  "--exclude-features=${exclude_features}" \
+  --each-feature \
   "${no_std_crates[@]}"
