@@ -72,6 +72,56 @@ pub(crate) fn deserialize_into<T: Default>(
     res
 }
 
+pub(crate) fn deserialize_vote_state_into_v1_14_11(
+    cursor: &mut Cursor<&[u8]>,
+    vote_state: *mut crate::state::vote_state_1_14_11::VoteState1_14_11,
+) -> Result<(), InstructionError> {
+    // General safety note: we must use addr_of_mut! to access the `vote_state` fields as the value
+    // is assumed to be _uninitialized_, so creating references to the state or any of its inner
+    // fields is UB.
+
+    read_pubkey_into(
+        cursor,
+        // Safety: if vote_state is non-null, node_pubkey is guaranteed to be valid too
+        unsafe { addr_of_mut!((*vote_state).node_pubkey) },
+    )?;
+    read_pubkey_into(
+        cursor,
+        // Safety: if vote_state is non-null, authorized_withdrawer is guaranteed to be valid too
+        unsafe { addr_of_mut!((*vote_state).authorized_withdrawer) },
+    )?;
+    let commission = read_u8(cursor)?;
+    let votes = read_votes_as_lockouts(cursor)?; // `Vec<Lockout>`
+    let root_slot = read_option_u64(cursor)?;
+    let authorized_voters = read_authorized_voters(cursor)?;
+
+    read_prior_voters_into(
+        cursor,
+        // Safety: if vote_state is non-null, prior_voters is guaranteed to be valid too
+        unsafe { addr_of_mut!((*vote_state).prior_voters) },
+    )?;
+
+    let epoch_credits = read_epoch_credits(cursor)?;
+    let last_timestamp = read_last_timestamp(cursor)?;
+
+    // Safety: if vote_state is non-null, all the fields are guaranteed to be
+    // valid pointers.
+    //
+    // Heap allocated collections - votes, authorized_voters, prior_voters, and epoch_credits -
+    // are guaranteed not to leak after this point as the VoteState1_14_11 is fully
+    // initialized and will be regularly dropped.
+    unsafe {
+        addr_of_mut!((*vote_state).commission).write(commission);
+        addr_of_mut!((*vote_state).votes).write(votes);
+        addr_of_mut!((*vote_state).root_slot).write(root_slot);
+        addr_of_mut!((*vote_state).authorized_voters).write(authorized_voters);
+        addr_of_mut!((*vote_state).epoch_credits).write(epoch_credits);
+        addr_of_mut!((*vote_state).last_timestamp).write(last_timestamp);
+    }
+
+    Ok(())
+}
+
 pub(super) fn deserialize_vote_state_into_v3(
     cursor: &mut Cursor<&[u8]>,
     vote_state: *mut VoteStateV3,
@@ -95,7 +145,13 @@ pub(super) fn deserialize_vote_state_into_v3(
     let votes = read_votes(cursor, has_latency)?;
     let root_slot = read_option_u64(cursor)?;
     let authorized_voters = read_authorized_voters(cursor)?;
-    read_prior_voters_into(cursor, vote_state)?;
+
+    read_prior_voters_into(
+        cursor,
+        // Safety: if vote_state is non-null, prior_voters is guaranteed to be valid too
+        unsafe { addr_of_mut!((*vote_state).prior_voters) },
+    )?;
+
     let epoch_credits = read_epoch_credits(cursor)?;
     let last_timestamp = read_last_timestamp(cursor)?;
 
@@ -252,6 +308,23 @@ fn read_votes<T: AsRef<[u8]>>(
     Ok(votes)
 }
 
+fn read_votes_as_lockouts<T: AsRef<[u8]>>(
+    cursor: &mut Cursor<T>,
+) -> Result<VecDeque<Lockout>, InstructionError> {
+    let vote_count = read_u64(cursor)? as usize;
+    let mut votes = VecDeque::with_capacity(vote_count.min(MAX_LOCKOUT_HISTORY));
+
+    for _ in 0..vote_count {
+        let slot = read_u64(cursor)?;
+        let confirmation_count = read_u32(cursor)?;
+        let lockout = Lockout::new_with_confirmation_count(slot, confirmation_count);
+
+        votes.push_back(lockout);
+    }
+
+    Ok(votes)
+}
+
 fn read_authorized_voters<T: AsRef<[u8]>>(
     cursor: &mut Cursor<T>,
 ) -> Result<AuthorizedVoters, InstructionError> {
@@ -269,11 +342,10 @@ fn read_authorized_voters<T: AsRef<[u8]>>(
 
 fn read_prior_voters_into<T: AsRef<[u8]>>(
     cursor: &mut Cursor<T>,
-    vote_state: *mut VoteStateV3,
+    prior_voters: *mut crate::state::CircBuf<(Pubkey, Epoch, Epoch)>,
 ) -> Result<(), InstructionError> {
-    // Safety: if vote_state is non-null, prior_voters is guaranteed to be valid too
+    // Safety: if prior_voters is non-null, its buf field is guaranteed to be valid too
     unsafe {
-        let prior_voters = addr_of_mut!((*vote_state).prior_voters);
         let prior_voters_buf = addr_of_mut!((*prior_voters).buf) as *mut (Pubkey, Epoch, Epoch);
 
         for i in 0..MAX_ITEMS {
@@ -286,8 +358,8 @@ fn read_prior_voters_into<T: AsRef<[u8]>>(
                 .write((prior_voter, from_epoch, until_epoch));
         }
 
-        (*vote_state).prior_voters.idx = read_u64(cursor)? as usize;
-        (*vote_state).prior_voters.is_empty = read_bool(cursor)?;
+        (*prior_voters).idx = read_u64(cursor)? as usize;
+        (*prior_voters).is_empty = read_bool(cursor)?;
     }
     Ok(())
 }

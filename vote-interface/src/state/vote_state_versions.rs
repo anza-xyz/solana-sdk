@@ -4,13 +4,14 @@ use crate::state::{
 };
 #[cfg(test)]
 use arbitrary::{Arbitrary, Unstructured};
+#[cfg(any(target_os = "solana", feature = "bincode"))]
+use solana_instruction_error::InstructionError;
 #[cfg(any(test, all(not(target_os = "solana"), feature = "bincode")))]
 use {
     crate::{
         authorized_voters::AuthorizedVoters,
         state::{CircBuf, LandedVote, Lockout},
     },
-    solana_instruction::error::InstructionError,
     solana_pubkey::Pubkey,
     std::collections::VecDeque,
 };
@@ -190,6 +191,66 @@ impl VoteStateVersions {
             || VoteStateV3::is_correct_size_and_initialized(data)
             || VoteState1_14_11::is_correct_size_and_initialized(data)
     }
+
+    /// Deserializes the input buffer directly into the appropriate `VoteStateVersions` variant.
+    ///
+    /// V0_23_5 is not supported. All other versions (V1_14_11, V3, V4) are deserialized as-is
+    /// without any version coercion.
+    #[cfg(any(target_os = "solana", feature = "bincode"))]
+    pub fn deserialize(input: &[u8]) -> Result<Self, InstructionError> {
+        use crate::state::vote_state_deserialize::{
+            deserialize_vote_state_into_v1_14_11, deserialize_vote_state_into_v3,
+            deserialize_vote_state_into_v4, SourceVersion,
+        };
+
+        let mut cursor = std::io::Cursor::new(input);
+
+        let variant = solana_serialize_utils::cursor::read_u32(&mut cursor)?;
+        match variant {
+            // V0_23_5 not supported.
+            //
+            // V1_14_11
+            1 => {
+                let mut vote_state = Box::new(std::mem::MaybeUninit::uninit());
+                deserialize_vote_state_into_v1_14_11(&mut cursor, vote_state.as_mut_ptr())?;
+                let vote_state =
+                    unsafe { Box::from_raw(Box::into_raw(vote_state) as *mut VoteState1_14_11) };
+                Ok(VoteStateVersions::V1_14_11(vote_state))
+            }
+            // V3
+            2 => {
+                let mut vote_state = Box::new(std::mem::MaybeUninit::uninit());
+                deserialize_vote_state_into_v3(&mut cursor, vote_state.as_mut_ptr(), true)?;
+                let vote_state =
+                    unsafe { Box::from_raw(Box::into_raw(vote_state) as *mut VoteStateV3) };
+                Ok(VoteStateVersions::V3(vote_state))
+            }
+            // V4
+            3 => {
+                let mut vote_state = Box::new(std::mem::MaybeUninit::uninit());
+                deserialize_vote_state_into_v4(
+                    &mut cursor,
+                    vote_state.as_mut_ptr(),
+                    SourceVersion::V4,
+                )?;
+                let vote_state =
+                    unsafe { Box::from_raw(Box::into_raw(vote_state) as *mut VoteStateV4) };
+                Ok(VoteStateVersions::V4(vote_state))
+            }
+            _ => Err(InstructionError::InvalidAccountData),
+        }
+    }
+
+    /// Serializes the `VoteStateVersions` into the output buffer.
+    ///
+    /// This is a convenience wrapper around `bincode::serialize_into`.
+    #[cfg(feature = "bincode")]
+    pub fn serialize(&self, output: &mut [u8]) -> Result<(), InstructionError> {
+        bincode::serialize_into(output, self).map_err(|err| match *err {
+            bincode::ErrorKind::SizeLimit => InstructionError::AccountDataTooSmall,
+            _ => InstructionError::GenericError,
+        })
+    }
 }
 
 #[cfg(test)]
@@ -202,5 +263,42 @@ impl Arbitrary<'_> for VoteStateVersions {
             2 => Ok(Self::V1_14_11(Box::new(VoteState1_14_11::arbitrary(u)?))),
             _ => unreachable!(),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_vote_state_versions_deserialize() {
+        let ser_deser = |original: VoteStateVersions| {
+            let serialized = bincode::serialize(&original).unwrap();
+            VoteStateVersions::deserialize(&serialized)
+        };
+
+        let v0_23_5 = VoteStateVersions::V0_23_5(Box::default());
+        assert_eq!(
+            ser_deser(v0_23_5),
+            Err(InstructionError::InvalidAccountData), // <-- v0_23_5 unsupported
+        );
+
+        let v1_14_11 = VoteStateVersions::V1_14_11(Box::default());
+        assert_eq!(
+            ser_deser(v1_14_11.clone()),
+            Ok(v1_14_11), // <-- Matches original
+        );
+
+        let v3 = VoteStateVersions::V3(Box::default());
+        assert_eq!(
+            ser_deser(v3.clone()),
+            Ok(v3), // <-- Matches original
+        );
+
+        let v4 = VoteStateVersions::V4(Box::default());
+        assert_eq!(
+            ser_deser(v4.clone()),
+            Ok(v4), // <-- Matches original
+        );
     }
 }
