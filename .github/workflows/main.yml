@@ -571,5 +571,10 @@ jobs:
           cargo-cache-key: cargo-nightly-no-std
           cargo-cache-fallback-key: cargo-nightly
 
+      - name: Install cargo-hack
+        uses: taiki-e/cache-cargo-install-action@v2
+        with:
+          tool: cargo-hack
+
       - name: Run check
         run: ./scripts/check-no-std.sh
