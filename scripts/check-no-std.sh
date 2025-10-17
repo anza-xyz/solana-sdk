@@ -20,6 +20,7 @@ no_std_crates=(
   -p solana-program-log
   -p solana-program-log-macro
   -p solana-program-memory
+  -p solana-pubkey
   -p solana-rent
   -p solana-sanitize
   -p solana-sdk-ids

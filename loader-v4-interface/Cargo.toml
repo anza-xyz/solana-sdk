@@ -38,6 +38,7 @@ solana-system-interface = { workspace = true, features = ["bincode"], optional =
 [dev-dependencies]
 memoffset = { workspace = true }
 solana-loader-v4-interface = { path = ".", features = ["dev-context-only-utils"] }
+solana-pubkey = { workspace = true, features = ["std"] }
 
 [lints]
 workspace = true

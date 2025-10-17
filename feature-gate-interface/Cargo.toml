@@ -43,6 +43,7 @@ solana-system-interface = { workspace = true, optional = true, features = [
 
 [dev-dependencies]
 solana-feature-gate-interface = { path = ".", features = ["dev-context-only-utils"] }
+solana-pubkey = { workspace = true, features = ["std"] }
 strum = { workspace = true }
 strum_macros = { workspace = true }
 

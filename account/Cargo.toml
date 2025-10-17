@@ -48,3 +48,4 @@ solana-sysvar = { workspace = true, features = ["bincode"], optional = true }
 
 [dev-dependencies]
 solana-account = { path = ".", features = ["dev-context-only-utils"] }
+solana-pubkey = { workspace = true, features = ["std"] }
