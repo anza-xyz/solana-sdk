@@ -198,9 +198,12 @@ impl VoteStateVersions {
     /// without any version coercion.
     #[cfg(any(target_os = "solana", feature = "bincode"))]
     pub fn deserialize(input: &[u8]) -> Result<Self, InstructionError> {
-        use crate::state::vote_state_deserialize::{
-            deserialize_vote_state_into_v1_14_11, deserialize_vote_state_into_v3,
-            deserialize_vote_state_into_v4, SourceVersion,
+        use {
+            crate::state::vote_state_deserialize::{
+                deserialize_vote_state_into_v1_14_11, deserialize_vote_state_into_v3,
+                deserialize_vote_state_into_v4, SourceVersion,
+            },
+            std::mem::MaybeUninit,
         };
 
         let mut cursor = std::io::Cursor::new(input);
@@ -208,10 +211,10 @@ impl VoteStateVersions {
         let variant = solana_serialize_utils::cursor::read_u32(&mut cursor)?;
         match variant {
             // V0_23_5 not supported.
-            //
+            0 => Err(InstructionError::UninitializedAccount),
             // V1_14_11
             1 => {
-                let mut vote_state = Box::new(std::mem::MaybeUninit::uninit());
+                let mut vote_state = Box::new(MaybeUninit::uninit());
                 deserialize_vote_state_into_v1_14_11(&mut cursor, vote_state.as_mut_ptr())?;
                 let vote_state =
                     unsafe { Box::from_raw(Box::into_raw(vote_state) as *mut VoteState1_14_11) };
@@ -219,7 +222,7 @@ impl VoteStateVersions {
             }
             // V3
             2 => {
-                let mut vote_state = Box::new(std::mem::MaybeUninit::uninit());
+                let mut vote_state = Box::new(MaybeUninit::uninit());
                 deserialize_vote_state_into_v3(&mut cursor, vote_state.as_mut_ptr(), true)?;
                 let vote_state =
                     unsafe { Box::from_raw(Box::into_raw(vote_state) as *mut VoteStateV3) };
@@ -227,7 +230,7 @@ impl VoteStateVersions {
             }
             // V4
             3 => {
-                let mut vote_state = Box::new(std::mem::MaybeUninit::uninit());
+                let mut vote_state = Box::new(MaybeUninit::uninit());
                 deserialize_vote_state_into_v4(
                     &mut cursor,
                     vote_state.as_mut_ptr(),
@@ -239,17 +242,6 @@ impl VoteStateVersions {
             }
             _ => Err(InstructionError::InvalidAccountData),
         }
-    }
-
-    /// Serializes the `VoteStateVersions` into the output buffer.
-    ///
-    /// This is a convenience wrapper around `bincode::serialize_into`.
-    #[cfg(feature = "bincode")]
-    pub fn serialize(&self, output: &mut [u8]) -> Result<(), InstructionError> {
-        bincode::serialize_into(output, self).map_err(|err| match *err {
-            bincode::ErrorKind::SizeLimit => InstructionError::AccountDataTooSmall,
-            _ => InstructionError::GenericError,
-        })
     }
 }
 
@@ -280,7 +272,7 @@ mod tests {
         let v0_23_5 = VoteStateVersions::V0_23_5(Box::default());
         assert_eq!(
             ser_deser(v0_23_5),
-            Err(InstructionError::InvalidAccountData), // <-- v0_23_5 unsupported
+            Err(InstructionError::UninitializedAccount), // <-- v0_23_5 unsupported
         );
 
         let v1_14_11 = VoteStateVersions::V1_14_11(Box::default());
