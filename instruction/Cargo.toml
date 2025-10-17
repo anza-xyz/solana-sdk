@@ -38,6 +38,7 @@ solana-define-syscall = { workspace = true }
 
 [dev-dependencies]
 solana-instruction = { path = ".", features = ["borsh"] }
+solana-pubkey = { workspace = true, features = ["std"] }
 
 [lints]
 workspace = true
