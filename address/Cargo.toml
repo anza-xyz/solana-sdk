@@ -20,7 +20,7 @@ atomic = ["dep:solana-atomic-u64"]
 borsh = ["dep:borsh", "alloc"]
 bytemuck = ["copy", "dep:bytemuck", "dep:bytemuck_derive"]
 copy = []
-curve25519 = ["dep:curve25519-dalek", "error", "sha2"]
+curve25519 = ["dep:curve25519-dalek", "sha2", "syscalls"]
 decode = ["dep:five8", "dep:five8_const", "error"]
 dev-context-only-utils = ["dep:arbitrary", "rand"]
 error = ["dep:solana-program-error"]
@@ -54,7 +54,7 @@ solana-frozen-abi-macro = { workspace = true, features = ["frozen-abi"], optiona
 solana-program-error = { workspace = true, optional = true }
 solana-sanitize = { workspace = true, optional = true }
 
-[target.'cfg(not(target_os = "solana"))'.dependencies]
+[target.'cfg(not(any(target_os = "solana", target_arch = "bpf")))'.dependencies]
 curve25519-dalek = { workspace = true, optional = true }
 solana-sha256-hasher = { workspace = true, features = ["sha2"], optional = true }
 
