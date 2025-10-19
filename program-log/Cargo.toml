@@ -25,6 +25,9 @@ std = []
 [dependencies]
 solana-program-log-macro = { workspace = true, optional = true }
 
+[target.'cfg(target_arch = "bpf")'.dependencies]
+solana-define-syscall = { workspace = true }
+
 [target.'cfg(target_os = "solana")'.dependencies]
 solana-define-syscall = { workspace = true }
 
