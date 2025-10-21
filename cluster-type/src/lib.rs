@@ -7,7 +7,13 @@ use solana_frozen_abi_macro::{AbiEnumVisitor, AbiExample};
 use {core::fmt, core::str::FromStr, solana_hash::Hash};
 
 // The order can't align with release lifecycle only to remain ABI-compatible...
-#[cfg_attr(feature = "frozen-abi", derive(AbiExample, AbiEnumVisitor))]
+#[cfg_attr(
+    feature = "frozen-abi",
+    derive(
+        solana_frozen_abi_macro::AbiExample,
+        solana_frozen_abi_macro::AbiEnumVisitor
+    )
+)]
 #[cfg_attr(
     feature = "serde",
     derive(serde_derive::Deserialize, serde_derive::Serialize)

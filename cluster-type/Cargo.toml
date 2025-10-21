@@ -16,12 +16,17 @@ rustdoc-args = ["--cfg=docsrs"]
 
 [features]
 default = []
-frozen-abi = ["dep:solana-frozen-abi", "dep:solana-frozen-abi-macro"]
+frozen-abi = ["dep:solana-frozen-abi", "dep:solana-frozen-abi-macro", "std"]
 serde = ["dep:serde", "dep:serde_derive"]
+std = ["serde?/std"]
 
 [dependencies]
 serde = { workspace = true, optional = true }
 serde_derive = { workspace = true, optional = true }
-solana-frozen-abi = { workspace = true, optional = true }
-solana-frozen-abi-macro = { workspace = true, optional = true }
+solana-frozen-abi = { workspace = true, features = [
+    "frozen-abi",
+], optional = true }
+solana-frozen-abi-macro = { workspace = true, features = [
+    "frozen-abi",
+], optional = true }
 solana-hash = { workspace = true, features = ["decode"] }
