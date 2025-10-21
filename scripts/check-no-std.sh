@@ -13,6 +13,7 @@ no_std_crates=(
   -p solana-commitment-config
   -p solana-define-syscall
   -p solana-epoch-info
+  -p solana-epoch-rewards
   -p solana-fee-calculator
   -p solana-hash
   -p solana-msg
