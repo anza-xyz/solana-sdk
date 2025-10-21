@@ -1,16 +1,19 @@
 #![no_std]
 #![cfg_attr(docsrs, feature(doc_auto_cfg))]
-#[cfg(all(feature = "sha2", not(target_os = "solana")))]
-use sha2::{Digest, Sha256};
-use solana_hash::Hash;
 
-#[cfg(all(feature = "sha2", not(target_os = "solana")))]
+#[cfg(all(feature = "sha2", not(any(target_os = "solana", target_arch = "bpf"))))]
+use sha2::{Digest, Sha256};
+use solana_hash::{Hash, HASH_BYTES};
+#[cfg(any(target_os = "solana", target_arch = "bpf"))]
+pub use {core::mem::MaybeUninit, solana_define_syscall::definitions::sol_sha256};
+
+#[cfg(all(feature = "sha2", not(any(target_os = "solana", target_arch = "bpf"))))]
 #[derive(Clone, Default)]
 pub struct Hasher {
     hasher: Sha256,
 }
 
-#[cfg(all(feature = "sha2", not(target_os = "solana")))]
+#[cfg(all(feature = "sha2", not(any(target_os = "solana", target_arch = "bpf"))))]
 impl Hasher {
     pub fn hash(&mut self, val: &[u8]) {
         self.hasher.update(val);
@@ -21,19 +24,16 @@ impl Hasher {
         }
     }
     pub fn result(self) -> Hash {
-        let bytes: [u8; solana_hash::HASH_BYTES] = self.hasher.finalize().into();
+        let bytes: [u8; HASH_BYTES] = self.hasher.finalize().into();
         bytes.into()
     }
 }
-
-#[cfg(target_os = "solana")]
-pub use solana_define_syscall::definitions::sol_sha256;
 
 /// Return a Sha256 hash for the given data.
 pub fn hashv(vals: &[&[u8]]) -> Hash {
     // Perform the calculation inline, calling this from within a program is
     // not supported
-    #[cfg(not(target_os = "solana"))]
+    #[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
     {
         #[cfg(feature = "sha2")]
         {
@@ -48,9 +48,9 @@ pub fn hashv(vals: &[&[u8]]) -> Hash {
         }
     }
     // Call via a system call to perform the calculation
-    #[cfg(target_os = "solana")]
+    #[cfg(any(target_os = "solana", target_arch = "bpf"))]
     {
-        let mut hash_result = [0; solana_hash::HASH_BYTES];
+        let mut hash_result = MaybeUninit::<[u8; HASH_BYTES]>::uninit();
         unsafe {
             sol_sha256(
                 vals as *const _ as *const u8,
@@ -58,7 +58,8 @@ pub fn hashv(vals: &[&[u8]]) -> Hash {
                 &mut hash_result as *mut _ as *mut u8,
             );
         }
-        Hash::new_from_array(hash_result)
+        // SAFETY: the syscall initializes the `hash_result`.
+        Hash::new_from_array(unsafe { hash_result.assume_init() })
     }
 }
 

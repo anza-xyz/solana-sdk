@@ -21,6 +21,9 @@ solana-hash = { workspace = true }
 [target.'cfg(not(target_os = "solana"))'.dependencies]
 sha2 = { workspace = true, optional = true }
 
+[target.'cfg(target_arch = "bpf")'.dependencies]
+solana-define-syscall = { workspace = true }
+
 [target.'cfg(target_os = "solana")'.dependencies]
 solana-define-syscall = { workspace = true }
 
