@@ -4,7 +4,7 @@
 
 #[cfg(feature = "frozen-abi")]
 use solana_frozen_abi_macro::{AbiEnumVisitor, AbiExample};
-use {core::str::FromStr, solana_hash::Hash, thiserror::Error};
+use {core::fmt, core::str::FromStr, solana_hash::Hash};
 
 // The order can't align with release lifecycle only to remain ABI-compatible...
 #[cfg_attr(feature = "frozen-abi", derive(AbiExample, AbiEnumVisitor))]
@@ -40,10 +40,20 @@ impl ClusterType {
     }
 }
 
-#[derive(Debug, Error)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ParseClusterTypeError {
-    #[error("Unrecognized cluster type")]
+    /// Unrecognized cluster type
     Unrecognized,
+}
+
+impl core::error::Error for ParseClusterTypeError {}
+
+impl fmt::Display for ParseClusterTypeError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Unrecognized => f.write_str("Unrecognized cluster type"),
+        }
+    }
 }
 
 impl FromStr for ClusterType {
