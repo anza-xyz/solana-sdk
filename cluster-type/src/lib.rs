@@ -4,7 +4,6 @@
 
 #[cfg(feature = "frozen-abi")]
 use solana_frozen_abi_macro::{AbiEnumVisitor, AbiExample};
-
 use {core::str::FromStr, solana_hash::Hash, thiserror::Error};
 
 // The order can't align with release lifecycle only to remain ABI-compatible...
