@@ -1,13 +1,11 @@
 #![cfg_attr(feature = "frozen-abi", feature(min_specialization))]
 #![cfg_attr(docsrs, feature(doc_cfg))]
 #![cfg_attr(not(feature = "std"), no_std)]
-extern crate alloc;
 
 #[cfg(feature = "frozen-abi")]
 use solana_frozen_abi_macro::{AbiEnumVisitor, AbiExample};
 
-use {solana_hash::Hash, core::str::FromStr};
-use alloc::{format, string::String};
+use {core::str::FromStr, solana_hash::Hash, thiserror::Error};
 
 // The order can't align with release lifecycle only to remain ABI-compatible...
 #[cfg_attr(feature = "frozen-abi", derive(AbiExample, AbiEnumVisitor))]
@@ -43,8 +41,14 @@ impl ClusterType {
     }
 }
 
+#[derive(Debug, Error)]
+pub enum ParseClusterTypeError {
+    #[error("Unrecognized cluster type")]
+    Unrecognized,
+}
+
 impl FromStr for ClusterType {
-    type Err = String;
+    type Err = ParseClusterTypeError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
@@ -52,7 +56,7 @@ impl FromStr for ClusterType {
             "devnet" => Ok(ClusterType::Devnet),
             "testnet" => Ok(ClusterType::Testnet),
             "mainnet-beta" => Ok(ClusterType::MainnetBeta),
-            _ => Err(format!("{s} is unrecognized for cluster type")),
+            _ => Err(ParseClusterTypeError::Unrecognized),
         }
     }
 }
