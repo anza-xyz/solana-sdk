@@ -23,11 +23,7 @@ bincode = [
 ]
 blake3 = ["bincode", "solana-message/blake3"]
 dev-context-only-utils = ["blake3", "serde", "verify", "solana-hash/atomic"]
-frozen-abi = [
-    "dep:solana-frozen-abi",
-    "dep:solana-frozen-abi-macro",
-    "dep:solana-logger",
-]
+frozen-abi = ["dep:solana-frozen-abi", "dep:solana-frozen-abi-macro"]
 serde = [
     "dep:serde",
     "dep:serde_derive",
@@ -47,7 +43,6 @@ solana-frozen-abi-macro = { workspace = true, optional = true }
 solana-hash = { workspace = true }
 solana-instruction = { workspace = true }
 solana-instruction-error = { workspace = true }
-solana-logger = { workspace = true, optional = true }
 solana-message = { workspace = true }
 solana-sanitize = { workspace = true }
 solana-sdk-ids = { workspace = true }

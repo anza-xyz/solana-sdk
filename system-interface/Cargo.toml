@@ -24,7 +24,6 @@ bincode = ["dep:solana-instruction", "alloc", "serde"]
 frozen-abi = [
     "dep:solana-frozen-abi",
     "dep:solana-frozen-abi-macro",
-    "dep:solana-logger",
     "serde",
     "std",
     "solana-address/frozen-abi",
@@ -41,7 +40,6 @@ solana-address = { workspace = true, features = ["decode"] }
 solana-frozen-abi = { workspace = true, features = ["frozen-abi"], optional = true }
 solana-frozen-abi-macro = { workspace = true, features = ["frozen-abi"], optional = true }
 solana-instruction = { workspace = true, features = ["bincode", "std"], optional = true }
-solana-logger = { workspace = true, optional = true }
 solana-msg = { workspace = true }
 solana-program-error = { workspace = true }
 

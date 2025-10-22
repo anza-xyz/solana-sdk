@@ -1,6 +1,5 @@
 use {
     crate::abi_digester::{AbiDigester, DigestError, DigestResult},
-    log::*,
     serde::Serialize,
     std::any::type_name,
 };
@@ -287,56 +286,56 @@ impl<T: Default + Serialize> TypeErasedExample<T> for Placeholder {
 
 impl<T: AbiExample> AbiExample for Option<T> {
     fn example() -> Self {
-        info!("AbiExample for (Option<T>): {}", type_name::<Self>());
+        println!("AbiExample for (Option<T>): {}", type_name::<Self>());
         Some(T::example())
     }
 }
 
 impl<O: AbiExample, E: AbiExample> AbiExample for Result<O, E> {
     fn example() -> Self {
-        info!("AbiExample for (Result<O, E>): {}", type_name::<Self>());
+        println!("AbiExample for (Result<O, E>): {}", type_name::<Self>());
         Ok(O::example())
     }
 }
 
 impl<T: AbiExample> AbiExample for Box<T> {
     fn example() -> Self {
-        info!("AbiExample for (Box<T>): {}", type_name::<Self>());
+        println!("AbiExample for (Box<T>): {}", type_name::<Self>());
         Box::new(T::example())
     }
 }
 
 impl<T> AbiExample for Box<dyn Fn(&mut T) + Sync + Send> {
     fn example() -> Self {
-        info!("AbiExample for (Box<T>): {}", type_name::<Self>());
+        println!("AbiExample for (Box<T>): {}", type_name::<Self>());
         Box::new(move |_t: &mut T| {})
     }
 }
 
 impl<T, U> AbiExample for Box<dyn Fn(&mut T, U) + Sync + Send> {
     fn example() -> Self {
-        info!("AbiExample for (Box<T, U>): {}", type_name::<Self>());
+        println!("AbiExample for (Box<T, U>): {}", type_name::<Self>());
         Box::new(move |_t: &mut T, _u: U| {})
     }
 }
 
 impl<T: AbiExample> AbiExample for Box<[T]> {
     fn example() -> Self {
-        info!("AbiExample for (Box<[T]>): {}", type_name::<Self>());
+        println!("AbiExample for (Box<[T]>): {}", type_name::<Self>());
         Box::new([T::example()])
     }
 }
 
 impl<T: AbiExample> AbiExample for std::marker::PhantomData<T> {
     fn example() -> Self {
-        info!("AbiExample for (PhantomData<T>): {}", type_name::<Self>());
+        println!("AbiExample for (PhantomData<T>): {}", type_name::<Self>());
         std::marker::PhantomData::<T>
     }
 }
 
 impl<T: AbiExample> AbiExample for std::sync::Arc<T> {
     fn example() -> Self {
-        info!("AbiExample for (Arc<T>): {}", type_name::<Self>());
+        println!("AbiExample for (Arc<T>): {}", type_name::<Self>());
         std::sync::Arc::new(T::example())
     }
 }
@@ -352,21 +351,21 @@ fn leak_and_inhibit_drop<'a, T>(t: T) -> &'a mut T {
 
 impl<T: AbiExample> AbiExample for &T {
     fn example() -> Self {
-        info!("AbiExample for (&T): {}", type_name::<Self>());
+        println!("AbiExample for (&T): {}", type_name::<Self>());
         leak_and_inhibit_drop(T::example())
     }
 }
 
 impl<T: AbiExample> AbiExample for &[T] {
     fn example() -> Self {
-        info!("AbiExample for (&[T]): {}", type_name::<Self>());
+        println!("AbiExample for (&[T]): {}", type_name::<Self>());
         leak_and_inhibit_drop(vec![T::example()])
     }
 }
 
 impl<T: AbiExample> AbiExample for std::sync::Weak<T> {
     fn example() -> Self {
-        info!("AbiExample for (Arc's Weak<T>): {}", type_name::<Self>());
+        println!("AbiExample for (Arc's Weak<T>): {}", type_name::<Self>());
         // leaking is needed otherwise Arc::upgrade() will always return None...
         std::sync::Arc::downgrade(leak_and_inhibit_drop(std::sync::Arc::new(T::example())))
     }
@@ -374,14 +373,14 @@ impl<T: AbiExample> AbiExample for std::sync::Weak<T> {
 
 impl<T: AbiExample> AbiExample for std::rc::Rc<T> {
     fn example() -> Self {
-        info!("AbiExample for (Rc<T>): {}", type_name::<Self>());
+        println!("AbiExample for (Rc<T>): {}", type_name::<Self>());
         std::rc::Rc::new(T::example())
     }
 }
 
 impl<T: AbiExample> AbiExample for std::rc::Weak<T> {
     fn example() -> Self {
-        info!("AbiExample for (Rc's Weak<T>): {}", type_name::<Self>());
+        println!("AbiExample for (Rc's Weak<T>): {}", type_name::<Self>());
         // leaking is needed otherwise Rc::upgrade() will always return None...
         std::rc::Rc::downgrade(leak_and_inhibit_drop(std::rc::Rc::new(T::example())))
     }
@@ -389,14 +388,14 @@ impl<T: AbiExample> AbiExample for std::rc::Weak<T> {
 
 impl<T: AbiExample> AbiExample for std::sync::Mutex<T> {
     fn example() -> Self {
-        info!("AbiExample for (Mutex<T>): {}", type_name::<Self>());
+        println!("AbiExample for (Mutex<T>): {}", type_name::<Self>());
         std::sync::Mutex::new(T::example())
     }
 }
 
 impl<T: AbiExample> AbiExample for std::sync::RwLock<T> {
     fn example() -> Self {
-        info!("AbiExample for (RwLock<T>): {}", type_name::<Self>());
+        println!("AbiExample for (RwLock<T>): {}", type_name::<Self>());
         std::sync::RwLock::new(T::example())
     }
 }
@@ -410,7 +409,7 @@ impl<
     > AbiExample for HashMap<T, S, H>
 {
     fn example() -> Self {
-        info!("AbiExample for (HashMap<T, S, H>): {}", type_name::<Self>());
+        println!("AbiExample for (HashMap<T, S, H>): {}", type_name::<Self>());
         let mut map = HashMap::default();
         map.insert(T::example(), S::example());
         map
@@ -425,7 +424,7 @@ impl<
     > AbiExample for im::HashMap<T, S, H>
 {
     fn example() -> Self {
-        info!("AbiExample for (HashMap<T, S, H>): {}", type_name::<Self>());
+        println!("AbiExample for (HashMap<T, S, H>): {}", type_name::<Self>());
         let mut map = im::HashMap::default();
         map.insert(T::example(), S::example());
         map
@@ -434,7 +433,7 @@ impl<
 
 impl<T: std::cmp::Ord + AbiExample, S: AbiExample> AbiExample for BTreeMap<T, S> {
     fn example() -> Self {
-        info!("AbiExample for (BTreeMap<T, S>): {}", type_name::<Self>());
+        println!("AbiExample for (BTreeMap<T, S>): {}", type_name::<Self>());
         let mut map = BTreeMap::default();
         map.insert(T::example(), S::example());
         map
@@ -443,14 +442,14 @@ impl<T: std::cmp::Ord + AbiExample, S: AbiExample> AbiExample for BTreeMap<T, S>
 
 impl<T: AbiExample> AbiExample for Vec<T> {
     fn example() -> Self {
-        info!("AbiExample for (Vec<T>): {}", type_name::<Self>());
+        println!("AbiExample for (Vec<T>): {}", type_name::<Self>());
         vec![T::example()]
     }
 }
 
 impl<T: AbiExample> AbiExample for VecDeque<T> {
     fn example() -> Self {
-        info!("AbiExample for (Vec<T>): {}", type_name::<Self>());
+        println!("AbiExample for (Vec<T>): {}", type_name::<Self>());
         VecDeque::from(vec![T::example()])
     }
 }
@@ -459,7 +458,7 @@ impl<T: std::cmp::Eq + std::hash::Hash + AbiExample, H: std::hash::BuildHasher +
     for HashSet<T, H>
 {
     fn example() -> Self {
-        info!("AbiExample for (HashSet<T, H>): {}", type_name::<Self>());
+        println!("AbiExample for (HashSet<T, H>): {}", type_name::<Self>());
         let mut set: HashSet<T, H> = HashSet::default();
         set.insert(T::example());
         set
@@ -468,7 +467,7 @@ impl<T: std::cmp::Eq + std::hash::Hash + AbiExample, H: std::hash::BuildHasher +
 
 impl<T: std::cmp::Ord + AbiExample> AbiExample for BTreeSet<T> {
     fn example() -> Self {
-        info!("AbiExample for (BTreeSet<T>): {}", type_name::<Self>());
+        println!("AbiExample for (BTreeSet<T>): {}", type_name::<Self>());
         let mut set: BTreeSet<T> = BTreeSet::default();
         set.insert(T::example());
         set
@@ -537,7 +536,7 @@ impl<T: Serialize + ?Sized> AbiEnumVisitor for T {
 
 impl<T: Serialize + AbiExample> AbiEnumVisitor for T {
     default fn visit_for_abi(&self, digester: &mut AbiDigester) -> DigestResult {
-        info!("AbiEnumVisitor for T: {}", type_name::<T>());
+        println!("AbiEnumVisitor for T: {}", type_name::<T>());
         // not calling self.serialize(...) is intentional here as the most generic impl
         // consider TransparentAsHelper and EvenAsOpaque if you're stuck on this....
         T::example()
@@ -551,7 +550,7 @@ impl<T: Serialize + AbiExample> AbiEnumVisitor for T {
 // relevant test: TestVecEnum
 impl<T: Serialize + ?Sized + AbiEnumVisitor> AbiEnumVisitor for &T {
     default fn visit_for_abi(&self, digester: &mut AbiDigester) -> DigestResult {
-        info!("AbiEnumVisitor for &T: {}", type_name::<T>());
+        println!("AbiEnumVisitor for &T: {}", type_name::<T>());
         // Don't call self.visit_for_abi(...) to avoid the infinite recursion!
         T::visit_for_abi(self, digester)
     }
@@ -561,7 +560,7 @@ impl<T: Serialize + ?Sized + AbiEnumVisitor> AbiEnumVisitor for &T {
 // helper structs like ad-hoc iterator `struct`s
 impl<T: Serialize + TransparentAsHelper> AbiEnumVisitor for &T {
     default fn visit_for_abi(&self, digester: &mut AbiDigester) -> DigestResult {
-        info!(
+        println!(
             "AbiEnumVisitor for (TransparentAsHelper): {}",
             type_name::<T>()
         );
@@ -576,10 +575,7 @@ impl<T: Serialize + TransparentAsHelper + EvenAsOpaque> AbiEnumVisitor for &T {
     default fn visit_for_abi(&self, digester: &mut AbiDigester) -> DigestResult {
         let type_name = type_name::<T>();
         let matcher = T::TYPE_NAME_MATCHER;
-        info!(
-            "AbiEnumVisitor for (EvenAsOpaque): {}: matcher: {}",
-            type_name, matcher
-        );
+        println!("AbiEnumVisitor for (EvenAsOpaque): {type_name}: matcher: {matcher}");
         self.serialize(digester.create_new_opaque(matcher))
             .map_err(DigestError::wrap_by_type::<T>)
     }
@@ -589,7 +585,7 @@ impl<T: Serialize + TransparentAsHelper + EvenAsOpaque> AbiEnumVisitor for &T {
 // The digesting pattern must match with what is derived from #[derive(AbiEnumVisitor)]
 impl<T: AbiEnumVisitor> AbiEnumVisitor for Option<T> {
     fn visit_for_abi(&self, digester: &mut AbiDigester) -> DigestResult {
-        info!("AbiEnumVisitor for (Option<T>): {}", type_name::<Self>());
+        println!("AbiEnumVisitor for (Option<T>): {}", type_name::<Self>());
 
         let variant: Self = Option::Some(T::example());
         // serde calls serialize_some(); not serialize_variant();
@@ -600,7 +596,7 @@ impl<T: AbiEnumVisitor> AbiEnumVisitor for Option<T> {
 
 impl<O: AbiEnumVisitor, E: AbiEnumVisitor> AbiEnumVisitor for Result<O, E> {
     fn visit_for_abi(&self, digester: &mut AbiDigester) -> DigestResult {
-        info!("AbiEnumVisitor for (Result<O, E>): {}", type_name::<Self>());
+        println!("AbiEnumVisitor for (Result<O, E>): {}", type_name::<Self>());
 
         digester.update(&["enum Result (variants = 2)"]);
         let variant: Self = Result::Ok(O::example());
@@ -628,7 +624,7 @@ impl<
     > AbiExample for dashmap::DashMap<T, S, H>
 {
     fn example() -> Self {
-        info!("AbiExample for (DashMap<T, S, H>): {}", type_name::<Self>());
+        println!("AbiExample for (DashMap<T, S, H>): {}", type_name::<Self>());
         let map = dashmap::DashMap::default();
         map.insert(T::example(), S::example());
         map
@@ -638,7 +634,7 @@ impl<
 #[cfg(not(target_os = "solana"))]
 impl<T: AbiExample> AbiExample for boxcar::Vec<T> {
     fn example() -> Self {
-        info!("AbiExample for (boxcar::Vec): {}", type_name::<Self>());
+        println!("AbiExample for (boxcar::Vec): {}", type_name::<Self>());
         let vec = boxcar::Vec::new();
         vec.push(T::example());
         vec

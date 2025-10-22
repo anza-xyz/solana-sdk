@@ -42,7 +42,6 @@ memmap2 = { workspace = true }
 bitflags = { workspace = true, features = ["serde"] }
 serde_bytes = { workspace = true }
 serde_with = { workspace = true, features = ["macros"] }
-solana-logger = { workspace = true }
 
 [lints]
 workspace = true

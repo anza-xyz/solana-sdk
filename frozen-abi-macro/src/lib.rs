@@ -142,7 +142,7 @@ fn derive_abi_sample_enum_type(input: ItemEnum) -> TokenStream {
         #( #attrs )*
         impl #impl_generics ::solana_frozen_abi::abi_example::AbiExample for #type_name #ty_generics #where_clause {
             fn example() -> Self {
-                ::solana_frozen_abi::__private::log::info!(
+                ::std::println!(
                     "AbiExample for enum: {}",
                     std::any::type_name::<#type_name #ty_generics>()
                 );
@@ -194,7 +194,7 @@ fn derive_abi_sample_struct_type(input: ItemStruct) -> TokenStream {
         #( #attrs )*
         impl #impl_generics ::solana_frozen_abi::abi_example::AbiExample for #type_name #ty_generics #where_clause {
             fn example() -> Self {
-                ::solana_frozen_abi::__private::log::info!(
+                ::std::println!(
                     "AbiExample for struct: {}",
                     std::any::type_name::<#type_name #ty_generics>()
                 );
@@ -287,14 +287,12 @@ fn quote_for_test(
 
             #[test]
             fn test_abi_digest() {
-                ::solana_logger::setup();
                 let mut digester = ::solana_frozen_abi::abi_digester::AbiDigester::create();
                 let example = <#type_name>::example();
                 let result = <_>::visit_for_abi(&&example, &mut digester);
                 let mut hash = digester.finalize();
-                // pretty-print error
                 if result.is_err() {
-                    ::solana_frozen_abi::__private::log::error!("digest error: {:#?}", result);
+                    ::std::eprintln!("Error: digest error: {:#?}", result);
                 }
                 result.unwrap();
                 let actual_digest = ::std::format!("{}", hash);
@@ -302,7 +300,7 @@ fn quote_for_test(
                     if #expected_digest != actual_digest {
                         ::std::eprintln!("sed -i -e 's/{}/{}/g' $(git grep --files-with-matches frozen_abi)", #expected_digest, hash);
                     }
-                    ::solana_frozen_abi::__private::log::warn!("Not testing the abi digest under SOLANA_ABI_BULK_UPDATE!");
+                    ::std::eprintln!("Warning: Not testing the abi digest under SOLANA_ABI_BULK_UPDATE!");
                 } else {
                     if let Ok(dir) = ::std::env::var("SOLANA_ABI_DUMP_DIR") {
                         assert_eq!(#expected_digest, actual_digest, "Possibly ABI changed? Examine the diff in SOLANA_ABI_DUMP_DIR!: \n$ diff -u {}/*{}* {}/*{}*", dir, #expected_digest, dir, actual_digest);

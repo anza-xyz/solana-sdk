@@ -3,7 +3,6 @@ use {
         abi_example::{normalize_type_name, AbiEnumVisitor},
         hash::{Hash, Hasher},
     },
-    log::*,
     serde::ser::{Error as SerdeError, *},
     std::{any::type_name, io::Write},
     thiserror::Error,
@@ -148,7 +147,7 @@ impl AbiDigester {
             buf,
             width = self.depth.saturating_mul(INDENT_WIDTH)
         );
-        info!("updating with: {}", buf.trim_end());
+        println!("updating with: {}", buf.trim_end());
         (*self.data_types.borrow_mut()).push(buf);
     }
 
@@ -212,7 +211,7 @@ impl AbiDigester {
                 .unwrap_or("unknown-test-thread")
                 .replace(':', "_");
             if thread_name == "main" {
-                error!("Bad thread name detected for dumping; Maybe, --test-threads=1? Sorry, SOLANA_ABI_DUMP_DIR doesn't work under 1; increase it");
+                eprintln!("Bad thread name detected for dumping; Maybe, --test-threads=1? Sorry, SOLANA_ABI_DUMP_DIR doesn't work under 1; increase it");
             }
 
             let path = format!("{dir}/{thread_name}_{hash}",);

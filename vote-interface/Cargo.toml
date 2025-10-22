@@ -77,7 +77,6 @@ solana-serialize-utils = { workspace = true }
 itertools = { workspace = true }
 rand = { workspace = true }
 solana-epoch-schedule = { workspace = true }
-solana-logger = { workspace = true }
 solana-pubkey = { workspace = true, features = ["dev-context-only-utils"] }
 solana-vote-interface = { path = ".", features = ["dev-context-only-utils"] }
 

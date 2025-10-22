@@ -15,11 +15,7 @@ all-features = true
 rustdoc-args = ["--cfg=docsrs"]
 
 [features]
-frozen-abi = [
-    "dep:solana-frozen-abi",
-    "dep:solana-frozen-abi-macro",
-    "dep:solana-logger",
-]
+frozen-abi = ["dep:solana-frozen-abi", "dep:solana-frozen-abi-macro"]
 serde = [
     "dep:serde",
     "dep:serde_derive",
@@ -49,7 +45,6 @@ solana-frozen-abi-macro = { workspace = true, optional = true }
 solana-hash = { workspace = true }
 solana-inflation = { workspace = true }
 solana-keypair = { workspace = true }
-solana-logger = { workspace = true, optional = true }
 solana-poh-config = { workspace = true }
 solana-pubkey = { workspace = true }
 solana-rent = { workspace = true }
