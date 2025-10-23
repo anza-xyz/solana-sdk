@@ -16,7 +16,10 @@ mod hash;
 #[macro_use]
 extern crate solana_frozen_abi_macro;
 
-// Not public API. Referenced by macro-generated code.
+// Not public API. Previously referenced by macro-generated code. Remove the
+// `log` dependency from Cargo.toml when this is cleaned up in the next major
+// version bump
+#[deprecated(since = "3.0.1", note = "Please use the `log` crate directly instead")]
 #[doc(hidden)]
 pub mod __private {
     #[doc(hidden)]
