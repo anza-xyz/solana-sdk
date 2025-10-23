@@ -31,7 +31,13 @@ declare print_free_tree=(
   ':^**/build.rs'
 )
 
-if git --no-pager grep -n "${prints[@]/#/-e}" -- "${print_free_tree[@]}"; then
+# Parts of the tree that may match a print_free_tree pattern but are deemed
+# an exception to the print free hygiene rule
+declare print_allowed_tree=(
+  ':!^frozen-abi/src/*.rs'
+)
+
+if git --no-pager grep -n "${prints[@]/#/-e}" -- "${print_free_tree[@]}" "${print_allowed_tree[@]}"; then
     exit 1
 fi
 
