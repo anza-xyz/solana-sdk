@@ -12,6 +12,9 @@ edition = { workspace = true }
 [package.metadata.docs.rs]
 targets = ["x86_64-unknown-linux-gnu"]
 
+[features]
+unstable-static-syscalls = []
+
 [lints.rust]
 unexpected_cfgs = { level = "warn", check-cfg = [
   'cfg(target_feature, values("static-syscalls"))',
