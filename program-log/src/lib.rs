@@ -56,7 +56,7 @@ pub use solana_program_log_macro::*;
 
 // Enabling the "std" feature when `target_os = "solana"` or
 // `target_arch = "bpf"` has no effect.
-#[cfg(all(not(target_os = "solana"), not(target_arch = "bpf"), feature = "std"))]
+#[cfg(all(not(any(target_os = "solana", target_arch = "bpf")), feature = "std"))]
 extern crate std;
 
 #[cfg(test)]
