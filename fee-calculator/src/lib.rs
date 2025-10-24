@@ -232,6 +232,7 @@ mod tests {
         let mut count = 0;
         loop {
             let last_lamports_per_signature = f.lamports_per_signature;
+            f = FeeRateGovernor::new_derived(&f, u64::MAX);
 
             // some maximum target reached
             if f.lamports_per_signature == last_lamports_per_signature {
