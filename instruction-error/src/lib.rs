@@ -26,191 +26,280 @@ mod instruction_error_module {
     #[cfg(feature = "frozen-abi")]
     use solana_frozen_abi_macro::{AbiEnumVisitor, AbiExample};
 
-    /// Reasons the runtime might have rejected an instruction.
-    ///
-    /// Members of this enum must not be removed, but new ones can be added.
-    /// Also, it is crucial that meta-information if any that comes along with
-    /// an error be consistent across software versions.  For example, it is
-    /// dangerous to include error strings from 3rd party crates because they could
-    /// change at any time and changes to them are difficult to detect.
-    #[cfg_attr(feature = "frozen-abi", derive(AbiExample, AbiEnumVisitor))]
-    #[cfg_attr(
-        feature = "serde",
-        derive(serde_derive::Serialize, serde_derive::Deserialize)
-    )]
-    #[derive(Debug, PartialEq, Eq, Clone)]
-    pub enum InstructionError {
-        /// Deprecated! Use CustomError instead!
-        /// The program instruction returned an error
-        GenericError,
+    macro_rules! define_enum {
+        (
+            $(#[$enum_meta:meta])*
+            pub enum InstructionError {
+                $(
+                    $(#[$variant_meta:meta])*
+                    $variant:ident
+                ),* $(,)?
+            }
+        ) => {
+            $(#[$enum_meta])*
+            pub enum InstructionError {
+                $(
+                    $(#[$variant_meta])*
+                    $variant,
+                )*
 
-        /// The arguments provided to a program were invalid
-        InvalidArgument,
+                /// Failed to serialize or deserialize account data
+                BorshIoError,
 
-        /// An instruction's data contents were invalid
-        InvalidInstructionData,
+                /// Allows on-chain programs to implement program-specific error types and see them returned
+                /// by the Solana runtime. A program-specific error may be any type that is represented as
+                /// or serialized to a u32 integer.
+                Custom(u32),
+            }
 
-        /// An account's data contents was invalid
-        InvalidAccountData,
+            #[cfg(feature = "serde")]
+            impl<'de> serde::Deserialize<'de> for InstructionError {
+                fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+                where
+                    D: serde::Deserializer<'de>,
+                {
+                    use {serde::de::{self, Visitor, MapAccess}, core::fmt};
 
-        /// An account's data was too small
-        AccountDataTooSmall,
+                    struct InstructionErrorVisitor;
 
-        /// An account's balance was too small to complete the instruction
-        InsufficientFunds,
+                    impl<'de> Visitor<'de> for InstructionErrorVisitor {
+                        type Value = InstructionError;
 
-        /// The account did not have the expected program id
-        IncorrectProgramId,
+                        fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+                            formatter.write_str(concat!("newtype variant"))
+                        }
 
-        /// A signature was required but not found
-        MissingRequiredSignature,
+                        fn visit_str<E>(self, value: &str) -> Result<Self::Value, E>
+                        where
+                            E: de::Error,
+                        {
+                            match value {
+                                $(
+                                    stringify!($variant) => Ok(InstructionError::$variant),
+                                )*
+                                "Custom" => Err(de::Error::invalid_type(serde::de::Unexpected::UnitVariant, &self)),
+                                "BorshIoError" => Ok(InstructionError::BorshIoError),
+                                _ => Err(de::Error::unknown_variant(
+                                    value,
+                                    &[$(stringify!($variant),)* "BorshIoError", "Custom"]
+                                )),
+                            }
+                        }
 
-        /// An initialize instruction was sent to an account that has already been initialized.
-        AccountAlreadyInitialized,
+                        fn visit_map<M>(self, mut map: M) -> Result<Self::Value, M::Error>
+                        where
+                            M: MapAccess<'de>,
+                        {
+                            if let Some(key) = map.next_key::<&str>()? {
+                                match key {
+                                    "Custom" => {
+                                        let value: u32 = map.next_value()?;
+                                        Ok(InstructionError::Custom(value))
+                                    }
+                                    "BorshIoError" => {
+                                        let _: &str = map.next_value()?;
+                                        Ok(InstructionError::BorshIoError)
+                                    }
+                                    $(
+                                        stringify!($variant) => {
+                                            let _: () = map.next_value()?;
+                                            Ok(InstructionError::$variant)
+                                        }
+                                    )*
+                                    value => Err(de::Error::unknown_variant(
+                                        value,
+                                        &[$(stringify!($variant),)* "BorshIoError", "Custom"]
+                                    )),
+                                }
+                            } else {
+                                Err(de::Error::custom("expected value"))
+                            }
+                        }
+                    }
 
-        /// An attempt to operate on an account that hasn't been initialized.
-        UninitializedAccount,
+                    deserializer.deserialize_any(InstructionErrorVisitor)
+                }
+            }
+        }
+    }
 
-        /// Program's instruction lamport balance does not equal the balance after the instruction
-        UnbalancedInstruction,
+    define_enum! {
+        /// Reasons the runtime might have rejected an instruction.
+        ///
+        /// Members of this enum must not be removed, but new ones can be added.
+        /// Also, it is crucial that meta-information if any that comes along with
+        /// an error be consistent across software versions.  For example, it is
+        /// dangerous to include error strings from 3rd party crates because they could
+        /// change at any time and changes to them are difficult to detect.
+        #[cfg_attr(feature = "frozen-abi", derive(AbiExample, AbiEnumVisitor))]
+        #[cfg_attr(feature = "serde", derive(serde_derive::Serialize))]
+        // #[cfg_attr(feature = "serde", derive(serde_derive::Serialize, serde_derive::Deserialize))]
+        #[derive(Debug, PartialEq, Eq, Clone)]
+        pub enum InstructionError {
+            /// Deprecated! Use CustomError instead!
+            /// The program instruction returned an error
+            GenericError,
 
-        /// Program illegally modified an account's program id
-        ModifiedProgramId,
+            /// The arguments provided to a program were invalid
+            InvalidArgument,
 
-        /// Program spent the lamports of an account that doesn't belong to it
-        ExternalAccountLamportSpend,
+            /// An instruction's data contents were invalid
+            InvalidInstructionData,
 
-        /// Program modified the data of an account that doesn't belong to it
-        ExternalAccountDataModified,
+            /// An account's data contents was invalid
+            InvalidAccountData,
 
-        /// Read-only account's lamports modified
-        ReadonlyLamportChange,
+            /// An account's data was too small
+            AccountDataTooSmall,
 
-        /// Read-only account's data was modified
-        ReadonlyDataModified,
+            /// An account's balance was too small to complete the instruction
+            InsufficientFunds,
 
-        /// An account was referenced more than once in a single instruction
-        // Deprecated, instructions can now contain duplicate accounts
-        DuplicateAccountIndex,
+            /// The account did not have the expected program id
+            IncorrectProgramId,
 
-        /// Executable bit on account changed, but shouldn't have
-        ExecutableModified,
+            /// A signature was required but not found
+            MissingRequiredSignature,
 
-        /// Rent_epoch account changed, but shouldn't have
-        RentEpochModified,
+            /// An initialize instruction was sent to an account that has already been initialized.
+            AccountAlreadyInitialized,
 
-        /// The instruction expected additional account keys
-        #[deprecated(since = "2.1.0", note = "Use InstructionError::MissingAccount instead")]
-        NotEnoughAccountKeys,
+            /// An attempt to operate on an account that hasn't been initialized.
+            UninitializedAccount,
 
-        /// Program other than the account's owner changed the size of the account data
-        AccountDataSizeChanged,
+            /// Program's instruction lamport balance does not equal the balance after the instruction
+            UnbalancedInstruction,
 
-        /// The instruction expected an executable account
-        AccountNotExecutable,
+            /// Program illegally modified an account's program id
+            ModifiedProgramId,
 
-        /// Failed to borrow a reference to account data, already borrowed
-        AccountBorrowFailed,
+            /// Program spent the lamports of an account that doesn't belong to it
+            ExternalAccountLamportSpend,
 
-        /// Account data has an outstanding reference after a program's execution
-        AccountBorrowOutstanding,
+            /// Program modified the data of an account that doesn't belong to it
+            ExternalAccountDataModified,
 
-        /// The same account was multiply passed to an on-chain program's entrypoint, but the program
-        /// modified them differently.  A program can only modify one instance of the account because
-        /// the runtime cannot determine which changes to pick or how to merge them if both are modified
-        DuplicateAccountOutOfSync,
+            /// Read-only account's lamports modified
+            ReadonlyLamportChange,
 
-        /// Allows on-chain programs to implement program-specific error types and see them returned
-        /// by the Solana runtime. A program-specific error may be any type that is represented as
-        /// or serialized to a u32 integer.
-        Custom(u32),
+            /// Read-only account's data was modified
+            ReadonlyDataModified,
 
-        /// The return value from the program was invalid.  Valid errors are either a defined builtin
-        /// error value or a user-defined error in the lower 32 bits.
-        InvalidError,
+            /// An account was referenced more than once in a single instruction
+            // Deprecated, instructions can now contain duplicate accounts
+            DuplicateAccountIndex,
 
-        /// Executable account's data was modified
-        ExecutableDataModified,
+            /// Executable bit on account changed, but shouldn't have
+            ExecutableModified,
 
-        /// Executable account's lamports modified
-        ExecutableLamportChange,
+            /// Rent_epoch account changed, but shouldn't have
+            RentEpochModified,
 
-        /// Executable accounts must be rent exempt
-        ExecutableAccountNotRentExempt,
+            /// The instruction expected additional account keys
+            #[deprecated(since = "2.1.0", note = "Use InstructionError::MissingAccount instead")]
+            NotEnoughAccountKeys,
 
-        /// Unsupported program id
-        UnsupportedProgramId,
+            /// Program other than the account's owner changed the size of the account data
+            AccountDataSizeChanged,
 
-        /// Cross-program invocation call depth too deep
-        CallDepth,
+            /// The instruction expected an executable account
+            AccountNotExecutable,
 
-        /// An account required by the instruction is missing
-        MissingAccount,
+            /// Failed to borrow a reference to account data, already borrowed
+            AccountBorrowFailed,
 
-        /// Cross-program invocation reentrancy not allowed for this instruction
-        ReentrancyNotAllowed,
+            /// Account data has an outstanding reference after a program's execution
+            AccountBorrowOutstanding,
 
-        /// Length of the seed is too long for address generation
-        MaxSeedLengthExceeded,
+            /// The same account was multiply passed to an on-chain program's entrypoint, but the program
+            /// modified them differently.  A program can only modify one instance of the account because
+            /// the runtime cannot determine which changes to pick or how to merge them if both are modified
+            DuplicateAccountOutOfSync,
 
-        /// Provided seeds do not result in a valid address
-        InvalidSeeds,
+            /// The return value from the program was invalid.  Valid errors are either a defined builtin
+            /// error value or a user-defined error in the lower 32 bits.
+            InvalidError,
 
-        /// Failed to reallocate account data of this length
-        InvalidRealloc,
+            /// Executable account's data was modified
+            ExecutableDataModified,
 
-        /// Computational budget exceeded
-        ComputationalBudgetExceeded,
+            /// Executable account's lamports modified
+            ExecutableLamportChange,
 
-        /// Cross-program invocation with unauthorized signer or writable account
-        PrivilegeEscalation,
+            /// Executable accounts must be rent exempt
+            ExecutableAccountNotRentExempt,
 
-        /// Failed to create program execution environment
-        ProgramEnvironmentSetupFailure,
+            /// Unsupported program id
+            UnsupportedProgramId,
 
-        /// Program failed to complete
-        ProgramFailedToComplete,
+            /// Cross-program invocation call depth too deep
+            CallDepth,
 
-        /// Program failed to compile
-        ProgramFailedToCompile,
+            /// An account required by the instruction is missing
+            MissingAccount,
 
-        /// Account is immutable
-        Immutable,
+            /// Cross-program invocation reentrancy not allowed for this instruction
+            ReentrancyNotAllowed,
 
-        /// Incorrect authority provided
-        IncorrectAuthority,
+            /// Length of the seed is too long for address generation
+            MaxSeedLengthExceeded,
 
-        /// Failed to serialize or deserialize account data
-        BorshIoError,
+            /// Provided seeds do not result in a valid address
+            InvalidSeeds,
 
-        /// An account does not have enough lamports to be rent-exempt
-        AccountNotRentExempt,
+            /// Failed to reallocate account data of this length
+            InvalidRealloc,
 
-        /// Invalid account owner
-        InvalidAccountOwner,
+            /// Computational budget exceeded
+            ComputationalBudgetExceeded,
 
-        /// Program arithmetic overflowed
-        ArithmeticOverflow,
+            /// Cross-program invocation with unauthorized signer or writable account
+            PrivilegeEscalation,
 
-        /// Unsupported sysvar
-        UnsupportedSysvar,
+            /// Failed to create program execution environment
+            ProgramEnvironmentSetupFailure,
 
-        /// Illegal account owner
-        IllegalOwner,
+            /// Program failed to complete
+            ProgramFailedToComplete,
 
-        /// Accounts data allocations exceeded the maximum allowed per transaction
-        MaxAccountsDataAllocationsExceeded,
+            /// Program failed to compile
+            ProgramFailedToCompile,
 
-        /// Max accounts exceeded
-        MaxAccountsExceeded,
+            /// Account is immutable
+            Immutable,
 
-        /// Max instruction trace length exceeded
-        MaxInstructionTraceLengthExceeded,
+            /// Incorrect authority provided
+            IncorrectAuthority,
 
-        /// Builtin programs must consume compute units
-        BuiltinProgramsMustConsumeComputeUnits,
-        // Note: For any new error added here an equivalent ProgramError and its
-        // conversions must also be added
+            /// An account does not have enough lamports to be rent-exempt
+            AccountNotRentExempt,
+
+            /// Invalid account owner
+            InvalidAccountOwner,
+
+            /// Program arithmetic overflowed
+            ArithmeticOverflow,
+
+            /// Unsupported sysvar
+            UnsupportedSysvar,
+
+            /// Illegal account owner
+            IllegalOwner,
+
+            /// Accounts data allocations exceeded the maximum allowed per transaction
+            MaxAccountsDataAllocationsExceeded,
+
+            /// Max accounts exceeded
+            MaxAccountsExceeded,
+
+            /// Max instruction trace length exceeded
+            MaxInstructionTraceLengthExceeded,
+
+            /// Builtin programs must consume compute units
+            BuiltinProgramsMustConsumeComputeUnits,
+            // Note: For any new error added here an equivalent ProgramError and its
+            // conversions must also be added
+        }
     }
 }
 
@@ -474,5 +563,23 @@ impl TryFrom<InstructionError> for ProgramError {
             Self::Error::IncorrectAuthority => Ok(Self::IncorrectAuthority),
             _ => Err(error),
         }
+    }
+}
+
+#[cfg(test)]
+#[cfg(feature = "serde")]
+mod tests {
+    use super::InstructionError;
+
+    #[test]
+    fn deserialize() {
+        assert!(serde_json::from_str::<InstructionError>(r#""InvalidError2""#).is_err());
+        assert!(serde_json::from_str::<InstructionError>(r#"{"InvalidError2": null}"#).is_err());
+        assert!(serde_json::from_str::<InstructionError>(r#"{"InvalidError": null}"#).is_ok());
+        assert!(serde_json::from_str::<InstructionError>(r#"{}"#).is_err());
+        assert!(serde_json::from_str::<InstructionError>(r#"{"BorshIoError": "42"}"#).is_ok());
+        assert!(serde_json::from_str::<InstructionError>(r#""BorshIoError""#).is_ok());
+        assert!(serde_json::from_str::<InstructionError>(r#""Custom""#).is_err());
+        assert!(serde_json::from_str::<InstructionError>(r#"{}"#).is_err());
     }
 }
