@@ -66,7 +66,7 @@ mod instruction_error_module {
                         type Value = InstructionError;
 
                         fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-                            formatter.write_str(concat!("newtype variant"))
+                            formatter.write_str("newtype variant")
                         }
 
                         fn visit_str<E>(self, value: &str) -> Result<Self::Value, E>
