@@ -193,8 +193,6 @@ mod tests {
 
     #[test]
     fn test_fee_rate_governor_derived_default() {
-        solana_logger::setup();
-
         let f0 = FeeRateGovernor::default();
         assert_eq!(
             f0.target_signatures_per_slot,
@@ -223,8 +221,6 @@ mod tests {
 
     #[test]
     fn test_fee_rate_governor_derived_adjust() {
-        solana_logger::setup();
-
         let mut f = FeeRateGovernor {
             target_lamports_per_signature: 100,
             target_signatures_per_slot: 100,
@@ -236,9 +232,6 @@ mod tests {
         let mut count = 0;
         loop {
             let last_lamports_per_signature = f.lamports_per_signature;
-
-            f = FeeRateGovernor::new_derived(&f, u64::MAX);
-            info!("[up] f.lamports_per_signature={}", f.lamports_per_signature);
 
             // some maximum target reached
             if f.lamports_per_signature == last_lamports_per_signature {
@@ -255,11 +248,6 @@ mod tests {
             let last_lamports_per_signature = f.lamports_per_signature;
             f = FeeRateGovernor::new_derived(&f, 0);
 
-            info!(
-                "[down] f.lamports_per_signature={}",
-                f.lamports_per_signature
-            );
-
             // some minimum target reached
             if f.lamports_per_signature == last_lamports_per_signature {
                 break;
@@ -274,10 +262,7 @@ mod tests {
         let mut count = 0;
         while f.lamports_per_signature != f.target_lamports_per_signature {
             f = FeeRateGovernor::new_derived(&f, f.target_signatures_per_slot);
-            info!(
-                "[target] f.lamports_per_signature={}",
-                f.lamports_per_signature
-            );
+
             // shouldn't take more than 100 steps to get to target
             assert!(count < 100);
             count += 1;

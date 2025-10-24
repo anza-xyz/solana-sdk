@@ -27,5 +27,4 @@ solana-frozen-abi-macro = { workspace = true, optional = true }
 
 [dev-dependencies]
 solana-clock = { workspace = true }
-solana-logger = { workspace = true }
 static_assertions = { workspace = true }

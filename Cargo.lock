@@ -3115,7 +3115,6 @@ dependencies = [
  "solana-clock",
  "solana-frozen-abi",
  "solana-frozen-abi-macro",
- "solana-logger",
  "static_assertions",
 ]
 
