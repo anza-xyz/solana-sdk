@@ -12,7 +12,6 @@ build_sbf_excludes=(
   --exclude solana-file-download
   --exclude solana-genesis-config
   --exclude solana-keypair
-  --exclude solana-logger
   --exclude solana-offchain-message
   --exclude solana-presigner
   --exclude solana-quic-definitions
