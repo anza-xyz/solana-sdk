@@ -45,7 +45,7 @@ impl VoteStateVersions {
     pub(crate) fn try_convert_to_v3(self) -> Result<VoteStateV3, InstructionError> {
         match self {
             VoteStateVersions::V0_23_5(state) => {
-                let authorized_voters = if state.is_uninitialized() {
+                let authorized_voters = if state.authorized_voter == Pubkey::default() {
                     AuthorizedVoters::default()
                 } else {
                     AuthorizedVoters::new(state.authorized_voter_epoch, state.authorized_voter)
@@ -108,7 +108,7 @@ impl VoteStateVersions {
     ) -> Result<VoteStateV4, InstructionError> {
         Ok(match self {
             VoteStateVersions::V0_23_5(state) => {
-                let authorized_voters = if state.is_uninitialized() {
+                let authorized_voters = if state.authorized_voter == Pubkey::default() {
                     AuthorizedVoters::default()
                 } else {
                     AuthorizedVoters::new(state.authorized_voter_epoch, state.authorized_voter)
@@ -171,19 +171,6 @@ impl VoteStateVersions {
     #[cfg(any(test, all(not(target_os = "solana"), feature = "bincode")))]
     fn landed_votes_from_lockouts(lockouts: VecDeque<Lockout>) -> VecDeque<LandedVote> {
         lockouts.into_iter().map(|lockout| lockout.into()).collect()
-    }
-
-    pub fn is_uninitialized(&self) -> bool {
-        match self {
-            VoteStateVersions::V0_23_5(vote_state) => vote_state.is_uninitialized(),
-
-            VoteStateVersions::V1_14_11(vote_state) => vote_state.is_uninitialized(),
-
-            VoteStateVersions::V3(vote_state) => vote_state.is_uninitialized(),
-
-            // As per SIMD-0185, v4 is always initialized.
-            VoteStateVersions::V4(_) => false,
-        }
     }
 
     pub fn is_correct_size_and_initialized(data: &[u8]) -> bool {
