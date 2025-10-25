@@ -3,7 +3,10 @@
 
 pub mod definitions;
 
-#[cfg(target_feature = "static-syscalls")]
+#[cfg(any(
+    target_feature = "static-syscalls",
+    all(target_arch = "bpf", feature = "unstable-static-syscalls")
+))]
 #[macro_export]
 macro_rules! define_syscall {
     ($(#[$attr:meta])* fn $name:ident($($arg:ident: $typ:ty),*) -> $ret:ty) => {
@@ -26,7 +29,10 @@ macro_rules! define_syscall {
     }
 }
 
-#[cfg(not(target_feature = "static-syscalls"))]
+#[cfg(not(any(
+    target_feature = "static-syscalls",
+    all(target_arch = "bpf", feature = "unstable-static-syscalls")
+)))]
 #[macro_export]
 macro_rules! define_syscall {
     ($(#[$attr:meta])* fn $name:ident($($arg:ident: $typ:ty),*) -> $ret:ty) => {
@@ -40,12 +46,18 @@ macro_rules! define_syscall {
     }
 }
 
-#[cfg(target_feature = "static-syscalls")]
+#[cfg(any(
+    target_feature = "static-syscalls",
+    all(target_arch = "bpf", feature = "unstable-static-syscalls")
+))]
 pub const fn sys_hash(name: &str) -> usize {
     murmur3_32(name.as_bytes(), 0) as usize
 }
 
-#[cfg(target_feature = "static-syscalls")]
+#[cfg(any(
+    target_feature = "static-syscalls",
+    all(target_arch = "bpf", feature = "unstable-static-syscalls")
+))]
 const fn murmur3_32(buf: &[u8], seed: u32) -> u32 {
     const fn pre_mix(buf: [u8; 4]) -> u32 {
         u32::from_le_bytes(buf)
