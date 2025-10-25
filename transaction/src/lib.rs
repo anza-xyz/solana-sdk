@@ -177,7 +177,7 @@ const NONCED_TX_MARKER_IX_INDEX: u8 = 0;
 #[cfg_attr(
     feature = "frozen-abi",
     derive(solana_frozen_abi_macro::AbiExample),
-    solana_frozen_abi_macro::frozen_abi(digest = "BLig4G2ysd7dcensK9bhKtnKvCQc1n65XdanyzsdWGXN")
+    solana_frozen_abi_macro::frozen_abi(digest = "5V7i4Tngkou3ieDNdtPpwYaFZpe2S2vZL71wrdJq5zTQ")
 )]
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[derive(Debug, PartialEq, Default, Eq, Clone)]
