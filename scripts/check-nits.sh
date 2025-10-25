@@ -21,7 +21,6 @@ declare print_free_tree=(
   ':^address/src/lib.rs'
   ':^frozen-abi/src/*.rs'
   ':^frozen-abi-macro/src/lib.rs'
-  ':^logger/src/lib.rs'
   ':^msg/src/lib.rs'
   ':^program-log/src/logger.rs'
   ':^program-option/src/lib.rs'

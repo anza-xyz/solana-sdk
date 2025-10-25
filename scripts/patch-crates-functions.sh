@@ -49,7 +49,6 @@ all_crate_dirs=(
   loader-v2-interface
   loader-v3-interface
   loader-v4-interface
-  logger
   message
   msg
   native-token

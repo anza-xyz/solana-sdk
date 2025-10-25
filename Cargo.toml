@@ -45,7 +45,6 @@ members = [
     "loader-v2-interface",
     "loader-v3-interface",
     "loader-v4-interface",
-    "logger",
     "message",
     "msg",
     "native-token",
@@ -170,7 +169,6 @@ derivation-path = { version = "0.2.0", default-features = false }
 digest = "0.10.7"
 ed25519-dalek = "2.1.1"
 ed25519-dalek-bip32 = "0.3.0"
-env_logger = "0.11.0"
 ff = "0.13.1"
 five8 = "1.0.0"
 five8_const = "1.0.0"
@@ -263,7 +261,6 @@ solana-last-restart-slot = { path = "last-restart-slot", version = "3.0.0" }
 solana-loader-v2-interface = { path = "loader-v2-interface", version = "3.0.0" }
 solana-loader-v3-interface = { path = "loader-v3-interface", version = "6.0.0" }
 solana-loader-v4-interface = { path = "loader-v4-interface", version = "3.0.0" }
-solana-logger = { path = "logger", version = "3.0.0" }
 solana-message = { path = "message", version = "3.0.0" }
 solana-msg = { path = "msg", version = "3.0.0", default-features = false }
 solana-native-token = { path = "native-token", version = "3.0.0" }
