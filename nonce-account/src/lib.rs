@@ -1,7 +1,9 @@
 //! Functions related to nonce accounts.
+#![no_std]
 #![cfg_attr(docsrs, feature(doc_auto_cfg))]
 
 use {
+    core::cell::RefCell,
     solana_account::{state_traits::StateMut, AccountSharedData, ReadableAccount},
     solana_hash::Hash,
     solana_nonce::{
@@ -9,7 +11,6 @@ use {
         versions::Versions,
     },
     solana_sdk_ids::system_program,
-    std::cell::RefCell,
 };
 
 pub fn create_account(lamports: u64) -> RefCell<AccountSharedData> {
@@ -73,6 +74,8 @@ pub fn get_system_account_kind(account: &AccountSharedData) -> Option<SystemAcco
 
 #[cfg(test)]
 mod tests {
+    extern crate std;
+    use std::boxed::Box;
     use {
         super::*,
         solana_fee_calculator::FeeCalculator,
