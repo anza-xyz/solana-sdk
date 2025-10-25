@@ -8,6 +8,8 @@
 #![cfg_attr(feature = "frozen-abi", feature(min_specialization))]
 #![allow(clippy::arithmetic_side_effects)]
 
+#[cfg(feature = "derive")]
+pub mod derive;
 #[cfg(feature = "error")]
 pub mod error;
 #[cfg(feature = "rand")]
