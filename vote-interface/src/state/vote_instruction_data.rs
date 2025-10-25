@@ -213,7 +213,7 @@ pub enum VoteAuthorize {
 pub struct VoteAuthorizeWithSeedArgs {
     pub authorization_type: VoteAuthorize,
     pub current_authority_derived_key_owner: Pubkey,
-    pub current_authority_derived_key_seed: String,
+    pub current_authority_derived_key_seed: Vec<u8>,
     pub new_authority: Pubkey,
 }
 
@@ -222,5 +222,5 @@ pub struct VoteAuthorizeWithSeedArgs {
 pub struct VoteAuthorizeCheckedWithSeedArgs {
     pub authorization_type: VoteAuthorize,
     pub current_authority_derived_key_owner: Pubkey,
-    pub current_authority_derived_key_seed: String,
+    pub current_authority_derived_key_seed: Vec<u8>,
 }
