@@ -16,20 +16,18 @@ rustdoc-args = ["--cfg=docsrs"]
 
 [features]
 borsh = ["dep:borsh"]
-dev-context-only-utils = ["borsh"]
+default = ["std"]
+dev-context-only-utils = ["borsh", "std"]
 frozen-abi = ["dep:solana-frozen-abi", "dep:solana-frozen-abi-macro", "serde"]
 serde = ["dep:serde", "dep:serde_derive"]
+std = ["serde?/std", "borsh?/std"]
 
 [dependencies]
 borsh = { workspace = true, optional = true }
 serde = { workspace = true, optional = true }
 serde_derive = { workspace = true, optional = true }
-solana-frozen-abi = { workspace = true, features = [
-    "frozen-abi",
-], optional = true }
-solana-frozen-abi-macro = { workspace = true, features = [
-    "frozen-abi",
-], optional = true }
+solana-frozen-abi = { workspace = true, optional = true }
+solana-frozen-abi-macro = { workspace = true, optional = true }
 solana-instruction = { workspace = true, features = ["std"] }
 solana-sdk-ids = { workspace = true }
 

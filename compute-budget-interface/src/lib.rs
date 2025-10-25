@@ -1,20 +1,23 @@
 //! Instructions for the compute budget native program.
-#![cfg_attr(docsrs, feature(doc_auto_cfg))]
 #![cfg_attr(feature = "frozen-abi", feature(min_specialization))]
+#![cfg_attr(docsrs, feature(doc_auto_cfg))]
+#![cfg_attr(not(feature = "std"), no_std)]
+
+#[cfg(feature = "frozen-abi")]
+use solana_frozen_abi_macro::{AbiEnumVisitor, AbiExample};
 
 #[cfg(feature = "borsh")]
 use borsh::{BorshDeserialize, BorshSerialize};
 use solana_instruction::Instruction;
+
+#[cfg(feature = "std")]
+extern crate std;
 pub use solana_sdk_ids::compute_budget::{check_id, id, ID};
+#[cfg(feature = "dev-context-only-utils")]
+use std::vec::Vec;
 
 /// Compute Budget Instructions
-#[cfg_attr(
-    feature = "frozen-abi",
-    derive(
-        solana_frozen_abi_macro::AbiExample,
-        solana_frozen_abi_macro::AbiEnumVisitor
-    )
-)]
+#[cfg_attr(feature = "frozen-abi", derive(AbiExample, AbiEnumVisitor))]
 #[cfg_attr(feature = "borsh", derive(BorshSerialize, BorshDeserialize))]
 #[cfg_attr(
     feature = "serde",
@@ -45,7 +48,7 @@ macro_rules! to_instruction {
         Instruction {
             program_id: id(),
             data: data.to_vec(),
-            accounts: vec![],
+            accounts: [].to_vec(),
         }
     }};
 }
@@ -86,8 +89,11 @@ mod tests {
     #[test]
     fn test_to_instruction() {
         let ix = ComputeBudgetInstruction::set_compute_unit_limit(257);
-        assert_eq!(ix.data, vec![2, 1, 1, 0, 0]);
+        assert_eq!(ix.data, [2, 1, 1, 0, 0].to_vec());
         let ix = ComputeBudgetInstruction::set_compute_unit_price(u64::MAX);
-        assert_eq!(ix.data, vec![3, 255, 255, 255, 255, 255, 255, 255, 255]);
+        assert_eq!(
+            ix.data,
+            [3, 255, 255, 255, 255, 255, 255, 255, 255].to_vec()
+        );
     }
 }
