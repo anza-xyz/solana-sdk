@@ -8,7 +8,7 @@
 
 use core::mem::MaybeUninit;
 
-#[cfg(target_os = "solana")]
+#[cfg(any(target_os = "solana", target_arch = "bpf"))]
 pub mod syscalls {
     pub use solana_define_syscall::definitions::{
         sol_memcmp_, sol_memcpy_, sol_memmove_, sol_memset_,
@@ -16,7 +16,7 @@ pub mod syscalls {
 }
 
 /// Check that two regions do not overlap.
-#[cfg(any(test, not(target_os = "solana")))]
+#[cfg(any(test, not(any(target_os = "solana", target_arch = "bpf"))))]
 fn is_nonoverlapping(src: usize, src_len: usize, dst: usize, dst_len: usize) -> bool {
     // If the absolute distance between the ptrs is at least as big as the size of the other,
     // they do not overlap.
@@ -27,7 +27,7 @@ fn is_nonoverlapping(src: usize, src_len: usize, dst: usize, dst_len: usize) -> 
     }
 }
 
-#[cfg(not(target_os = "solana"))]
+#[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
 #[allow(clippy::arithmetic_side_effects)]
 pub mod stubs {
     use super::is_nonoverlapping;
@@ -95,10 +95,10 @@ pub mod stubs {
 /// likely introduce undefined behavior.
 #[inline]
 pub unsafe fn sol_memcpy(dst: &mut [u8], src: &[u8], n: usize) {
-    #[cfg(target_os = "solana")]
+    #[cfg(any(target_os = "solana", target_arch = "bpf"))]
     syscalls::sol_memcpy_(dst.as_mut_ptr(), src.as_ptr(), n as u64);
 
-    #[cfg(not(target_os = "solana"))]
+    #[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
     stubs::sol_memcpy(dst.as_mut_ptr(), src.as_ptr(), n);
 }
 
@@ -123,10 +123,10 @@ pub unsafe fn sol_memcpy(dst: &mut [u8], src: &[u8], n: usize) {
 /// [`ptr::copy`]: https://doc.rust-lang.org/core/ptr/fn.copy.html
 #[inline]
 pub unsafe fn sol_memmove(dst: *mut u8, src: *const u8, n: usize) {
-    #[cfg(target_os = "solana")]
+    #[cfg(any(target_os = "solana", target_arch = "bpf"))]
     syscalls::sol_memmove_(dst, src, n as u64);
 
-    #[cfg(not(target_os = "solana"))]
+    #[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
     stubs::sol_memmove(dst, src, n);
 }
 
@@ -156,10 +156,10 @@ pub unsafe fn sol_memmove(dst: *mut u8, src: *const u8, n: usize) {
 pub unsafe fn sol_memcmp(s1: &[u8], s2: &[u8], n: usize) -> i32 {
     let mut result: MaybeUninit<i32> = MaybeUninit::uninit();
 
-    #[cfg(target_os = "solana")]
+    #[cfg(any(target_os = "solana", target_arch = "bpf"))]
     syscalls::sol_memcmp_(s1.as_ptr(), s2.as_ptr(), n as u64, result.as_mut_ptr());
 
-    #[cfg(not(target_os = "solana"))]
+    #[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
     stubs::sol_memcmp(s1.as_ptr(), s2.as_ptr(), n, result.as_mut_ptr());
 
     result.assume_init()
@@ -189,10 +189,10 @@ pub unsafe fn sol_memcmp(s1: &[u8], s2: &[u8], n: usize) -> i32 {
 /// undefined behavior.
 #[inline]
 pub unsafe fn sol_memset(s: &mut [u8], c: u8, n: usize) {
-    #[cfg(target_os = "solana")]
+    #[cfg(any(target_os = "solana", target_arch = "bpf"))]
     syscalls::sol_memset_(s.as_mut_ptr(), c, n as u64);
 
-    #[cfg(not(target_os = "solana"))]
+    #[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
     stubs::sol_memset(s.as_mut_ptr(), c, n);
 }
 
