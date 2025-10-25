@@ -3458,6 +3458,7 @@ dependencies = [
  "solana-packet",
  "solana-pubkey",
  "solana-sanitize",
+ "solana-serialize-utils",
  "solana-sha256-hasher",
  "solana-signature",
  "solana-signer",
