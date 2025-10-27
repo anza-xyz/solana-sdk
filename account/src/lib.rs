@@ -226,6 +226,7 @@ pub trait ReadableAccount: Sized {
     fn owner(&self) -> &Pubkey;
     fn executable(&self) -> bool;
     fn rent_epoch(&self) -> Epoch;
+    #[deprecated(since = "3.2.0")]
     fn to_account_shared_data(&self) -> AccountSharedData {
         AccountSharedData::create(
             self.lamports(),
@@ -918,6 +919,7 @@ pub mod tests {
     }
 
     #[test]
+    #[allow(deprecated)]
     fn test_to_account_shared_data() {
         let key = Pubkey::new_unique();
         let (account1, account2) = make_two_accounts(&key);
