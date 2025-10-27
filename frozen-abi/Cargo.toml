@@ -37,6 +37,7 @@ thiserror = { workspace = true }
 [target.'cfg(not(target_os = "solana"))'.dependencies]
 im = { workspace = true, features = ["rayon", "serde"] }
 memmap2 = { workspace = true }
+rand = { workspace = true }
 
 [target.'cfg(not(target_os = "solana"))'.dev-dependencies]
 bitflags = { workspace = true, features = ["serde"] }
