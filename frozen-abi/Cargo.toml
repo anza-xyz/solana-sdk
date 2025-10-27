@@ -27,6 +27,7 @@ bv = { workspace = true, features = ["serde"] }
 bytes = { workspace = true }
 dashmap = { workspace = true }
 log = { workspace = true, features = ["std"] }
+rand = { workspace = true }
 serde = { workspace = true, features = ["rc"] }
 serde_derive = { workspace = true }
 serde_with = { workspace = true }
