@@ -10,7 +10,10 @@ pub mod abi_digester;
 #[cfg(feature = "frozen-abi")]
 pub mod abi_example;
 #[cfg(feature = "frozen-abi")]
-mod hash;
+pub mod hash;
+#[cfg(feature = "frozen-abi")]
+#[cfg(not(target_os = "solana"))]
+pub mod stable_abi;
 
 #[cfg(feature = "frozen-abi")]
 #[macro_use]
