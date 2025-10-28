@@ -18,6 +18,7 @@ no_std_crates=(
   -p solana-fee-calculator
   -p solana-hash
   -p solana-msg
+  -p solana-nonce-account
   -p solana-program-error
   -p solana-program-log
   -p solana-program-log-macro
