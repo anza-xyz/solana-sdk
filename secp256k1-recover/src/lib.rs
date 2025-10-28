@@ -410,7 +410,8 @@ pub fn secp256k1_recover(
 ) -> Result<Secp256k1Pubkey, Secp256k1RecoverError> {
     #[cfg(target_os = "solana")]
     {
-        let mut pubkey_buffer = core::mem::MaybeUninit::<[u8;SECP256K1_PUBLIC_KEY_LENGTH]>::uninit();
+        let mut pubkey_buffer =
+            core::mem::MaybeUninit::<[u8; SECP256K1_PUBLIC_KEY_LENGTH]>::uninit();
         let result = unsafe {
             sol_secp256k1_recover(
                 hash.as_ptr(),
