@@ -1,0 +1,30 @@
+[package]
+name = "solana-instruction-view"
+description = "Lightweight instruction representation"
+documentation = "https://docs.rs/solana-instruction-view"
+version = "0.0.0"
+rust-version = "1.81.0"
+authors = { workspace = true }
+repository = { workspace = true }
+homepage = { workspace = true }
+license = { workspace = true }
+edition = { workspace = true }
+
+[package.metadata.docs.rs]
+targets = ["x86_64-unknown-linux-gnu"]
+all-features = true
+rustdoc-args = ["--cfg=docsrs"]
+
+[features]
+cpi = ["dep:solana-define-syscall", "dep:solana-program-error"]
+
+[dependencies]
+solana-account-view = { workspace = true }
+solana-address = { workspace = true }
+solana-program-error = { workspace = true, optional = true }
+
+[target.'cfg(any(target_os = "solana", target_arch = "bpf"))'.dependencies]
+solana-define-syscall = { workspace = true, optional = true }
+
+[lints]
+workspace = true

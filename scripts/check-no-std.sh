@@ -17,6 +17,7 @@ no_std_crates=(
   -p solana-epoch-rewards
   -p solana-fee-calculator
   -p solana-hash
+  -p solana-instruction-view
   -p solana-msg
   -p solana-program-error
   -p solana-program-log

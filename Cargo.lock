@@ -3128,6 +3128,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "solana-instruction-view"
+version = "0.0.0"
+dependencies = [
+ "solana-account-view",
+ "solana-address",
+ "solana-define-syscall",
+ "solana-program-error",
+]
+
+[[package]]
 name = "solana-instructions-sysvar"
 version = "3.0.0"
 dependencies = [
