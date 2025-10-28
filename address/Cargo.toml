@@ -54,13 +54,13 @@ solana-frozen-abi-macro = { workspace = true, features = ["frozen-abi"], optiona
 solana-program-error = { workspace = true, optional = true }
 solana-sanitize = { workspace = true, optional = true }
 
-[target.'cfg(not(any(target_os = "solana", target_arch = "bpf")))'.dependencies]
-curve25519-dalek = { workspace = true, optional = true }
-solana-sha256-hasher = { workspace = true, features = ["sha2"], optional = true }
-
 [target.'cfg(any(target_os = "solana", target_arch = "bpf"))'.dependencies]
 solana-define-syscall = { workspace = true, optional = true }
 solana-sha256-hasher = { workspace = true, optional = true }
+
+[target.'cfg(not(any(target_os = "solana", target_arch = "bpf")))'.dependencies]
+curve25519-dalek = { workspace = true, optional = true }
+solana-sha256-hasher = { workspace = true, features = ["sha2"], optional = true }
 
 [dev-dependencies]
 anyhow = { workspace = true }
