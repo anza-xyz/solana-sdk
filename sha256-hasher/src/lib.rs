@@ -57,7 +57,7 @@ pub fn hashv(vals: &[&[u8]]) -> Hash {
             sol_sha256(
                 vals as *const _ as *const u8,
                 vals.len() as u64,
-                hash_result.assume_init_mut() as *mut u8,
+                hash_result.as_mut_ptr() as *mut u8,
             );
             Hash::new_from_array(hash_result.assume_init())
         }
