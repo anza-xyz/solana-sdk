@@ -52,7 +52,7 @@ pub fn hashv(vals: &[&[u8]]) -> Hash {
     #[cfg(target_os = "solana")]
     {
         let mut hash_result = core::mem::MaybeUninit::<[u8; solana_hash::HASH_BYTES]>::uninit();
-        // Safety: This is sound as sol_sha256 always fills all 32 bytes of our hash
+        // SAFETY: This is sound as sol_sha256 always fills all 32 bytes of our hash
         unsafe {
             sol_sha256(
                 vals as *const _ as *const u8,
