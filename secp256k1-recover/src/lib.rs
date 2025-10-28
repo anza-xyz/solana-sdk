@@ -402,6 +402,7 @@ pub use solana_define_syscall::definitions::sol_secp256k1_recover;
 ///     Ok(())
 /// }
 /// ```
+#[cfg_attr(target_os = "solana", inline(always))]
 pub fn secp256k1_recover(
     hash: &[u8],
     recovery_id: u8,
@@ -409,18 +410,19 @@ pub fn secp256k1_recover(
 ) -> Result<Secp256k1Pubkey, Secp256k1RecoverError> {
     #[cfg(target_os = "solana")]
     {
-        let mut pubkey_buffer = [0u8; SECP256K1_PUBLIC_KEY_LENGTH];
+        let mut pubkey_buffer = core::mem::MaybeUninit::<[u8;SECP256K1_PUBLIC_KEY_LENGTH]>::uninit();
         let result = unsafe {
             sol_secp256k1_recover(
                 hash.as_ptr(),
                 recovery_id as u64,
                 signature.as_ptr(),
-                pubkey_buffer.as_mut_ptr(),
+                pubkey_buffer.as_mut_ptr() as *mut u8,
             )
         };
 
+        // Safety: This is sound as in our pass case, all 64 bytes of the pubkey are always initialized by sol_secp256k1_recover
         match result {
-            0 => Ok(Secp256k1Pubkey::new(&pubkey_buffer)),
+            0 => Ok(Secp256k1Pubkey(unsafe { pubkey_buffer.assume_init() })),
             error => Err(Secp256k1RecoverError::from(error)),
         }
     }

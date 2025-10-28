@@ -30,6 +30,7 @@ impl Hasher {
 }
 
 /// Return a Keccak256 hash for the given data.
+#[cfg_attr(target_os = "solana", inline(always))]
 pub fn hashv(vals: &[&[u8]]) -> Hash {
     // Perform the calculation inline, calling this from within a program is
     // not supported
@@ -50,19 +51,21 @@ pub fn hashv(vals: &[&[u8]]) -> Hash {
     // Call via a system call to perform the calculation
     #[cfg(target_os = "solana")]
     {
-        let mut hash_result = [0; HASH_BYTES];
+        let mut hash_result = core::mem::MaybeUninit::<[u8; solana_hash::HASH_BYTES]>::uninit();
+        // Safety: This is sound as sol_keccak256 always fills all 32 bytes of our hash
         unsafe {
             solana_define_syscall::definitions::sol_keccak256(
                 vals as *const _ as *const u8,
                 vals.len() as u64,
-                &mut hash_result as *mut _ as *mut u8,
+                hash_result.as_mut_ptr() as *mut u8,
             );
+            Hash::new_from_array(hash_result.assume_init())
         }
-        Hash::new_from_array(hash_result)
     }
 }
 
 /// Return a Keccak256 hash for the given data.
+#[cfg_attr(target_os = "solana", inline(always))]
 pub fn hash(val: &[u8]) -> Hash {
     hashv(&[val])
 }
