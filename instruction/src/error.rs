@@ -247,7 +247,7 @@ pub enum InstructionError {
 // variant or a newtype, since there's no way for an enum variant deserializer
 // to work with both a newtype and nothing:
 // https://github.com/serde-rs/serde/issues/1174#issuecomment-372411280
-#[cfg(feature = "serde")]
+#[cfg(all(feature = "std", feature = "serde"))]
 impl<'de> serde::de::Deserialize<'de> for InstructionError {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
@@ -262,7 +262,7 @@ impl<'de> serde::de::Deserialize<'de> for InstructionError {
     }
 }
 
-#[cfg(feature = "serde")]
+#[cfg(all(feature = "std", feature = "serde"))]
 impl serde::ser::Serialize for InstructionError {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
