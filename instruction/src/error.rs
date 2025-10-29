@@ -60,6 +60,7 @@ pub const INCORRECT_AUTHORITY: u64 = to_builtin!(26);
     feature = "serde",
     derive(serde_derive::Serialize, serde_derive::Deserialize)
 )]
+#[cfg_attr(feature = "serde", serde(remote = "InstructionError"))]
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum InstructionError {
     /// Deprecated! Use CustomError instead!
@@ -240,6 +241,35 @@ pub enum InstructionError {
     BuiltinProgramsMustConsumeComputeUnits,
     // Note: For any new error added here an equivalent ProgramError and its
     // conversions must also be added
+}
+
+// This is a variant on a hack proposed to get around deserializing a unit
+// variant or a newtype, since there's no way for an enum variant deserializer
+// to work with both a newtype and nothing:
+// https://github.com/serde-rs/serde/issues/1174#issuecomment-372411280
+#[cfg(all(feature = "std", feature = "serde"))]
+impl<'de> serde::de::Deserialize<'de> for InstructionError {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::de::Deserializer<'de>,
+    {
+        let s = serde_json::Value::deserialize(deserializer)?;
+        if s.as_str().is_some_and(|v| v == "BorshIoError") {
+            Ok(Self::BorshIoError(String::new()))
+        } else {
+            Self::deserialize(s).map_err(serde::de::Error::custom)
+        }
+    }
+}
+
+#[cfg(all(feature = "std", feature = "serde"))]
+impl serde::ser::Serialize for InstructionError {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::ser::Serializer,
+    {
+        Self::serialize(self, serializer)
+    }
 }
 
 #[cfg(feature = "std")]
@@ -460,5 +490,44 @@ impl From<LamportsError> for InstructionError {
             LamportsError::ArithmeticOverflow => InstructionError::ArithmeticOverflow,
             LamportsError::ArithmeticUnderflow => InstructionError::ArithmeticOverflow,
         }
+    }
+}
+
+#[cfg(test)]
+#[cfg(feature = "serde")]
+mod tests {
+    use {super::InstructionError, std::string::ToString};
+
+    #[test]
+    fn deserialize() {
+        serde_json::from_str::<InstructionError>(r#""InvalidError2""#).unwrap_err();
+        serde_json::from_str::<InstructionError>(r#"{"InvalidError2": null}"#).unwrap_err();
+        serde_json::from_str::<InstructionError>(r#"{}"#).unwrap_err();
+        serde_json::from_str::<InstructionError>(r#""Custom""#).unwrap_err();
+
+        assert_eq!(
+            InstructionError::BorshIoError("".to_string()),
+            serde_json::from_str::<InstructionError>(r#""BorshIoError""#).unwrap()
+        );
+        assert_eq!(
+            InstructionError::BorshIoError("42".to_string()),
+            serde_json::from_str::<InstructionError>(r#"{"BorshIoError": "42"}"#).unwrap()
+        );
+        assert_eq!(
+            InstructionError::InvalidError,
+            serde_json::from_str::<InstructionError>(r#"{"InvalidError": null}"#).unwrap()
+        );
+    }
+
+    #[test]
+    fn serialize() {
+        assert_eq!(
+            serde_json::to_string(&InstructionError::BorshIoError("42".to_string())).unwrap(),
+            r#"{"BorshIoError":"42"}"#
+        );
+        assert_eq!(
+            serde_json::to_string(&InstructionError::InvalidError).unwrap(),
+            r#""InvalidError""#
+        );
     }
 }

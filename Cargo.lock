@@ -3071,6 +3071,7 @@ dependencies = [
  "num-traits",
  "serde",
  "serde_derive",
+ "serde_json",
  "solana-define-syscall",
  "solana-frozen-abi",
  "solana-frozen-abi-macro",
