@@ -2,7 +2,7 @@
 //!
 //! [keccak]: https://keccak.team/keccak.html
 #![no_std]
-#![cfg_attr(docsrs, feature(doc_auto_cfg))]
+#![cfg_attr(docsrs, feature(doc_cfg))]
 
 #[cfg(all(feature = "sha3", not(any(target_os = "solana", target_arch = "bpf"))))]
 use sha3::{Digest, Keccak256};

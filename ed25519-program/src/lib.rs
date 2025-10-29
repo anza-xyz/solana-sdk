@@ -1,7 +1,7 @@
 //! Instructions for the [ed25519 native program][np].
 //!
 //! [np]: https://docs.solanalabs.com/runtime/programs#ed25519-program
-#![cfg_attr(docsrs, feature(doc_auto_cfg))]
+#![cfg_attr(docsrs, feature(doc_cfg))]
 
 use {
     bytemuck::bytes_of,

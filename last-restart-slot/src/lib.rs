@@ -1,5 +1,5 @@
 //! Information about the last restart slot (hard fork).
-#![cfg_attr(docsrs, feature(doc_auto_cfg))]
+#![cfg_attr(docsrs, feature(doc_cfg))]
 
 #[cfg(feature = "sysvar")]
 pub mod sysvar;

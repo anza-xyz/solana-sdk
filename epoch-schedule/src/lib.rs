@@ -13,7 +13,7 @@
 //!
 //! [`DEFAULT_SLOTS_PER_EPOCH`]: https://docs.rs/solana-clock/latest/solana_clock/constant.DEFAULT_SLOTS_PER_EPOCH.html
 #![cfg_attr(feature = "frozen-abi", feature(min_specialization))]
-#![cfg_attr(docsrs, feature(doc_auto_cfg))]
+#![cfg_attr(docsrs, feature(doc_cfg))]
 #![no_std]
 #[cfg(feature = "frozen-abi")]
 extern crate std;

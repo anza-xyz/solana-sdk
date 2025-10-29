@@ -29,7 +29,7 @@
 //! [json]: https://solana.com/docs/rpc
 //! [`clap`]: https://docs.rs/clap
 
-#![cfg_attr(docsrs, feature(doc_auto_cfg))]
+#![cfg_attr(docsrs, feature(doc_cfg))]
 
 // Allows macro expansion of `use ::solana_sdk::*` to work within this crate
 extern crate self as solana_sdk;

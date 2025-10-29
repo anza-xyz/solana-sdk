@@ -3,7 +3,7 @@
 //! On-chain programs can use this API to retrieve the total stake for the
 //! current epoch or the stake for a specific vote account using the
 //! `sol_get_epoch_stake` syscall.
-#![cfg_attr(docsrs, feature(doc_auto_cfg))]
+#![cfg_attr(docsrs, feature(doc_cfg))]
 
 use solana_pubkey::Pubkey;
 

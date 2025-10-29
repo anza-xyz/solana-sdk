@@ -1,5 +1,5 @@
 #![no_std]
-#![cfg_attr(docsrs, feature(doc_auto_cfg))]
+#![cfg_attr(docsrs, feature(doc_cfg))]
 
 #[cfg(any(target_os = "solana", target_arch = "bpf"))]
 pub use solana_define_syscall::definitions::sol_sha256;

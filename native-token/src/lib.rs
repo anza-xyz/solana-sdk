@@ -1,6 +1,6 @@
 //! Definitions for the native SOL token and its fractional lamports.
 
-#![cfg_attr(docsrs, feature(doc_auto_cfg))]
+#![cfg_attr(docsrs, feature(doc_cfg))]
 #![allow(clippy::arithmetic_side_effects)]
 
 /// There are 10^9 lamports in one SOL

@@ -1,5 +1,5 @@
 //! `SystemInstruction` Javascript interface
-#![cfg_attr(docsrs, feature(doc_auto_cfg))]
+#![cfg_attr(docsrs, feature(doc_cfg))]
 #![cfg(target_arch = "wasm32")]
 #![allow(non_snake_case)]
 pub use solana_sdk_wasm_js::{

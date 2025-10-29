@@ -10,7 +10,7 @@
 //! while executing a given instruction is also included in `Instruction`, as
 //! [`AccountMeta`] values. The runtime uses this information to efficiently
 //! schedule execution of transactions.
-#![cfg_attr(docsrs, feature(doc_auto_cfg))]
+#![cfg_attr(docsrs, feature(doc_cfg))]
 #![allow(clippy::arithmetic_side_effects)]
 #![no_std]
 

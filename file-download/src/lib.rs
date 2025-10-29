@@ -1,5 +1,5 @@
 #![allow(clippy::arithmetic_side_effects)]
-#![cfg_attr(docsrs, feature(doc_auto_cfg))]
+#![cfg_attr(docsrs, feature(doc_cfg))]
 use {
     console::Emoji,
     indicatif::{ProgressBar, ProgressStyle},

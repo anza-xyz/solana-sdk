@@ -1,5 +1,5 @@
 #![cfg_attr(feature = "frozen-abi", feature(min_specialization))]
-#![cfg_attr(docsrs, feature(doc_auto_cfg))]
+#![cfg_attr(docsrs, feature(doc_cfg))]
 //! An upgradeable BPF loader native program.
 //!
 //! The upgradeable BPF loader is responsible for deploying, upgrading, and

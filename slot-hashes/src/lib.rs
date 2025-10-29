@@ -5,7 +5,7 @@
 //! The sysvar ID is declared in [`solana_program::sysvar::slot_hashes`].
 //!
 //! [`solana_program::sysvar::slot_hashes`]: https://docs.rs/solana-program/latest/solana_program/sysvar/slot_hashes/index.html
-#![cfg_attr(docsrs, feature(doc_auto_cfg))]
+#![cfg_attr(docsrs, feature(doc_cfg))]
 
 #[cfg(feature = "sysvar")]
 pub mod sysvar;

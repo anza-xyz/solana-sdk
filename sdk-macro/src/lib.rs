@@ -1,7 +1,7 @@
 //! Convenience macro to declare a static public key and functions to interact with it
 //!
 //! Input: a single literal base58 string representation of a program's id
-#![cfg_attr(docsrs, feature(doc_auto_cfg))]
+#![cfg_attr(docsrs, feature(doc_cfg))]
 
 extern crate proc_macro;
 

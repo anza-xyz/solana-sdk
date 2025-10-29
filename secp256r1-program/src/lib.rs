@@ -9,7 +9,7 @@
 //! This property can be problematic for developers who assume each signature is unique. Without enforcing
 //! low-S values, the same message and key can produce two different valid signatures, potentially breaking
 //! replay protection schemes that rely on signature uniqueness.
-#![cfg_attr(docsrs, feature(doc_auto_cfg))]
+#![cfg_attr(docsrs, feature(doc_cfg))]
 use bytemuck::{Pod, Zeroable};
 pub use solana_sdk_ids::secp256r1_program::{check_id, id, ID};
 

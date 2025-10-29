@@ -20,7 +20,7 @@
 //!
 //! [oracle]: https://docs.solanalabs.com/implemented-proposals/validator-timestamp-oracle
 #![no_std]
-#![cfg_attr(docsrs, feature(doc_auto_cfg))]
+#![cfg_attr(docsrs, feature(doc_cfg))]
 
 #[cfg(feature = "sysvar")]
 pub mod sysvar;

@@ -10,7 +10,7 @@
 //!    `Feature::default()`
 //! 2. When the next epoch is entered the runtime will check for new activation requests and
 //!    active them.  When this occurs, the activation slot is recorded in the feature account
-#![cfg_attr(docsrs, feature(doc_auto_cfg))]
+#![cfg_attr(docsrs, feature(doc_cfg))]
 
 pub mod error;
 pub mod instruction;
