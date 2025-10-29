@@ -421,7 +421,7 @@ pub fn secp256k1_recover(
             )
         };
 
-        // Safety: This is sound as in our pass case, all 64 bytes of the pubkey are always initialized by sol_secp256k1_recover
+        // SAFETY: This is sound as in our pass case, all 64 bytes of the pubkey are always initialized by sol_secp256k1_recover
         match result {
             0 => Ok(Secp256k1Pubkey(unsafe { pubkey_buffer.assume_init() })),
             error => Err(Secp256k1RecoverError::from(error)),

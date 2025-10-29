@@ -52,7 +52,7 @@ pub fn hashv(vals: &[&[u8]]) -> Hash {
     #[cfg(target_os = "solana")]
     {
         let mut hash_result = core::mem::MaybeUninit::<[u8; solana_hash::HASH_BYTES]>::uninit();
-        // Safety: This is sound as sol_keccak256 always fills all 32 bytes of our hash
+        // SAFETY: This is sound as sol_keccak256 always fills all 32 bytes of our hash
         unsafe {
             solana_define_syscall::definitions::sol_keccak256(
                 vals as *const _ as *const u8,
