@@ -505,9 +505,18 @@ mod tests {
         serde_json::from_str::<InstructionError>(r#"{}"#).unwrap_err();
         serde_json::from_str::<InstructionError>(r#""Custom""#).unwrap_err();
 
-        serde_json::from_str::<InstructionError>(r#""BorshIoError""#).unwrap();
-        serde_json::from_str::<InstructionError>(r#"{"BorshIoError": "42"}"#).unwrap();
-        serde_json::from_str::<InstructionError>(r#"{"InvalidError": null}"#).unwrap();
+        assert_eq!(
+            InstructionError::BorshIoError("".to_string()),
+            serde_json::from_str::<InstructionError>(r#""BorshIoError""#).unwrap()
+        );
+        assert_eq!(
+            InstructionError::BorshIoError("42".to_string()),
+            serde_json::from_str::<InstructionError>(r#"{"BorshIoError": "42"}"#).unwrap()
+        );
+        assert_eq!(
+            InstructionError::InvalidError,
+            serde_json::from_str::<InstructionError>(r#"{"InvalidError": null}"#).unwrap()
+        );
     }
 
     #[test]
