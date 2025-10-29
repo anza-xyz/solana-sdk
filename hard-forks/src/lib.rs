@@ -1,7 +1,7 @@
 //! The list of slot boundaries at which a hard fork should
 //! occur.
 
-#![cfg_attr(docsrs, feature(doc_auto_cfg))]
+#![cfg_attr(docsrs, feature(doc_cfg))]
 #![cfg_attr(feature = "frozen-abi", feature(min_specialization))]
 
 #[cfg_attr(feature = "frozen-abi", derive(solana_frozen_abi_macro::AbiExample))]

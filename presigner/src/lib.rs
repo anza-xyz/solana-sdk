@@ -1,4 +1,4 @@
-#![cfg_attr(docsrs, feature(doc_auto_cfg))]
+#![cfg_attr(docsrs, feature(doc_cfg))]
 pub use solana_signer::PresignerError;
 use {
     solana_pubkey::Pubkey,

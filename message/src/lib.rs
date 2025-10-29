@@ -1,4 +1,4 @@
-#![cfg_attr(docsrs, feature(doc_auto_cfg))]
+#![cfg_attr(docsrs, feature(doc_cfg))]
 #![cfg_attr(feature = "frozen-abi", feature(min_specialization))]
 //! Sequences of [`Instruction`]s executed within a single transaction.
 //!

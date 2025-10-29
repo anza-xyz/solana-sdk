@@ -1,4 +1,4 @@
-#![cfg_attr(docsrs, feature(doc_auto_cfg))]
+#![cfg_attr(docsrs, feature(doc_cfg))]
 //! Instructions for the [secp256k1 native program][np].
 //!
 //! [np]: https://docs.solanalabs.com/runtime/programs#secp256k1-program

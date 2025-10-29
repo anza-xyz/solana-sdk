@@ -6,7 +6,7 @@
 //!
 //! Asynchronous implementations are expected to create transactions, sign them, and send
 //! them but without waiting to see if the server accepted it.
-#![cfg_attr(docsrs, feature(doc_auto_cfg))]
+#![cfg_attr(docsrs, feature(doc_cfg))]
 
 use {
     solana_account::Account,

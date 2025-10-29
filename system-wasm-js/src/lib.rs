@@ -1,6 +1,6 @@
 //! `SystemInstruction` Javascript interface
 #![cfg(target_arch = "wasm32")]
-#![cfg_attr(docsrs, feature(doc_auto_cfg))]
+#![cfg_attr(docsrs, feature(doc_cfg))]
 #![allow(non_snake_case)]
 use {
     solana_sdk_wasm_js::{address::Address, instruction::Instruction},

@@ -35,7 +35,7 @@
 //!     original number of bits (i.e., the length of the input vectors; not the
 //!     length of the final vector).
 //! 3.  **Data Payload**: A sequence of bytes containing the packed base-3 digits.
-#![cfg_attr(docsrs, feature(doc_auto_cfg))]
+#![cfg_attr(docsrs, feature(doc_cfg))]
 
 use {
     bitvec::prelude::*,

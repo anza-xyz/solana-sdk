@@ -14,10 +14,10 @@ if [[ -n $files ]]; then
   err=1
 fi
 
-# Get all lib.rs files that don't have #![cfg_attr(docsrs, feature(doc_auto_cfg))]
-files=$(comm -23 <(git ls-files -- '**/lib.rs' | sort) <(git grep -lE '^#!\[cfg_attr\(docsrs, feature\(doc_auto_cfg\)\)\]' | sort))
+# Get all lib.rs files that don't have #![cfg_attr(docsrs, feature(doc_cfg))]
+files=$(comm -23 <(git ls-files -- '**/lib.rs' | sort) <(git grep -lE '^#!\[cfg_attr\(docsrs, feature\(doc_cfg\)\)\]' | sort))
 if [[ -n $files ]]; then
-  echo "Files found without #![cfg_attr(docsrs, feature(doc_auto_cfg))]"
+  echo "Files found without #![cfg_attr(docsrs, feature(doc_cfg))]"
   echo "$files"
   err=1
 fi

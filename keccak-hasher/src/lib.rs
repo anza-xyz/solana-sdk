@@ -1,7 +1,7 @@
 //! Hashing with the [keccak] (SHA-3) hash function.
 //!
 //! [keccak]: https://keccak.team/keccak.html
-#![cfg_attr(docsrs, feature(doc_auto_cfg))]
+#![cfg_attr(docsrs, feature(doc_cfg))]
 #![no_std]
 
 #[cfg(all(feature = "sha3", not(target_os = "solana")))]

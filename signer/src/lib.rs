@@ -1,5 +1,5 @@
 //! Abstractions and implementations for transaction signers.
-#![cfg_attr(docsrs, feature(doc_auto_cfg))]
+#![cfg_attr(docsrs, feature(doc_cfg))]
 use {
     core::fmt,
     solana_pubkey::Pubkey,

@@ -1,7 +1,7 @@
 //! Contains a single utility function for deserializing from [bincode].
 //!
 //! [bincode]: https://docs.rs/bincode
-#![cfg_attr(docsrs, feature(doc_auto_cfg))]
+#![cfg_attr(docsrs, feature(doc_cfg))]
 
 use {bincode::config::Options, solana_instruction_error::InstructionError};
 

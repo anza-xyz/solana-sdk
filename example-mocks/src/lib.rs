@@ -12,7 +12,7 @@
 
 #![doc(hidden)]
 #![allow(clippy::new_without_default)]
-#![cfg_attr(docsrs, feature(doc_auto_cfg))]
+#![cfg_attr(docsrs, feature(doc_cfg))]
 
 pub mod solana_rpc_client {
     pub mod rpc_client {

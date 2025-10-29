@@ -1,5 +1,5 @@
 //! The `logger` module configures `env_logger`
-#![cfg_attr(docsrs, feature(doc_auto_cfg))]
+#![cfg_attr(docsrs, feature(doc_cfg))]
 
 use {
     lazy_static::lazy_static,

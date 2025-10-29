@@ -1,5 +1,5 @@
 //! solana-program Javascript interface
-#![cfg_attr(docsrs, feature(doc_auto_cfg))]
+#![cfg_attr(docsrs, feature(doc_cfg))]
 #![cfg(target_arch = "wasm32")]
 
 use {

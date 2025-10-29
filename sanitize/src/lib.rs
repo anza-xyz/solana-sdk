@@ -1,7 +1,7 @@
 //! A trait for sanitizing values and members of over the wire messages.
 
 #![no_std]
-#![cfg_attr(docsrs, feature(doc_auto_cfg))]
+#![cfg_attr(docsrs, feature(doc_cfg))]
 
 use core::{error::Error, fmt};
 

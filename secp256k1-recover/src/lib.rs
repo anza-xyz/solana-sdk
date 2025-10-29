@@ -1,5 +1,5 @@
 #![cfg_attr(feature = "frozen-abi", feature(min_specialization))]
-#![cfg_attr(docsrs, feature(doc_auto_cfg))]
+#![cfg_attr(docsrs, feature(doc_cfg))]
 //! Public key recovery from [secp256k1] ECDSA signatures.
 //!
 //! [secp256k1]: https://en.bitcoin.it/wiki/Secp256k1

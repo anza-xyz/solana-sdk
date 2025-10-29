@@ -1,5 +1,5 @@
 //! Macro to access data from the `package.metadata` section of Cargo.toml
-#![cfg_attr(docsrs, feature(doc_auto_cfg))]
+#![cfg_attr(docsrs, feature(doc_cfg))]
 
 extern crate proc_macro;
 

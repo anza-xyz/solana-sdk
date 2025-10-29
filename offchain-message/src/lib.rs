@@ -1,5 +1,5 @@
 //! Off-chain message container for storing non-transaction messages.
-#![cfg_attr(docsrs, feature(doc_auto_cfg))]
+#![cfg_attr(docsrs, feature(doc_cfg))]
 use {
     num_enum::{IntoPrimitive, TryFromPrimitive},
     solana_hash::Hash,

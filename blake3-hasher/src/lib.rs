@@ -1,7 +1,7 @@
 //! Hashing with the [blake3] hash function.
 //!
 //! [blake3]: https://github.com/BLAKE3-team/BLAKE3
-#![cfg_attr(docsrs, feature(doc_auto_cfg))]
+#![cfg_attr(docsrs, feature(doc_cfg))]
 #![no_std]
 
 pub use solana_hash::{Hash, ParseHashError, HASH_BYTES, MAX_BASE58_LEN};

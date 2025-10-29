@@ -1,5 +1,5 @@
 #![no_std]
-#![cfg_attr(docsrs, feature(doc_auto_cfg))]
+#![cfg_attr(docsrs, feature(doc_cfg))]
 #[cfg(all(feature = "sha2", not(target_os = "solana")))]
 use sha2::{Digest, Sha256};
 use solana_hash::Hash;

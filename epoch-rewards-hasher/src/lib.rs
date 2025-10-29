@@ -1,4 +1,4 @@
-#![cfg_attr(docsrs, feature(doc_auto_cfg))]
+#![cfg_attr(docsrs, feature(doc_cfg))]
 use {siphasher::sip::SipHasher13, solana_address::Address, solana_hash::Hash, std::hash::Hasher};
 
 #[derive(Debug, Clone)]

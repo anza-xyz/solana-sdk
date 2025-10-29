@@ -2,7 +2,7 @@
 
 #![no_std]
 #![cfg_attr(feature = "frozen-abi", feature(min_specialization))]
-#![cfg_attr(docsrs, feature(doc_auto_cfg))]
+#![cfg_attr(docsrs, feature(doc_cfg))]
 
 #[cfg(feature = "alloc")]
 extern crate alloc;

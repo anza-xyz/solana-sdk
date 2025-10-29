@@ -1,5 +1,5 @@
 #![allow(incomplete_features)]
-#![cfg_attr(docsrs, feature(doc_auto_cfg))]
+#![cfg_attr(docsrs, feature(doc_cfg))]
 #![cfg_attr(feature = "frozen-abi", feature(specialization))]
 
 // Allows macro expansion of `use ::solana_frozen_abi::*` to work within this crate

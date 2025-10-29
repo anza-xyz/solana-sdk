@@ -12,7 +12,7 @@
 //! [`invoke_signed`]: invoke_signed
 //! [cpi]: https://solana.com/docs/core/cpi
 //! [`solana_program::program`]: https://docs.rs/solana-program/latest/solana_program/program/
-#![cfg_attr(docsrs, feature(doc_auto_cfg))]
+#![cfg_attr(docsrs, feature(doc_cfg))]
 
 use {
     solana_account_info::AccountInfo, solana_instruction::Instruction,

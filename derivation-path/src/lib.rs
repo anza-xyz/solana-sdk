@@ -8,7 +8,7 @@
 //! > `m/44'/501'`
 //!
 //! with 501 being the Solana coin type.
-#![cfg_attr(docsrs, feature(doc_auto_cfg))]
+#![cfg_attr(docsrs, feature(doc_cfg))]
 
 use {
     core::{iter::IntoIterator, slice::Iter},

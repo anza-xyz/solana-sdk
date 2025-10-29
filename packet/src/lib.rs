@@ -1,6 +1,6 @@
 //! The definition of a Solana network packet.
 #![cfg_attr(feature = "frozen-abi", feature(min_specialization))]
-#![cfg_attr(docsrs, feature(doc_auto_cfg))]
+#![cfg_attr(docsrs, feature(doc_cfg))]
 
 #[cfg(feature = "frozen-abi")]
 use solana_frozen_abi_macro::AbiExample;

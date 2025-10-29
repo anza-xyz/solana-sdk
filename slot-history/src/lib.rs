@@ -7,7 +7,7 @@
 //! [`sysvar::slot_history`]: https://docs.rs/solana-program/latest/solana_program/sysvar/slot_history
 
 #![allow(clippy::arithmetic_side_effects)]
-#![cfg_attr(docsrs, feature(doc_auto_cfg))]
+#![cfg_attr(docsrs, feature(doc_cfg))]
 
 #[cfg(feature = "sysvar")]
 pub mod sysvar;
