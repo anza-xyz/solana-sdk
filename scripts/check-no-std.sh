@@ -12,6 +12,7 @@ no_std_crates=(
   -p solana-account-view
   -p solana-clock
   -p solana-commitment-config
+  -p solana-compute-budget-interface
   -p solana-define-syscall
   -p solana-epoch-info
   -p solana-epoch-rewards
