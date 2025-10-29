@@ -250,7 +250,8 @@ pub enum InstructionError {
 #[cfg(feature = "serde")]
 impl<'de> serde::de::Deserialize<'de> for InstructionError {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-        where D: serde::de::Deserializer<'de>
+    where
+        D: serde::de::Deserializer<'de>,
     {
         let s = serde_json::Value::deserialize(deserializer)?;
         if s.as_str().is_some_and(|v| v == "BorshIoError") {
@@ -258,6 +259,16 @@ impl<'de> serde::de::Deserialize<'de> for InstructionError {
         } else {
             Self::deserialize(s).map_err(serde::de::Error::custom)
         }
+    }
+}
+
+#[cfg(feature = "serde")]
+impl serde::ser::Serialize for InstructionError {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::ser::Serializer,
+    {
+        Self::serialize(self, serializer)
     }
 }
 
@@ -485,18 +496,29 @@ impl From<LamportsError> for InstructionError {
 #[cfg(test)]
 #[cfg(feature = "serde")]
 mod tests {
-    use super::InstructionError;
+    use {super::InstructionError, std::string::ToString};
 
     #[test]
     fn deserialize() {
         serde_json::from_str::<InstructionError>(r#""InvalidError2""#).unwrap_err();
-        serde_json::from_str::<InstructionError>(r#"{"InvalidError2": null}"#).unwrap_err
-();
+        serde_json::from_str::<InstructionError>(r#"{"InvalidError2": null}"#).unwrap_err();
         serde_json::from_str::<InstructionError>(r#"{}"#).unwrap_err();
         serde_json::from_str::<InstructionError>(r#""Custom""#).unwrap_err();
 
         serde_json::from_str::<InstructionError>(r#""BorshIoError""#).unwrap();
         serde_json::from_str::<InstructionError>(r#"{"BorshIoError": "42"}"#).unwrap();
         serde_json::from_str::<InstructionError>(r#"{"InvalidError": null}"#).unwrap();
+    }
+
+    #[test]
+    fn serialize() {
+        assert_eq!(
+            serde_json::to_string(&InstructionError::BorshIoError("42".to_string())).unwrap(),
+            r#"{"BorshIoError":"42"}"#
+        );
+        assert_eq!(
+            serde_json::to_string(&InstructionError::InvalidError).unwrap(),
+            r#""InvalidError""#
+        );
     }
 }
