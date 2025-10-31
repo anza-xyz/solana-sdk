@@ -126,8 +126,19 @@ mod target_arch {
         LE,
     }
 
+    #[deprecated(
+        since = "3.2.0",
+        note = "Please use `alt_bn128_g1_decompress_be` instead"
+    )]
     #[inline(always)]
     pub fn alt_bn128_g1_decompress(
+        g1_bytes: &[u8],
+    ) -> Result<[u8; ALT_BN128_G1_POINT_SIZE], AltBn128CompressionError> {
+        alt_bn128_g1_decompress_be(g1_bytes)
+    }
+
+    #[inline(always)]
+    pub fn alt_bn128_g1_decompress_be(
         g1_bytes: &[u8],
     ) -> Result<[u8; ALT_BN128_G1_POINT_SIZE], AltBn128CompressionError> {
         alt_bn128_apply_g1_decompress(g1_bytes, Endianness::BE)
@@ -173,8 +184,22 @@ mod target_arch {
         }
     }
 
+    #[deprecated(
+        since = "3.2.0",
+        note = "Please use `alt_bn128_g1_compress_be` instead"
+    )]
     #[inline(always)]
     pub fn alt_bn128_g1_compress(
+        g1_bytes: &[u8],
+    ) -> Result<
+        [u8; alt_bn128_compression_size::ALT_BN128_G1_COMPRESSED_POINT_SIZE],
+        AltBn128CompressionError,
+    > {
+        alt_bn128_g1_compress_be(g1_bytes)
+    }
+
+    #[inline(always)]
+    pub fn alt_bn128_g1_compress_be(
         g1_bytes: &[u8],
     ) -> Result<
         [u8; alt_bn128_compression_size::ALT_BN128_G1_COMPRESSED_POINT_SIZE],
@@ -221,8 +246,19 @@ mod target_arch {
         }
     }
 
+    #[deprecated(
+        since = "3.2.0",
+        note = "Please use `alt_bn128_g2_decompress_be` instead"
+    )]
     #[inline(always)]
     pub fn alt_bn128_g2_decompress(
+        g2_bytes: &[u8],
+    ) -> Result<[u8; ALT_BN128_G2_POINT_SIZE], AltBn128CompressionError> {
+        alt_bn128_g2_decompress_be(g2_bytes)
+    }
+
+    #[inline(always)]
+    pub fn alt_bn128_g2_decompress_be(
         g2_bytes: &[u8],
     ) -> Result<[u8; ALT_BN128_G2_POINT_SIZE], AltBn128CompressionError> {
         alt_bn128_apply_g2_decompress(g2_bytes, Endianness::BE)
@@ -268,8 +304,22 @@ mod target_arch {
         }
     }
 
+    #[deprecated(
+        since = "3.2.0",
+        note = "Please use `alt_bn128_g2_compress_be` instead"
+    )]
     #[inline(always)]
     pub fn alt_bn128_g2_compress(
+        g2_bytes: &[u8],
+    ) -> Result<
+        [u8; alt_bn128_compression_size::ALT_BN128_G2_COMPRESSED_POINT_SIZE],
+        AltBn128CompressionError,
+    > {
+        alt_bn128_g2_compress_be(g2_bytes)
+    }
+
+    #[inline(always)]
+    pub fn alt_bn128_g2_compress_be(
         g2_bytes: &[u8],
     ) -> Result<
         [u8; alt_bn128_compression_size::ALT_BN128_G2_COMPRESSED_POINT_SIZE],
@@ -342,8 +392,31 @@ mod target_arch {
         solana_define_syscall::definitions as syscalls,
     };
 
+    #[deprecated(
+        since = "3.2.0",
+        note = "Please use `alt_bn128_g1_compress_be` instead"
+    )]
     pub fn alt_bn128_g1_compress(
         input: &[u8],
+    ) -> Result<[u8; ALT_BN128_G1_COMPRESSED_POINT_SIZE], AltBn128CompressionError> {
+        let mut result_buffer = [0; ALT_BN128_G1_COMPRESSED_POINT_SIZE];
+        let result = unsafe {
+            syscalls::sol_alt_bn128_compression(
+                ALT_BN128_G1_COMPRESS_BE,
+                input as *const _ as *const u8,
+                input.len() as u64,
+                &mut result_buffer as *mut _ as *mut u8,
+            )
+        };
+
+        match result {
+            0 => Ok(result_buffer),
+            _ => Err(AltBn128CompressionError::UnexpectedError),
+        }
+    }
+
+    pub fn alt_bn128_g1_compress_be(
+        input: &[u8; ALT_BN128_G1_POINT_SIZE],
     ) -> Result<[u8; ALT_BN128_G1_COMPRESSED_POINT_SIZE], AltBn128CompressionError> {
         let mut result_buffer = [0; ALT_BN128_G1_COMPRESSED_POINT_SIZE];
         let result = unsafe {
@@ -380,8 +453,31 @@ mod target_arch {
         }
     }
 
+    #[deprecated(
+        since = "3.2.0",
+        note = "Please use `alt_bn128_g1_decompress_be` instead"
+    )]
     pub fn alt_bn128_g1_decompress(
         input: &[u8],
+    ) -> Result<[u8; ALT_BN128_G1_POINT_SIZE], AltBn128CompressionError> {
+        let mut result_buffer = [0; ALT_BN128_G1_POINT_SIZE];
+        let result = unsafe {
+            syscalls::sol_alt_bn128_compression(
+                ALT_BN128_G1_DECOMPRESS_BE,
+                input as *const _ as *const u8,
+                input.len() as u64,
+                &mut result_buffer as *mut _ as *mut u8,
+            )
+        };
+
+        match result {
+            0 => Ok(result_buffer),
+            _ => Err(AltBn128CompressionError::UnexpectedError),
+        }
+    }
+
+    pub fn alt_bn128_g1_decompress_be(
+        input: &[u8; ALT_BN128_G1_COMPRESSED_POINT_SIZE],
     ) -> Result<[u8; ALT_BN128_G1_POINT_SIZE], AltBn128CompressionError> {
         let mut result_buffer = [0; ALT_BN128_G1_POINT_SIZE];
         let result = unsafe {
@@ -418,8 +514,31 @@ mod target_arch {
         }
     }
 
+    #[deprecated(
+        since = "3.2.0",
+        note = "Please use `alt_bn128_g2_compress_be` instead"
+    )]
     pub fn alt_bn128_g2_compress(
         input: &[u8],
+    ) -> Result<[u8; ALT_BN128_G2_COMPRESSED_POINT_SIZE], AltBn128CompressionError> {
+        let mut result_buffer = [0; ALT_BN128_G2_COMPRESSED_POINT_SIZE];
+        let result = unsafe {
+            syscalls::sol_alt_bn128_compression(
+                ALT_BN128_G2_COMPRESS_BE,
+                input as *const _ as *const u8,
+                input.len() as u64,
+                &mut result_buffer as *mut _ as *mut u8,
+            )
+        };
+
+        match result {
+            0 => Ok(result_buffer),
+            _ => Err(AltBn128CompressionError::UnexpectedError),
+        }
+    }
+
+    pub fn alt_bn128_g2_compress_be(
+        input: &[u8; ALT_BN128_G2_POINT_SIZE],
     ) -> Result<[u8; ALT_BN128_G2_COMPRESSED_POINT_SIZE], AltBn128CompressionError> {
         let mut result_buffer = [0; ALT_BN128_G2_COMPRESSED_POINT_SIZE];
         let result = unsafe {
@@ -456,7 +575,18 @@ mod target_arch {
         }
     }
 
+    #[deprecated(
+        since = "3.2.0",
+        note = "Please use `alt_bn128_g2_decompress_be` instead"
+    )]
+    #[inline(always)]
     pub fn alt_bn128_g2_decompress(
+        input: &[u8; ALT_BN128_G2_COMPRESSED_POINT_SIZE],
+    ) -> Result<[u8; ALT_BN128_G2_POINT_SIZE], AltBn128CompressionError> {
+        alt_bn128_g2_decompress_be(input)
+    }
+
+    pub fn alt_bn128_g2_decompress_be(
         input: &[u8; ALT_BN128_G2_COMPRESSED_POINT_SIZE],
     ) -> Result<[u8; ALT_BN128_G2_POINT_SIZE], AltBn128CompressionError> {
         let mut result_buffer = [0; ALT_BN128_G2_POINT_SIZE];
@@ -503,9 +633,9 @@ mod tests {
         ark_serialize::{CanonicalDeserialize, CanonicalSerialize, Compress, Validate},
         std::ops::Neg,
         target_arch::{
-            alt_bn128_g1_compress, alt_bn128_g1_compress_le, alt_bn128_g1_decompress,
-            alt_bn128_g1_decompress_le, alt_bn128_g2_compress, alt_bn128_g2_compress_le,
-            alt_bn128_g2_decompress, alt_bn128_g2_decompress_le,
+            alt_bn128_g1_compress_be, alt_bn128_g1_compress_le, alt_bn128_g1_decompress_be,
+            alt_bn128_g1_decompress_le, alt_bn128_g2_compress_be, alt_bn128_g2_compress_le,
+            alt_bn128_g2_decompress_be, alt_bn128_g2_decompress_le,
         },
     };
     type G1 = ark_bn254::g1::G1Affine;
@@ -553,10 +683,10 @@ mod tests {
             // test be
             let compressed_ref: [u8; 32] = convert_endianness::<32, 32>(&compressed_ref);
 
-            let decompressed = alt_bn128_g1_decompress(compressed_ref.as_slice()).unwrap();
+            let decompressed = alt_bn128_g1_decompress_be(compressed_ref.as_slice()).unwrap();
 
             assert_eq!(
-                alt_bn128_g1_compress(&decompressed).unwrap(),
+                alt_bn128_g1_compress_be(&decompressed).unwrap(),
                 compressed_ref
             );
             assert_eq!(decompressed, *g1_be);
@@ -608,10 +738,10 @@ mod tests {
             // test be
             let compressed_ref: [u8; 64] = convert_endianness::<64, 64>(&compressed_ref);
 
-            let decompressed = alt_bn128_g2_decompress(compressed_ref.as_slice()).unwrap();
+            let decompressed = alt_bn128_g2_decompress_be(compressed_ref.as_slice()).unwrap();
 
             assert_eq!(
-                alt_bn128_g2_compress(&decompressed).unwrap(),
+                alt_bn128_g2_compress_be(&decompressed).unwrap(),
                 compressed_ref
             );
             assert_eq!(decompressed, *g2_be);
@@ -621,16 +751,16 @@ mod tests {
     #[test]
     fn alt_bn128_compression_g1_point_of_infitity() {
         let g1_bytes = vec![0u8; 64];
-        let g1_compressed = alt_bn128_g1_compress(&g1_bytes).unwrap();
-        let g1_decompressed = alt_bn128_g1_decompress(&g1_compressed).unwrap();
+        let g1_compressed = alt_bn128_g1_compress_be(&g1_bytes).unwrap();
+        let g1_decompressed = alt_bn128_g1_decompress_be(&g1_compressed).unwrap();
         assert_eq!(g1_bytes, g1_decompressed);
     }
 
     #[test]
     fn alt_bn128_compression_g2_point_of_infitity() {
         let g1_bytes = vec![0u8; 128];
-        let g1_compressed = alt_bn128_g2_compress(&g1_bytes).unwrap();
-        let g1_decompressed = alt_bn128_g2_decompress(&g1_compressed).unwrap();
+        let g1_compressed = alt_bn128_g2_compress_be(&g1_bytes).unwrap();
+        let g1_decompressed = alt_bn128_g2_decompress_be(&g1_compressed).unwrap();
         assert_eq!(g1_bytes, g1_decompressed);
     }
 }
