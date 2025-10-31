@@ -113,20 +113,12 @@ jobs:
       - name: Install 'nightly' toolchain
         uses: dtolnay/rust-toolchain@nightly
 
-      - name: Run docs.rs container build
+      - name: Run docs.rs build
         run: |
-          docker run --rm \
-            -v ~/.cargo:/cargo \
-            -v ~/.rustup:/rustup \
-            -v "$PWD":/work \
-            -w /work \
-            -e CARGO_HOME=/cargo \
-            -e RUSTUP_HOME=/rustup \
-            -e PATH=/cargo/bin:$PATH \
-            -e DOCS_RS=1 \
-            -e RUSTDOCFLAGS="--cfg docsrs" \
-            ghcr.io/rust-lang/crates-build-env/linux:latest \
-            bash -c "cargo +nightly doc --no-deps --all-features --manifest-path ${{ inputs.package_path }}/Cargo.toml"
+          # Mimic docs.rs build environment
+          export DOCS_RS="1"
+          export RUSTDOCFLAGS="--cfg docsrs"
+          cargo +nightly doc --no-deps --all-features --manifest-path "${{ inputs.package_path }}/Cargo.toml"
 
   detached-minimal-versions:
     name: Check minimal-versions on detached crate
