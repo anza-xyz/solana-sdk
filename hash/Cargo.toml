@@ -16,27 +16,15 @@ all-features = true
 rustdoc-args = ["--cfg=docsrs"]
 
 [features]
-borsh = ["dep:borsh"]
-bytemuck = ["dep:bytemuck", "dep:bytemuck_derive"]
+borsh = ["solana-hash/borsh"]
+bytemuck = ["solana-hash/bytemuck"]
 default = ["std"]
-frozen-abi = ["dep:solana-frozen-abi", "dep:solana-frozen-abi-macro", "std"]
-serde = ["dep:serde", "dep:serde_derive"]
-std = ["borsh?/std", "serde?/std"]
+frozen-abi = ["solana-hash/frozen-abi"]
+serde = ["solana-hash/serde"]
+std = ["solana-hash/std"]
 
 [dependencies]
-borsh = { workspace = true, optional = true }
-bytemuck = { workspace = true, optional = true }
-bytemuck_derive = { workspace = true, optional = true }
-five8 = { workspace = true }
-serde = { workspace = true, optional = true }
-serde_derive = { workspace = true, optional = true }
-solana-atomic-u64 = { workspace = true }
-solana-frozen-abi = { workspace = true, optional = true, features = ["frozen-abi"] }
-solana-frozen-abi-macro = { workspace = true, optional = true, features = ["frozen-abi"] }
-solana-sanitize = { workspace = true }
-
-[dev-dependencies]
-bs58 = { workspace = true, default-features = false, features = ["alloc"] }
+solana-hash = { version = "4.0", features = ["atomic", "copy", "decode", "sanitize"] }
 
 [lints]
 workspace = true

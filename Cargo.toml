@@ -342,3 +342,11 @@ opt-level = 1
 # Enable optimizations for procmacros for faster recompile
 [profile.dev.build-override]
 opt-level = 1
+
+[patch.crates-io]
+# hash re-exports version 4.0, which brings its dependencies from
+# crates.io instead of using the local path.
+solana-atomic-u64 = { path = "atomic-u64" }
+solana-frozen-abi = { path = "frozen-abi" }
+solana-frozen-abi-macro = { path = "frozen-abi-macro" }
+solana-sanitize = { path = "sanitize" }
