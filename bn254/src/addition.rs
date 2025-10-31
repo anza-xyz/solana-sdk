@@ -119,6 +119,7 @@ pub fn alt_bn128_g1_addition_be(input: &[u8]) -> Result<Vec<u8>, AltBn128Error> 
         if input.len() > ALT_BN128_ADDITION_INPUT_SIZE {
             return Err(AltBn128Error::InvalidInputData);
         }
+        // SAFETY: This is sound as sol_alt_bn128_group_op addition always fills all 32 bytes of our buffer
         let mut result_buffer = Vec::with_capacity(ALT_BN128_ADDITION_OUTPUT_SIZE);
         unsafe {
             let result = syscalls::sol_alt_bn128_group_op(
@@ -157,6 +158,7 @@ pub fn alt_bn128_g1_addition_le(
     }
     #[cfg(target_os = "solana")]
     {
+        // SAFETY: This is sound as sol_alt_bn128_group_op addition always fills all 32 bytes of our buffer
         let mut result_buffer = Vec::with_capacity(ALT_BN128_ADDITION_OUTPUT_SIZE);
         unsafe {
             let result = syscalls::sol_alt_bn128_group_op(

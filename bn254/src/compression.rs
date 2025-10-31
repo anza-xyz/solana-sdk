@@ -345,6 +345,7 @@ mod target_arch {
     pub fn alt_bn128_g1_compress(
         input: &[u8],
     ) -> Result<[u8; ALT_BN128_G1_COMPRESSED_POINT_SIZE], AltBn128CompressionError> {
+        // SAFETY: This is sound as sol_alt_bn128_group_op compression always fills all 32 bytes of our buffer
         let mut result_buffer =
             core::mem::MaybeUninit::<[u8; ALT_BN128_G1_COMPRESSED_POINT_SIZE]>::uninit();
         unsafe {
@@ -364,6 +365,7 @@ mod target_arch {
     pub fn alt_bn128_g1_compress_le(
         input: &[u8; ALT_BN128_G1_POINT_SIZE],
     ) -> Result<[u8; ALT_BN128_G1_COMPRESSED_POINT_SIZE], AltBn128CompressionError> {
+        // SAFETY: This is sound as sol_alt_bn128_group_op compression always fills all 32 bytes of our buffer
         let mut result_buffer =
             core::mem::MaybeUninit::<[u8; ALT_BN128_G1_COMPRESSED_POINT_SIZE]>::uninit();
         unsafe {
@@ -383,6 +385,7 @@ mod target_arch {
     pub fn alt_bn128_g1_decompress(
         input: &[u8],
     ) -> Result<[u8; ALT_BN128_G1_POINT_SIZE], AltBn128CompressionError> {
+        // SAFETY: This is sound as sol_alt_bn128_group_op decompression always fills all 64 bytes of our buffer
         let mut result_buffer = core::mem::MaybeUninit::<[u8; ALT_BN128_G1_POINT_SIZE]>::uninit();
         unsafe {
             let result = syscalls::sol_alt_bn128_compression(
@@ -401,6 +404,7 @@ mod target_arch {
     pub fn alt_bn128_g1_decompress_le(
         input: &[u8; ALT_BN128_G1_COMPRESSED_POINT_SIZE],
     ) -> Result<[u8; ALT_BN128_G1_POINT_SIZE], AltBn128CompressionError> {
+        // SAFETY: This is sound as sol_alt_bn128_group_op decompression always fills all 64 bytes of our buffer
         let mut result_buffer = core::mem::MaybeUninit::<[u8; ALT_BN128_G1_POINT_SIZE]>::uninit();
         unsafe {
             let result = syscalls::sol_alt_bn128_compression(
@@ -419,6 +423,7 @@ mod target_arch {
     pub fn alt_bn128_g2_compress(
         input: &[u8],
     ) -> Result<[u8; ALT_BN128_G2_COMPRESSED_POINT_SIZE], AltBn128CompressionError> {
+        // SAFETY: This is sound as sol_alt_bn128_group_op compression always fills all 64 bytes of our buffer
         let mut result_buffer =
             core::mem::MaybeUninit::<[u8; ALT_BN128_G2_COMPRESSED_POINT_SIZE]>::uninit();
         unsafe {
@@ -438,6 +443,7 @@ mod target_arch {
     pub fn alt_bn128_g2_compress_le(
         input: &[u8; ALT_BN128_G2_POINT_SIZE],
     ) -> Result<[u8; ALT_BN128_G2_COMPRESSED_POINT_SIZE], AltBn128CompressionError> {
+        // SAFETY: This is sound as sol_alt_bn128_group_op compression always fills all 64 bytes of our buffer
         let mut result_buffer = [0; ALT_BN128_G2_COMPRESSED_POINT_SIZE];
         unsafe {
             let result = syscalls::sol_alt_bn128_compression(
@@ -456,6 +462,7 @@ mod target_arch {
     pub fn alt_bn128_g2_decompress(
         input: &[u8; ALT_BN128_G2_COMPRESSED_POINT_SIZE],
     ) -> Result<[u8; ALT_BN128_G2_POINT_SIZE], AltBn128CompressionError> {
+        // SAFETY: This is sound as sol_alt_bn128_group_op decompression always fills all 128 bytes of our buffer
         let mut result_buffer = core::mem::MaybeUninit::<[u8; ALT_BN128_G2_POINT_SIZE]>::uninit();
         unsafe {
             let result = syscalls::sol_alt_bn128_compression(
@@ -474,6 +481,7 @@ mod target_arch {
     pub fn alt_bn128_g2_decompress_le(
         input: &[u8; ALT_BN128_G2_COMPRESSED_POINT_SIZE],
     ) -> Result<[u8; ALT_BN128_G2_POINT_SIZE], AltBn128CompressionError> {
+        // SAFETY: This is sound as sol_alt_bn128_group_op decompression always fills all 128 bytes of our buffer
         let mut result_buffer = core::mem::MaybeUninit::<[u8; ALT_BN128_G2_POINT_SIZE]>::uninit();
         unsafe {
             let result = syscalls::sol_alt_bn128_compression(

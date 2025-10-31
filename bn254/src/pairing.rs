@@ -128,6 +128,7 @@ pub fn alt_bn128_pairing_be(input: &[u8]) -> Result<Vec<u8>, AltBn128Error> {
         if input.len() % ALT_BN128_PAIRING_ELEMENT_SIZE != 0 {
             return Err(AltBn128Error::InvalidInputData);
         }
+        // SAFETY: This is sound as sol_alt_bn128_group_op pairing always fills all 32 bytes of our buffer
         let mut result_buffer = Vec::with_capacity(ALT_BN128_PAIRING_OUTPUT_SIZE);
         unsafe {
             let result = syscalls::sol_alt_bn128_group_op(
@@ -192,6 +193,7 @@ pub fn alt_bn128_pairing_le(input: &[u8]) -> Result<Vec<u8>, AltBn128Error> {
         if input.len() % ALT_BN128_PAIRING_ELEMENT_SIZE != 0 {
             return Err(AltBn128Error::InvalidInputData);
         }
+        // SAFETY: This is sound as sol_alt_bn128_group_op pairing always fills all 32 bytes of our buffer
         let mut result_buffer = Vec::with_capacity(ALT_BN128_PAIRING_OUTPUT_SIZE);
         unsafe {
             let result = syscalls::sol_alt_bn128_group_op(
