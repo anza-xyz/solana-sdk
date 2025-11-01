@@ -130,11 +130,11 @@ fn alt_bn128_compression_pairing_test_input() {
             return;
         }
         let g1 = input[0..64].to_vec();
-        let g1_compressed = alt_bn128_g1_compress(&g1).unwrap();
-        assert_eq!(g1, alt_bn128_g1_decompress(&g1_compressed).unwrap());
+        let g1_compressed = alt_bn128_g1_compress_be(&g1).unwrap();
+        assert_eq!(g1, alt_bn128_g1_decompress_be(&g1_compressed).unwrap());
         let g2 = input[64..192].to_vec();
-        let g2_compressed = alt_bn128_g2_compress(&g2).unwrap();
-        assert_eq!(g2, alt_bn128_g2_decompress(&g2_compressed).unwrap());
+        let g2_compressed = alt_bn128_g2_compress_be(&g2).unwrap();
+        assert_eq!(g2, alt_bn128_g2_decompress_be(&g2_compressed).unwrap());
 
         // test le
         let g1_le = convert_endianness::<32, 64>(&g1.try_into().unwrap());
