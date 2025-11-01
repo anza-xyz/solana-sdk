@@ -298,7 +298,7 @@ pub enum SystemInstruction {
     },
 }
 
-/// Create an account.
+/// Create an account, failing if the account previously had any balance.
 ///
 /// This function produces an [`Instruction`] which must be submitted in a
 /// [`Transaction`] or [invoked] to take effect, containing a serialized
@@ -311,6 +311,13 @@ pub enum SystemInstruction {
 /// Account creation typically involves three steps: [`allocate`] space,
 /// [`transfer`] lamports for rent, [`assign`] to its owning program. The
 /// [`create_account`] function does all three at once.
+///
+/// # Security issues
+///
+/// Using this function is a security issue if the `to_address` is predictable
+/// by an attacker. The attacker can prefund the address with lamports and
+/// thereby prevent the successful execution of the `create_account` call. This
+/// can DoS an on-chain program.
 ///
 /// # Required signers
 ///
