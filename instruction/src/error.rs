@@ -239,7 +239,7 @@ pub enum InstructionError {
     // conversions must also be added
 }
 
-#[cfg(feature = "serde")]
+#[cfg(all(feature = "std", feature = "serde"))]
 #[doc(hidden)]
 #[allow(
     non_upper_case_globals,
