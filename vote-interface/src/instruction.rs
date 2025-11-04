@@ -337,7 +337,7 @@ pub fn create_account_with_config(
 }
 
 #[cfg(feature = "bincode")]
-pub fn create_account_v2(
+pub fn create_account_with_config_v2(
     from_pubkey: &Pubkey,
     vote_pubkey: &Pubkey,
     vote_init: &VoteInitV2,
