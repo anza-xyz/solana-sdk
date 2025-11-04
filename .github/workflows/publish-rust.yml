@@ -147,7 +147,7 @@ jobs:
       - name: Install cargo-release
         uses: taiki-e/cache-cargo-install-action@v2
         with:
-          tool: cargo-release
+          tool: cargo-release@0.25.18
 
       - name: Ensure CARGO_REGISTRY_TOKEN variable is set
         env:
