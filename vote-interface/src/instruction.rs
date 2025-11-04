@@ -290,7 +290,6 @@ fn initialize_account_v2(vote_pubkey: &Pubkey, vote_init: &VoteInitV2) -> Instru
     )
 }
 
-
 pub struct CreateVoteAccountConfig<'a> {
     pub space: u64,
     pub with_seed: Option<(&'a Pubkey, &'a str)>,

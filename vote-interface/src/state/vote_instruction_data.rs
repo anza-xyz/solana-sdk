@@ -1,17 +1,18 @@
-#[cfg(feature = "serde")]
-use {
-    serde_derive::{Deserialize, Serialize},
-    serde_with::serde_as,
-};
-
 #[cfg(feature = "frozen-abi")]
 use solana_frozen_abi_macro::{frozen_abi, AbiExample};
 use {
-    crate::state::{BLS_PUBLIC_KEY_COMPRESSED_SIZE, BLS_SIGNATURE_COMPRESSED_SIZE, Lockout, MAX_LOCKOUT_HISTORY},
+    crate::state::{
+        Lockout, BLS_PUBLIC_KEY_COMPRESSED_SIZE, BLS_SIGNATURE_COMPRESSED_SIZE, MAX_LOCKOUT_HISTORY,
+    },
     solana_clock::{Slot, UnixTimestamp},
     solana_hash::Hash,
     solana_pubkey::Pubkey,
     std::{collections::VecDeque, fmt::Debug},
+};
+#[cfg(feature = "serde")]
+use {
+    serde_derive::{Deserialize, Serialize},
+    serde_with::serde_as,
 };
 
 #[cfg_attr(
@@ -251,7 +252,7 @@ pub enum VoteAuthorize {
         // BLS Proof of Possession
         #[cfg_attr(feature = "serde", serde(with = "serde_bytes"))]
         [u8; BLS_SIGNATURE_COMPRESSED_SIZE],
-    )
+    ),
 }
 
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
