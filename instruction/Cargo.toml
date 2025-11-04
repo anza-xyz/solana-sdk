@@ -48,7 +48,7 @@ wasm-bindgen = { workspace = true }
 solana-define-syscall = { workspace = true }
 
 [dev-dependencies]
-solana-instruction = { path = ".", features = ["borsh", "serde"] }
+solana-instruction = { path = ".", features = ["bincode", "borsh", "serde"] }
 
 [lints]
 workspace = true
