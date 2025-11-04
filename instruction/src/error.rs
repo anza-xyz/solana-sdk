@@ -46,6 +46,7 @@ pub const INCORRECT_AUTHORITY: u64 = to_builtin!(26);
 // - Added as an equivalent to ProgramError and InstructionError
 // - Be featurized in the BPF loader to return `InstructionError::InvalidError`
 //   until the feature is activated
+// - Added to the `Deserialize` implementation, which is done by hand
 
 /// Reasons the runtime might have rejected an instruction.
 ///
