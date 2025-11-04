@@ -151,7 +151,7 @@ jobs:
       - name: Install cargo-semver-checks
         uses: taiki-e/install-action@v2
         with:
-          tool: cargo-semver-checks,cargo-release
+          tool: cargo-semver-checks@0.44.0,cargo-release@0.25.20
 
       - name: Set Git Author (required for cargo-release)
         run: |
