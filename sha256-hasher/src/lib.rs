@@ -12,14 +12,19 @@ pub struct Hasher {
 
 #[cfg(all(feature = "sha2", not(target_os = "solana")))]
 impl Hasher {
+    #[inline(always)]
     pub fn hash(&mut self, val: &[u8]) {
         self.hasher.update(val);
     }
+
+    #[inline(always)]
     pub fn hashv(&mut self, vals: &[&[u8]]) {
         for val in vals {
             self.hash(val);
         }
     }
+
+    #[inline(always)]
     pub fn result(self) -> Hash {
         let bytes: [u8; solana_hash::HASH_BYTES] = self.hasher.finalize().into();
         bytes.into()
