@@ -11,7 +11,7 @@ use solana_frozen_abi_macro::{frozen_abi, AbiExample};
 #[cfg(any(target_os = "solana", feature = "bincode"))]
 use solana_instruction::error::InstructionError;
 use {
-    super::{BlockTimestamp, LandedVote, VoteInit, BLS_PUBLIC_KEY_COMPRESSED_SIZE},
+    super::{BlockTimestamp, LandedVote, VoteInit, VoteInitV2, BLS_PUBLIC_KEY_COMPRESSED_SIZE},
     crate::authorized_voters::AuthorizedVoters,
     solana_clock::{Clock, Epoch, Slot},
     solana_pubkey::Pubkey,
@@ -88,6 +88,20 @@ impl VoteStateV4 {
             inflation_rewards_collector: *vote_pubkey,
             block_revenue_collector: vote_init.node_pubkey,
             block_revenue_commission_bps: 10_000, // 100%
+            ..Self::default()
+        }
+    }
+
+    pub fn new_with_vote_init_v2(vote_init: &VoteInitV2, clock: &Clock) -> Self {
+        Self {
+            node_pubkey: vote_init.node_pubkey,
+            authorized_voters: AuthorizedVoters::new(clock.epoch, vote_init.authorized_voter),
+            bls_pubkey_compressed: Some(vote_init.authorized_voter_bls_pubkey),
+            authorized_withdrawer: vote_init.authorized_withdrawer,
+            inflation_rewards_commission_bps: vote_init.inflation_rewards_commission_bps,
+            inflation_rewards_collector: vote_init.inflation_rewards_collector,
+            block_revenue_commission_bps: vote_init.block_revenue_commission_bps,
+            block_revenue_collector: vote_init.block_revenue_collector,
             ..Self::default()
         }
     }

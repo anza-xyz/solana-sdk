@@ -4,7 +4,7 @@ use {
     super::state::TowerSync,
     crate::state::{
         Vote, VoteAuthorize, VoteAuthorizeCheckedWithSeedArgs, VoteAuthorizeWithSeedArgs, VoteInit,
-        VoteStateUpdate, VoteStateV4,
+        VoteInitV2, VoteStateUpdate, VoteStateV4,
     },
     solana_clock::{Slot, UnixTimestamp},
     solana_hash::Hash,
@@ -33,6 +33,15 @@ pub enum VoteInstruction {
     ///   2. `[]` Clock sysvar
     ///   3. `[SIGNER]` New validator identity (node_pubkey)
     InitializeAccount(VoteInit),
+
+    // Initialize a vote account using VoteInitV2
+    ///
+    /// # Account references
+    ///   0. `[WRITE]` Uninitialized vote account
+    ///   1. `[]` Rent sysvar
+    ///   2. `[]` Clock sysvar
+    ///   3. `[SIGNER]` New validator identity (node_pubkey)
+    InitializeAccountV2(VoteInitV2),
 
     /// Authorize a key to send votes or issue a withdrawal
     ///
@@ -265,6 +274,23 @@ fn initialize_account(vote_pubkey: &Pubkey, vote_init: &VoteInit) -> Instruction
     )
 }
 
+#[cfg(feature = "bincode")]
+fn initialize_account_v2(vote_pubkey: &Pubkey, vote_init: &VoteInitV2) -> Instruction {
+    let account_metas = vec![
+        AccountMeta::new(*vote_pubkey, false),
+        AccountMeta::new_readonly(sysvar::rent::id(), false),
+        AccountMeta::new_readonly(sysvar::clock::id(), false),
+        AccountMeta::new_readonly(vote_init.node_pubkey, true),
+    ];
+
+    Instruction::new_with_bincode(
+        id(),
+        &VoteInstruction::InitializeAccountV2(*vote_init),
+        account_metas,
+    )
+}
+
+
 pub struct CreateVoteAccountConfig<'a> {
     pub space: u64,
     pub with_seed: Option<(&'a Pubkey, &'a str)>,
@@ -308,6 +334,37 @@ pub fn create_account_with_config(
         )
     };
     let init_ix = initialize_account(vote_pubkey, vote_init);
+    vec![create_ix, init_ix]
+}
+
+#[cfg(feature = "bincode")]
+pub fn create_account_v2(
+    from_pubkey: &Pubkey,
+    vote_pubkey: &Pubkey,
+    vote_init: &VoteInitV2,
+    lamports: u64,
+    config: CreateVoteAccountConfig,
+) -> Vec<Instruction> {
+    let create_ix = if let Some((base, seed)) = config.with_seed {
+        solana_system_interface::instruction::create_account_with_seed(
+            from_pubkey,
+            vote_pubkey,
+            base,
+            seed,
+            lamports,
+            config.space,
+            &id(),
+        )
+    } else {
+        solana_system_interface::instruction::create_account(
+            from_pubkey,
+            vote_pubkey,
+            lamports,
+            config.space,
+            &id(),
+        )
+    };
+    let init_ix = initialize_account_v2(vote_pubkey, vote_init);
     vec![create_ix, init_ix]
 }
 
