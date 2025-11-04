@@ -34,15 +34,6 @@ pub enum VoteInstruction {
     ///   3. `[SIGNER]` New validator identity (node_pubkey)
     InitializeAccount(VoteInit),
 
-    // Initialize a vote account using VoteInitV2
-    ///
-    /// # Account references
-    ///   0. `[WRITE]` Uninitialized vote account
-    ///   1. `[]` Rent sysvar
-    ///   2. `[]` Clock sysvar
-    ///   3. `[SIGNER]` New validator identity (node_pubkey)
-    InitializeAccountV2(VoteInitV2),
-
     /// Authorize a key to send votes or issue a withdrawal
     ///
     /// # Account references
@@ -178,6 +169,13 @@ pub enum VoteInstruction {
         #[cfg_attr(feature = "serde", serde(with = "serde_tower_sync"))] TowerSync,
         Hash,
     ),
+
+    // Initialize a vote account using VoteInitV2
+    ///
+    /// # Account references
+    ///   0. `[WRITE]` Uninitialized vote account
+    ///   1. `[SIGNER]` New validator identity (node_pubkey)
+    InitializeAccountV2(VoteInitV2),
 }
 
 impl VoteInstruction {

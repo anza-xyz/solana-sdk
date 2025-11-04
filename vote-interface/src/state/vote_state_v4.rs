@@ -77,7 +77,7 @@ impl VoteStateV4 {
         3762 // Same size as V3 to avoid account resizing
     }
 
-    pub fn new(vote_pubkey: &Pubkey, vote_init: &VoteInit, clock: &Clock) -> Self {
+    pub fn new_with_defaults(vote_pubkey: &Pubkey, vote_init: &VoteInit, clock: &Clock) -> Self {
         Self {
             node_pubkey: vote_init.node_pubkey,
             authorized_voters: AuthorizedVoters::new(clock.epoch, vote_init.authorized_voter),
@@ -92,7 +92,7 @@ impl VoteStateV4 {
         }
     }
 
-    pub fn new_with_vote_init_v2(vote_init: &VoteInitV2, clock: &Clock) -> Self {
+    pub fn new(vote_init: &VoteInitV2, clock: &Clock) -> Self {
         Self {
             node_pubkey: vote_init.node_pubkey,
             authorized_voters: AuthorizedVoters::new(clock.epoch, vote_init.authorized_voter),

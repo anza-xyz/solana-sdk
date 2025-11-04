@@ -242,17 +242,21 @@ impl Default for VoteInitV2 {
 #[cfg_attr(feature = "serde", serde_as)]
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
+pub struct VoterWithBLSArgs {
+    #[cfg_attr(feature = "serde", serde(with = "serde_bytes"))]
+    bls_pub_key: [u8; BLS_PUBLIC_KEY_COMPRESSED_SIZE],
+
+    #[cfg_attr(feature = "serde", serde(with = "serde_bytes"))]
+    bls_proof_of_possession: [u8; BLS_SIGNATURE_COMPRESSED_SIZE],
+}
+
+#[cfg_attr(feature = "serde", serde_as)]
+#[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum VoteAuthorize {
     Voter,
     Withdrawer,
-    VoterWithBLS(
-        // BLS public key
-        #[cfg_attr(feature = "serde", serde(with = "serde_bytes"))]
-        [u8; BLS_PUBLIC_KEY_COMPRESSED_SIZE],
-        // BLS Proof of Possession
-        #[cfg_attr(feature = "serde", serde(with = "serde_bytes"))]
-        [u8; BLS_SIGNATURE_COMPRESSED_SIZE],
-    ),
+    VoterWithBLS(VoterWithBLSArgs),
 }
 
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
