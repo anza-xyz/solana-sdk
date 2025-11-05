@@ -2773,7 +2773,7 @@ dependencies = [
  "solana-example-mocks",
  "solana-frozen-abi",
  "solana-frozen-abi-macro 3.0.0",
- "solana-hash 3.0.0",
+ "solana-hash 3.1.0",
  "solana-instruction",
  "solana-program-error",
  "solana-sanitize",
@@ -2795,7 +2795,7 @@ dependencies = [
  "solana-clock",
  "solana-frozen-abi",
  "solana-frozen-abi-macro 3.0.0",
- "solana-hash 3.0.0",
+ "solana-hash 3.1.0",
  "solana-instruction",
  "solana-instruction-error",
  "solana-pubkey",
@@ -2841,7 +2841,7 @@ dependencies = [
  "blake3",
  "solana-blake3-hasher",
  "solana-define-syscall",
- "solana-hash 3.0.0",
+ "solana-hash 3.1.0",
 ]
 
 [[package]]
@@ -2906,7 +2906,7 @@ dependencies = [
  "solana-account",
  "solana-commitment-config",
  "solana-epoch-info",
- "solana-hash 3.0.0",
+ "solana-hash 3.1.0",
  "solana-instruction",
  "solana-keypair",
  "solana-message",
@@ -2939,7 +2939,7 @@ dependencies = [
  "serde_derive",
  "solana-frozen-abi",
  "solana-frozen-abi-macro 3.0.0",
- "solana-hash 3.0.0",
+ "solana-hash 3.1.0",
 ]
 
 [[package]]
@@ -3020,7 +3020,7 @@ dependencies = [
  "solana-epoch-rewards",
  "solana-frozen-abi",
  "solana-frozen-abi-macro 3.0.0",
- "solana-hash 3.0.0",
+ "solana-hash 3.1.0",
  "solana-sdk-ids",
  "solana-sdk-macro",
  "solana-sysvar-id",
@@ -3032,7 +3032,7 @@ version = "3.0.0"
 dependencies = [
  "siphasher",
  "solana-address",
- "solana-hash 3.0.0",
+ "solana-hash 3.1.0",
 ]
 
 [[package]]
@@ -3067,7 +3067,7 @@ dependencies = [
  "serde_derive",
  "solana-address-lookup-table-interface",
  "solana-clock",
- "solana-hash 3.0.0",
+ "solana-hash 3.1.0",
  "solana-instruction",
  "solana-keccak-hasher",
  "solana-message",
@@ -3191,7 +3191,7 @@ dependencies = [
  "solana-frozen-abi",
  "solana-frozen-abi-macro 3.0.0",
  "solana-genesis-config",
- "solana-hash 3.0.0",
+ "solana-hash 3.1.0",
  "solana-inflation",
  "solana-keypair",
  "solana-logger",
@@ -3217,7 +3217,7 @@ dependencies = [
 
 [[package]]
 name = "solana-hash"
-version = "3.0.0"
+version = "3.1.0"
 dependencies = [
  "solana-hash 4.0.0",
 ]
@@ -3302,7 +3302,7 @@ version = "3.0.0"
 dependencies = [
  "sha3",
  "solana-define-syscall",
- "solana-hash 3.0.0",
+ "solana-hash 3.1.0",
 ]
 
 [[package]]
@@ -3411,7 +3411,7 @@ dependencies = [
  "solana-example-mocks",
  "solana-frozen-abi",
  "solana-frozen-abi-macro 3.0.0",
- "solana-hash 3.0.0",
+ "solana-hash 3.1.0",
  "solana-instruction",
  "solana-instruction-error",
  "solana-logger",
@@ -3444,7 +3444,7 @@ dependencies = [
  "serde",
  "serde_derive",
  "solana-fee-calculator",
- "solana-hash 3.0.0",
+ "solana-hash 3.1.0",
  "solana-nonce",
  "solana-pubkey",
  "solana-sha256-hasher",
@@ -3456,7 +3456,7 @@ version = "3.0.0"
 dependencies = [
  "solana-account",
  "solana-fee-calculator",
- "solana-hash 3.0.0",
+ "solana-hash 3.1.0",
  "solana-nonce",
  "solana-pubkey",
  "solana-sdk-ids",
@@ -3467,7 +3467,7 @@ name = "solana-offchain-message"
 version = "3.0.0"
 dependencies = [
  "num_enum",
- "solana-hash 3.0.0",
+ "solana-hash 3.1.0",
  "solana-keypair",
  "solana-offchain-message",
  "solana-packet",
@@ -3561,7 +3561,7 @@ dependencies = [
  "solana-fee-calculator",
  "solana-frozen-abi",
  "solana-frozen-abi-macro 3.0.0",
- "solana-hash 3.0.0",
+ "solana-hash 3.1.0",
  "solana-instruction",
  "solana-instruction-error",
  "solana-instructions-sysvar",
@@ -3756,7 +3756,7 @@ dependencies = [
  "js-sys",
  "log",
  "solana-address",
- "solana-hash 3.0.0",
+ "solana-hash 3.1.0",
  "solana-instruction",
  "solana-keypair",
  "solana-message",
@@ -3883,7 +3883,7 @@ version = "3.0.1"
 dependencies = [
  "sha2",
  "solana-define-syscall",
- "solana-hash 3.0.0",
+ "solana-hash 3.1.0",
  "solana-sha256-hasher",
 ]
 
@@ -3904,7 +3904,7 @@ name = "solana-shred-version"
 version = "3.0.0"
 dependencies = [
  "solana-hard-forks",
- "solana-hash 3.0.0",
+ "solana-hash 3.1.0",
  "solana-sha256-hasher",
 ]
 
@@ -3959,7 +3959,7 @@ version = "3.0.0"
 dependencies = [
  "serde",
  "serde_derive",
- "solana-hash 3.0.0",
+ "solana-hash 3.1.0",
  "solana-sdk-ids",
  "solana-sha256-hasher",
  "solana-sysvar-id",
@@ -4018,7 +4018,7 @@ dependencies = [
 name = "solana-system-transaction"
 version = "3.0.0"
 dependencies = [
- "solana-hash 3.0.0",
+ "solana-hash 3.1.0",
  "solana-keypair",
  "solana-message",
  "solana-pubkey",
@@ -4059,7 +4059,7 @@ dependencies = [
  "solana-fee-calculator",
  "solana-frozen-abi",
  "solana-frozen-abi-macro 3.0.0",
- "solana-hash 3.0.0",
+ "solana-hash 3.1.0",
  "solana-instruction",
  "solana-last-restart-slot",
  "solana-msg",
@@ -4103,7 +4103,7 @@ dependencies = [
  "solana-example-mocks",
  "solana-frozen-abi",
  "solana-frozen-abi-macro 3.0.0",
- "solana-hash 3.0.0",
+ "solana-hash 3.1.0",
  "solana-instruction",
  "solana-instruction-error",
  "solana-keypair",
@@ -4160,7 +4160,7 @@ dependencies = [
  "solana-epoch-schedule",
  "solana-frozen-abi",
  "solana-frozen-abi-macro 3.0.0",
- "solana-hash 3.0.0",
+ "solana-hash 3.1.0",
  "solana-instruction",
  "solana-instruction-error",
  "solana-logger",
