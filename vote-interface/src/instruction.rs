@@ -276,8 +276,6 @@ fn initialize_account(vote_pubkey: &Pubkey, vote_init: &VoteInit) -> Instruction
 fn initialize_account_v2(vote_pubkey: &Pubkey, vote_init: &VoteInitV2) -> Instruction {
     let account_metas = vec![
         AccountMeta::new(*vote_pubkey, false),
-        AccountMeta::new_readonly(sysvar::rent::id(), false),
-        AccountMeta::new_readonly(sysvar::clock::id(), false),
         AccountMeta::new_readonly(vote_init.node_pubkey, true),
     ];
 
