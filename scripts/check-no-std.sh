@@ -7,11 +7,13 @@ src_root="$(readlink -f "${here}/..")"
 
 cd "${src_root}"
 
+# Crates have a major version specified to avoid conflicts with
+# re-exported crates.
 no_std_crates=(
-  -p solana-address
+  -p solana-address@1
   -p solana-clock
   -p solana-commitment-config
-  -p solana-define-syscall
+  -p solana-define-syscall@3
   -p solana-epoch-info
   -p solana-fee-calculator
   -p solana-msg

@@ -347,6 +347,7 @@ opt-level = 1
 # crates re-exporting the next major version brings dependencies
 # from crates.io instead of using the local path.
 solana-atomic-u64 = { path = "atomic-u64" }
+solana-define-syscall = { path = "define-syscall" }
 solana-frozen-abi = { path = "frozen-abi" }
 solana-frozen-abi-macro = { path = "frozen-abi-macro" }
 solana-program-error = { path = "program-error" }
