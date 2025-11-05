@@ -10,79 +10,41 @@ homepage = { workspace = true }
 license = { workspace = true }
 edition = { workspace = true }
 
+[package.metadata.cargo-semver-checks.lints]
+# cargo-semver-checks performs checks on the exported symbol graph, so re-exports
+# are considered different elements and they will be flagged as breaking changes
+# even if the public API is equivalent.
+declarative_macro_missing = "allow"
+enum_missing = "allow"
+function_missing = "allow"
+module_missing = "allow"
+pub_module_level_const_missing = "allow"
+struct_missing = "allow"
+
 [package.metadata.docs.rs]
 targets = ["x86_64-unknown-linux-gnu"]
 all-features = true
 rustdoc-args = ["--cfg=docsrs"]
 
 [features]
-atomic = ["dep:solana-atomic-u64"]
-borsh = ["dep:borsh", "alloc"]
-bytemuck = ["dep:bytemuck", "dep:bytemuck_derive"]
-curve25519 = ["dep:curve25519-dalek", "error", "sha2"]
-decode = ["dep:five8", "dep:five8_const", "error"]
-dev-context-only-utils = ["dep:arbitrary", "rand"]
-error = ["dep:solana-program-error"]
-frozen-abi = [
-    "dep:solana-frozen-abi",
-    "dep:solana-frozen-abi-macro",
-    "dep:solana-program-error",
-    "std",
-]
-rand = ["dep:rand", "atomic", "std"]
-sanitize = ["dep:solana-sanitize"]
-serde = ["dep:serde", "dep:serde_derive"]
-sha2 = ["dep:solana-sha256-hasher", "error"]
-std = ["decode", "borsh?/std", "serde?/std", "alloc"]
-alloc = []
-syscalls = ["dep:solana-define-syscall", "error"]
+atomic = ["solana-address-v2/atomic"]
+borsh = ["solana-address-v2/borsh"]
+bytemuck = ["solana-address-v2/bytemuck"]
+curve25519 = ["solana-address-v2/curve25519"]
+decode = ["solana-address-v2/decode"]
+dev-context-only-utils = ["solana-address-v2/dev-context-only-utils"]
+error = ["solana-address-v2/error"]
+frozen-abi = ["solana-address-v2/frozen-abi"]
+rand = ["solana-address-v2/rand"]
+sanitize = ["solana-address-v2/sanitize"]
+serde = ["solana-address-v2/serde"]
+sha2 = ["solana-address-v2/sha2"]
+std = ["solana-address-v2/std"]
+alloc = ["solana-address-v2/alloc"]
+syscalls = ["solana-address-v2/syscalls"]
 
 [dependencies]
-arbitrary = { workspace = true, features = ["derive"], optional = true }
-borsh = { workspace = true, optional = true }
-bytemuck = { workspace = true, optional = true }
-bytemuck_derive = { workspace = true, optional = true }
-five8 = { workspace = true, optional = true }
-five8_const = { workspace = true, optional = true }
-rand = { workspace = true, optional = true }
-serde = { workspace = true, optional = true }
-serde_derive = { workspace = true, optional = true }
-solana-atomic-u64 = { workspace = true, optional = true }
-solana-frozen-abi = { workspace = true, features = ["frozen-abi"], optional = true }
-solana-frozen-abi-macro = { workspace = true, features = ["frozen-abi"], optional = true }
-solana-program-error = { workspace = true, optional = true }
-solana-sanitize = { workspace = true, optional = true }
-
-[target.'cfg(not(target_os = "solana"))'.dependencies]
-curve25519-dalek = { workspace = true, optional = true }
-solana-sha256-hasher = { workspace = true, features = ["sha2"], optional = true }
-
-[target.'cfg(target_os = "solana")'.dependencies]
-solana-define-syscall = { workspace = true, optional = true }
-solana-sha256-hasher = { workspace = true, optional = true }
-
-[dev-dependencies]
-anyhow = { workspace = true }
-solana-account-info = { path = "../account-info" }
-solana-address = { path = ".", features = [
-    "atomic",
-    "borsh",
-    "curve25519",
-    "decode",
-    "dev-context-only-utils",
-    "error",
-    "sanitize",
-    "std",
-    "syscalls",
-] }
-solana-cpi = { path = "../cpi" }
-solana-example-mocks = { path = "../example-mocks" }
-solana-hash = { workspace = true }
-solana-instruction = { path = "../instruction", features = ["borsh"] }
-solana-program-error = { workspace = true, features = ["borsh"] }
-solana-system-interface = { path = "../system-interface", features = ["bincode"] }
-strum = { workspace = true }
-strum_macros = { workspace = true }
+solana-address-v2 = { package = "solana-address", version = "2.0", features = ["copy"] }
 
 [lints]
 workspace = true
