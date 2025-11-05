@@ -2731,7 +2731,7 @@ dependencies = [
  "solana-account-info",
  "solana-clock",
  "solana-frozen-abi",
- "solana-frozen-abi-macro",
+ "solana-frozen-abi-macro 3.0.0",
  "solana-instruction-error",
  "solana-logger",
  "solana-pubkey",
@@ -2772,8 +2772,8 @@ dependencies = [
  "solana-define-syscall",
  "solana-example-mocks",
  "solana-frozen-abi",
- "solana-frozen-abi-macro",
- "solana-hash",
+ "solana-frozen-abi-macro 3.0.0",
+ "solana-hash 3.0.0",
  "solana-instruction",
  "solana-program-error",
  "solana-sanitize",
@@ -2794,8 +2794,8 @@ dependencies = [
  "solana-address-lookup-table-interface",
  "solana-clock",
  "solana-frozen-abi",
- "solana-frozen-abi-macro",
- "solana-hash",
+ "solana-frozen-abi-macro 3.0.0",
+ "solana-hash 3.0.0",
  "solana-instruction",
  "solana-instruction-error",
  "solana-pubkey",
@@ -2841,7 +2841,7 @@ dependencies = [
  "blake3",
  "solana-blake3-hasher",
  "solana-define-syscall",
- "solana-hash",
+ "solana-hash 3.0.0",
 ]
 
 [[package]]
@@ -2865,7 +2865,7 @@ dependencies = [
  "serde_with",
  "solana-bls-signatures",
  "solana-frozen-abi",
- "solana-frozen-abi-macro",
+ "solana-frozen-abi-macro 3.0.0",
  "solana-keypair",
  "solana-signature",
  "solana-signer",
@@ -2906,7 +2906,7 @@ dependencies = [
  "solana-account",
  "solana-commitment-config",
  "solana-epoch-info",
- "solana-hash",
+ "solana-hash 3.0.0",
  "solana-instruction",
  "solana-keypair",
  "solana-message",
@@ -2938,8 +2938,8 @@ dependencies = [
  "serde",
  "serde_derive",
  "solana-frozen-abi",
- "solana-frozen-abi-macro",
- "solana-hash",
+ "solana-frozen-abi-macro 3.0.0",
+ "solana-hash 3.0.0",
 ]
 
 [[package]]
@@ -2958,7 +2958,7 @@ dependencies = [
  "serde",
  "serde_derive",
  "solana-frozen-abi",
- "solana-frozen-abi-macro",
+ "solana-frozen-abi-macro 3.0.0",
  "solana-instruction",
  "solana-sdk-ids",
 ]
@@ -3019,8 +3019,8 @@ dependencies = [
  "serde_derive",
  "solana-epoch-rewards",
  "solana-frozen-abi",
- "solana-frozen-abi-macro",
- "solana-hash",
+ "solana-frozen-abi-macro 3.0.0",
+ "solana-hash 3.0.0",
  "solana-sdk-ids",
  "solana-sdk-macro",
  "solana-sysvar-id",
@@ -3032,7 +3032,7 @@ version = "3.0.0"
 dependencies = [
  "siphasher",
  "solana-address",
- "solana-hash",
+ "solana-hash 3.0.0",
 ]
 
 [[package]]
@@ -3044,7 +3044,7 @@ dependencies = [
  "solana-clock",
  "solana-epoch-schedule",
  "solana-frozen-abi",
- "solana-frozen-abi-macro",
+ "solana-frozen-abi-macro 3.0.0",
  "solana-sdk-ids",
  "solana-sdk-macro",
  "solana-sysvar-id",
@@ -3067,7 +3067,7 @@ dependencies = [
  "serde_derive",
  "solana-address-lookup-table-interface",
  "solana-clock",
- "solana-hash",
+ "solana-hash 3.0.0",
  "solana-instruction",
  "solana-keccak-hasher",
  "solana-message",
@@ -3107,7 +3107,7 @@ dependencies = [
  "serde_derive",
  "solana-clock",
  "solana-frozen-abi",
- "solana-frozen-abi-macro",
+ "solana-frozen-abi-macro 3.0.0",
  "solana-logger",
  "static_assertions",
 ]
@@ -3149,7 +3149,7 @@ dependencies = [
  "serde_derive",
  "serde_with",
  "sha2",
- "solana-frozen-abi-macro",
+ "solana-frozen-abi-macro 3.0.0",
  "solana-logger",
  "thiserror 2.0.12",
 ]
@@ -3157,6 +3157,17 @@ dependencies = [
 [[package]]
 name = "solana-frozen-abi-macro"
 version = "3.0.0"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.98",
+]
+
+[[package]]
+name = "solana-frozen-abi-macro"
+version = "3.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "38e4bb0f5232668866a7f6f5cbc3222bbd9eebbff6afe392e3394498e8c9b1fa"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -3178,9 +3189,9 @@ dependencies = [
  "solana-epoch-schedule",
  "solana-fee-calculator",
  "solana-frozen-abi",
- "solana-frozen-abi-macro",
+ "solana-frozen-abi-macro 3.0.0",
  "solana-genesis-config",
- "solana-hash",
+ "solana-hash 3.0.0",
  "solana-inflation",
  "solana-keypair",
  "solana-logger",
@@ -3201,15 +3212,23 @@ dependencies = [
  "serde",
  "serde_derive",
  "solana-frozen-abi",
- "solana-frozen-abi-macro",
+ "solana-frozen-abi-macro 3.0.0",
 ]
 
 [[package]]
 name = "solana-hash"
 version = "3.0.0"
 dependencies = [
+ "solana-hash 4.0.0",
+]
+
+[[package]]
+name = "solana-hash"
+version = "4.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ff2672d370be2deb51fc3cfeca8c8d9327b84e7db9418ad90d190defb6afbe36"
+dependencies = [
  "borsh",
- "bs58",
  "bytemuck",
  "bytemuck_derive",
  "five8",
@@ -3217,7 +3236,7 @@ dependencies = [
  "serde_derive",
  "solana-atomic-u64",
  "solana-frozen-abi",
- "solana-frozen-abi-macro",
+ "solana-frozen-abi-macro 3.0.1",
  "solana-sanitize",
 ]
 
@@ -3228,7 +3247,7 @@ dependencies = [
  "serde",
  "serde_derive",
  "solana-frozen-abi",
- "solana-frozen-abi-macro",
+ "solana-frozen-abi-macro 3.0.0",
 ]
 
 [[package]]
@@ -3241,7 +3260,7 @@ dependencies = [
  "serde_derive",
  "solana-define-syscall",
  "solana-frozen-abi",
- "solana-frozen-abi-macro",
+ "solana-frozen-abi-macro 3.0.0",
  "solana-instruction",
  "solana-instruction-error",
  "solana-pubkey",
@@ -3255,7 +3274,7 @@ dependencies = [
  "serde",
  "serde_derive",
  "solana-frozen-abi",
- "solana-frozen-abi-macro",
+ "solana-frozen-abi-macro 3.0.0",
  "solana-program-error",
 ]
 
@@ -3283,7 +3302,7 @@ version = "3.0.0"
 dependencies = [
  "sha3",
  "solana-define-syscall",
- "solana-hash",
+ "solana-hash 3.0.0",
 ]
 
 [[package]]
@@ -3337,7 +3356,7 @@ dependencies = [
  "serde_bytes",
  "serde_derive",
  "solana-frozen-abi",
- "solana-frozen-abi-macro",
+ "solana-frozen-abi-macro 3.0.0",
  "solana-instruction",
  "solana-loader-v3-interface",
  "solana-pubkey",
@@ -3354,7 +3373,7 @@ dependencies = [
  "serde_bytes",
  "serde_derive",
  "solana-frozen-abi",
- "solana-frozen-abi-macro",
+ "solana-frozen-abi-macro 3.0.0",
  "solana-instruction",
  "solana-loader-v4-interface",
  "solana-pubkey",
@@ -3391,8 +3410,8 @@ dependencies = [
  "solana-address-lookup-table-interface",
  "solana-example-mocks",
  "solana-frozen-abi",
- "solana-frozen-abi-macro",
- "solana-hash",
+ "solana-frozen-abi-macro 3.0.0",
+ "solana-hash 3.0.0",
  "solana-instruction",
  "solana-instruction-error",
  "solana-logger",
@@ -3425,7 +3444,7 @@ dependencies = [
  "serde",
  "serde_derive",
  "solana-fee-calculator",
- "solana-hash",
+ "solana-hash 3.0.0",
  "solana-nonce",
  "solana-pubkey",
  "solana-sha256-hasher",
@@ -3437,7 +3456,7 @@ version = "3.0.0"
 dependencies = [
  "solana-account",
  "solana-fee-calculator",
- "solana-hash",
+ "solana-hash 3.0.0",
  "solana-nonce",
  "solana-pubkey",
  "solana-sdk-ids",
@@ -3448,7 +3467,7 @@ name = "solana-offchain-message"
 version = "3.0.0"
 dependencies = [
  "num_enum",
- "solana-hash",
+ "solana-hash 3.0.0",
  "solana-keypair",
  "solana-offchain-message",
  "solana-packet",
@@ -3489,7 +3508,7 @@ dependencies = [
  "serde_derive",
  "serde_with",
  "solana-frozen-abi",
- "solana-frozen-abi-macro",
+ "solana-frozen-abi-macro 3.0.0",
  "solana-packet",
  "static_assertions",
 ]
@@ -3502,7 +3521,7 @@ dependencies = [
  "serde_derive",
  "solana-clock",
  "solana-frozen-abi",
- "solana-frozen-abi-macro",
+ "solana-frozen-abi-macro 3.0.0",
  "static_assertions",
 ]
 
@@ -3541,8 +3560,8 @@ dependencies = [
  "solana-example-mocks",
  "solana-fee-calculator",
  "solana-frozen-abi",
- "solana-frozen-abi-macro",
- "solana-hash",
+ "solana-frozen-abi-macro 3.0.0",
+ "solana-hash 3.0.0",
  "solana-instruction",
  "solana-instruction-error",
  "solana-instructions-sysvar",
@@ -3650,7 +3669,7 @@ dependencies = [
  "serde_derive",
  "solana-clock",
  "solana-frozen-abi",
- "solana-frozen-abi-macro",
+ "solana-frozen-abi-macro 3.0.0",
  "solana-sdk-ids",
  "solana-sdk-macro",
  "solana-sysvar-id",
@@ -3664,7 +3683,7 @@ dependencies = [
  "serde",
  "serde_derive",
  "solana-frozen-abi",
- "solana-frozen-abi-macro",
+ "solana-frozen-abi-macro 3.0.0",
 ]
 
 [[package]]
@@ -3737,7 +3756,7 @@ dependencies = [
  "js-sys",
  "log",
  "solana-address",
- "solana-hash",
+ "solana-hash 3.0.0",
  "solana-instruction",
  "solana-keypair",
  "solana-message",
@@ -3794,7 +3813,7 @@ dependencies = [
  "rand",
  "solana-define-syscall",
  "solana-frozen-abi",
- "solana-frozen-abi-macro",
+ "solana-frozen-abi-macro 3.0.0",
  "solana-program",
  "thiserror 2.0.12",
 ]
@@ -3864,7 +3883,7 @@ version = "3.0.1"
 dependencies = [
  "sha2",
  "solana-define-syscall",
- "solana-hash",
+ "solana-hash 3.0.0",
  "solana-sha256-hasher",
 ]
 
@@ -3877,7 +3896,7 @@ dependencies = [
  "serde_core",
  "serde_json",
  "solana-frozen-abi",
- "solana-frozen-abi-macro",
+ "solana-frozen-abi-macro 3.0.0",
 ]
 
 [[package]]
@@ -3885,7 +3904,7 @@ name = "solana-shred-version"
 version = "3.0.0"
 dependencies = [
  "solana-hard-forks",
- "solana-hash",
+ "solana-hash 3.0.0",
  "solana-sha256-hasher",
 ]
 
@@ -3906,7 +3925,7 @@ dependencies = [
  "serde_derive",
  "serde_json",
  "solana-frozen-abi",
- "solana-frozen-abi-macro",
+ "solana-frozen-abi-macro 3.0.0",
  "solana-pubkey",
  "solana-sanitize",
  "solana-short-vec",
@@ -3940,7 +3959,7 @@ version = "3.0.0"
 dependencies = [
  "serde",
  "serde_derive",
- "solana-hash",
+ "solana-hash 3.0.0",
  "solana-sdk-ids",
  "solana-sha256-hasher",
  "solana-sysvar-id",
@@ -3980,7 +3999,7 @@ dependencies = [
  "solana-cpi",
  "solana-example-mocks",
  "solana-frozen-abi",
- "solana-frozen-abi-macro",
+ "solana-frozen-abi-macro 3.0.0",
  "solana-instruction",
  "solana-logger",
  "solana-msg",
@@ -3999,7 +4018,7 @@ dependencies = [
 name = "solana-system-transaction"
 version = "3.0.0"
 dependencies = [
- "solana-hash",
+ "solana-hash 3.0.0",
  "solana-keypair",
  "solana-message",
  "solana-pubkey",
@@ -4039,8 +4058,8 @@ dependencies = [
  "solana-example-mocks",
  "solana-fee-calculator",
  "solana-frozen-abi",
- "solana-frozen-abi-macro",
- "solana-hash",
+ "solana-frozen-abi-macro 3.0.0",
+ "solana-hash 3.0.0",
  "solana-instruction",
  "solana-last-restart-slot",
  "solana-msg",
@@ -4083,8 +4102,8 @@ dependencies = [
  "solana-address",
  "solana-example-mocks",
  "solana-frozen-abi",
- "solana-frozen-abi-macro",
- "solana-hash",
+ "solana-frozen-abi-macro 3.0.0",
+ "solana-hash 3.0.0",
  "solana-instruction",
  "solana-instruction-error",
  "solana-keypair",
@@ -4114,7 +4133,7 @@ dependencies = [
  "serde",
  "serde_derive",
  "solana-frozen-abi",
- "solana-frozen-abi-macro",
+ "solana-frozen-abi-macro 3.0.0",
  "solana-instruction-error",
  "solana-sanitize",
 ]
@@ -4140,8 +4159,8 @@ dependencies = [
  "solana-clock",
  "solana-epoch-schedule",
  "solana-frozen-abi",
- "solana-frozen-abi-macro",
- "solana-hash",
+ "solana-frozen-abi-macro 3.0.0",
+ "solana-hash 3.0.0",
  "solana-instruction",
  "solana-instruction-error",
  "solana-logger",

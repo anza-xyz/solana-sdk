@@ -63,6 +63,20 @@ def is_self_dev_dep_with_dev_context_only_utils(package, dependency, wrong_self_
 
     return is_special_cased
 
+# When using the semver trick to make version X compatible with version X + 1,
+# we add a self-dependency on a different major version.
+# This is totally fine from a publishing perspective.
+def is_self_dep_with_different_major(package, dependency):
+    no_explicit_version = '*'
+
+    is_special_cased = False
+    if (dependency['name'] == package['name'] and
+        dependency['req'] != no_explicit_version and
+        dependency['req'].lstrip('^~>=<')[0] != package['version'][0]):
+        is_special_cased = True
+
+    return is_special_cased
+
 
 # `cargo publish` is fine with circular dev-dependencies if
 # they are path deps.
@@ -86,10 +100,12 @@ def should_add(package, dependency, wrong_self_dev_dependencies):
     self_dev_dep_with_dev_context_only_utils = is_self_dev_dep_with_dev_context_only_utils(
         package, dependency, wrong_self_dev_dependencies
     )
+    self_dep_with_different_major = is_self_dep_with_different_major(package, dependency)
     return (
         related_to_solana
         and not self_dev_dep_with_dev_context_only_utils
         and not is_path_dev_dep(dependency)
+        and not self_dep_with_different_major
     )
 
 def get_packages():
