@@ -250,341 +250,340 @@ pub enum InstructionError {
     clippy::redundant_static_lifetimes
 )]
 const _: () = {
+    use std::{fmt::Formatter, marker::PhantomData, string::String};
     #[allow(unused_extern_crates, clippy::useless_attribute)]
     extern crate serde as _serde;
     #[automatically_derived]
     impl<'de> _serde::de::Deserialize<'de> for InstructionError {
-        fn deserialize<__D>(
-            __deserializer: __D,
-        ) -> _serde::__private::Result<InstructionError, __D::Error>
+        fn deserialize<__D>(__deserializer: __D) -> Result<InstructionError, __D::Error>
         where
             __D: _serde::Deserializer<'de>,
         {
-            match _serde::__private::None::<&InstructionError> {
-                _serde::__private::Some(InstructionError::Custom { 0: __v0 }) => {}
-                _serde::__private::Some(InstructionError::BorshIoError { 0: __v0 }) => {}
+            match None::<&InstructionError> {
+                Some(InstructionError::Custom { 0: __v0 }) => {}
+                Some(InstructionError::BorshIoError { 0: __v0 }) => {}
                 _ => {}
             }
-            match _serde::__private::None {
-                _serde::__private::Some(()) => {
+            match None {
+                Some(()) => {
                     let _ = InstructionError::GenericError;
                 }
                 _ => {}
             }
-            match _serde::__private::None {
-                _serde::__private::Some(()) => {
+            match None {
+                Some(()) => {
                     let _ = InstructionError::InvalidArgument;
                 }
                 _ => {}
             }
-            match _serde::__private::None {
-                _serde::__private::Some(()) => {
+            match None {
+                Some(()) => {
                     let _ = InstructionError::InvalidInstructionData;
                 }
                 _ => {}
             }
-            match _serde::__private::None {
-                _serde::__private::Some(()) => {
+            match None {
+                Some(()) => {
                     let _ = InstructionError::InvalidAccountData;
                 }
                 _ => {}
             }
-            match _serde::__private::None {
-                _serde::__private::Some(()) => {
+            match None {
+                Some(()) => {
                     let _ = InstructionError::AccountDataTooSmall;
                 }
                 _ => {}
             }
-            match _serde::__private::None {
-                _serde::__private::Some(()) => {
+            match None {
+                Some(()) => {
                     let _ = InstructionError::InsufficientFunds;
                 }
                 _ => {}
             }
-            match _serde::__private::None {
-                _serde::__private::Some(()) => {
+            match None {
+                Some(()) => {
                     let _ = InstructionError::IncorrectProgramId;
                 }
                 _ => {}
             }
-            match _serde::__private::None {
-                _serde::__private::Some(()) => {
+            match None {
+                Some(()) => {
                     let _ = InstructionError::MissingRequiredSignature;
                 }
                 _ => {}
             }
-            match _serde::__private::None {
-                _serde::__private::Some(()) => {
+            match None {
+                Some(()) => {
                     let _ = InstructionError::AccountAlreadyInitialized;
                 }
                 _ => {}
             }
-            match _serde::__private::None {
-                _serde::__private::Some(()) => {
+            match None {
+                Some(()) => {
                     let _ = InstructionError::UninitializedAccount;
                 }
                 _ => {}
             }
-            match _serde::__private::None {
-                _serde::__private::Some(()) => {
+            match None {
+                Some(()) => {
                     let _ = InstructionError::UnbalancedInstruction;
                 }
                 _ => {}
             }
-            match _serde::__private::None {
-                _serde::__private::Some(()) => {
+            match None {
+                Some(()) => {
                     let _ = InstructionError::ModifiedProgramId;
                 }
                 _ => {}
             }
-            match _serde::__private::None {
-                _serde::__private::Some(()) => {
+            match None {
+                Some(()) => {
                     let _ = InstructionError::ExternalAccountLamportSpend;
                 }
                 _ => {}
             }
-            match _serde::__private::None {
-                _serde::__private::Some(()) => {
+            match None {
+                Some(()) => {
                     let _ = InstructionError::ExternalAccountDataModified;
                 }
                 _ => {}
             }
-            match _serde::__private::None {
-                _serde::__private::Some(()) => {
+            match None {
+                Some(()) => {
                     let _ = InstructionError::ReadonlyLamportChange;
                 }
                 _ => {}
             }
-            match _serde::__private::None {
-                _serde::__private::Some(()) => {
+            match None {
+                Some(()) => {
                     let _ = InstructionError::ReadonlyDataModified;
                 }
                 _ => {}
             }
-            match _serde::__private::None {
-                _serde::__private::Some(()) => {
+            match None {
+                Some(()) => {
                     let _ = InstructionError::DuplicateAccountIndex;
                 }
                 _ => {}
             }
-            match _serde::__private::None {
-                _serde::__private::Some(()) => {
+            match None {
+                Some(()) => {
                     let _ = InstructionError::ExecutableModified;
                 }
                 _ => {}
             }
-            match _serde::__private::None {
-                _serde::__private::Some(()) => {
+            match None {
+                Some(()) => {
                     let _ = InstructionError::RentEpochModified;
                 }
                 _ => {}
             }
-            match _serde::__private::None {
-                _serde::__private::Some(()) => {
+            match None {
+                Some(()) => {
                     let _ = InstructionError::NotEnoughAccountKeys;
                 }
                 _ => {}
             }
-            match _serde::__private::None {
-                _serde::__private::Some(()) => {
+            match None {
+                Some(()) => {
                     let _ = InstructionError::AccountDataSizeChanged;
                 }
                 _ => {}
             }
-            match _serde::__private::None {
-                _serde::__private::Some(()) => {
+            match None {
+                Some(()) => {
                     let _ = InstructionError::AccountNotExecutable;
                 }
                 _ => {}
             }
-            match _serde::__private::None {
-                _serde::__private::Some(()) => {
+            match None {
+                Some(()) => {
                     let _ = InstructionError::AccountBorrowFailed;
                 }
                 _ => {}
             }
-            match _serde::__private::None {
-                _serde::__private::Some(()) => {
+            match None {
+                Some(()) => {
                     let _ = InstructionError::AccountBorrowOutstanding;
                 }
                 _ => {}
             }
-            match _serde::__private::None {
-                _serde::__private::Some(()) => {
+            match None {
+                Some(()) => {
                     let _ = InstructionError::DuplicateAccountOutOfSync;
                 }
                 _ => {}
             }
-            match _serde::__private::None {
-                _serde::__private::Some((__v0,)) => {
+            match None {
+                Some((__v0,)) => {
                     let _ = InstructionError::Custom(__v0);
                 }
                 _ => {}
             }
-            match _serde::__private::None {
-                _serde::__private::Some(()) => {
+            match None {
+                Some(()) => {
                     let _ = InstructionError::InvalidError;
                 }
                 _ => {}
             }
-            match _serde::__private::None {
-                _serde::__private::Some(()) => {
+            match None {
+                Some(()) => {
                     let _ = InstructionError::ExecutableDataModified;
                 }
                 _ => {}
             }
-            match _serde::__private::None {
-                _serde::__private::Some(()) => {
+            match None {
+                Some(()) => {
                     let _ = InstructionError::ExecutableLamportChange;
                 }
                 _ => {}
             }
-            match _serde::__private::None {
-                _serde::__private::Some(()) => {
+            match None {
+                Some(()) => {
                     let _ = InstructionError::ExecutableAccountNotRentExempt;
                 }
                 _ => {}
             }
-            match _serde::__private::None {
-                _serde::__private::Some(()) => {
+            match None {
+                Some(()) => {
                     let _ = InstructionError::UnsupportedProgramId;
                 }
                 _ => {}
             }
-            match _serde::__private::None {
-                _serde::__private::Some(()) => {
+            match None {
+                Some(()) => {
                     let _ = InstructionError::CallDepth;
                 }
                 _ => {}
             }
-            match _serde::__private::None {
-                _serde::__private::Some(()) => {
+            match None {
+                Some(()) => {
                     let _ = InstructionError::MissingAccount;
                 }
                 _ => {}
             }
-            match _serde::__private::None {
-                _serde::__private::Some(()) => {
+            match None {
+                Some(()) => {
                     let _ = InstructionError::ReentrancyNotAllowed;
                 }
                 _ => {}
             }
-            match _serde::__private::None {
-                _serde::__private::Some(()) => {
+            match None {
+                Some(()) => {
                     let _ = InstructionError::MaxSeedLengthExceeded;
                 }
                 _ => {}
             }
-            match _serde::__private::None {
-                _serde::__private::Some(()) => {
+            match None {
+                Some(()) => {
                     let _ = InstructionError::InvalidSeeds;
                 }
                 _ => {}
             }
-            match _serde::__private::None {
-                _serde::__private::Some(()) => {
+            match None {
+                Some(()) => {
                     let _ = InstructionError::InvalidRealloc;
                 }
                 _ => {}
             }
-            match _serde::__private::None {
-                _serde::__private::Some(()) => {
+            match None {
+                Some(()) => {
                     let _ = InstructionError::ComputationalBudgetExceeded;
                 }
                 _ => {}
             }
-            match _serde::__private::None {
-                _serde::__private::Some(()) => {
+            match None {
+                Some(()) => {
                     let _ = InstructionError::PrivilegeEscalation;
                 }
                 _ => {}
             }
-            match _serde::__private::None {
-                _serde::__private::Some(()) => {
+            match None {
+                Some(()) => {
                     let _ = InstructionError::ProgramEnvironmentSetupFailure;
                 }
                 _ => {}
             }
-            match _serde::__private::None {
-                _serde::__private::Some(()) => {
+            match None {
+                Some(()) => {
                     let _ = InstructionError::ProgramFailedToComplete;
                 }
                 _ => {}
             }
-            match _serde::__private::None {
-                _serde::__private::Some(()) => {
+            match None {
+                Some(()) => {
                     let _ = InstructionError::ProgramFailedToCompile;
                 }
                 _ => {}
             }
-            match _serde::__private::None {
-                _serde::__private::Some(()) => {
+            match None {
+                Some(()) => {
                     let _ = InstructionError::Immutable;
                 }
                 _ => {}
             }
-            match _serde::__private::None {
-                _serde::__private::Some(()) => {
+            match None {
+                Some(()) => {
                     let _ = InstructionError::IncorrectAuthority;
                 }
                 _ => {}
             }
-            match _serde::__private::None {
-                _serde::__private::Some((__v0,)) => {
+            match None {
+                Some((__v0,)) => {
                     let _ = InstructionError::BorshIoError(__v0);
                 }
                 _ => {}
             }
-            match _serde::__private::None {
-                _serde::__private::Some(()) => {
+            match None {
+                Some(()) => {
                     let _ = InstructionError::AccountNotRentExempt;
                 }
                 _ => {}
             }
-            match _serde::__private::None {
-                _serde::__private::Some(()) => {
+            match None {
+                Some(()) => {
                     let _ = InstructionError::InvalidAccountOwner;
                 }
                 _ => {}
             }
-            match _serde::__private::None {
-                _serde::__private::Some(()) => {
+            match None {
+                Some(()) => {
                     let _ = InstructionError::ArithmeticOverflow;
                 }
                 _ => {}
             }
-            match _serde::__private::None {
-                _serde::__private::Some(()) => {
+            match None {
+                Some(()) => {
                     let _ = InstructionError::UnsupportedSysvar;
                 }
                 _ => {}
             }
-            match _serde::__private::None {
-                _serde::__private::Some(()) => {
+            match None {
+                Some(()) => {
                     let _ = InstructionError::IllegalOwner;
                 }
                 _ => {}
             }
-            match _serde::__private::None {
-                _serde::__private::Some(()) => {
+            match None {
+                Some(()) => {
                     let _ = InstructionError::MaxAccountsDataAllocationsExceeded;
                 }
                 _ => {}
             }
-            match _serde::__private::None {
-                _serde::__private::Some(()) => {
+            match None {
+                Some(()) => {
                     let _ = InstructionError::MaxAccountsExceeded;
                 }
                 _ => {}
             }
-            match _serde::__private::None {
-                _serde::__private::Some(()) => {
+            match None {
+                Some(()) => {
                     let _ = InstructionError::MaxInstructionTraceLengthExceeded;
                 }
                 _ => {}
             }
-            match _serde::__private::None {
-                _serde::__private::Some(()) => {
+            match None {
+                Some(()) => {
                     let _ = InstructionError::BuiltinProgramsMustConsumeComputeUnits;
                 }
                 _ => {}
@@ -652,231 +651,198 @@ const _: () = {
             #[automatically_derived]
             impl<'de> _serde::de::Visitor<'de> for __FieldVisitor {
                 type Value = __Field;
-                fn expecting(
-                    &self,
-                    __formatter: &mut _serde::__private::Formatter,
-                ) -> _serde::__private::fmt::Result {
-                    _serde::__private::Formatter::write_str(__formatter, "variant identifier")
+                fn expecting(&self, __formatter: &mut Formatter) -> fmt::Result {
+                    Formatter::write_str(__formatter, "variant identifier")
                 }
-                fn visit_u64<__E>(self, __value: u64) -> _serde::__private::Result<Self::Value, __E>
+                fn visit_u64<__E>(self, __value: u64) -> Result<Self::Value, __E>
                 where
                     __E: _serde::de::Error,
                 {
                     match __value {
-                        0u64 => _serde::__private::Ok(__Field::__field0),
-                        1u64 => _serde::__private::Ok(__Field::__field1),
-                        2u64 => _serde::__private::Ok(__Field::__field2),
-                        3u64 => _serde::__private::Ok(__Field::__field3),
-                        4u64 => _serde::__private::Ok(__Field::__field4),
-                        5u64 => _serde::__private::Ok(__Field::__field5),
-                        6u64 => _serde::__private::Ok(__Field::__field6),
-                        7u64 => _serde::__private::Ok(__Field::__field7),
-                        8u64 => _serde::__private::Ok(__Field::__field8),
-                        9u64 => _serde::__private::Ok(__Field::__field9),
-                        10u64 => _serde::__private::Ok(__Field::__field10),
-                        11u64 => _serde::__private::Ok(__Field::__field11),
-                        12u64 => _serde::__private::Ok(__Field::__field12),
-                        13u64 => _serde::__private::Ok(__Field::__field13),
-                        14u64 => _serde::__private::Ok(__Field::__field14),
-                        15u64 => _serde::__private::Ok(__Field::__field15),
-                        16u64 => _serde::__private::Ok(__Field::__field16),
-                        17u64 => _serde::__private::Ok(__Field::__field17),
-                        18u64 => _serde::__private::Ok(__Field::__field18),
-                        19u64 => _serde::__private::Ok(__Field::__field19),
-                        20u64 => _serde::__private::Ok(__Field::__field20),
-                        21u64 => _serde::__private::Ok(__Field::__field21),
-                        22u64 => _serde::__private::Ok(__Field::__field22),
-                        23u64 => _serde::__private::Ok(__Field::__field23),
-                        24u64 => _serde::__private::Ok(__Field::__field24),
-                        25u64 => _serde::__private::Ok(__Field::__field25),
-                        26u64 => _serde::__private::Ok(__Field::__field26),
-                        27u64 => _serde::__private::Ok(__Field::__field27),
-                        28u64 => _serde::__private::Ok(__Field::__field28),
-                        29u64 => _serde::__private::Ok(__Field::__field29),
-                        30u64 => _serde::__private::Ok(__Field::__field30),
-                        31u64 => _serde::__private::Ok(__Field::__field31),
-                        32u64 => _serde::__private::Ok(__Field::__field32),
-                        33u64 => _serde::__private::Ok(__Field::__field33),
-                        34u64 => _serde::__private::Ok(__Field::__field34),
-                        35u64 => _serde::__private::Ok(__Field::__field35),
-                        36u64 => _serde::__private::Ok(__Field::__field36),
-                        37u64 => _serde::__private::Ok(__Field::__field37),
-                        38u64 => _serde::__private::Ok(__Field::__field38),
-                        39u64 => _serde::__private::Ok(__Field::__field39),
-                        40u64 => _serde::__private::Ok(__Field::__field40),
-                        41u64 => _serde::__private::Ok(__Field::__field41),
-                        42u64 => _serde::__private::Ok(__Field::__field42),
-                        43u64 => _serde::__private::Ok(__Field::__field43),
-                        44u64 => _serde::__private::Ok(__Field::__field44),
-                        45u64 => _serde::__private::Ok(__Field::__field45),
-                        46u64 => _serde::__private::Ok(__Field::__field46),
-                        47u64 => _serde::__private::Ok(__Field::__field47),
-                        48u64 => _serde::__private::Ok(__Field::__field48),
-                        49u64 => _serde::__private::Ok(__Field::__field49),
-                        50u64 => _serde::__private::Ok(__Field::__field50),
-                        51u64 => _serde::__private::Ok(__Field::__field51),
-                        52u64 => _serde::__private::Ok(__Field::__field52),
-                        53u64 => _serde::__private::Ok(__Field::__field53),
-                        _ => _serde::__private::Err(_serde::de::Error::invalid_value(
+                        0u64 => Ok(__Field::__field0),
+                        1u64 => Ok(__Field::__field1),
+                        2u64 => Ok(__Field::__field2),
+                        3u64 => Ok(__Field::__field3),
+                        4u64 => Ok(__Field::__field4),
+                        5u64 => Ok(__Field::__field5),
+                        6u64 => Ok(__Field::__field6),
+                        7u64 => Ok(__Field::__field7),
+                        8u64 => Ok(__Field::__field8),
+                        9u64 => Ok(__Field::__field9),
+                        10u64 => Ok(__Field::__field10),
+                        11u64 => Ok(__Field::__field11),
+                        12u64 => Ok(__Field::__field12),
+                        13u64 => Ok(__Field::__field13),
+                        14u64 => Ok(__Field::__field14),
+                        15u64 => Ok(__Field::__field15),
+                        16u64 => Ok(__Field::__field16),
+                        17u64 => Ok(__Field::__field17),
+                        18u64 => Ok(__Field::__field18),
+                        19u64 => Ok(__Field::__field19),
+                        20u64 => Ok(__Field::__field20),
+                        21u64 => Ok(__Field::__field21),
+                        22u64 => Ok(__Field::__field22),
+                        23u64 => Ok(__Field::__field23),
+                        24u64 => Ok(__Field::__field24),
+                        25u64 => Ok(__Field::__field25),
+                        26u64 => Ok(__Field::__field26),
+                        27u64 => Ok(__Field::__field27),
+                        28u64 => Ok(__Field::__field28),
+                        29u64 => Ok(__Field::__field29),
+                        30u64 => Ok(__Field::__field30),
+                        31u64 => Ok(__Field::__field31),
+                        32u64 => Ok(__Field::__field32),
+                        33u64 => Ok(__Field::__field33),
+                        34u64 => Ok(__Field::__field34),
+                        35u64 => Ok(__Field::__field35),
+                        36u64 => Ok(__Field::__field36),
+                        37u64 => Ok(__Field::__field37),
+                        38u64 => Ok(__Field::__field38),
+                        39u64 => Ok(__Field::__field39),
+                        40u64 => Ok(__Field::__field40),
+                        41u64 => Ok(__Field::__field41),
+                        42u64 => Ok(__Field::__field42),
+                        43u64 => Ok(__Field::__field43),
+                        44u64 => Ok(__Field::__field44),
+                        45u64 => Ok(__Field::__field45),
+                        46u64 => Ok(__Field::__field46),
+                        47u64 => Ok(__Field::__field47),
+                        48u64 => Ok(__Field::__field48),
+                        49u64 => Ok(__Field::__field49),
+                        50u64 => Ok(__Field::__field50),
+                        51u64 => Ok(__Field::__field51),
+                        52u64 => Ok(__Field::__field52),
+                        53u64 => Ok(__Field::__field53),
+                        _ => Err(_serde::de::Error::invalid_value(
                             _serde::de::Unexpected::Unsigned(__value),
                             &"variant index 0 <= i < 54",
                         )),
                     }
                 }
-                fn visit_str<__E>(
-                    self,
-                    __value: &str,
-                ) -> _serde::__private::Result<Self::Value, __E>
+                fn visit_str<__E>(self, __value: &str) -> Result<Self::Value, __E>
                 where
                     __E: _serde::de::Error,
                 {
                     match __value {
-                        "GenericError" => _serde::__private::Ok(__Field::__field0),
-                        "InvalidArgument" => _serde::__private::Ok(__Field::__field1),
-                        "InvalidInstructionData" => _serde::__private::Ok(__Field::__field2),
-                        "InvalidAccountData" => _serde::__private::Ok(__Field::__field3),
-                        "AccountDataTooSmall" => _serde::__private::Ok(__Field::__field4),
-                        "InsufficientFunds" => _serde::__private::Ok(__Field::__field5),
-                        "IncorrectProgramId" => _serde::__private::Ok(__Field::__field6),
-                        "MissingRequiredSignature" => _serde::__private::Ok(__Field::__field7),
-                        "AccountAlreadyInitialized" => _serde::__private::Ok(__Field::__field8),
-                        "UninitializedAccount" => _serde::__private::Ok(__Field::__field9),
-                        "UnbalancedInstruction" => _serde::__private::Ok(__Field::__field10),
-                        "ModifiedProgramId" => _serde::__private::Ok(__Field::__field11),
-                        "ExternalAccountLamportSpend" => _serde::__private::Ok(__Field::__field12),
-                        "ExternalAccountDataModified" => _serde::__private::Ok(__Field::__field13),
-                        "ReadonlyLamportChange" => _serde::__private::Ok(__Field::__field14),
-                        "ReadonlyDataModified" => _serde::__private::Ok(__Field::__field15),
-                        "DuplicateAccountIndex" => _serde::__private::Ok(__Field::__field16),
-                        "ExecutableModified" => _serde::__private::Ok(__Field::__field17),
-                        "RentEpochModified" => _serde::__private::Ok(__Field::__field18),
-                        "NotEnoughAccountKeys" => _serde::__private::Ok(__Field::__field19),
-                        "AccountDataSizeChanged" => _serde::__private::Ok(__Field::__field20),
-                        "AccountNotExecutable" => _serde::__private::Ok(__Field::__field21),
-                        "AccountBorrowFailed" => _serde::__private::Ok(__Field::__field22),
-                        "AccountBorrowOutstanding" => _serde::__private::Ok(__Field::__field23),
-                        "DuplicateAccountOutOfSync" => _serde::__private::Ok(__Field::__field24),
-                        "Custom" => _serde::__private::Ok(__Field::__field25),
-                        "InvalidError" => _serde::__private::Ok(__Field::__field26),
-                        "ExecutableDataModified" => _serde::__private::Ok(__Field::__field27),
-                        "ExecutableLamportChange" => _serde::__private::Ok(__Field::__field28),
-                        "ExecutableAccountNotRentExempt" => {
-                            _serde::__private::Ok(__Field::__field29)
-                        }
-                        "UnsupportedProgramId" => _serde::__private::Ok(__Field::__field30),
-                        "CallDepth" => _serde::__private::Ok(__Field::__field31),
-                        "MissingAccount" => _serde::__private::Ok(__Field::__field32),
-                        "ReentrancyNotAllowed" => _serde::__private::Ok(__Field::__field33),
-                        "MaxSeedLengthExceeded" => _serde::__private::Ok(__Field::__field34),
-                        "InvalidSeeds" => _serde::__private::Ok(__Field::__field35),
-                        "InvalidRealloc" => _serde::__private::Ok(__Field::__field36),
-                        "ComputationalBudgetExceeded" => _serde::__private::Ok(__Field::__field37),
-                        "PrivilegeEscalation" => _serde::__private::Ok(__Field::__field38),
-                        "ProgramEnvironmentSetupFailure" => {
-                            _serde::__private::Ok(__Field::__field39)
-                        }
-                        "ProgramFailedToComplete" => _serde::__private::Ok(__Field::__field40),
-                        "ProgramFailedToCompile" => _serde::__private::Ok(__Field::__field41),
-                        "Immutable" => _serde::__private::Ok(__Field::__field42),
-                        "IncorrectAuthority" => _serde::__private::Ok(__Field::__field43),
-                        "BorshIoError" => _serde::__private::Ok(__Field::__field44),
-                        "AccountNotRentExempt" => _serde::__private::Ok(__Field::__field45),
-                        "InvalidAccountOwner" => _serde::__private::Ok(__Field::__field46),
-                        "ArithmeticOverflow" => _serde::__private::Ok(__Field::__field47),
-                        "UnsupportedSysvar" => _serde::__private::Ok(__Field::__field48),
-                        "IllegalOwner" => _serde::__private::Ok(__Field::__field49),
-                        "MaxAccountsDataAllocationsExceeded" => {
-                            _serde::__private::Ok(__Field::__field50)
-                        }
-                        "MaxAccountsExceeded" => _serde::__private::Ok(__Field::__field51),
-                        "MaxInstructionTraceLengthExceeded" => {
-                            _serde::__private::Ok(__Field::__field52)
-                        }
-                        "BuiltinProgramsMustConsumeComputeUnits" => {
-                            _serde::__private::Ok(__Field::__field53)
-                        }
-                        _ => _serde::__private::Err(_serde::de::Error::unknown_variant(
-                            __value, VARIANTS,
-                        )),
+                        "GenericError" => Ok(__Field::__field0),
+                        "InvalidArgument" => Ok(__Field::__field1),
+                        "InvalidInstructionData" => Ok(__Field::__field2),
+                        "InvalidAccountData" => Ok(__Field::__field3),
+                        "AccountDataTooSmall" => Ok(__Field::__field4),
+                        "InsufficientFunds" => Ok(__Field::__field5),
+                        "IncorrectProgramId" => Ok(__Field::__field6),
+                        "MissingRequiredSignature" => Ok(__Field::__field7),
+                        "AccountAlreadyInitialized" => Ok(__Field::__field8),
+                        "UninitializedAccount" => Ok(__Field::__field9),
+                        "UnbalancedInstruction" => Ok(__Field::__field10),
+                        "ModifiedProgramId" => Ok(__Field::__field11),
+                        "ExternalAccountLamportSpend" => Ok(__Field::__field12),
+                        "ExternalAccountDataModified" => Ok(__Field::__field13),
+                        "ReadonlyLamportChange" => Ok(__Field::__field14),
+                        "ReadonlyDataModified" => Ok(__Field::__field15),
+                        "DuplicateAccountIndex" => Ok(__Field::__field16),
+                        "ExecutableModified" => Ok(__Field::__field17),
+                        "RentEpochModified" => Ok(__Field::__field18),
+                        "NotEnoughAccountKeys" => Ok(__Field::__field19),
+                        "AccountDataSizeChanged" => Ok(__Field::__field20),
+                        "AccountNotExecutable" => Ok(__Field::__field21),
+                        "AccountBorrowFailed" => Ok(__Field::__field22),
+                        "AccountBorrowOutstanding" => Ok(__Field::__field23),
+                        "DuplicateAccountOutOfSync" => Ok(__Field::__field24),
+                        "Custom" => Ok(__Field::__field25),
+                        "InvalidError" => Ok(__Field::__field26),
+                        "ExecutableDataModified" => Ok(__Field::__field27),
+                        "ExecutableLamportChange" => Ok(__Field::__field28),
+                        "ExecutableAccountNotRentExempt" => Ok(__Field::__field29),
+                        "UnsupportedProgramId" => Ok(__Field::__field30),
+                        "CallDepth" => Ok(__Field::__field31),
+                        "MissingAccount" => Ok(__Field::__field32),
+                        "ReentrancyNotAllowed" => Ok(__Field::__field33),
+                        "MaxSeedLengthExceeded" => Ok(__Field::__field34),
+                        "InvalidSeeds" => Ok(__Field::__field35),
+                        "InvalidRealloc" => Ok(__Field::__field36),
+                        "ComputationalBudgetExceeded" => Ok(__Field::__field37),
+                        "PrivilegeEscalation" => Ok(__Field::__field38),
+                        "ProgramEnvironmentSetupFailure" => Ok(__Field::__field39),
+                        "ProgramFailedToComplete" => Ok(__Field::__field40),
+                        "ProgramFailedToCompile" => Ok(__Field::__field41),
+                        "Immutable" => Ok(__Field::__field42),
+                        "IncorrectAuthority" => Ok(__Field::__field43),
+                        "BorshIoError" => Ok(__Field::__field44),
+                        "AccountNotRentExempt" => Ok(__Field::__field45),
+                        "InvalidAccountOwner" => Ok(__Field::__field46),
+                        "ArithmeticOverflow" => Ok(__Field::__field47),
+                        "UnsupportedSysvar" => Ok(__Field::__field48),
+                        "IllegalOwner" => Ok(__Field::__field49),
+                        "MaxAccountsDataAllocationsExceeded" => Ok(__Field::__field50),
+                        "MaxAccountsExceeded" => Ok(__Field::__field51),
+                        "MaxInstructionTraceLengthExceeded" => Ok(__Field::__field52),
+                        "BuiltinProgramsMustConsumeComputeUnits" => Ok(__Field::__field53),
+                        _ => Err(_serde::de::Error::unknown_variant(__value, VARIANTS)),
                     }
                 }
-                fn visit_bytes<__E>(
-                    self,
-                    __value: &[u8],
-                ) -> _serde::__private::Result<Self::Value, __E>
+                fn visit_bytes<__E>(self, __value: &[u8]) -> Result<Self::Value, __E>
                 where
                     __E: _serde::de::Error,
                 {
                     match __value {
-                        b"GenericError" => _serde::__private::Ok(__Field::__field0),
-                        b"InvalidArgument" => _serde::__private::Ok(__Field::__field1),
-                        b"InvalidInstructionData" => _serde::__private::Ok(__Field::__field2),
-                        b"InvalidAccountData" => _serde::__private::Ok(__Field::__field3),
-                        b"AccountDataTooSmall" => _serde::__private::Ok(__Field::__field4),
-                        b"InsufficientFunds" => _serde::__private::Ok(__Field::__field5),
-                        b"IncorrectProgramId" => _serde::__private::Ok(__Field::__field6),
-                        b"MissingRequiredSignature" => _serde::__private::Ok(__Field::__field7),
-                        b"AccountAlreadyInitialized" => _serde::__private::Ok(__Field::__field8),
-                        b"UninitializedAccount" => _serde::__private::Ok(__Field::__field9),
-                        b"UnbalancedInstruction" => _serde::__private::Ok(__Field::__field10),
-                        b"ModifiedProgramId" => _serde::__private::Ok(__Field::__field11),
-                        b"ExternalAccountLamportSpend" => _serde::__private::Ok(__Field::__field12),
-                        b"ExternalAccountDataModified" => _serde::__private::Ok(__Field::__field13),
-                        b"ReadonlyLamportChange" => _serde::__private::Ok(__Field::__field14),
-                        b"ReadonlyDataModified" => _serde::__private::Ok(__Field::__field15),
-                        b"DuplicateAccountIndex" => _serde::__private::Ok(__Field::__field16),
-                        b"ExecutableModified" => _serde::__private::Ok(__Field::__field17),
-                        b"RentEpochModified" => _serde::__private::Ok(__Field::__field18),
-                        b"NotEnoughAccountKeys" => _serde::__private::Ok(__Field::__field19),
-                        b"AccountDataSizeChanged" => _serde::__private::Ok(__Field::__field20),
-                        b"AccountNotExecutable" => _serde::__private::Ok(__Field::__field21),
-                        b"AccountBorrowFailed" => _serde::__private::Ok(__Field::__field22),
-                        b"AccountBorrowOutstanding" => _serde::__private::Ok(__Field::__field23),
-                        b"DuplicateAccountOutOfSync" => _serde::__private::Ok(__Field::__field24),
-                        b"Custom" => _serde::__private::Ok(__Field::__field25),
-                        b"InvalidError" => _serde::__private::Ok(__Field::__field26),
-                        b"ExecutableDataModified" => _serde::__private::Ok(__Field::__field27),
-                        b"ExecutableLamportChange" => _serde::__private::Ok(__Field::__field28),
-                        b"ExecutableAccountNotRentExempt" => {
-                            _serde::__private::Ok(__Field::__field29)
-                        }
-                        b"UnsupportedProgramId" => _serde::__private::Ok(__Field::__field30),
-                        b"CallDepth" => _serde::__private::Ok(__Field::__field31),
-                        b"MissingAccount" => _serde::__private::Ok(__Field::__field32),
-                        b"ReentrancyNotAllowed" => _serde::__private::Ok(__Field::__field33),
-                        b"MaxSeedLengthExceeded" => _serde::__private::Ok(__Field::__field34),
-                        b"InvalidSeeds" => _serde::__private::Ok(__Field::__field35),
-                        b"InvalidRealloc" => _serde::__private::Ok(__Field::__field36),
-                        b"ComputationalBudgetExceeded" => _serde::__private::Ok(__Field::__field37),
-                        b"PrivilegeEscalation" => _serde::__private::Ok(__Field::__field38),
-                        b"ProgramEnvironmentSetupFailure" => {
-                            _serde::__private::Ok(__Field::__field39)
-                        }
-                        b"ProgramFailedToComplete" => _serde::__private::Ok(__Field::__field40),
-                        b"ProgramFailedToCompile" => _serde::__private::Ok(__Field::__field41),
-                        b"Immutable" => _serde::__private::Ok(__Field::__field42),
-                        b"IncorrectAuthority" => _serde::__private::Ok(__Field::__field43),
-                        b"BorshIoError" => _serde::__private::Ok(__Field::__field44),
-                        b"AccountNotRentExempt" => _serde::__private::Ok(__Field::__field45),
-                        b"InvalidAccountOwner" => _serde::__private::Ok(__Field::__field46),
-                        b"ArithmeticOverflow" => _serde::__private::Ok(__Field::__field47),
-                        b"UnsupportedSysvar" => _serde::__private::Ok(__Field::__field48),
-                        b"IllegalOwner" => _serde::__private::Ok(__Field::__field49),
-                        b"MaxAccountsDataAllocationsExceeded" => {
-                            _serde::__private::Ok(__Field::__field50)
-                        }
-                        b"MaxAccountsExceeded" => _serde::__private::Ok(__Field::__field51),
-                        b"MaxInstructionTraceLengthExceeded" => {
-                            _serde::__private::Ok(__Field::__field52)
-                        }
-                        b"BuiltinProgramsMustConsumeComputeUnits" => {
-                            _serde::__private::Ok(__Field::__field53)
-                        }
+                        b"GenericError" => Ok(__Field::__field0),
+                        b"InvalidArgument" => Ok(__Field::__field1),
+                        b"InvalidInstructionData" => Ok(__Field::__field2),
+                        b"InvalidAccountData" => Ok(__Field::__field3),
+                        b"AccountDataTooSmall" => Ok(__Field::__field4),
+                        b"InsufficientFunds" => Ok(__Field::__field5),
+                        b"IncorrectProgramId" => Ok(__Field::__field6),
+                        b"MissingRequiredSignature" => Ok(__Field::__field7),
+                        b"AccountAlreadyInitialized" => Ok(__Field::__field8),
+                        b"UninitializedAccount" => Ok(__Field::__field9),
+                        b"UnbalancedInstruction" => Ok(__Field::__field10),
+                        b"ModifiedProgramId" => Ok(__Field::__field11),
+                        b"ExternalAccountLamportSpend" => Ok(__Field::__field12),
+                        b"ExternalAccountDataModified" => Ok(__Field::__field13),
+                        b"ReadonlyLamportChange" => Ok(__Field::__field14),
+                        b"ReadonlyDataModified" => Ok(__Field::__field15),
+                        b"DuplicateAccountIndex" => Ok(__Field::__field16),
+                        b"ExecutableModified" => Ok(__Field::__field17),
+                        b"RentEpochModified" => Ok(__Field::__field18),
+                        b"NotEnoughAccountKeys" => Ok(__Field::__field19),
+                        b"AccountDataSizeChanged" => Ok(__Field::__field20),
+                        b"AccountNotExecutable" => Ok(__Field::__field21),
+                        b"AccountBorrowFailed" => Ok(__Field::__field22),
+                        b"AccountBorrowOutstanding" => Ok(__Field::__field23),
+                        b"DuplicateAccountOutOfSync" => Ok(__Field::__field24),
+                        b"Custom" => Ok(__Field::__field25),
+                        b"InvalidError" => Ok(__Field::__field26),
+                        b"ExecutableDataModified" => Ok(__Field::__field27),
+                        b"ExecutableLamportChange" => Ok(__Field::__field28),
+                        b"ExecutableAccountNotRentExempt" => Ok(__Field::__field29),
+                        b"UnsupportedProgramId" => Ok(__Field::__field30),
+                        b"CallDepth" => Ok(__Field::__field31),
+                        b"MissingAccount" => Ok(__Field::__field32),
+                        b"ReentrancyNotAllowed" => Ok(__Field::__field33),
+                        b"MaxSeedLengthExceeded" => Ok(__Field::__field34),
+                        b"InvalidSeeds" => Ok(__Field::__field35),
+                        b"InvalidRealloc" => Ok(__Field::__field36),
+                        b"ComputationalBudgetExceeded" => Ok(__Field::__field37),
+                        b"PrivilegeEscalation" => Ok(__Field::__field38),
+                        b"ProgramEnvironmentSetupFailure" => Ok(__Field::__field39),
+                        b"ProgramFailedToComplete" => Ok(__Field::__field40),
+                        b"ProgramFailedToCompile" => Ok(__Field::__field41),
+                        b"Immutable" => Ok(__Field::__field42),
+                        b"IncorrectAuthority" => Ok(__Field::__field43),
+                        b"BorshIoError" => Ok(__Field::__field44),
+                        b"AccountNotRentExempt" => Ok(__Field::__field45),
+                        b"InvalidAccountOwner" => Ok(__Field::__field46),
+                        b"ArithmeticOverflow" => Ok(__Field::__field47),
+                        b"UnsupportedSysvar" => Ok(__Field::__field48),
+                        b"IllegalOwner" => Ok(__Field::__field49),
+                        b"MaxAccountsDataAllocationsExceeded" => Ok(__Field::__field50),
+                        b"MaxAccountsExceeded" => Ok(__Field::__field51),
+                        b"MaxInstructionTraceLengthExceeded" => Ok(__Field::__field52),
+                        b"BuiltinProgramsMustConsumeComputeUnits" => Ok(__Field::__field53),
                         _ => {
-                            let __value = &_serde::__private::from_utf8_lossy(__value);
-                            _serde::__private::Err(_serde::de::Error::unknown_variant(
-                                __value, VARIANTS,
-                            ))
+                            let __value = &String::from_utf8_lossy(__value);
+                            Err(_serde::de::Error::unknown_variant(__value, VARIANTS))
                         }
                     }
                 }
@@ -884,9 +850,7 @@ const _: () = {
             #[automatically_derived]
             impl<'de> _serde::Deserialize<'de> for __Field {
                 #[inline]
-                fn deserialize<__D>(
-                    __deserializer: __D,
-                ) -> _serde::__private::Result<Self, __D::Error>
+                fn deserialize<__D>(__deserializer: __D) -> Result<Self, __D::Error>
                 where
                     __D: _serde::Deserializer<'de>,
                 {
@@ -895,205 +859,199 @@ const _: () = {
             }
             #[doc(hidden)]
             struct __Visitor<'de> {
-                marker: _serde::__private::PhantomData<InstructionError>,
-                lifetime: _serde::__private::PhantomData<&'de ()>,
+                marker: PhantomData<InstructionError>,
+                lifetime: PhantomData<&'de ()>,
             }
             #[automatically_derived]
             impl<'de> _serde::de::Visitor<'de> for __Visitor<'de> {
                 type Value = InstructionError;
-                fn expecting(
-                    &self,
-                    __formatter: &mut _serde::__private::Formatter,
-                ) -> _serde::__private::fmt::Result {
-                    _serde::__private::Formatter::write_str(__formatter, "enum InstructionError")
+                fn expecting(&self, __formatter: &mut Formatter) -> fmt::Result {
+                    Formatter::write_str(__formatter, "enum InstructionError")
                 }
-                fn visit_enum<__A>(
-                    self,
-                    __data: __A,
-                ) -> _serde::__private::Result<Self::Value, __A::Error>
+                fn visit_enum<__A>(self, __data: __A) -> Result<Self::Value, __A::Error>
                 where
                     __A: _serde::de::EnumAccess<'de>,
                 {
                     match _serde::de::EnumAccess::variant(__data)? {
                         (__Field::__field0, __variant) => {
                             _serde::de::VariantAccess::unit_variant(__variant)?;
-                            _serde::__private::Ok(InstructionError::GenericError)
+                            Ok(InstructionError::GenericError)
                         }
                         (__Field::__field1, __variant) => {
                             _serde::de::VariantAccess::unit_variant(__variant)?;
-                            _serde::__private::Ok(InstructionError::InvalidArgument)
+                            Ok(InstructionError::InvalidArgument)
                         }
                         (__Field::__field2, __variant) => {
                             _serde::de::VariantAccess::unit_variant(__variant)?;
-                            _serde::__private::Ok(InstructionError::InvalidInstructionData)
+                            Ok(InstructionError::InvalidInstructionData)
                         }
                         (__Field::__field3, __variant) => {
                             _serde::de::VariantAccess::unit_variant(__variant)?;
-                            _serde::__private::Ok(InstructionError::InvalidAccountData)
+                            Ok(InstructionError::InvalidAccountData)
                         }
                         (__Field::__field4, __variant) => {
                             _serde::de::VariantAccess::unit_variant(__variant)?;
-                            _serde::__private::Ok(InstructionError::AccountDataTooSmall)
+                            Ok(InstructionError::AccountDataTooSmall)
                         }
                         (__Field::__field5, __variant) => {
                             _serde::de::VariantAccess::unit_variant(__variant)?;
-                            _serde::__private::Ok(InstructionError::InsufficientFunds)
+                            Ok(InstructionError::InsufficientFunds)
                         }
                         (__Field::__field6, __variant) => {
                             _serde::de::VariantAccess::unit_variant(__variant)?;
-                            _serde::__private::Ok(InstructionError::IncorrectProgramId)
+                            Ok(InstructionError::IncorrectProgramId)
                         }
                         (__Field::__field7, __variant) => {
                             _serde::de::VariantAccess::unit_variant(__variant)?;
-                            _serde::__private::Ok(InstructionError::MissingRequiredSignature)
+                            Ok(InstructionError::MissingRequiredSignature)
                         }
                         (__Field::__field8, __variant) => {
                             _serde::de::VariantAccess::unit_variant(__variant)?;
-                            _serde::__private::Ok(InstructionError::AccountAlreadyInitialized)
+                            Ok(InstructionError::AccountAlreadyInitialized)
                         }
                         (__Field::__field9, __variant) => {
                             _serde::de::VariantAccess::unit_variant(__variant)?;
-                            _serde::__private::Ok(InstructionError::UninitializedAccount)
+                            Ok(InstructionError::UninitializedAccount)
                         }
                         (__Field::__field10, __variant) => {
                             _serde::de::VariantAccess::unit_variant(__variant)?;
-                            _serde::__private::Ok(InstructionError::UnbalancedInstruction)
+                            Ok(InstructionError::UnbalancedInstruction)
                         }
                         (__Field::__field11, __variant) => {
                             _serde::de::VariantAccess::unit_variant(__variant)?;
-                            _serde::__private::Ok(InstructionError::ModifiedProgramId)
+                            Ok(InstructionError::ModifiedProgramId)
                         }
                         (__Field::__field12, __variant) => {
                             _serde::de::VariantAccess::unit_variant(__variant)?;
-                            _serde::__private::Ok(InstructionError::ExternalAccountLamportSpend)
+                            Ok(InstructionError::ExternalAccountLamportSpend)
                         }
                         (__Field::__field13, __variant) => {
                             _serde::de::VariantAccess::unit_variant(__variant)?;
-                            _serde::__private::Ok(InstructionError::ExternalAccountDataModified)
+                            Ok(InstructionError::ExternalAccountDataModified)
                         }
                         (__Field::__field14, __variant) => {
                             _serde::de::VariantAccess::unit_variant(__variant)?;
-                            _serde::__private::Ok(InstructionError::ReadonlyLamportChange)
+                            Ok(InstructionError::ReadonlyLamportChange)
                         }
                         (__Field::__field15, __variant) => {
                             _serde::de::VariantAccess::unit_variant(__variant)?;
-                            _serde::__private::Ok(InstructionError::ReadonlyDataModified)
+                            Ok(InstructionError::ReadonlyDataModified)
                         }
                         (__Field::__field16, __variant) => {
                             _serde::de::VariantAccess::unit_variant(__variant)?;
-                            _serde::__private::Ok(InstructionError::DuplicateAccountIndex)
+                            Ok(InstructionError::DuplicateAccountIndex)
                         }
                         (__Field::__field17, __variant) => {
                             _serde::de::VariantAccess::unit_variant(__variant)?;
-                            _serde::__private::Ok(InstructionError::ExecutableModified)
+                            Ok(InstructionError::ExecutableModified)
                         }
                         (__Field::__field18, __variant) => {
                             _serde::de::VariantAccess::unit_variant(__variant)?;
-                            _serde::__private::Ok(InstructionError::RentEpochModified)
+                            Ok(InstructionError::RentEpochModified)
                         }
                         (__Field::__field19, __variant) => {
                             _serde::de::VariantAccess::unit_variant(__variant)?;
-                            _serde::__private::Ok(InstructionError::NotEnoughAccountKeys)
+                            Ok(InstructionError::NotEnoughAccountKeys)
                         }
                         (__Field::__field20, __variant) => {
                             _serde::de::VariantAccess::unit_variant(__variant)?;
-                            _serde::__private::Ok(InstructionError::AccountDataSizeChanged)
+                            Ok(InstructionError::AccountDataSizeChanged)
                         }
                         (__Field::__field21, __variant) => {
                             _serde::de::VariantAccess::unit_variant(__variant)?;
-                            _serde::__private::Ok(InstructionError::AccountNotExecutable)
+                            Ok(InstructionError::AccountNotExecutable)
                         }
                         (__Field::__field22, __variant) => {
                             _serde::de::VariantAccess::unit_variant(__variant)?;
-                            _serde::__private::Ok(InstructionError::AccountBorrowFailed)
+                            Ok(InstructionError::AccountBorrowFailed)
                         }
                         (__Field::__field23, __variant) => {
                             _serde::de::VariantAccess::unit_variant(__variant)?;
-                            _serde::__private::Ok(InstructionError::AccountBorrowOutstanding)
+                            Ok(InstructionError::AccountBorrowOutstanding)
                         }
                         (__Field::__field24, __variant) => {
                             _serde::de::VariantAccess::unit_variant(__variant)?;
-                            _serde::__private::Ok(InstructionError::DuplicateAccountOutOfSync)
+                            Ok(InstructionError::DuplicateAccountOutOfSync)
                         }
-                        (__Field::__field25, __variant) => _serde::__private::Result::map(
+                        (__Field::__field25, __variant) => Result::map(
                             _serde::de::VariantAccess::newtype_variant::<u32>(__variant),
                             InstructionError::Custom,
                         ),
                         (__Field::__field26, __variant) => {
                             _serde::de::VariantAccess::unit_variant(__variant)?;
-                            _serde::__private::Ok(InstructionError::InvalidError)
+                            Ok(InstructionError::InvalidError)
                         }
                         (__Field::__field27, __variant) => {
                             _serde::de::VariantAccess::unit_variant(__variant)?;
-                            _serde::__private::Ok(InstructionError::ExecutableDataModified)
+                            Ok(InstructionError::ExecutableDataModified)
                         }
                         (__Field::__field28, __variant) => {
                             _serde::de::VariantAccess::unit_variant(__variant)?;
-                            _serde::__private::Ok(InstructionError::ExecutableLamportChange)
+                            Ok(InstructionError::ExecutableLamportChange)
                         }
                         (__Field::__field29, __variant) => {
                             _serde::de::VariantAccess::unit_variant(__variant)?;
-                            _serde::__private::Ok(InstructionError::ExecutableAccountNotRentExempt)
+                            Ok(InstructionError::ExecutableAccountNotRentExempt)
                         }
                         (__Field::__field30, __variant) => {
                             _serde::de::VariantAccess::unit_variant(__variant)?;
-                            _serde::__private::Ok(InstructionError::UnsupportedProgramId)
+                            Ok(InstructionError::UnsupportedProgramId)
                         }
                         (__Field::__field31, __variant) => {
                             _serde::de::VariantAccess::unit_variant(__variant)?;
-                            _serde::__private::Ok(InstructionError::CallDepth)
+                            Ok(InstructionError::CallDepth)
                         }
                         (__Field::__field32, __variant) => {
                             _serde::de::VariantAccess::unit_variant(__variant)?;
-                            _serde::__private::Ok(InstructionError::MissingAccount)
+                            Ok(InstructionError::MissingAccount)
                         }
                         (__Field::__field33, __variant) => {
                             _serde::de::VariantAccess::unit_variant(__variant)?;
-                            _serde::__private::Ok(InstructionError::ReentrancyNotAllowed)
+                            Ok(InstructionError::ReentrancyNotAllowed)
                         }
                         (__Field::__field34, __variant) => {
                             _serde::de::VariantAccess::unit_variant(__variant)?;
-                            _serde::__private::Ok(InstructionError::MaxSeedLengthExceeded)
+                            Ok(InstructionError::MaxSeedLengthExceeded)
                         }
                         (__Field::__field35, __variant) => {
                             _serde::de::VariantAccess::unit_variant(__variant)?;
-                            _serde::__private::Ok(InstructionError::InvalidSeeds)
+                            Ok(InstructionError::InvalidSeeds)
                         }
                         (__Field::__field36, __variant) => {
                             _serde::de::VariantAccess::unit_variant(__variant)?;
-                            _serde::__private::Ok(InstructionError::InvalidRealloc)
+                            Ok(InstructionError::InvalidRealloc)
                         }
                         (__Field::__field37, __variant) => {
                             _serde::de::VariantAccess::unit_variant(__variant)?;
-                            _serde::__private::Ok(InstructionError::ComputationalBudgetExceeded)
+                            Ok(InstructionError::ComputationalBudgetExceeded)
                         }
                         (__Field::__field38, __variant) => {
                             _serde::de::VariantAccess::unit_variant(__variant)?;
-                            _serde::__private::Ok(InstructionError::PrivilegeEscalation)
+                            Ok(InstructionError::PrivilegeEscalation)
                         }
                         (__Field::__field39, __variant) => {
                             _serde::de::VariantAccess::unit_variant(__variant)?;
-                            _serde::__private::Ok(InstructionError::ProgramEnvironmentSetupFailure)
+                            Ok(InstructionError::ProgramEnvironmentSetupFailure)
                         }
                         (__Field::__field40, __variant) => {
                             _serde::de::VariantAccess::unit_variant(__variant)?;
-                            _serde::__private::Ok(InstructionError::ProgramFailedToComplete)
+                            Ok(InstructionError::ProgramFailedToComplete)
                         }
                         (__Field::__field41, __variant) => {
                             _serde::de::VariantAccess::unit_variant(__variant)?;
-                            _serde::__private::Ok(InstructionError::ProgramFailedToCompile)
+                            Ok(InstructionError::ProgramFailedToCompile)
                         }
                         (__Field::__field42, __variant) => {
                             _serde::de::VariantAccess::unit_variant(__variant)?;
-                            _serde::__private::Ok(InstructionError::Immutable)
+                            Ok(InstructionError::Immutable)
                         }
                         (__Field::__field43, __variant) => {
                             _serde::de::VariantAccess::unit_variant(__variant)?;
-                            _serde::__private::Ok(InstructionError::IncorrectAuthority)
+                            Ok(InstructionError::IncorrectAuthority)
                         }
                         (__Field::__field44, __variant) => {
                             // START CUSTOM CODE: FALL BACK TO AN EMPTY STRING
-                            _serde::__private::Ok(InstructionError::BorshIoError(
+                            Ok(InstructionError::BorshIoError(
                                 _serde::de::VariantAccess::newtype_variant::<String>(__variant)
                                     .unwrap_or_default(),
                             ))
@@ -1101,45 +1059,39 @@ const _: () = {
                         }
                         (__Field::__field45, __variant) => {
                             _serde::de::VariantAccess::unit_variant(__variant)?;
-                            _serde::__private::Ok(InstructionError::AccountNotRentExempt)
+                            Ok(InstructionError::AccountNotRentExempt)
                         }
                         (__Field::__field46, __variant) => {
                             _serde::de::VariantAccess::unit_variant(__variant)?;
-                            _serde::__private::Ok(InstructionError::InvalidAccountOwner)
+                            Ok(InstructionError::InvalidAccountOwner)
                         }
                         (__Field::__field47, __variant) => {
                             _serde::de::VariantAccess::unit_variant(__variant)?;
-                            _serde::__private::Ok(InstructionError::ArithmeticOverflow)
+                            Ok(InstructionError::ArithmeticOverflow)
                         }
                         (__Field::__field48, __variant) => {
                             _serde::de::VariantAccess::unit_variant(__variant)?;
-                            _serde::__private::Ok(InstructionError::UnsupportedSysvar)
+                            Ok(InstructionError::UnsupportedSysvar)
                         }
                         (__Field::__field49, __variant) => {
                             _serde::de::VariantAccess::unit_variant(__variant)?;
-                            _serde::__private::Ok(InstructionError::IllegalOwner)
+                            Ok(InstructionError::IllegalOwner)
                         }
                         (__Field::__field50, __variant) => {
                             _serde::de::VariantAccess::unit_variant(__variant)?;
-                            _serde::__private::Ok(
-                                InstructionError::MaxAccountsDataAllocationsExceeded,
-                            )
+                            Ok(InstructionError::MaxAccountsDataAllocationsExceeded)
                         }
                         (__Field::__field51, __variant) => {
                             _serde::de::VariantAccess::unit_variant(__variant)?;
-                            _serde::__private::Ok(InstructionError::MaxAccountsExceeded)
+                            Ok(InstructionError::MaxAccountsExceeded)
                         }
                         (__Field::__field52, __variant) => {
                             _serde::de::VariantAccess::unit_variant(__variant)?;
-                            _serde::__private::Ok(
-                                InstructionError::MaxInstructionTraceLengthExceeded,
-                            )
+                            Ok(InstructionError::MaxInstructionTraceLengthExceeded)
                         }
                         (__Field::__field53, __variant) => {
                             _serde::de::VariantAccess::unit_variant(__variant)?;
-                            _serde::__private::Ok(
-                                InstructionError::BuiltinProgramsMustConsumeComputeUnits,
-                            )
+                            Ok(InstructionError::BuiltinProgramsMustConsumeComputeUnits)
                         }
                     }
                 }
@@ -1206,8 +1158,8 @@ const _: () = {
                 "InstructionError",
                 VARIANTS,
                 __Visitor {
-                    marker: _serde::__private::PhantomData::<InstructionError>,
-                    lifetime: _serde::__private::PhantomData,
+                    marker: PhantomData::<InstructionError>,
+                    lifetime: PhantomData,
                 },
             )
         }
