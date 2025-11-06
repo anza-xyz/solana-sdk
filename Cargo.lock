@@ -3347,6 +3347,7 @@ dependencies = [
  "solana-frozen-abi",
  "solana-frozen-abi-macro",
  "solana-packet",
+ "solana-pubkey",
  "static_assertions",
 ]
 

@@ -11,6 +11,7 @@ use {
 };
 use {
     bitflags::bitflags,
+    solana_pubkey::Pubkey,
     std::{
         fmt,
         net::{IpAddr, Ipv4Addr, SocketAddr},
@@ -72,6 +73,7 @@ pub struct Meta {
     pub addr: IpAddr,
     pub port: u16,
     pub flags: PacketFlags,
+    pub remote_pubkey: Option<Pubkey>,
 }
 
 #[cfg(feature = "frozen-abi")]
@@ -309,6 +311,7 @@ impl Default for Meta {
             addr: IpAddr::V4(Ipv4Addr::UNSPECIFIED),
             port: 0,
             flags: PacketFlags::empty(),
+            remote_pubkey: None,
         }
     }
 }
