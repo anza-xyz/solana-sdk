@@ -344,9 +344,12 @@ opt-level = 1
 opt-level = 1
 
 [patch.crates-io]
-# hash re-exports version 4.0, which brings its dependencies from
-# crates.io instead of using the local path.
+# crates re-exporting the next major version brings dependencies
+# from crates.io instead of using the local path.
 solana-atomic-u64 = { path = "atomic-u64" }
+solana-define-syscall = { path = "define-syscall" }
 solana-frozen-abi = { path = "frozen-abi" }
 solana-frozen-abi-macro = { path = "frozen-abi-macro" }
+solana-program-error = { path = "program-error" }
 solana-sanitize = { path = "sanitize" }
+solana-sha256-hasher = { path = "sha256-hasher" }
