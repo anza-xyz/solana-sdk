@@ -2745,14 +2745,14 @@ version = "3.0.0"
 dependencies = [
  "bincode",
  "serde_core",
- "solana-address 1.0.0",
+ "solana-address 1.1.0",
  "solana-program-error",
  "solana-program-memory",
 ]
 
 [[package]]
 name = "solana-address"
-version = "1.0.0"
+version = "1.1.0"
 dependencies = [
  "solana-address 2.0.0",
 ]
@@ -3036,7 +3036,7 @@ name = "solana-epoch-rewards-hasher"
 version = "3.0.0"
 dependencies = [
  "siphasher",
- "solana-address 1.0.0",
+ "solana-address 1.1.0",
  "solana-hash 3.1.0",
 ]
 
@@ -3290,7 +3290,7 @@ dependencies = [
  "bitflags 2.8.0",
  "qualifier_attr",
  "solana-account-info",
- "solana-address 1.0.0",
+ "solana-address 1.1.0",
  "solana-instruction",
  "solana-instruction-error",
  "solana-program-error",
@@ -3319,7 +3319,7 @@ dependencies = [
  "five8",
  "rand",
  "serde_json",
- "solana-address 1.0.0",
+ "solana-address 1.1.0",
  "solana-derivation-path",
  "solana-seed-derivable",
  "solana-seed-phrase",
@@ -3411,7 +3411,7 @@ dependencies = [
  "serde",
  "serde_derive",
  "serde_json",
- "solana-address 1.0.0",
+ "solana-address 1.1.0",
  "solana-address-lookup-table-interface",
  "solana-example-mocks",
  "solana-frozen-abi",
@@ -3656,7 +3656,7 @@ name = "solana-pubkey"
 version = "3.0.0"
 dependencies = [
  "rand",
- "solana-address 1.0.0",
+ "solana-address 1.1.0",
 ]
 
 [[package]]
@@ -3737,7 +3737,7 @@ dependencies = [
 name = "solana-sdk-ids"
 version = "3.0.0"
 dependencies = [
- "solana-address 1.0.0",
+ "solana-address 1.1.0",
 ]
 
 [[package]]
@@ -3760,7 +3760,7 @@ dependencies = [
  "getrandom 0.2.15",
  "js-sys",
  "log",
- "solana-address 1.0.0",
+ "solana-address 1.1.0",
  "solana-hash 3.1.0",
  "solana-instruction",
  "solana-keypair",
@@ -3777,7 +3777,7 @@ name = "solana-sdk-wasm-js-tests"
 version = "1.0.0"
 dependencies = [
  "js-sys",
- "solana-address 1.0.0",
+ "solana-address 1.1.0",
  "solana-instruction",
  "solana-sdk-wasm-js",
  "wasm-bindgen",
@@ -4000,7 +4000,7 @@ dependencies = [
  "serde",
  "serde_derive",
  "solana-account-info",
- "solana-address 1.0.0",
+ "solana-address 1.1.0",
  "solana-cpi",
  "solana-example-mocks",
  "solana-frozen-abi",
@@ -4087,7 +4087,7 @@ dependencies = [
 name = "solana-sysvar-id"
 version = "3.0.0"
 dependencies = [
- "solana-address 1.0.0",
+ "solana-address 1.1.0",
  "solana-sdk-ids",
 ]
 
@@ -4104,7 +4104,7 @@ dependencies = [
  "borsh",
  "serde",
  "serde_derive",
- "solana-address 1.0.0",
+ "solana-address 1.1.0",
  "solana-example-mocks",
  "solana-frozen-abi",
  "solana-frozen-abi-macro 3.0.0",
