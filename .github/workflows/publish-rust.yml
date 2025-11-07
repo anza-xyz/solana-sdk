@@ -176,7 +176,7 @@ jobs:
         shell: bash
         run: |
           set +e # toml crashes the whole shell if it fails to find the key
-          result=$(toml get "${{ inputs.package-path }}/Cargo.toml" lib.proc-macro)
+          result=$(toml get "${{ inputs.package_path }}/Cargo.toml" lib.proc-macro)
           if [[ "$result" == *"true"* ]]; then
             echo "is_proc_macro=true" >> "$GITHUB_OUTPUT"
           else
