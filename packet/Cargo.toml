@@ -38,6 +38,7 @@ solana-frozen-abi-macro = { workspace = true, optional = true, features = ["froz
 solana-pubkey = { workspace = true, features = ["serde"] }
 
 [dev-dependencies]
+solana-address = { workspace = true, features = ["atomic"] }
 solana-packet = { path = ".", features = ["dev-context-only-utils"] }
 static_assertions = { workspace = true }
 

@@ -3344,6 +3344,7 @@ dependencies = [
  "serde",
  "serde_derive",
  "serde_with",
+ "solana-address",
  "solana-frozen-abi",
  "solana-frozen-abi-macro",
  "solana-packet",
