@@ -73,7 +73,7 @@ pub struct Meta {
     pub addr: IpAddr,
     pub port: u16,
     pub flags: PacketFlags,
-    pub remote_pubkey: Option<Pubkey>,
+    remote_pubkey: Pubkey,
 }
 
 #[cfg(feature = "frozen-abi")]
@@ -302,6 +302,20 @@ impl Meta {
     pub fn is_from_staked_node(&self) -> bool {
         self.flags.contains(PacketFlags::FROM_STAKED_NODE)
     }
+
+    #[inline]
+    pub fn remote_pubkey(&self) -> Option<Pubkey> {
+        if self.remote_pubkey == Pubkey::default() {
+            None
+        } else {
+            Some(self.remote_pubkey)
+        }
+    }
+
+    #[inline]
+    pub fn set_remote_pubkey(&mut self, pubkey: Pubkey) {
+        self.remote_pubkey = pubkey;
+    }
 }
 
 impl Default for Meta {
@@ -311,7 +325,7 @@ impl Default for Meta {
             addr: IpAddr::V4(Ipv4Addr::UNSPECIFIED),
             port: 0,
             flags: PacketFlags::empty(),
-            remote_pubkey: None,
+            remote_pubkey: Pubkey::default(),
         }
     }
 }
@@ -357,5 +371,17 @@ mod tests {
                 .map_err(|e| e.to_string()),
             Err("the size limit has been reached".to_string()),
         );
+    }
+
+    #[test]
+    fn test_remote_pubkey() {
+        let mut meta = Meta::default();
+        assert!(meta.remote_pubkey().is_none());
+        let pubkey = Pubkey::new_unique();
+        meta.set_remote_pubkey(pubkey);
+        assert_eq!(meta.remote_pubkey(), Some(pubkey));
+        let pubkey = Pubkey::default();
+        meta.set_remote_pubkey(pubkey);
+        assert!(meta.remote_pubkey().is_none());
     }
 }
