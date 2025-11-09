@@ -473,14 +473,9 @@ mod tests {
             };
         }
 
-        unsigned_test_case!(
-            (u8, 3),
-            (u16, 5),
-            (u32, 10),
-            (u64, 20),
-            (u128, 39),
-            (usize, 20)
-        );
+        unsigned_test_case!((u8, 3), (u16, 5), (u32, 10), (u64, 20), (usize, 20));
+        #[cfg(not(target_arch = "bpf"))]
+        unsigned_test_case!((u128, 39),);
     }
 
     #[test]
@@ -516,14 +511,9 @@ mod tests {
             };
         }
 
-        signed_test_case!(
-            (i8, 3),
-            (i16, 5),
-            (i32, 10),
-            (i64, 20),
-            (i128, 39),
-            (isize, 20)
-        );
+        signed_test_case!((i8, 3), (i16, 5), (i32, 10), (i64, 20), (isize, 20));
+        #[cfg(not(target_arch = "bpf"))]
+        signed_test_case!((i128, 39),);
     }
 
     #[test]
