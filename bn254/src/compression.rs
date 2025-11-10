@@ -454,7 +454,7 @@ mod target_arch {
                 &mut result_buffer as *mut _ as *mut u8,
             );
             match result {
-                0 => Ok(result_buffer),
+                0 => Ok(result_buffer.assume_init()),
                 _ => Err(AltBn128CompressionError::UnexpectedError),
             }
         }
