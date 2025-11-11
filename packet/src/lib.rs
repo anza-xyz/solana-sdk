@@ -312,6 +312,7 @@ impl Meta {
         }
     }
 
+    /// Sets the remote pubkey. Use Pubkey::default() to clear.
     #[inline]
     pub fn set_remote_pubkey(&mut self, pubkey: Pubkey) {
         self.remote_pubkey = pubkey;
