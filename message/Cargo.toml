@@ -25,6 +25,7 @@ frozen-abi = [
     "solana-address/frozen-abi",
     "solana-hash/frozen-abi",
     "serde",
+    "solana-short-vec/frozen-abi",
 ]
 serde = [
     "dep:serde",
