@@ -7,6 +7,7 @@ cd "${src_root}"
 
 packages=$(./cargo nightly metadata --no-deps --format-version=1 | jq -r '.packages[] | select(.features | has("frozen-abi")) | .name')
 for package in $packages; do
-  echo "--- ./cargo nightly test -p $package --features frozen-abi --lib -- test_abi_ --nocapture"
+  echo "::group::./cargo nightly test -p $package --features frozen-abi --lib -- test_abi_ --nocapture"
   ./cargo nightly test -p "$package" --features frozen-abi --lib -- test_abi_ --nocapture
+  echo "::endgroup::"
 done
