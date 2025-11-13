@@ -14,6 +14,9 @@ targets = ["x86_64-unknown-linux-gnu"]
 all-features = true
 rustdoc-args = ["--cfg=docsrs"]
 
+[patch.crates-io]
+solana-pubkey = { version = "3.0.0" }
+
 [features]
 bincode = ["dep:bincode", "serde"]
 dev-context-only-utils = ["bincode"]
@@ -36,11 +39,11 @@ serde_derive = { workspace = true, optional = true }
 serde_with = { workspace = true, optional = true, features = ["macros"] }
 solana-frozen-abi = { workspace = true, optional = true, features = ["frozen-abi"] }
 solana-frozen-abi-macro = { workspace = true, optional = true, features = ["frozen-abi"] }
-solana-pubkey = { workspace = true }
+solana-pubkey = { version = "3.0.0" }
 
 [dev-dependencies]
 solana-packet = { path = ".", features = ["dev-context-only-utils"] }
-solana-pubkey = { workspace = true, features = ["std"] }
+solana-pubkey = { version = "3.0.0", features = ["std"] }
 static_assertions = { workspace = true }
 
 [lints]
