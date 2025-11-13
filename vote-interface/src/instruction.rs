@@ -267,7 +267,7 @@ fn initialize_account(vote_pubkey: &Pubkey, vote_init: &VoteInit) -> Instruction
 
 pub struct CreateVoteAccountConfig<'a> {
     pub space: u64,
-    pub with_seed: Option<(&'a Pubkey, &'a str)>,
+    pub with_seed: Option<(&'a Pubkey, &'a [u8])>,
 }
 
 impl Default for CreateVoteAccountConfig<'_> {
@@ -357,7 +357,7 @@ pub fn authorize_with_seed(
     vote_pubkey: &Pubkey,
     current_authority_base_key: &Pubkey,
     current_authority_derived_key_owner: &Pubkey,
-    current_authority_derived_key_seed: &str,
+    current_authority_derived_key_seed: &[u8],
     new_authority: &Pubkey,
     authorization_type: VoteAuthorize,
 ) -> Instruction {
@@ -372,7 +372,7 @@ pub fn authorize_with_seed(
         &VoteInstruction::AuthorizeWithSeed(VoteAuthorizeWithSeedArgs {
             authorization_type,
             current_authority_derived_key_owner: *current_authority_derived_key_owner,
-            current_authority_derived_key_seed: current_authority_derived_key_seed.to_string(),
+            current_authority_derived_key_seed: current_authority_derived_key_seed.to_vec(),
             new_authority: *new_authority,
         }),
         account_metas,
@@ -384,7 +384,7 @@ pub fn authorize_checked_with_seed(
     vote_pubkey: &Pubkey,
     current_authority_base_key: &Pubkey,
     current_authority_derived_key_owner: &Pubkey,
-    current_authority_derived_key_seed: &str,
+    current_authority_derived_key_seed: &[u8],
     new_authority: &Pubkey,
     authorization_type: VoteAuthorize,
 ) -> Instruction {
@@ -400,7 +400,7 @@ pub fn authorize_checked_with_seed(
         &VoteInstruction::AuthorizeCheckedWithSeed(VoteAuthorizeCheckedWithSeedArgs {
             authorization_type,
             current_authority_derived_key_owner: *current_authority_derived_key_owner,
-            current_authority_derived_key_seed: current_authority_derived_key_seed.to_string(),
+            current_authority_derived_key_seed: current_authority_derived_key_seed.to_vec(),
         }),
         account_metas,
     )
