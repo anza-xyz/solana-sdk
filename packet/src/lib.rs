@@ -72,6 +72,7 @@ pub struct Meta {
     pub size: usize,
     pub addr: IpAddr,
     pub port: u16,
+    pub src_pubkey: Option<[u8; 32]>,
     pub flags: PacketFlags,
     remote_pubkey: Pubkey,
 }
@@ -325,6 +326,7 @@ impl Default for Meta {
             size: 0,
             addr: IpAddr::V4(Ipv4Addr::UNSPECIFIED),
             port: 0,
+            src_pubkey: None,
             flags: PacketFlags::empty(),
             remote_pubkey: Pubkey::default(),
         }
