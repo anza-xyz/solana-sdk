@@ -421,6 +421,11 @@ jobs:
           cargo-cache-key: cargo-nightly-miri
           cargo-cache-fallback-key: cargo-nightly
 
+      - name: Install cargo-hack
+        uses: taiki-e/cache-cargo-install-action@v2
+        with:
+          tool: cargo-hack
+
       - name: Run frozen-abi tests
         run: ./scripts/test-frozen-abi.sh
 
