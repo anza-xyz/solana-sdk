@@ -743,10 +743,11 @@ mod tests {
     fn test_borrow() {
         // 8-bytes aligned account data + 8 bytes of trailing data.
         let mut data = [0u64; size_of::<RuntimeAccount>() / size_of::<u64>() + 1];
+        data[0] = NOT_BORROWED as u64;
+
         let account = data.as_mut_ptr() as *mut RuntimeAccount;
         unsafe { (*account).data_len = 8 };
 
-        data[0] = NOT_BORROWED as u64;
         let account_view = AccountView { raw: account };
 
         // Check that we can borrow data and lamports.
