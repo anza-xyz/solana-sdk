@@ -32,7 +32,7 @@ members = [
     "fee-structure",
     "file-download",
     "frozen-abi",
-    "frozen-abi-macro",
+    "frozen-abi-macro", "frozen-abi-test",
     "genesis-config",
     "hard-forks",
     "hash",

@@ -1,0 +1,17 @@
+[package]
+name = "frozen-abi-test"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+bincode = { workspace = true }
+rand = { workspace = true }
+rand_chacha = "0.3"
+sha2 = { workspace = true }
+
+solana-frozen-abi = { path = "../frozen-abi", features = ["frozen-abi"] }
+solana-frozen-abi-macro = { path = "../frozen-abi-macro", features = ["frozen-abi"] }
+
+[features]
+frozen-abi = []

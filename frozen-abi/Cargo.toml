@@ -33,6 +33,7 @@ serde_with = { workspace = true }
 sha2 = { workspace = true }
 solana-frozen-abi-macro = { workspace = true }
 thiserror = { workspace = true }
+rand = { workspace = true }
 
 [target.'cfg(not(target_os = "solana"))'.dependencies]
 im = { workspace = true, features = ["rayon", "serde"] }

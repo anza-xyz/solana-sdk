@@ -1095,6 +1095,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "frozen-abi-test"
+version = "0.1.0"
+dependencies = [
+ "bincode",
+ "rand",
+ "rand_chacha",
+ "serde",
+ "sha2",
+ "solana-frozen-abi",
+ "solana-frozen-abi-macro",
+]
+
+[[package]]
 name = "funty"
 version = "2.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3013,6 +3026,7 @@ dependencies = [
  "im",
  "log",
  "memmap2",
+ "rand",
  "serde",
  "serde_bytes",
  "serde_derive",
