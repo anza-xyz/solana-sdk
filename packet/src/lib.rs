@@ -11,7 +11,6 @@ use {
 };
 use {
     bitflags::bitflags,
-    solana_pubkey::Pubkey,
     std::{
         fmt,
         net::{IpAddr, Ipv4Addr, SocketAddr},
@@ -73,7 +72,7 @@ pub struct Meta {
     pub addr: IpAddr,
     pub port: u16,
     pub flags: PacketFlags,
-    remote_pubkey: Pubkey,
+    pub remote_pubkey: [u8; 32],
 }
 
 #[cfg(feature = "frozen-abi")]
@@ -304,17 +303,17 @@ impl Meta {
     }
 
     #[inline]
-    pub fn remote_pubkey(&self) -> Option<Pubkey> {
-        if self.remote_pubkey == Pubkey::default() {
+    pub fn remote_pubkey(&self) -> Option<[u8; 32]> {
+        if self.remote_pubkey == [0u8; 32] {
             None
         } else {
             Some(self.remote_pubkey)
         }
     }
 
-    /// Sets the remote pubkey. Use Pubkey::default() to clear.
+    /// Sets the remote pubkey. Use [0u8; 32] to clear.
     #[inline]
-    pub fn set_remote_pubkey(&mut self, pubkey: Pubkey) {
+    pub fn set_remote_pubkey(&mut self, pubkey: [u8; 32]) {
         self.remote_pubkey = pubkey;
     }
 }
@@ -326,7 +325,7 @@ impl Default for Meta {
             addr: IpAddr::V4(Ipv4Addr::UNSPECIFIED),
             port: 0,
             flags: PacketFlags::empty(),
-            remote_pubkey: Pubkey::default(),
+            remote_pubkey: [0u8; 32],
         }
     }
 }
@@ -334,6 +333,7 @@ impl Default for Meta {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use solana_pubkey::Pubkey;
 
     #[test]
     fn test_deserialize_slice() {
@@ -379,10 +379,10 @@ mod tests {
         let mut meta = Meta::default();
         assert!(meta.remote_pubkey().is_none());
         let pubkey = Pubkey::new_unique();
-        meta.set_remote_pubkey(pubkey);
-        assert_eq!(meta.remote_pubkey(), Some(pubkey));
+        meta.set_remote_pubkey(pubkey.to_bytes());
+        assert_eq!(meta.remote_pubkey(), Some(pubkey.to_bytes()));
         let pubkey = Pubkey::default();
-        meta.set_remote_pubkey(pubkey);
+        meta.set_remote_pubkey(pubkey.to_bytes());
         assert!(meta.remote_pubkey().is_none());
     }
 }
