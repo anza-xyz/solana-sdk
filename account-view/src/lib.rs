@@ -77,19 +77,19 @@ pub struct RuntimeAccount {
     pub data_len: u64,
 }
 
-/// Wrapper struct for an `Account`.
+/// Wrapper struct for a `RuntimeAccount`.
 ///
-/// This struct provides safe access to the data in an `Account`. It is
-/// also used to track borrows of the account data and lamports, given
-/// that an account can be "shared" across multiple `AccountView`
-/// instances.
+/// This struct provides safe access to the data in a `RuntimeAccount`.
+/// It is also used to track borrows of the account data, given that
+/// an account can be "shared" across multiple `AccountView` instances.
 ///
 /// # Invariants
 ///
-/// - The `raw` pointer must be valid and point to memory containing an
-///   `Account` struct, immediately followed by the account's data region.
+/// - The `raw` pointer must be valid and point to memory containing a
+///   `RuntimeAccount` struct, immediately followed by the account's data
+///   region.
 /// - The length of the account data must exactly match the value stored in
-///   `Account::data_len`.
+///   `RuntimeAccount::data_len`.
 ///
 /// These conditions must always hold for any `AccountView` created from
 /// a raw pointer.
@@ -109,7 +109,7 @@ impl AccountView {
     /// # Safety
     ///
     /// The caller must ensure that the `raw` pointer is valid and points
-    /// to memory containing an `Account` struct, immediately followed by
+    /// to memory containing a `RuntimeAccount` struct, immediately followed by
     /// the account's data region.
     #[inline(always)]
     pub unsafe fn new_unchecked(raw: *mut RuntimeAccount) -> Self {
@@ -131,7 +131,7 @@ impl AccountView {
     ///
     /// This method is unsafe because it returns a reference to the owner field,
     /// which can be modified by `assign` and `close` methods. It is undefined
-    /// behavior to use this reference after the account has been modified.
+    /// behavior to use this reference after the account owner has been modified.
     #[inline(always)]
     pub unsafe fn owner(&self) -> &Address {
         // SAFETY: The `raw` pointer is guaranteed to be valid.
@@ -145,23 +145,22 @@ impl AccountView {
         unsafe { (*self.raw).is_signer != 0 }
     }
 
-    /// Indicate whether the account is writable.
+    /// Indicate whether the account is writable or not.
     #[inline(always)]
     pub fn is_writable(&self) -> bool {
         // SAFETY: The `raw` pointer is guaranteed to be valid.
         unsafe { (*self.raw).is_writable != 0 }
     }
 
-    /// Indicate whether this account represents an executable program.
-    ///
-    /// Program accounts are always read-only.
+    /// Indicate whether this account represents an executable program
+    /// or not.
     #[inline(always)]
     pub fn executable(&self) -> bool {
         // SAFETY: The `raw` pointer is guaranteed to be valid.
         unsafe { (*self.raw).executable != 0 }
     }
 
-    /// Return the size of the data in the account.
+    /// Return the size of the account data.
     #[inline(always)]
     pub fn data_len(&self) -> usize {
         // SAFETY: The `raw` pointer is guaranteed to be valid.
@@ -195,7 +194,7 @@ impl AccountView {
         }
     }
 
-    /// Indicates whether the account data is empty.
+    /// Indicates whether the account data is empty or not.
     ///
     /// An account is considered empty if the data length is zero.
     #[inline(always)]
@@ -235,14 +234,14 @@ impl AccountView {
         unsafe { (*self.raw).borrow_state == 0 }
     }
 
-    /// Returns a read-only reference to the data in the account.
+    /// Returns an immutable reference to the data in the account.
     ///
     /// # Safety
     ///
     /// This method is unsafe because it does not return a `Ref`, thus leaving the borrow
     /// flag untouched. Useful when an instruction has verified non-duplicate accounts.
     #[inline(always)]
-    pub unsafe fn borrow_data_unchecked(&self) -> &[u8] {
+    pub unsafe fn borrow_unchecked(&self) -> &[u8] {
         from_raw_parts(self.data_ptr(), self.data_len())
     }
 
@@ -250,19 +249,19 @@ impl AccountView {
     ///
     /// # Safety
     ///
-    /// This method is unsafe because it does not return a `Ref`, thus leaving the borrow
+    /// This method is unsafe because it does not return a `RefMut`, thus leaving the borrow
     /// flag untouched. Useful when an instruction has verified non-duplicate accounts.
     #[allow(clippy::mut_from_ref)]
     #[inline(always)]
-    pub unsafe fn borrow_data_unchecked_mut(&self) -> &mut [u8] {
+    pub unsafe fn borrow_unchecked_mut(&self) -> &mut [u8] {
         from_raw_parts_mut(self.data_ptr(), self.data_len())
     }
 
-    /// Tries to get a read-only reference to the data field, failing if the field
-    /// is already mutable borrowed or if `7` borrows already exist.
-    pub fn try_borrow_data(&self) -> Result<Ref<'_, [u8]>, ProgramError> {
-        // check if the account data is already borrowed
-        self.can_borrow_data()?;
+    /// Tries to get an immutable reference to the account data, failing if the account
+    /// is already mutably borrowed.
+    pub fn try_borrow(&self) -> Result<Ref<'_, [u8]>, ProgramError> {
+        // check if the account data can be borrowed
+        self.check_borrow()?;
 
         let borrow_state = self.raw as *mut u8;
         // Use one immutable borrow for data by subtracting `1` from the data
@@ -281,11 +280,11 @@ impl AccountView {
         })
     }
 
-    /// Tries to get a mutable reference to the data field, failing if the field
+    /// Tries to get a mutable reference to the account data, failing if the account
     /// is already borrowed in any form.
-    pub fn try_borrow_data_mut(&self) -> Result<RefMut<'_, [u8]>, ProgramError> {
-        // check if the account data is already borrowed
-        self.can_borrow_data_mut()?;
+    pub fn try_borrow_mut(&self) -> Result<RefMut<'_, [u8]>, ProgramError> {
+        // check if the account data can be mutably borrowed
+        self.check_borrow_mut()?;
 
         let borrow_state = self.raw as *mut u8;
         // Set the mutable data borrow bit to `0`; we are guaranteed that account
@@ -303,11 +302,11 @@ impl AccountView {
         })
     }
 
-    /// Check if it is possible to get a immutable reference to the data field,
-    /// failing if the field is already mutably borrowed or there are not enough
+    /// Check if it is possible to get an immutable reference to the account data,
+    /// failing if the account is already mutably borrowed or there are not enough
     /// immutable borrows available.
     #[inline(always)]
-    pub fn can_borrow_data(&self) -> Result<(), ProgramError> {
+    pub fn check_borrow(&self) -> Result<(), ProgramError> {
         // There must be at least one immutable borrow available.
         //
         // SAFETY: The `raw` pointer is guaranteed to be valid.
@@ -318,10 +317,10 @@ impl AccountView {
         Ok(())
     }
 
-    /// Checks if it is possible to get a mutable reference to the data field,
-    /// failing if the field is already borrowed in any form.
+    /// Checks if it is possible to get a mutable reference to the account data,
+    /// failing if the account is already borrowed in any form.
     #[inline(always)]
-    pub fn can_borrow_data_mut(&self) -> Result<(), ProgramError> {
+    pub fn check_borrow_mut(&self) -> Result<(), ProgramError> {
         // SAFETY: The `raw` pointer is guaranteed to be valid.
         if unsafe { (*self.raw).borrow_state } != NOT_BORROWED {
             return Err(ProgramError::AccountBorrowFailed);
@@ -338,13 +337,13 @@ impl AccountView {
     /// # Important
     ///
     /// This method makes assumptions about the layout and location of memory
-    /// referenced by `Account` fields. It should only be called for instances
-    /// of `AccountView` that were created by the runtime and received in the
-    /// `process_instruction` entrypoint of a program.
+    /// referenced by `RuntimeAccount` fields. It should only be called for
+    /// instances of `AccountView` that were created by the runtime and received
+    /// in the `process_instruction` entrypoint of a program.
     #[inline]
     pub fn resize(&self, new_len: usize) -> Result<(), ProgramError> {
         // Check whether the account data is already borrowed.
-        self.can_borrow_data_mut()?;
+        self.check_borrow_mut()?;
 
         // SAFETY: We are checking if the account data is already borrowed, so
         // we are safe to call.
@@ -409,7 +408,8 @@ impl AccountView {
     /// # Important
     ///
     /// The lamports must be moved from the account prior to closing it to prevent
-    /// an unbalanced instruction error.
+    /// an unbalanced instruction error. Any existing reference to the account owner
+    /// will be invalidated after calling this method.
     #[inline]
     pub fn close(&self) -> ProgramResult {
         // Make sure the account is not borrowed since we are about to
@@ -452,8 +452,8 @@ impl AccountView {
     /// borrowed. It should only be called when the account is not being used.
     ///
     /// It also makes assumptions about the layout and location of memory
-    /// referenced by `AccountInfo` fields. It should only be called for
-    /// instances of `AccountInfo` that were created by the runtime and received
+    /// referenced by `RuntimeAccount` fields. It should only be called for
+    /// instances of `AccountView` that were created by the runtime and received
     /// in the `process_instruction` entrypoint of a program.
     #[inline(always)]
     pub unsafe fn close_unchecked(&self) {
@@ -478,8 +478,8 @@ impl AccountView {
     /// Obtaining the raw pointer itself is safe, but de-referencing it requires
     /// the caller to uphold Rust's aliasing rules. It is undefined behavior to
     /// de-reference the pointer or write through it while any safe reference
-    /// (e.g., from any of `borrow_data` or `borrow_mut_data` methods) to the same
-    /// data is still alive.
+    /// (e.g., from any of `borrow` or `borrow_mut` methods) to the same data
+    /// is still alive.
     #[inline(always)]
     pub fn data_ptr(&self) -> *mut u8 {
         // SAFETY: The `raw` pointer is guaranteed to be valid.
@@ -487,7 +487,7 @@ impl AccountView {
     }
 }
 
-/// Reference to account data or lamports with checked borrow rules.
+/// Reference to account data with checked borrow rules.
 #[derive(Debug)]
 pub struct Ref<'a, T: ?Sized> {
     value: NonNull<T>,
@@ -504,7 +504,7 @@ impl<'a, T: ?Sized> Ref<'a, T> {
     where
         F: FnOnce(&T) -> &U,
     {
-        // Avoid decrementing the borrow flag on Drop.
+        // Avoid decrementing the borrow flag on drop.
         let orig = ManuallyDrop::new(orig);
         Ref {
             value: NonNull::from(f(&*orig)),
@@ -514,6 +514,7 @@ impl<'a, T: ?Sized> Ref<'a, T> {
     }
 
     /// Tries to makes a new `Ref` for a component of the borrowed data.
+    ///
     /// On failure, the original guard is returned alongside with the error
     /// returned by the closure.
     #[inline]
@@ -534,12 +535,14 @@ impl<'a, T: ?Sized> Ref<'a, T> {
     }
 
     /// Filters and maps a reference to a new type.
+    ///
+    /// On failure, the original guard is returned.
     #[inline]
     pub fn filter_map<U: ?Sized, F>(orig: Ref<'a, T>, f: F) -> Result<Ref<'a, U>, Self>
     where
         F: FnOnce(&T) -> Option<&U>,
     {
-        // Avoid decrementing the borrow flag on Drop.
+        // Avoid decrementing the borrow flag on drop.
         let orig = ManuallyDrop::new(orig);
 
         match f(&*orig) {
@@ -567,7 +570,7 @@ impl<T: ?Sized> Drop for Ref<'_, T> {
     }
 }
 
-/// Mutable reference to account data or lamports with checked borrow rules.
+/// Mutable reference to account data with checked borrow rules.
 #[derive(Debug)]
 pub struct RefMut<'a, T: ?Sized> {
     value: NonNull<T>,
@@ -594,6 +597,7 @@ impl<'a, T: ?Sized> RefMut<'a, T> {
     }
 
     /// Tries to makes a new `RefMut` for a component of the borrowed data.
+    ///
     /// On failure, the original guard is returned alongside with the error
     /// returned by the closure.
     #[inline]
@@ -614,6 +618,9 @@ impl<'a, T: ?Sized> RefMut<'a, T> {
     }
 
     /// Filters and maps a mutable reference to a new type.
+    ///
+    /// On failure, the original guard is returned alongside with the error
+    /// returned by the closure.
     #[inline]
     pub fn filter_map<U: ?Sized, F>(orig: RefMut<'a, T>, f: F) -> Result<RefMut<'a, U>, Self>
     where
@@ -659,7 +666,7 @@ mod tests {
     };
 
     #[test]
-    fn test_data_ref() {
+    fn test_ref() {
         let data: [u8; 4] = [0, 1, 2, 3];
         let mut state = NOT_BORROWED - 1;
 
@@ -706,7 +713,7 @@ mod tests {
     }
 
     #[test]
-    fn test_data_ref_mut() {
+    fn test_ref_mut() {
         let mut data: [u8; 4] = [0, 1, 2, 3];
         let mut state = 0;
 
@@ -733,7 +740,7 @@ mod tests {
     }
 
     #[test]
-    fn test_borrow_data() {
+    fn test_borrow() {
         // 8-bytes aligned account data + 8 bytes of trailing data.
         let mut data = [0u64; size_of::<RuntimeAccount>() / size_of::<u64>() + 1];
         let account = data.as_mut_ptr() as *mut RuntimeAccount;
@@ -743,8 +750,8 @@ mod tests {
         let account_view = AccountView { raw: account };
 
         // Check that we can borrow data and lamports.
-        assert!(account_view.can_borrow_data().is_ok());
-        assert!(account_view.can_borrow_data_mut().is_ok());
+        assert!(account_view.check_borrow().is_ok());
+        assert!(account_view.check_borrow_mut().is_ok());
 
         // It should be sound to mutate the data through the data pointer
         // while no other borrows exist.
@@ -761,7 +768,7 @@ mod tests {
         let mut refs = [ACCOUNT_REF; (NOT_BORROWED as usize) - 1];
 
         refs.iter_mut().for_each(|r| {
-            let Ok(data_ref) = account_view.try_borrow_data() else {
+            let Ok(data_ref) = account_view.try_borrow() else {
                 panic!("Failed to borrow data");
             };
             // Sanity check: the data pointer should see the change.
@@ -770,10 +777,10 @@ mod tests {
         });
 
         // Check that we cannot borrow the data anymore.
-        assert!(account_view.can_borrow_data().is_err());
-        assert!(account_view.try_borrow_data().is_err());
-        assert!(account_view.can_borrow_data_mut().is_err());
-        assert!(account_view.try_borrow_data_mut().is_err());
+        assert!(account_view.check_borrow().is_err());
+        assert!(account_view.try_borrow().is_err());
+        assert!(account_view.check_borrow_mut().is_err());
+        assert!(account_view.try_borrow_mut().is_err());
 
         // Drop the immutable borrows.
         refs.iter_mut().for_each(|r| {
@@ -782,26 +789,26 @@ mod tests {
         });
 
         // We should be able to borrow the data again.
-        assert!(account_view.can_borrow_data().is_ok());
-        assert!(account_view.can_borrow_data_mut().is_ok());
+        assert!(account_view.check_borrow().is_ok());
+        assert!(account_view.check_borrow_mut().is_ok());
 
         // Borrow mutable data.
-        let ref_mut = account_view.try_borrow_data_mut().unwrap();
+        let ref_mut = account_view.try_borrow_mut().unwrap();
         // It should be sound to get the data pointer while the data is borrowed
         // as long as we don't use it.
         let _data_ptr = account_view.data_ptr();
 
         // Check that we cannot borrow the data anymore.
-        assert!(account_view.can_borrow_data().is_err());
-        assert!(account_view.try_borrow_data().is_err());
-        assert!(account_view.can_borrow_data_mut().is_err());
-        assert!(account_view.try_borrow_data_mut().is_err());
+        assert!(account_view.check_borrow().is_err());
+        assert!(account_view.try_borrow().is_err());
+        assert!(account_view.check_borrow_mut().is_err());
+        assert!(account_view.try_borrow_mut().is_err());
 
         drop(ref_mut);
 
         // We should be able to borrow the data again.
-        assert!(account_view.can_borrow_data().is_ok());
-        assert!(account_view.can_borrow_data_mut().is_ok());
+        assert!(account_view.check_borrow().is_ok());
+        assert!(account_view.check_borrow_mut().is_ok());
 
         let borrow_state = unsafe { (*account_view.raw).borrow_state };
         assert!(borrow_state == NOT_BORROWED);
@@ -867,7 +874,7 @@ mod tests {
         assert_eq!(account.data_len(), 500);
         assert_eq!(account.resize_delta(), 400);
 
-        let data = account.try_borrow_data().unwrap();
+        let data = account.try_borrow().unwrap();
         assert_eq!(data.len(), 500);
     }
 }
