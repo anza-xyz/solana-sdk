@@ -3,7 +3,9 @@ use serde_derive::{Deserialize, Serialize};
 #[cfg(feature = "frozen-abi")]
 use solana_frozen_abi_macro::{frozen_abi, AbiExample};
 use {
-    crate::state::{Lockout, MAX_LOCKOUT_HISTORY},
+    crate::state::{
+        Lockout, BLS_PUBLIC_KEY_COMPRESSED_SIZE, BLS_SIGNATURE_COMPRESSED_SIZE, MAX_LOCKOUT_HISTORY,
+    },
     solana_clock::{Slot, UnixTimestamp},
     solana_hash::Hash,
     solana_pubkey::Pubkey,
@@ -203,9 +205,62 @@ pub struct VoteInit {
 
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
+pub struct BLSPubkeyCompressed(
+    #[cfg_attr(feature = "serde", serde(with = "serde_bytes"))]
+    [u8; BLS_PUBLIC_KEY_COMPRESSED_SIZE],
+);
+
+impl Default for BLSPubkeyCompressed {
+    fn default() -> Self {
+        Self([0u8; BLS_PUBLIC_KEY_COMPRESSED_SIZE])
+    }
+}
+
+impl From<BLSPubkeyCompressed> for [u8; BLS_PUBLIC_KEY_COMPRESSED_SIZE] {
+    fn from(wrapper: BLSPubkeyCompressed) -> Self {
+        wrapper.0
+    }
+}
+
+#[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+pub struct BLSSignatureCompressed(
+    #[cfg_attr(feature = "serde", serde(with = "serde_bytes"))] [u8; BLS_SIGNATURE_COMPRESSED_SIZE],
+);
+
+impl Default for BLSSignatureCompressed {
+    fn default() -> Self {
+        Self([0u8; BLS_SIGNATURE_COMPRESSED_SIZE])
+    }
+}
+
+#[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
+#[derive(Debug, Default, PartialEq, Eq, Clone, Copy)]
+pub struct VoteInitV2 {
+    pub node_pubkey: Pubkey,
+    pub authorized_voter: Pubkey,
+    pub authorized_voter_bls_pubkey: BLSPubkeyCompressed,
+    pub authorized_voter_bls_proof_of_possession: BLSSignatureCompressed,
+    pub authorized_withdrawer: Pubkey,
+    pub inflation_rewards_commission_bps: u16,
+    pub inflation_rewards_collector: Pubkey,
+    pub block_revenue_commission_bps: u16,
+    pub block_revenue_collector: Pubkey,
+}
+
+#[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
+#[derive(Debug, Default, PartialEq, Eq, Clone, Copy)]
+pub struct VoterWithBLSArgs {
+    bls_pub_key: BLSPubkeyCompressed,
+    bls_proof_of_possession: BLSSignatureCompressed,
+}
+
+#[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum VoteAuthorize {
     Voter,
     Withdrawer,
+    VoterWithBLS(VoterWithBLSArgs),
 }
 
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]

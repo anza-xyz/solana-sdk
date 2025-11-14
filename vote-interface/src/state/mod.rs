@@ -33,6 +33,9 @@ pub(crate) mod vote_state_deserialize;
 /// Size of a BLS public key in a compressed point representation
 pub const BLS_PUBLIC_KEY_COMPRESSED_SIZE: usize = 48;
 
+/// Size of a BLS signature in a compressed point representation
+pub const BLS_SIGNATURE_COMPRESSED_SIZE: usize = 96;
+
 // Maximum number of votes to keep around, tightly coupled with epoch_schedule::MINIMUM_SLOTS_PER_EPOCH
 pub const MAX_LOCKOUT_HISTORY: usize = 31;
 pub const INITIAL_LOCKOUT: usize = 2;
