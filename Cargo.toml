@@ -229,7 +229,7 @@ solana-bn254 = { path = "bn254", version = "3.0.0" }
 solana-borsh = { path = "borsh", version = "3.0.0" }
 solana-client-traits = { path = "client-traits", version = "3.0.0" }
 solana-clock = { path = "clock", version = "3.0.0" }
-solana-cluster-type = { path = "cluster-type", version = "3.0.0" }
+solana-cluster-type = { path = "cluster-type", version = "3.0.0", default-features = false }
 solana-commitment-config = { path = "commitment-config", version = "3.0.0" }
 solana-compute-budget-interface = { path = "compute-budget-interface", version = "3.0.0" }
 solana-cpi = { path = "cpi", version = "3.0.0" }
@@ -324,7 +324,7 @@ subtle = "2.6.1"
 syn = "2.0.87"
 tempfile = "3.20.0"
 test-case = "3.3.1"
-thiserror = "2.0.11"
+thiserror = { version = "2.0.11", default-features = false }
 tiny-bip39 = "2.0.0"
 toml = "0.8.23"
 uriparse = "0.6.4"
