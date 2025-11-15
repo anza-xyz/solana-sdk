@@ -4,6 +4,9 @@
 
 #[cfg(feature = "frozen-abi")]
 use solana_frozen_abi_macro::{AbiEnumVisitor, AbiExample};
+#[cfg(feature = "frozen-abi")]
+extern crate std;
+
 use {core::str::FromStr, solana_hash::Hash};
 
 // The order can't align with release lifecycle only to remain ABI-compatible...
