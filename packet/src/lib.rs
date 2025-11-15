@@ -248,14 +248,14 @@ impl Meta {
         addr: IpAddr,
         port: u16,
         flags: PacketFlags,
-        remote_pubkey: Pubkey,
+        remote_pubkey: Option<Pubkey>,
     ) -> Self {
         Self {
             size,
             addr,
             port,
             flags,
-            remote_pubkey,
+            remote_pubkey: remote_pubkey.unwrap_or_default(),
         }
     }
 
@@ -410,7 +410,7 @@ mod tests {
         let flags = PacketFlags::FROM_STAKED_NODE | PacketFlags::REPAIR;
         let pubkey = Pubkey::new_unique();
 
-        let meta = Meta::new(size, addr, port, flags, pubkey);
+        let meta = Meta::new(size, addr, port, flags, Some(pubkey));
 
         assert_eq!(meta.size, size);
         assert_eq!(meta.addr, addr);
@@ -418,5 +418,8 @@ mod tests {
         assert_eq!(meta.flags, flags);
         assert_eq!(meta.remote_pubkey, pubkey);
         assert_eq!(meta.remote_pubkey(), Some(pubkey));
+        let meta = Meta::new(size, addr, port, flags, None);
+        assert_eq!(meta.remote_pubkey, Pubkey::default());
+        assert_eq!(meta.remote_pubkey(), None);
     }
 }
