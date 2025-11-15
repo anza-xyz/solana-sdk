@@ -243,6 +243,22 @@ impl PartialEq for Packet {
 }
 
 impl Meta {
+    pub fn new(
+        size: usize,
+        addr: IpAddr,
+        port: u16,
+        flags: PacketFlags,
+        remote_pubkey: Pubkey,
+    ) -> Self {
+        Self {
+            size,
+            addr,
+            port,
+            flags,
+            remote_pubkey,
+        }
+    }
+
     pub fn socket_addr(&self) -> SocketAddr {
         SocketAddr::new(self.addr, self.port)
     }
@@ -384,5 +400,23 @@ mod tests {
         let pubkey = Pubkey::default();
         meta.set_remote_pubkey(pubkey);
         assert!(meta.remote_pubkey().is_none());
+    }
+
+    #[test]
+    fn test_meta_new() {
+        let size = 1024;
+        let addr = IpAddr::V4(Ipv4Addr::new(192, 168, 1, 1));
+        let port = 8080;
+        let flags = PacketFlags::FROM_STAKED_NODE | PacketFlags::REPAIR;
+        let pubkey = Pubkey::new_unique();
+
+        let meta = Meta::new(size, addr, port, flags, pubkey);
+
+        assert_eq!(meta.size, size);
+        assert_eq!(meta.addr, addr);
+        assert_eq!(meta.port, port);
+        assert_eq!(meta.flags, flags);
+        assert_eq!(meta.remote_pubkey, pubkey);
+        assert_eq!(meta.remote_pubkey(), Some(pubkey));
     }
 }
