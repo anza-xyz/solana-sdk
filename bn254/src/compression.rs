@@ -419,19 +419,20 @@ mod target_arch {
     pub fn alt_bn128_g1_compress_be(
         input: &[u8; ALT_BN128_G1_POINT_SIZE],
     ) -> Result<[u8; ALT_BN128_G1_COMPRESSED_POINT_SIZE], AltBn128CompressionError> {
-        let mut result_buffer = [0; ALT_BN128_G1_COMPRESSED_POINT_SIZE];
-        let result = unsafe {
-            syscalls::sol_alt_bn128_compression(
+        // SAFETY: This is sound as sol_alt_bn128_group_op compression always fills all 32 bytes of our buffer
+        let mut result_buffer =
+            core::mem::MaybeUninit::<[u8; ALT_BN128_G1_COMPRESSED_POINT_SIZE]>::uninit();
+        unsafe {
+            let result = syscalls::sol_alt_bn128_compression(
                 ALT_BN128_G1_COMPRESS_BE,
                 input as *const _ as *const u8,
                 input.len() as u64,
                 &mut result_buffer as *mut _ as *mut u8,
-            )
-        };
-
-        match result {
-            0 => Ok(result_buffer),
-            _ => Err(AltBn128CompressionError::UnexpectedError),
+            );
+            match result {
+                0 => Ok(result_buffer.assume_init()),
+                _ => Err(AltBn128CompressionError::UnexpectedError),
+            }
         }
     }
 
@@ -481,19 +482,19 @@ mod target_arch {
     pub fn alt_bn128_g1_decompress_be(
         input: &[u8; ALT_BN128_G1_COMPRESSED_POINT_SIZE],
     ) -> Result<[u8; ALT_BN128_G1_POINT_SIZE], AltBn128CompressionError> {
-        let mut result_buffer = [0; ALT_BN128_G1_POINT_SIZE];
-        let result = unsafe {
-            syscalls::sol_alt_bn128_compression(
+        // SAFETY: This is sound as sol_alt_bn128_group_op decompression always fills all 64 bytes of our buffer
+        let mut result_buffer = core::mem::MaybeUninit::<[u8; ALT_BN128_G1_POINT_SIZE]>::uninit();
+        unsafe {
+            let result = syscalls::sol_alt_bn128_compression(
                 ALT_BN128_G1_DECOMPRESS_BE,
                 input as *const _ as *const u8,
                 input.len() as u64,
                 &mut result_buffer as *mut _ as *mut u8,
-            )
-        };
-
-        match result {
-            0 => Ok(result_buffer),
-            _ => Err(AltBn128CompressionError::UnexpectedError),
+            );
+            match result {
+                0 => Ok(result_buffer.assume_init()),
+                _ => Err(AltBn128CompressionError::UnexpectedError),
+            }
         }
     }
 
@@ -543,19 +544,20 @@ mod target_arch {
     pub fn alt_bn128_g2_compress_be(
         input: &[u8; ALT_BN128_G2_POINT_SIZE],
     ) -> Result<[u8; ALT_BN128_G2_COMPRESSED_POINT_SIZE], AltBn128CompressionError> {
-        let mut result_buffer = [0; ALT_BN128_G2_COMPRESSED_POINT_SIZE];
-        let result = unsafe {
-            syscalls::sol_alt_bn128_compression(
+        // SAFETY: This is sound as sol_alt_bn128_group_op compression always fills all 64 bytes of our buffer
+        let mut result_buffer =
+            core::mem::MaybeUninit::<[u8; ALT_BN128_G2_COMPRESSED_POINT_SIZE]>::uninit();
+        unsafe {
+            let result = syscalls::sol_alt_bn128_compression(
                 ALT_BN128_G2_COMPRESS_BE,
                 input as *const _ as *const u8,
                 input.len() as u64,
                 &mut result_buffer as *mut _ as *mut u8,
-            )
-        };
-
-        match result {
-            0 => Ok(result_buffer),
-            _ => Err(AltBn128CompressionError::UnexpectedError),
+            );
+            match result {
+                0 => Ok(result_buffer.assume_init()),
+                _ => Err(AltBn128CompressionError::UnexpectedError),
+            }
         }
     }
 
