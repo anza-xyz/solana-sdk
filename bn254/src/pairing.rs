@@ -135,7 +135,7 @@ pub fn alt_bn128_pairing_be(input: &[u8]) -> Result<Vec<u8>, AltBn128Error> {
                 ALT_BN128_PAIRING_BE,
                 input as *const _ as *const u8,
                 input.len() as u64,
-                result_buffer.as_mut_ptr() as *mut u8,
+                result_buffer.as_mut_ptr(),
             );
             match result {
                 0 => {
@@ -200,7 +200,7 @@ pub fn alt_bn128_pairing_le(input: &[u8]) -> Result<Vec<u8>, AltBn128Error> {
                 ALT_BN128_PAIRING_LE,
                 input as *const _ as *const u8,
                 input.len() as u64,
-                result_buffer.as_mut_ptr() as *mut u8,
+                result_buffer.as_mut_ptr(),
             );
             match result {
                 0 => {

@@ -126,7 +126,7 @@ pub fn alt_bn128_g1_addition_be(input: &[u8]) -> Result<Vec<u8>, AltBn128Error> 
                 ALT_BN128_G1_ADD_BE,
                 input as *const _ as *const u8,
                 input.len() as u64,
-                result_buffer.as_mut_ptr() as *mut u8,
+                result_buffer.as_mut_ptr(),
             );
             match result {
                 0 => {
@@ -165,7 +165,7 @@ pub fn alt_bn128_g1_addition_le(
                 ALT_BN128_G1_ADD_LE,
                 input as *const _ as *const u8,
                 input.len() as u64,
-                result_buffer.as_mut_ptr() as *mut u8,
+                result_buffer.as_mut_ptr(),
             );
             match result {
                 0 => {
