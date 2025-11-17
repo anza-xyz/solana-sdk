@@ -2,7 +2,7 @@
 name = "solana-epoch-rewards-hasher"
 description = "Solana epoch rewards hasher."
 documentation = "https://docs.rs/solana-epoch-rewards-hasher"
-version = "3.0.0"
+version = "3.1.0"
 authors = { workspace = true }
 repository = { workspace = true }
 homepage = { workspace = true }

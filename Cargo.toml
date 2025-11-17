@@ -218,7 +218,7 @@ siphasher = "0.3.11"
 solana-account = { path = "account", version = "3.0.0" }
 solana-account-info = { path = "account-info", version = "3.0.0" }
 solana-account-view = { path = "account-view", version = "0.0.0" }
-solana-address = { path = "address", version = "1.0.0" }
+solana-address = { path = "address", version = "2.0.0" }
 solana-address-lookup-table-interface = { path = "address-lookup-table-interface", version = "3.0.0" }
 solana-atomic-u64 = { path = "atomic-u64", version = "3.0.0" }
 solana-big-mod-exp = { path = "big-mod-exp", version = "3.0.0" }
@@ -269,19 +269,19 @@ solana-nonce-account = { path = "nonce-account", version = "3.0.0" }
 solana-offchain-message = { path = "offchain-message", version = "3.0.0" }
 solana-package-metadata = { path = "package-metadata", version = "3.0.0" }
 solana-package-metadata-macro = { path = "package-metadata-macro", version = "3.0.0" }
-solana-packet = { path = "packet", version = "3.0.0" }
+solana-packet = { path = "packet", version = "4.0.0" }
 solana-poh-config = { path = "poh-config", version = "3.0.0" }
 solana-precompile-error = { path = "precompile-error", version = "3.0.0" }
 solana-presigner = { path = "presigner", version = "3.0.0" }
 solana-program = { path = "program", version = "3.0.0", default-features = false }
 solana-program-entrypoint = { path = "program-entrypoint", version = "3.0.0" }
 solana-program-error = { path = "program-error", version = "3.0.0" }
-solana-program-log = { path = "program-log", version = "0.0.0" }
-solana-program-log-macro = { path = "program-log-macro", version = "0.0.0" }
+solana-program-log = { path = "program-log", version = "1.0.0" }
+solana-program-log-macro = { path = "program-log-macro", version = "1.0.0" }
 solana-program-memory = { path = "program-memory", version = "3.0.0" }
 solana-program-option = { path = "program-option", version = "3.0.0" }
 solana-program-pack = { path = "program-pack", version = "3.0.0" }
-solana-pubkey = { path = "pubkey", version = "3.0.0", default-features = false }
+solana-pubkey = { path = "pubkey", version = "4.0.0", default-features = false }
 solana-quic-definitions = { path = "quic-definitions", version = "3.0.0" }
 solana-rent = { path = "rent", version = "3.0.0", default-features = false }
 solana-reward-info = { path = "reward-info", version = "3.0.0" }
@@ -307,7 +307,7 @@ solana-signer-store = { path = "signer-store", version = "0.1.0" }
 solana-slot-hashes = { path = "slot-hashes", version = "3.0.0" }
 solana-slot-history = { path = "slot-history", version = "3.0.0" }
 solana-stable-layout = { path = "stable-layout", version = "3.0.0" }
-solana-system-interface = { path = "system-interface", version = "2.0" }
+solana-system-interface = { path = "system-interface", version = "3.0" }
 solana-system-transaction = { path = "system-transaction", version = "3.0.0" }
 solana-system-wasm-js = { path = "system-wasm-js", version = "1.0" }
 solana-sysvar = { path = "sysvar", version = "3.0.0" }

@@ -2,7 +2,7 @@
 name = "solana-program-log-macro"
 description = "Macro for solana program log utility"
 documentation = "https://docs.rs/solana-program-log-macro"
-version = "0.0.0"
+version = "1.0.0"
 authors = { workspace = true }
 repository = { workspace = true }
 homepage = { workspace = true }

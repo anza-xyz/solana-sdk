@@ -4,6 +4,7 @@
 //! current epoch or the stake for a specific vote account using the
 //! `sol_get_epoch_stake` syscall.
 #![cfg_attr(docsrs, feature(doc_cfg))]
+#![no_std]
 
 use solana_pubkey::Pubkey;
 
@@ -22,7 +23,7 @@ fn get_epoch_stake(var_addr: *const u8) -> u64 {
 
 /// Get the current epoch's total stake.
 pub fn get_epoch_total_stake() -> u64 {
-    get_epoch_stake(std::ptr::null::<Pubkey>() as *const u8)
+    get_epoch_stake(core::ptr::null::<Pubkey>() as *const u8)
 }
 
 /// Get the current epoch stake for a given vote address.

@@ -1,7 +1,7 @@
 [package]
 name = "solana-program-log"
 description = "Lightweight log utility for Solana programs"
-version = "0.0.0"
+version = "1.0.0"
 authors = { workspace = true }
 repository = { workspace = true }
 homepage = { workspace = true }

@@ -102,6 +102,24 @@ jobs:
       - name: Run clippy
         run: ./scripts/check-clippy.sh
 
+  docsrs:
+    name: Docs.rs
+    needs: [sanity]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Git Checkout
+        uses: actions/checkout@v4
+
+      - name: Install 'nightly' toolchain
+        uses: dtolnay/rust-toolchain@nightly
+
+      - name: Run docs.rs build
+        run: |
+          # Mimic docs.rs build environment
+          export DOCS_RS="1"
+          export RUSTDOCFLAGS="--cfg docsrs"
+          cargo +nightly doc --no-deps --all-features --manifest-path "${{ inputs.package_path }}/Cargo.toml"
+
   detached-minimal-versions:
     name: Check minimal-versions on detached crate
     runs-on: ubuntu-latest
@@ -153,26 +171,26 @@ jobs:
         with:
           tool: toml-cli,cargo-semver-checks,cargo-release
 
-      - name: Check if crate has a lib target
-        id: has_lib
+      - name: Check if crate is a procedural macro
+        id: is_proc_macro
         shell: bash
         run: |
           set +e # toml crashes the whole shell if it fails to find the key
-          result=$(toml get "${{ inputs.package-path }}/Cargo.toml" lib.crate-type)
-          if [[ "$result" == *"lib"* ]]; then
-            echo "has_lib=true" >> "$GITHUB_OUTPUT"
+          result=$(toml get "${{ inputs.package_path }}/Cargo.toml" lib.proc-macro)
+          if [[ "$result" == *"true"* ]]; then
+            echo "is_proc_macro=true" >> "$GITHUB_OUTPUT"
           else
-            echo "has_lib=false" >> "$GITHUB_OUTPUT"
+            echo "is_proc_macro=false" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Set Git Author (required for cargo-release)
-        if: ${{ steps.has_lib.outputs.has_lib == 'true' }}
+        if: ${{ steps.is_proc_macro.outputs.is_proc_macro == 'false' }}
         run: |
           git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git config --global user.name "github-actions[bot]"
 
       - name: Set Version
-        if: ${{ steps.has_lib.outputs.has_lib == 'true' }}
+        if: ${{ steps.is_proc_macro.outputs.is_proc_macro == 'false' }}
         run: |
           if [ "${{ inputs.level }}" == "version" ]; then
             LEVEL=${{ inputs.version }}
@@ -182,13 +200,13 @@ jobs:
           cargo release $LEVEL --manifest-path "${{ inputs.package_path }}/Cargo.toml" --no-tag --no-publish --no-push --no-confirm --execute
 
       - name: Check semver
-        if: ${{ steps.has_lib.outputs.has_lib == 'true' }}
+        if: ${{ steps.is_proc_macro.outputs.is_proc_macro == 'false' }}
         run: cargo semver-checks --manifest-path "${{ inputs.package_path }}/Cargo.toml"
 
   publish-crate:
     name: Publish crate
     runs-on: ubuntu-latest
-    needs: [format, clippy, detached-minimal-versions, semver]
+    needs: [format, clippy, detached-minimal-versions, semver, docsrs]
     permissions:
       contents: write
     steps:

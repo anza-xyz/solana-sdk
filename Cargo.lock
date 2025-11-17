@@ -2031,9 +2031,9 @@ dependencies = [
 
 [[package]]
 name = "proc-macro2"
-version = "1.0.93"
+version = "1.0.103"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "60946a68e5f9d28b0dc1c21bb8a97ee7d018a8b322fa57838ba31cc878e22d99"
+checksum = "5ee95bc4ef87b8d5ba32e8b7714ccc834865276eab0aed5c9958d00ec45f49e8"
 dependencies = [
  "unicode-ident",
 ]
@@ -2603,7 +2603,7 @@ dependencies = [
 
 [[package]]
 name = "solana-account-info"
-version = "3.0.0"
+version = "3.1.0"
 dependencies = [
  "bincode",
  "serde_core",
@@ -2622,7 +2622,7 @@ dependencies = [
 
 [[package]]
 name = "solana-address"
-version = "1.0.0"
+version = "2.0.0"
 dependencies = [
  "anyhow",
  "arbitrary",
@@ -2696,7 +2696,7 @@ dependencies = [
 
 [[package]]
 name = "solana-bincode"
-version = "3.0.0"
+version = "3.1.0"
 dependencies = [
  "bincode",
  "serde_core",
@@ -2706,7 +2706,7 @@ dependencies = [
 
 [[package]]
 name = "solana-blake3-hasher"
-version = "3.0.0"
+version = "3.1.0"
 dependencies = [
  "blake3",
  "solana-blake3-hasher",
@@ -2814,7 +2814,7 @@ dependencies = [
 
 [[package]]
 name = "solana-commitment-config"
-version = "3.0.0"
+version = "3.1.0"
 dependencies = [
  "serde",
  "serde_derive",
@@ -2835,7 +2835,7 @@ dependencies = [
 
 [[package]]
 name = "solana-cpi"
-version = "3.0.0"
+version = "3.1.0"
 dependencies = [
  "solana-account-info",
  "solana-define-syscall",
@@ -2851,7 +2851,7 @@ dependencies = [
 
 [[package]]
 name = "solana-define-syscall"
-version = "4.0.0"
+version = "4.0.1"
 
 [[package]]
 name = "solana-derivation-path"
@@ -2875,7 +2875,7 @@ dependencies = [
 
 [[package]]
 name = "solana-epoch-info"
-version = "3.0.0"
+version = "3.1.0"
 dependencies = [
  "serde",
  "serde_derive",
@@ -2898,7 +2898,7 @@ dependencies = [
 
 [[package]]
 name = "solana-epoch-rewards-hasher"
-version = "3.0.0"
+version = "3.1.0"
 dependencies = [
  "siphasher",
  "solana-address",
@@ -3024,7 +3024,7 @@ dependencies = [
 
 [[package]]
 name = "solana-frozen-abi-macro"
-version = "3.0.1"
+version = "3.1.0"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -3073,7 +3073,7 @@ dependencies = [
 
 [[package]]
 name = "solana-hash"
-version = "4.0.0"
+version = "4.0.1"
 dependencies = [
  "borsh",
  "bs58",
@@ -3101,7 +3101,7 @@ dependencies = [
 
 [[package]]
 name = "solana-instruction"
-version = "3.0.0"
+version = "3.1.0"
 dependencies = [
  "bincode",
  "borsh",
@@ -3117,7 +3117,7 @@ dependencies = [
 
 [[package]]
 name = "solana-instruction-error"
-version = "2.0.0"
+version = "2.1.0"
 dependencies = [
  "num-traits",
  "serde",
@@ -3147,7 +3147,7 @@ dependencies = [
 
 [[package]]
 name = "solana-keccak-hasher"
-version = "3.0.0"
+version = "3.1.0"
 dependencies = [
  "sha3",
  "solana-define-syscall",
@@ -3156,7 +3156,7 @@ dependencies = [
 
 [[package]]
 name = "solana-keypair"
-version = "3.0.1"
+version = "3.1.0"
 dependencies = [
  "ed25519-dalek",
  "ed25519-dalek-bip32",
@@ -3336,7 +3336,7 @@ dependencies = [
 
 [[package]]
 name = "solana-packet"
-version = "3.0.0"
+version = "4.0.0"
 dependencies = [
  "bincode",
  "bitflags 2.8.0",
@@ -3347,6 +3347,7 @@ dependencies = [
  "solana-frozen-abi",
  "solana-frozen-abi-macro",
  "solana-packet",
+ "solana-pubkey",
  "static_assertions",
 ]
 
@@ -3429,7 +3430,7 @@ dependencies = [
 
 [[package]]
 name = "solana-program-entrypoint"
-version = "3.1.0"
+version = "3.1.1"
 dependencies = [
  "solana-account-info",
  "solana-define-syscall",
@@ -3450,7 +3451,7 @@ dependencies = [
 
 [[package]]
 name = "solana-program-log"
-version = "0.0.0"
+version = "1.0.0"
 dependencies = [
  "solana-define-syscall",
  "solana-program-log-macro",
@@ -3458,7 +3459,7 @@ dependencies = [
 
 [[package]]
 name = "solana-program-log-macro"
-version = "0.0.0"
+version = "1.0.0"
 dependencies = [
  "quote",
  "regex",
@@ -3467,7 +3468,7 @@ dependencies = [
 
 [[package]]
 name = "solana-program-memory"
-version = "3.0.0"
+version = "3.1.0"
 dependencies = [
  "solana-define-syscall",
 ]
@@ -3485,7 +3486,7 @@ dependencies = [
 
 [[package]]
 name = "solana-pubkey"
-version = "3.0.0"
+version = "4.0.0"
 dependencies = [
  "rand",
  "solana-address",
@@ -3567,7 +3568,7 @@ dependencies = [
 
 [[package]]
 name = "solana-sdk-ids"
-version = "3.0.0"
+version = "3.1.0"
 dependencies = [
  "solana-address",
 ]
@@ -3642,7 +3643,7 @@ dependencies = [
 
 [[package]]
 name = "solana-secp256k1-recover"
-version = "3.0.0"
+version = "3.1.0"
 dependencies = [
  "anyhow",
  "borsh",
@@ -3716,7 +3717,7 @@ dependencies = [
 
 [[package]]
 name = "solana-sha256-hasher"
-version = "3.0.0"
+version = "3.1.0"
 dependencies = [
  "sha2",
  "solana-define-syscall",
@@ -3726,7 +3727,7 @@ dependencies = [
 
 [[package]]
 name = "solana-short-vec"
-version = "3.0.0"
+version = "3.1.0"
 dependencies = [
  "assert_matches",
  "bincode",
@@ -3824,7 +3825,7 @@ dependencies = [
 
 [[package]]
 name = "solana-system-interface"
-version = "2.0.0"
+version = "3.0.0"
 dependencies = [
  "anyhow",
  "borsh",
@@ -3875,7 +3876,7 @@ dependencies = [
 
 [[package]]
 name = "solana-sysvar"
-version = "3.0.0"
+version = "3.1.0"
 dependencies = [
  "anyhow",
  "base64 0.22.1",
@@ -3916,7 +3917,7 @@ dependencies = [
 
 [[package]]
 name = "solana-sysvar-id"
-version = "3.0.0"
+version = "3.1.0"
 dependencies = [
  "solana-address",
  "solana-sdk-ids",
@@ -3928,7 +3929,7 @@ version = "3.0.0"
 
 [[package]]
 name = "solana-transaction"
-version = "3.0.1"
+version = "3.0.2"
 dependencies = [
  "anyhow",
  "bincode",
