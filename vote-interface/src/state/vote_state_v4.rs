@@ -96,7 +96,7 @@ impl VoteStateV4 {
         Self {
             node_pubkey: vote_init.node_pubkey,
             authorized_voters: AuthorizedVoters::new(clock.epoch, vote_init.authorized_voter),
-            bls_pubkey_compressed: Some(vote_init.authorized_voter_bls_pubkey.into()),
+            bls_pubkey_compressed: Some(vote_init.authorized_voter_bls_pubkey),
             authorized_withdrawer: vote_init.authorized_withdrawer,
             inflation_rewards_commission_bps: vote_init.inflation_rewards_commission_bps,
             inflation_rewards_collector: vote_init.inflation_rewards_collector,

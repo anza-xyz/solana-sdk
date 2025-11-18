@@ -1,8 +1,3 @@
-#[cfg(feature = "serde")]
-use {
-    serde_derive::{Deserialize, Serialize},
-    serde_with::serde_as,
-};
 #[cfg(feature = "frozen-abi")]
 use solana_frozen_abi_macro::{frozen_abi, AbiExample};
 use {
@@ -13,6 +8,11 @@ use {
     solana_hash::Hash,
     solana_pubkey::Pubkey,
     std::{collections::VecDeque, fmt::Debug},
+};
+#[cfg(feature = "serde")]
+use {
+    serde_derive::{Deserialize, Serialize},
+    serde_with::serde_as,
 };
 
 #[cfg_attr(
@@ -212,7 +212,10 @@ pub struct VoteInit {
 pub struct VoteInitV2 {
     pub node_pubkey: Pubkey,
     pub authorized_voter: Pubkey,
-    #[cfg_attr(feature = "serde", serde_as(as = "[_; BLS_PUBLIC_KEY_COMPRESSED_SIZE]"))]
+    #[cfg_attr(
+        feature = "serde",
+        serde_as(as = "[_; BLS_PUBLIC_KEY_COMPRESSED_SIZE]")
+    )]
     pub authorized_voter_bls_pubkey: [u8; BLS_PUBLIC_KEY_COMPRESSED_SIZE],
     #[cfg_attr(feature = "serde", serde_as(as = "[_; BLS_SIGNATURE_COMPRESSED_SIZE]"))]
     pub authorized_voter_bls_proof_of_possession: [u8; BLS_SIGNATURE_COMPRESSED_SIZE],
@@ -243,7 +246,10 @@ impl Default for VoteInitV2 {
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub struct VoterWithBLSArgs {
-    #[cfg_attr(feature = "serde", serde_as(as = "[_; BLS_PUBLIC_KEY_COMPRESSED_SIZE]"))]
+    #[cfg_attr(
+        feature = "serde",
+        serde_as(as = "[_; BLS_PUBLIC_KEY_COMPRESSED_SIZE]")
+    )]
     pub bls_pub_key: [u8; BLS_PUBLIC_KEY_COMPRESSED_SIZE],
     #[cfg_attr(feature = "serde", serde_as(as = "[_; BLS_SIGNATURE_COMPRESSED_SIZE]"))]
     pub bls_proof_of_possession: [u8; BLS_SIGNATURE_COMPRESSED_SIZE],
