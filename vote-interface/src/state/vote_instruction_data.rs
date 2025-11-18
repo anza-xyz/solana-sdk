@@ -213,7 +213,7 @@ pub struct VoteInitV2 {
     pub node_pubkey: Pubkey,
     pub authorized_voter: Pubkey,
     #[cfg_attr(feature = "serde", serde_as(as = "[_; BLS_PUBLIC_KEY_COMPRESSED_SIZE]"))]
-    pub authorized_voter_bls_pubkey: [u8; BLS_PUBLIC_KEY_COMPRESSED_SIZE],  
+    pub authorized_voter_bls_pubkey: [u8; BLS_PUBLIC_KEY_COMPRESSED_SIZE],
     #[cfg_attr(feature = "serde", serde_as(as = "[_; BLS_SIGNATURE_COMPRESSED_SIZE]"))]
     pub authorized_voter_bls_proof_of_possession: [u8; BLS_SIGNATURE_COMPRESSED_SIZE],
     pub authorized_withdrawer: Pubkey,
