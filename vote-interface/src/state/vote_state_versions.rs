@@ -152,7 +152,7 @@ impl VoteStateVersions {
         let variant = solana_serialize_utils::cursor::read_u32(&mut cursor)?;
         match variant {
             // V0_23_5 not supported.
-            0 => Err(InstructionError::UninitializedAccount),
+            0 => Err(InstructionError::InvalidAccountData),
             // V1_14_11
             1 => {
                 let mut vote_state = Box::new(MaybeUninit::uninit());
