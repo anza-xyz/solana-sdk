@@ -38,7 +38,6 @@ frozen-abi = [
 serde = [
     "dep:cfg_eval",
     "dep:serde",
-    "dep:serde_bytes",
     "dep:serde_derive",
     "dep:serde_with",
     "dep:solana-serde-varint",
@@ -55,7 +54,6 @@ cfg_eval = { workspace = true, optional = true }
 num-derive = { workspace = true }
 num-traits = { workspace = true }
 serde = { workspace = true, optional = true }
-serde_bytes = { workspace = true, optional = true }
 serde_derive = { workspace = true, optional = true }
 serde_with = { workspace = true, features = ["macros"], optional = true }
 solana-clock = { workspace = true }

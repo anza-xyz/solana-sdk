@@ -40,6 +40,9 @@ pub enum VoteInstruction {
     ///   0. `[WRITE]` Vote account to be updated with the Pubkey for authorization
     ///   1. `[]` Clock sysvar
     ///   2. `[SIGNER]` Vote or withdraw authority
+    ///
+    /// When SIMD-0387 is enabled, the `VoteAuthorize::Voter` variant is
+    /// disallowed for any vote accounts whose BLS pubkey is set to `Some`.
     Authorize(Pubkey, VoteAuthorize),
 
     /// A Vote instruction with recent votes
@@ -93,6 +96,9 @@ pub enum VoteInstruction {
     ///   1. `[]` Clock sysvar
     ///   2. `[SIGNER]` Vote or withdraw authority
     ///   3. `[SIGNER]` New vote or withdraw authority
+    ///
+    /// When SIMD-0387 is enabled, the `VoteAuthorize::Voter` variant is
+    /// disallowed for any vote accounts whose BLS pubkey is set to `Some`.
     AuthorizeChecked(VoteAuthorize),
 
     /// Update the onchain vote state for the signer.
@@ -117,6 +123,10 @@ pub enum VoteInstruction {
     ///   0. `[Write]` Vote account to be updated
     ///   1. `[]` Clock sysvar
     ///   2. `[SIGNER]` Base key of current Voter or Withdrawer authority's derived key
+    ///
+    /// When SIMD-0387 is enabled, the `VoteAuthorize::Voter` variant in
+    /// `authorization_type` is disallowed for any vote accounts whose BLS
+    /// pubkey is set to `Some`.
     AuthorizeWithSeed(VoteAuthorizeWithSeedArgs),
 
     /// Given that the current Voter or Withdrawer authority is a derived key,
@@ -131,6 +141,10 @@ pub enum VoteInstruction {
     ///   1. `[]` Clock sysvar
     ///   2. `[SIGNER]` Base key of current Voter or Withdrawer authority's derived key
     ///   3. `[SIGNER]` New vote or withdraw authority
+    ///
+    /// When SIMD-0387 is enabled, the `VoteAuthorize::Voter` variant in
+    /// `authorization_type` is disallowed for any vote accounts whose BLS
+    /// pubkey is set to `Some`.
     AuthorizeCheckedWithSeed(VoteAuthorizeCheckedWithSeedArgs),
 
     /// Update the onchain vote state for the signer.

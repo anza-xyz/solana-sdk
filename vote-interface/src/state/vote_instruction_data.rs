@@ -1,5 +1,8 @@
 #[cfg(feature = "serde")]
-use serde_derive::{Deserialize, Serialize};
+use {
+    serde_derive::{Deserialize, Serialize},
+    serde_with::serde_as,
+};
 #[cfg(feature = "frozen-abi")]
 use solana_frozen_abi_macro::{frozen_abi, AbiExample};
 use {
@@ -203,44 +206,16 @@ pub struct VoteInit {
     pub commission: u8,
 }
 
+#[cfg_attr(feature = "serde", cfg_eval::cfg_eval, serde_as)]
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
-pub struct BLSPubkeyCompressed(
-    #[cfg_attr(feature = "serde", serde(with = "serde_bytes"))]
-    [u8; BLS_PUBLIC_KEY_COMPRESSED_SIZE],
-);
-
-impl Default for BLSPubkeyCompressed {
-    fn default() -> Self {
-        Self([0u8; BLS_PUBLIC_KEY_COMPRESSED_SIZE])
-    }
-}
-
-impl From<BLSPubkeyCompressed> for [u8; BLS_PUBLIC_KEY_COMPRESSED_SIZE] {
-    fn from(wrapper: BLSPubkeyCompressed) -> Self {
-        wrapper.0
-    }
-}
-
-#[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
-#[derive(Debug, PartialEq, Eq, Clone, Copy)]
-pub struct BLSSignatureCompressed(
-    #[cfg_attr(feature = "serde", serde(with = "serde_bytes"))] [u8; BLS_SIGNATURE_COMPRESSED_SIZE],
-);
-
-impl Default for BLSSignatureCompressed {
-    fn default() -> Self {
-        Self([0u8; BLS_SIGNATURE_COMPRESSED_SIZE])
-    }
-}
-
-#[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
-#[derive(Debug, Default, PartialEq, Eq, Clone, Copy)]
 pub struct VoteInitV2 {
     pub node_pubkey: Pubkey,
     pub authorized_voter: Pubkey,
-    pub authorized_voter_bls_pubkey: BLSPubkeyCompressed,
-    pub authorized_voter_bls_proof_of_possession: BLSSignatureCompressed,
+    #[cfg_attr(feature = "serde", serde_as(as = "[_; BLS_PUBLIC_KEY_COMPRESSED_SIZE]"))]
+    pub authorized_voter_bls_pubkey: [u8; BLS_PUBLIC_KEY_COMPRESSED_SIZE],  
+    #[cfg_attr(feature = "serde", serde_as(as = "[_; BLS_SIGNATURE_COMPRESSED_SIZE]"))]
+    pub authorized_voter_bls_proof_of_possession: [u8; BLS_SIGNATURE_COMPRESSED_SIZE],
     pub authorized_withdrawer: Pubkey,
     pub inflation_rewards_commission_bps: u16,
     pub inflation_rewards_collector: Pubkey,
@@ -248,11 +223,39 @@ pub struct VoteInitV2 {
     pub block_revenue_collector: Pubkey,
 }
 
+impl Default for VoteInitV2 {
+    fn default() -> Self {
+        Self {
+            node_pubkey: Pubkey::default(),
+            authorized_voter: Pubkey::default(),
+            authorized_voter_bls_pubkey: [0u8; BLS_PUBLIC_KEY_COMPRESSED_SIZE],
+            authorized_voter_bls_proof_of_possession: [0u8; BLS_SIGNATURE_COMPRESSED_SIZE],
+            authorized_withdrawer: Pubkey::default(),
+            inflation_rewards_commission_bps: 0,
+            inflation_rewards_collector: Pubkey::default(),
+            block_revenue_commission_bps: 0,
+            block_revenue_collector: Pubkey::default(),
+        }
+    }
+}
+
+#[cfg_attr(feature = "serde", cfg_eval::cfg_eval, serde_as)]
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
-#[derive(Debug, Default, PartialEq, Eq, Clone, Copy)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub struct VoterWithBLSArgs {
-    bls_pub_key: BLSPubkeyCompressed,
-    bls_proof_of_possession: BLSSignatureCompressed,
+    #[cfg_attr(feature = "serde", serde_as(as = "[_; BLS_PUBLIC_KEY_COMPRESSED_SIZE]"))]
+    pub bls_pub_key: [u8; BLS_PUBLIC_KEY_COMPRESSED_SIZE],
+    #[cfg_attr(feature = "serde", serde_as(as = "[_; BLS_SIGNATURE_COMPRESSED_SIZE]"))]
+    pub bls_proof_of_possession: [u8; BLS_SIGNATURE_COMPRESSED_SIZE],
+}
+
+impl Default for VoterWithBLSArgs {
+    fn default() -> Self {
+        Self {
+            bls_pub_key: [0u8; BLS_PUBLIC_KEY_COMPRESSED_SIZE],
+            bls_proof_of_possession: [0u8; BLS_SIGNATURE_COMPRESSED_SIZE],
+        }
+    }
 }
 
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]

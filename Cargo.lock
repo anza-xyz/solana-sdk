@@ -3989,7 +3989,6 @@ dependencies = [
  "num-traits",
  "rand",
  "serde",
- "serde_bytes",
  "serde_derive",
  "serde_with",
  "solana-clock",
