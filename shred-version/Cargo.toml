@@ -17,5 +17,8 @@ solana-hard-forks = { workspace = true }
 solana-hash = { workspace = true }
 solana-sha256-hasher = { workspace = true }
 
+[dev-dependencies]
+solana-sha256-hasher = { workspace = true, features = ["sha2"] }
+
 [lints]
 workspace = true
