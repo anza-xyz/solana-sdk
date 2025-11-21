@@ -224,7 +224,7 @@ jobs:
           cargo-cache-fallback-key: cargo-stable
 
       - name: Install cargo-release
-        uses: taiki-e/cache-cargo-install-action@v2
+        uses: taiki-e/install-action@v2
         with:
           tool: cargo-release
 
