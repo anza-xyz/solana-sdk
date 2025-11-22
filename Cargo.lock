@@ -3050,6 +3050,7 @@ dependencies = [
  "im",
  "log",
  "memmap2",
+ "rand",
  "serde",
  "serde_bytes",
  "serde_derive",

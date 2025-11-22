@@ -23,6 +23,8 @@ build_sbf_excludes=(
   --exclude solana-system-wasm-js
   --exclude solana-transaction
   --exclude solana-sdk
+  --exclude solana-frozen-abi
+  --exclude solana-frozen-abi-macro
 )
 
 ./cargo nightly hack --workspace "${build_sbf_excludes[@]}" build-sbf
