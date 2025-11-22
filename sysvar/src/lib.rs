@@ -185,19 +185,21 @@ macro_rules! impl_sysvar_get {
     ($sysvar_id:expr) => {
         fn get() -> Result<Self, $crate::__private::ProgramError> {
             // Allocate uninitialized memory for the sysvar struct
-            let mut uninit = core::mem::MaybeUninit::<Self>::uninit();
-            let size = core::mem::size_of::<Self>() as u64;
-            // Safety: we build a mutable slice pointing to the uninitialized
-            // buffer.  The `get_sysvar` syscall will fill exactly `size`
-            // bytes, after which the buffer is fully initialised.
-            let dst = unsafe {
-                core::slice::from_raw_parts_mut(uninit.as_mut_ptr() as *mut u8, size as usize)
-            };
-            // Attempt to load the sysvar data using the provided sysvar id.
-            $crate::get_sysvar(dst, &$sysvar_id, 0, size)?;
-            // Safety: `get_sysvar` succeeded and initialised the buffer.
-            let var = unsafe { uninit.assume_init() };
-            Ok(var)
+            let mut uninit = ::core::mem::MaybeUninit::<Self>::uninit();
+            let size: u64 = size_of::<Self>() as u64;
+            let sysvar_id = $sysvar_id;
+            unsafe {
+                // Attempt to load the sysvar data using the provided sysvar id.
+                // SAFETY: `size` is exactly the size of the buffer passed
+                $crate::get_sysvar_unchecked(
+                    uninit.as_mut_ptr() as *mut u8,
+                    ::core::ptr::addr_of!(sysvar_id) as *const u8,
+                    0,
+                    size,
+                )?;
+                // SAFETY: If `get_sysvar_unchecked` succeeded, the buffer will have been initialized
+                Ok(uninit.assume_init())
+            }
         }
     };
 }
@@ -219,13 +221,26 @@ pub fn get_sysvar(
     let sysvar_id = sysvar_id as *const _ as *const u8;
     let var_addr = dst as *mut _ as *mut u8;
 
+    unsafe { get_sysvar_unchecked(var_addr, sysvar_id, offset, length) }
+}
+
+/// Same as [`get_sysvar`], but takes a raw pointer and does not check destination length.
+///
+/// # SAFETY:
+/// - `dst` must point to `length` mutable bytes
+unsafe fn get_sysvar_unchecked(
+    dst: *mut u8,
+    sysvar_id: *const u8,
+    offset: u64,
+    length: u64,
+) -> Result<(), solana_program_error::ProgramError> {
     #[cfg(target_os = "solana")]
     let result = unsafe {
-        solana_define_syscall::definitions::sol_get_sysvar(sysvar_id, var_addr, offset, length)
+        solana_define_syscall::definitions::sol_get_sysvar(sysvar_id, dst, offset, length)
     };
 
     #[cfg(not(target_os = "solana"))]
-    let result = crate::program_stubs::sol_get_sysvar(sysvar_id, var_addr, offset, length);
+    let result = crate::program_stubs::sol_get_sysvar(sysvar_id, dst, offset, length);
 
     match result {
         solana_program_entrypoint::SUCCESS => Ok(()),
