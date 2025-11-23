@@ -45,11 +45,15 @@ pub use {
 };
 
 impl Sysvar for LastRestartSlot {
-    impl_sysvar_get!(id());
-}
+    #[cfg(not(feature = "bincode"))]
+    impl_sysvar_get!(sol_get_last_restart_slot);
+    #[cfg(feature = "bincode")]
+    impl_sysvar_get!(id(), SERIALIZED_SIZE);}
 
 #[cfg(feature = "bincode")]
 impl SysvarSerialize for LastRestartSlot {}
+
+const SERIALIZED_SIZE: usize = 8;
 
 #[cfg(test)]
 mod tests {
@@ -66,5 +70,16 @@ mod tests {
 
         let got = LastRestartSlot::get().unwrap();
         assert_eq!(got, expected);
+    }
+
+
+    #[cfg(feature = "bincode")]
+    #[test]
+    fn test_last_restart_slot_sysvar_size() {
+        let slot = LastRestartSlot::default();
+        assert_eq!(
+            bincode::serialized_size(&slot).unwrap(),
+            SERIALIZED_SIZE as u64
+        );
     }
 }

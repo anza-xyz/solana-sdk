@@ -128,11 +128,16 @@ pub use {
 };
 
 impl Sysvar for EpochSchedule {
-    impl_sysvar_get!(id());
+    #[cfg(not(feature = "bincode"))]
+    impl_sysvar_get!(sol_get_epoch_schedule_sysvar);
+    #[cfg(feature = "bincode")]
+    impl_sysvar_get!(id(), SERIALIZED_SIZE);
 }
 
 #[cfg(feature = "bincode")]
 impl SysvarSerialize for EpochSchedule {}
+
+const SERIALIZED_SIZE: usize = 33;
 
 #[cfg(test)]
 mod tests {
@@ -147,5 +152,15 @@ mod tests {
 
         let got = EpochSchedule::get().unwrap();
         assert_eq!(got, expected);
+    }
+
+    #[cfg(feature = "bincode")]
+    #[test]
+    fn test_epoch_schedule_sysvar_size() {
+        let schedule = EpochSchedule::default();
+        assert_eq!(
+            bincode::serialized_size(&schedule).unwrap(),
+            SERIALIZED_SIZE as u64
+        );
     }
 }

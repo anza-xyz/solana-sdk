@@ -129,11 +129,16 @@ pub use {
     solana_sdk_ids::sysvar::rent::{check_id, id, ID},
 };
 impl Sysvar for Rent {
-    impl_sysvar_get!(id());
+    #[cfg(not(feature = "bincode"))]
+    impl_sysvar_get!(sol_get_rent_sysvar);
+    #[cfg(feature = "bincode")]
+    impl_sysvar_get!(id(), SERIALIZED_SIZE);
 }
 
 #[cfg(feature = "bincode")]
 impl SysvarSerialize for Rent {}
+
+const SERIALIZED_SIZE: usize = 17;
 
 #[cfg(test)]
 mod tests_sysvar_get {
@@ -152,5 +157,19 @@ mod tests_sysvar_get {
 
         let got = Rent::get().unwrap();
         assert_eq!(got, expected);
+    }
+
+    #[cfg(feature = "bincode")]
+    #[test]
+    fn test_rent_sysvar_size() {
+        let rent = Rent {
+            lamports_per_byte_year: 123,
+            exemption_threshold: 2.5,
+            burn_percent: 7,
+        };
+        assert_eq!(
+            bincode::serialized_size(&rent).unwrap(),
+            SERIALIZED_SIZE as u64
+        );
     }
 }

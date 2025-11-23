@@ -130,11 +130,15 @@ pub use {
 };
 
 impl Sysvar for Clock {
-    impl_sysvar_get!(id());
-}
+    #[cfg(not(feature = "bincode"))]
+    impl_sysvar_get!(sol_get_clock_sysvar);
+    #[cfg(feature = "bincode")]
+    impl_sysvar_get!(id(), SERIALIZED_SIZE);}
 
 #[cfg(feature = "bincode")]
 impl SysvarSerialize for Clock {}
+
+const SERIALIZED_SIZE: usize = 40;
 
 #[cfg(test)]
 mod tests {
@@ -199,5 +203,12 @@ mod tests {
         assert_eq!(got, expected);
 
         let _ = crate::program_stubs::set_syscall_stubs(prev);
+    }
+
+    #[cfg(feature = "bincode")]
+    #[test]
+    fn test_clock_sysvar_size() {
+        let clock = Clock::default();
+        assert_eq!(bincode::serialized_size(&clock).unwrap(), SERIALIZED_SIZE as u64);
     }
 }

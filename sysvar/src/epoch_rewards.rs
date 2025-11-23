@@ -163,11 +163,16 @@ pub use {
 };
 
 impl Sysvar for EpochRewards {
-    impl_sysvar_get!(id());
+    #[cfg(not(feature = "bincode"))]
+    impl_sysvar_get!(sol_get_epoch_rewards_sysvar);
+    #[cfg(feature = "bincode")]
+    impl_sysvar_get!(id(), SERIALIZED_SIZE);
 }
 
 #[cfg(feature = "bincode")]
 impl SysvarSerialize for EpochRewards {}
+
+const SERIALIZED_SIZE: usize = 81;
 
 #[cfg(test)]
 mod tests {
@@ -191,5 +196,12 @@ mod tests {
 
         let got = EpochRewards::get().unwrap();
         assert_eq!(got, expected);
+    }
+
+    #[cfg(feature = "bincode")]
+    #[test]
+    fn test_epoch_rewards_sysvar_size() {
+        let rewards = EpochRewards::default();
+        assert_eq!(bincode::serialized_size(&rewards).unwrap(), SERIALIZED_SIZE as u64);
     }
 }

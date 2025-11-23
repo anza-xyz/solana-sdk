@@ -182,23 +182,27 @@ macro_rules! impl_sysvar_get {
             }
         }
     };
-    ($sysvar_id:expr) => {
+    // This version requires the `bincode` feature
+    ($sysvar_id:expr, $serialized_size:expr) => {
         fn get() -> Result<Self, $crate::__private::ProgramError> {
             // Allocate uninitialized memory for the sysvar struct
-            let mut uninit = ::core::mem::MaybeUninit::<Self>::uninit();
-            let size: u64 = size_of::<Self>() as u64;
+            let mut uninit = ::core::mem::MaybeUninit::<[u8; $serialized_size]>::uninit();
             let sysvar_id = $sysvar_id;
+            // Attempt to load the sysvar data using the provided sysvar id.
+            // SAFETY: `size` is exactly the size of the buffer passed
             unsafe {
-                // Attempt to load the sysvar data using the provided sysvar id.
-                // SAFETY: `size` is exactly the size of the buffer passed
                 $crate::get_sysvar_unchecked(
                     uninit.as_mut_ptr() as *mut u8,
                     ::core::ptr::addr_of!(sysvar_id) as *const u8,
                     0,
-                    size,
+                    $serialized_size as u64,
                 )?;
-                // SAFETY: If `get_sysvar_unchecked` succeeded, the buffer will have been initialized
-                Ok(uninit.assume_init())
+            }
+            // SAFETY: If `get_sysvar_unchecked` succeeded, the buffer will have been initialized
+            let buffer: [u8; $serialized_size] = unsafe { uninit.assume_init() };
+            match ::bincode::deserialize::<Self>(&buffer) {
+                Ok(var) => Ok(var),
+                Err(_) => Err($crate::__private::ProgramError::UnsupportedSysvar),
             }
         }
     };
@@ -226,8 +230,9 @@ pub fn get_sysvar(
 
 /// Same as [`get_sysvar`], but takes a raw pointer and does not check destination length.
 ///
-/// # SAFETY:
-/// - `dst` must point to `length` mutable bytes
+/// # Safety
+///
+/// The caller must ensure that `dst` is valid for writes of `length` bytes.
 unsafe fn get_sysvar_unchecked(
     dst: *mut u8,
     sysvar_id: *const u8,
@@ -305,17 +310,10 @@ mod tests {
         }));
     }
 
-    /// Convert a value to its in-memory byte representation.
-    ///
-    /// Safety: This relies on the type's plain old data layout. Intended for tests.
-    pub fn to_bytes<T>(value: &T) -> Vec<u8> {
-        unsafe {
-            let size = core::mem::size_of::<T>();
-            let ptr = (value as *const T) as *const u8;
-            let mut data = vec![0u8; size];
-            std::ptr::copy_nonoverlapping(ptr, data.as_mut_ptr(), size);
-            data
-        }
+    /// Convert a value to its in-memory byte representation. This uses `bincode` to serialize them
+    #[cfg(feature = "bincode")]
+    pub fn to_bytes<T: serde::Serialize>(value: &T) -> Vec<u8> {
+        bincode::serialize(value).unwrap()
     }
 
     #[test]
