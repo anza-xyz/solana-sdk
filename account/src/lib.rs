@@ -729,6 +729,22 @@ impl AccountSharedData {
             rent_epoch,
         }
     }
+
+    pub fn compose(
+        lamports: u64,
+        data: Vec<u8>,
+        owner: Pubkey,
+        executable: bool,
+        rent_epoch: Epoch,
+    ) -> Self {
+        AccountSharedData {
+            lamports,
+            data: Arc::new(data),
+            owner,
+            executable,
+            rent_epoch,
+        }
+    }
 }
 
 pub type InheritableAccountFields = (u64, Epoch);
