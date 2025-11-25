@@ -173,30 +173,6 @@ mod tests {
         assert_eq!(got, expected);
     }
 
-    struct ValidateIdSyscall {
-        data: Vec<u8>,
-    }
-
-    impl crate::program_stubs::SyscallStubs for ValidateIdSyscall {
-        fn sol_get_sysvar(
-            &self,
-            sysvar_id_addr: *const u8,
-            var_addr: *mut u8,
-            offset: u64,
-            length: u64,
-        ) -> u64 {
-            // Validate that the macro passed the correct sysvar id pointer
-            let passed_id = unsafe { *(sysvar_id_addr as *const solana_pubkey::Pubkey) };
-            assert_eq!(passed_id, id());
-
-            let slice = unsafe { std::slice::from_raw_parts_mut(var_addr, length as usize) };
-            slice.copy_from_slice(
-                &self.data[offset as usize..(offset.saturating_add(length)) as usize],
-            );
-            solana_program_entrypoint::SUCCESS
-        }
-    }
-
     #[test]
     #[serial]
     fn test_clock_get_passes_correct_sysvar_id() {
@@ -208,7 +184,7 @@ mod tests {
             unix_timestamp: 55,
         };
         let data = to_bytes(&expected);
-        let prev = crate::program_stubs::set_syscall_stubs(Box::new(ValidateIdSyscall { data }));
+        let prev = crate::tests::mock_get_sysvar_syscall_with_id(&data, &id());
 
         let got = Clock::get().unwrap();
         assert_eq!(got, expected);

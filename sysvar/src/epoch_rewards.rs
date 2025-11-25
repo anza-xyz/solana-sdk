@@ -218,11 +218,6 @@ mod tests {
     #[serial]
     #[cfg(feature = "bincode")]
     fn test_epoch_rewards_get() {
-        use {
-            crate::program_stubs::{set_syscall_stubs, SyscallStubs},
-            solana_program_entrypoint::SUCCESS,
-        };
-
         let expected = EpochRewards {
             distribution_starting_block_height: 42,
             num_partitions: 7,
@@ -236,26 +231,7 @@ mod tests {
         let data = bincode::serialize(&expected).unwrap();
         assert_eq!(data.len(), 81);
 
-        struct MockSyscall {
-            data: Vec<u8>,
-        }
-        impl SyscallStubs for MockSyscall {
-            fn sol_get_sysvar(
-                &self,
-                _sysvar_id_addr: *const u8,
-                var_addr: *mut u8,
-                offset: u64,
-                length: u64,
-            ) -> u64 {
-                unsafe {
-                    let slice = core::slice::from_raw_parts_mut(var_addr, length as usize);
-                    slice.copy_from_slice(&self.data[offset as usize..(offset + length) as usize]);
-                }
-                SUCCESS
-            }
-        }
-
-        set_syscall_stubs(Box::new(MockSyscall { data }));
+        crate::tests::mock_get_sysvar_syscall(&data);
         let got = EpochRewards::get().unwrap();
         assert_eq!(got, expected);
     }

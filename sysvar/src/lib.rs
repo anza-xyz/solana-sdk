@@ -328,10 +328,13 @@ mod tests {
     impl Sysvar for TestSysvar {}
     impl SysvarSerialize for TestSysvar {}
 
-    // NOTE tests that use this mock MUST carry the #[serial] attribute
+    // NOTE: Tests using these mocks MUST carry the #[serial] attribute
+    // because they modify global SYSCALL_STUBS state.
+
     struct MockGetSysvarSyscall {
         data: Vec<u8>,
     }
+
     impl SyscallStubs for MockGetSysvarSyscall {
         #[allow(clippy::arithmetic_side_effects)]
         fn sol_get_sysvar(
@@ -346,10 +349,47 @@ mod tests {
             SUCCESS
         }
     }
+
+    /// Mock syscall stub for tests. Requires `#[serial]` attribute.
     pub fn mock_get_sysvar_syscall(data: &[u8]) {
         set_syscall_stubs(Box::new(MockGetSysvarSyscall {
             data: data.to_vec(),
         }));
+    }
+
+    struct ValidateIdSyscall {
+        data: Vec<u8>,
+        expected_id: Pubkey,
+    }
+
+    impl SyscallStubs for ValidateIdSyscall {
+        #[allow(clippy::arithmetic_side_effects)]
+        fn sol_get_sysvar(
+            &self,
+            sysvar_id_addr: *const u8,
+            var_addr: *mut u8,
+            offset: u64,
+            length: u64,
+        ) -> u64 {
+            // Validate that the correct sysvar id pointer was passed
+            let passed_id = unsafe { *(sysvar_id_addr as *const Pubkey) };
+            assert_eq!(passed_id, self.expected_id);
+
+            let slice = unsafe { std::slice::from_raw_parts_mut(var_addr, length as usize) };
+            slice.copy_from_slice(&self.data[offset as usize..(offset + length) as usize]);
+            SUCCESS
+        }
+    }
+
+    /// Mock syscall stub that validates sysvar ID. Requires `#[serial]` attribute.
+    pub fn mock_get_sysvar_syscall_with_id(
+        data: &[u8],
+        expected_id: &Pubkey,
+    ) -> Box<dyn SyscallStubs> {
+        set_syscall_stubs(Box::new(ValidateIdSyscall {
+            data: data.to_vec(),
+            expected_id: *expected_id,
+        }))
     }
 
     /// Convert a value to its in-memory byte representation.
