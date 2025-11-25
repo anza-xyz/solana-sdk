@@ -2624,6 +2624,8 @@ version = "3.2.0"
 dependencies = [
  "bincode",
  "qualifier_attr",
+ "rand",
+ "rand_chacha",
  "serde",
  "serde_bytes",
  "serde_derive",
