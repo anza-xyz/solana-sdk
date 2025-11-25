@@ -177,27 +177,24 @@ macro_rules! impl_sysvar_get {
 
             match result {
                 $crate::__private::SUCCESS => Ok(var),
-                // Unexpected errors are folded into `UnsupportedSysvar`.
                 _ => Err($crate::__private::ProgramError::UnsupportedSysvar),
             }
         }
     };
     ($sysvar_id:expr) => {
         fn get() -> Result<Self, $crate::__private::ProgramError> {
-            // Allocate uninitialized memory for the sysvar struct
             let mut uninit = core::mem::MaybeUninit::<Self>::uninit();
             let size = core::mem::size_of::<Self>() as u64;
-            // Safety: we build a mutable slice pointing to the uninitialized
-            // buffer.  The `get_sysvar` syscall will fill exactly `size`
-            // bytes, after which the buffer is fully initialised.
-            let dst = unsafe {
-                core::slice::from_raw_parts_mut(uninit.as_mut_ptr() as *mut u8, size as usize)
-            };
-            // Attempt to load the sysvar data using the provided sysvar id.
-            $crate::get_sysvar(dst, &$sysvar_id, 0, size)?;
-            // Safety: `get_sysvar` succeeded and initialised the buffer.
-            let var = unsafe { uninit.assume_init() };
-            Ok(var)
+            let sysvar_id_ptr = (&$sysvar_id) as *const _ as *const u8;
+            unsafe {
+                $crate::get_sysvar_unchecked(
+                    uninit.as_mut_ptr() as *mut u8,
+                    sysvar_id_ptr,
+                    0,
+                    size,
+                )?;
+                Ok(uninit.assume_init())
+            }
         }
     };
 }
@@ -292,8 +289,6 @@ pub unsafe fn get_sysvar_unchecked(
     match result {
         solana_program_entrypoint::SUCCESS => Ok(()),
         OFFSET_LENGTH_EXCEEDS_SYSVAR => Err(solana_program_error::ProgramError::InvalidArgument),
-        SYSVAR_NOT_FOUND => Err(solana_program_error::ProgramError::UnsupportedSysvar),
-        // Unexpected errors are folded into `UnsupportedSysvar`.
         _ => Err(solana_program_error::ProgramError::UnsupportedSysvar),
     }
 }
