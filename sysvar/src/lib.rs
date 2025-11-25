@@ -263,8 +263,6 @@ pub fn get_sysvar(
     match result {
         solana_program_entrypoint::SUCCESS => Ok(()),
         OFFSET_LENGTH_EXCEEDS_SYSVAR => Err(solana_program_error::ProgramError::InvalidArgument),
-        SYSVAR_NOT_FOUND => Err(solana_program_error::ProgramError::UnsupportedSysvar),
-        // Unexpected errors are folded into `UnsupportedSysvar`.
         _ => Err(solana_program_error::ProgramError::UnsupportedSysvar),
     }
 }
@@ -356,15 +354,18 @@ mod tests {
 
     /// Convert a value to its in-memory byte representation.
     ///
-    /// Safety: This relies on the type's plain old data layout. Intended for tests.
+    /// # Safety
+    ///
+    /// This function is only safe for plain-old-data types with no padding.
+    /// Intended for test use only.
     pub fn to_bytes<T>(value: &T) -> Vec<u8> {
+        let size = core::mem::size_of::<T>();
+        let ptr = (value as *const T) as *const u8;
+        let mut data = vec![0u8; size];
         unsafe {
-            let size = core::mem::size_of::<T>();
-            let ptr = (value as *const T) as *const u8;
-            let mut data = vec![0u8; size];
             std::ptr::copy_nonoverlapping(ptr, data.as_mut_ptr(), size);
-            data
         }
+        data
     }
 
     #[test]
