@@ -143,7 +143,7 @@ mod tests {
     #[test]
     fn test_clock_size_matches_bincode() {
         // Prove that Clock's in-memory layout matches its bincode serialization,
-        // so we do not need to use define_sysvar_wire.
+        // so we do not need to use sysvar_packed_struct.
         let clock = Clock::default();
         let in_memory_size = core::mem::size_of::<Clock>();
 

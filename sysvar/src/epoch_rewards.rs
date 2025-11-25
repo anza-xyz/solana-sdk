@@ -156,34 +156,47 @@
 
 #[cfg(feature = "bincode")]
 use crate::SysvarSerialize;
-use crate::{get_sysvar_via_packed, sysvar_packed_struct, Sysvar};
+use crate::{get_sysvar_via_packed, Sysvar};
 pub use {
     solana_epoch_rewards::EpochRewards,
     solana_sdk_ids::sysvar::epoch_rewards::{check_id, id, ID},
 };
 
-sysvar_packed_struct! {
-    struct EpochRewardsPacked(81) {
-        distribution_starting_block_height: u64,
-        num_partitions: u64,
-        parent_blockhash: [u8; 32],
-        total_points: u128,
-        total_rewards: u64,
-        distributed_rewards: u64,
-        active: u8, // bool as u8
-    }
+#[repr(C, packed)]
+#[derive(Clone, Copy)]
+struct EpochRewardsPacked {
+    distribution_starting_block_height: u64,
+    num_partitions: u64,
+    parent_blockhash: [u8; 32],
+    total_points: u128,
+    total_rewards: u64,
+    distributed_rewards: u64,
+    active: u8, // bool as u8
 }
+
+const _: () = assert!(core::mem::size_of::<EpochRewardsPacked>() == 81);
 
 impl From<EpochRewardsPacked> for EpochRewards {
     fn from(p: EpochRewardsPacked) -> Self {
+        // Ensure field parity at compile time
+        let EpochRewardsPacked {
+            distribution_starting_block_height,
+            num_partitions,
+            parent_blockhash,
+            total_points,
+            total_rewards,
+            distributed_rewards,
+            active,
+        } = p;
+
         Self {
-            distribution_starting_block_height: p.distribution_starting_block_height,
-            num_partitions: p.num_partitions,
-            parent_blockhash: solana_hash::Hash::new_from_array(p.parent_blockhash),
-            total_points: p.total_points,
-            total_rewards: p.total_rewards,
-            distributed_rewards: p.distributed_rewards,
-            active: p.active != 0,
+            distribution_starting_block_height,
+            num_partitions,
+            parent_blockhash: solana_hash::Hash::new_from_array(parent_blockhash),
+            total_points,
+            total_rewards,
+            distributed_rewards,
+            active: active != 0,
         }
     }
 }

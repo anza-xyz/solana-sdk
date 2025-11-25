@@ -57,8 +57,8 @@ mod tests {
 
     #[test]
     fn test_last_restart_slot_size_matches_bincode() {
-        // Prove that Clock's in-memory layout matches its bincode serialization,
-        // so we do not need to use define_sysvar_wire.
+        // Prove that LastRestartSlot's in-memory layout matches its bincode serialization,
+        // so we do not need to use sysvar_packed_struct.
         let slot = LastRestartSlot::default();
         let in_memory_size = core::mem::size_of::<LastRestartSlot>();
 

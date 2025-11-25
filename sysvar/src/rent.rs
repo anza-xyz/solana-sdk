@@ -123,26 +123,35 @@
 //! ```
 #[cfg(feature = "bincode")]
 use crate::SysvarSerialize;
-use crate::{get_sysvar_via_packed, sysvar_packed_struct, Sysvar};
+use crate::{get_sysvar_via_packed, Sysvar};
 pub use {
     solana_rent::Rent,
     solana_sdk_ids::sysvar::rent::{check_id, id, ID},
 };
 
-sysvar_packed_struct! {
-    struct RentPacked(17) {
-        lamports_per_byte_year: u64,
-        exemption_threshold: [u8; 8], // f64 as little-endian bytes
-        burn_percent: u8,
-    }
+#[repr(C, packed)]
+#[derive(Clone, Copy)]
+struct RentPacked {
+    lamports_per_byte_year: u64,
+    exemption_threshold: [u8; 8], // f64 as little-endian bytes
+    burn_percent: u8,
 }
+
+const _: () = assert!(core::mem::size_of::<RentPacked>() == 17);
 
 impl From<RentPacked> for Rent {
     fn from(p: RentPacked) -> Self {
+        // Ensure field parity at compile time
+        let RentPacked {
+            lamports_per_byte_year,
+            exemption_threshold,
+            burn_percent,
+        } = p;
+
         Self {
-            lamports_per_byte_year: p.lamports_per_byte_year,
-            exemption_threshold: f64::from_le_bytes(p.exemption_threshold),
-            burn_percent: p.burn_percent,
+            lamports_per_byte_year,
+            exemption_threshold: f64::from_le_bytes(exemption_threshold),
+            burn_percent,
         }
     }
 }

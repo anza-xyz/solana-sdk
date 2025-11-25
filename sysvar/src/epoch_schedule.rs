@@ -121,30 +121,41 @@
 //! ```
 #[cfg(feature = "bincode")]
 use crate::SysvarSerialize;
-use crate::{get_sysvar_via_packed, sysvar_packed_struct, Sysvar};
+use crate::{get_sysvar_via_packed, Sysvar};
 pub use {
     solana_epoch_schedule::EpochSchedule,
     solana_sdk_ids::sysvar::epoch_schedule::{check_id, id, ID},
 };
 
-sysvar_packed_struct! {
-    struct EpochSchedulePacked(33) {
-        slots_per_epoch: u64,
-        leader_schedule_slot_offset: u64,
-        warmup: u8, // bool as u8
-        first_normal_epoch: u64,
-        first_normal_slot: u64,
-    }
+#[repr(C, packed)]
+#[derive(Clone, Copy)]
+struct EpochSchedulePacked {
+    slots_per_epoch: u64,
+    leader_schedule_slot_offset: u64,
+    warmup: u8, // bool as u8
+    first_normal_epoch: u64,
+    first_normal_slot: u64,
 }
+
+const _: () = assert!(core::mem::size_of::<EpochSchedulePacked>() == 33);
 
 impl From<EpochSchedulePacked> for EpochSchedule {
     fn from(p: EpochSchedulePacked) -> Self {
+        // Ensure field parity at compile time
+        let EpochSchedulePacked {
+            slots_per_epoch,
+            leader_schedule_slot_offset,
+            warmup,
+            first_normal_epoch,
+            first_normal_slot,
+        } = p;
+
         Self {
-            slots_per_epoch: p.slots_per_epoch,
-            leader_schedule_slot_offset: p.leader_schedule_slot_offset,
-            warmup: p.warmup != 0,
-            first_normal_epoch: p.first_normal_epoch,
-            first_normal_slot: p.first_normal_slot,
+            slots_per_epoch,
+            leader_schedule_slot_offset,
+            warmup: warmup != 0,
+            first_normal_epoch,
+            first_normal_slot,
         }
     }
 }

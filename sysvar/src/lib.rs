@@ -202,40 +202,6 @@ macro_rules! impl_sysvar_get {
     };
 }
 
-/// Defines a `#[repr(C, packed)]` struct with compile-time size and alignment checking.
-///
-/// Used for sysvars whose canonical `#[repr(C)]` layout contains padding
-/// that doesn't match the runtime's compact serialization format.
-///
-/// # Example
-///
-/// ```ignore
-/// sysvar_packed_struct! {
-///     struct RentPacked(17) {
-///         lamports_per_byte_year: u64,
-///         exemption_threshold: [u8; 8],
-///         burn_percent: u8,
-///     }
-/// }
-/// ```
-#[macro_export]
-macro_rules! sysvar_packed_struct {
-    (
-        struct $name:ident($size:expr) {
-            $( $field:ident : $fty:ty ),* $(,)?
-        }
-    ) => {
-        #[repr(C, packed)]
-        #[derive(Clone, Copy)]
-        struct $name {
-            $( $field: $fty ),*
-        }
-
-        const _: () = assert!(core::mem::size_of::<$name>() == $size);
-        const _: () = assert!(core::mem::align_of::<$name>() == 1);
-    };
-}
-
 /// Generic helper to load a sysvar via a packed representation.
 ///
 /// 1. Allocates uninitialized memory for the packed struct
