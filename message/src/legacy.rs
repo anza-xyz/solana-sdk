@@ -66,7 +66,7 @@ fn compile_instructions(ixs: &[Instruction], keys: &[Address]) -> Vec<CompiledIn
 // for versioned messages in the `RemainingLegacyMessage` struct.
 #[cfg_attr(
     feature = "frozen-abi",
-    frozen_abi(digest = "GXpvLNiMCnjnZpQEDKpc2NBpsqmRnAX7ZTCy9JmvG8Dg"),
+    frozen_abi(digest = "AhkTFHhRftw61EGDjZcMZhoLozeSnb1gRRZmQeoaPXeE"),
     derive(AbiExample)
 )]
 #[cfg_attr(
