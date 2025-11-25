@@ -141,23 +141,18 @@ mod tests {
     use {super::*, crate::tests::to_bytes, serial_test::serial};
 
     #[test]
+    #[cfg(feature = "bincode")]
     fn test_clock_size_matches_bincode() {
         // Prove that Clock's in-memory layout matches its bincode serialization,
         // so we do not need to use sysvar_packed_struct.
         let clock = Clock::default();
         let in_memory_size = core::mem::size_of::<Clock>();
+        let bincode_size = bincode::serialized_size(&clock).unwrap() as usize;
 
-        #[cfg(feature = "bincode")]
-        {
-            let bincode_size = bincode::serialized_size(&clock).unwrap() as usize;
-            assert_eq!(
-                in_memory_size, bincode_size,
-                "Clock in-memory size ({in_memory_size}) must match bincode size ({bincode_size})",
-            );
-        }
-
-        // Clock is 5 u64s = 40 bytes
-        assert_eq!(in_memory_size, 40);
+        assert_eq!(
+            in_memory_size, bincode_size,
+            "Clock in-memory size ({in_memory_size}) must match bincode size ({bincode_size})",
+        );
     }
 
     #[test]

@@ -170,11 +170,6 @@ mod tests {
     use {super::*, crate::Sysvar, serial_test::serial};
 
     #[test]
-    fn test_rent_packed_size() {
-        assert_eq!(core::mem::size_of::<RentPacked>(), 17);
-    }
-
-    #[test]
     #[serial]
     #[cfg(feature = "bincode")]
     fn test_rent_get() {

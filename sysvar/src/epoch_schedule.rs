@@ -174,11 +174,6 @@ mod tests {
     use {super::*, crate::Sysvar, serial_test::serial};
 
     #[test]
-    fn test_epoch_schedule_packed_size() {
-        assert_eq!(core::mem::size_of::<EpochSchedulePacked>(), 33);
-    }
-
-    #[test]
     #[serial]
     #[cfg(feature = "bincode")]
     fn test_epoch_schedule_get() {

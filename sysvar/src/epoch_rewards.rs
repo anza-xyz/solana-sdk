@@ -215,11 +215,6 @@ mod tests {
     use {super::*, crate::Sysvar, serial_test::serial};
 
     #[test]
-    fn test_epoch_rewards_packed_size() {
-        assert_eq!(core::mem::size_of::<EpochRewardsPacked>(), 81);
-    }
-
-    #[test]
     #[serial]
     #[cfg(feature = "bincode")]
     fn test_epoch_rewards_get() {

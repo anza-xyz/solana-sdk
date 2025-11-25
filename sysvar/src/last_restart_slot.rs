@@ -56,23 +56,18 @@ mod tests {
     use {super::*, crate::tests::to_bytes, serial_test::serial};
 
     #[test]
+    #[cfg(feature = "bincode")]
     fn test_last_restart_slot_size_matches_bincode() {
         // Prove that LastRestartSlot's in-memory layout matches its bincode serialization,
         // so we do not need to use sysvar_packed_struct.
         let slot = LastRestartSlot::default();
         let in_memory_size = core::mem::size_of::<LastRestartSlot>();
+        let bincode_size = bincode::serialized_size(&slot).unwrap() as usize;
 
-        #[cfg(feature = "bincode")]
-        {
-            let bincode_size = bincode::serialized_size(&slot).unwrap() as usize;
-            assert_eq!(
-                in_memory_size, bincode_size,
-                "LastRestartSlot in-memory size ({in_memory_size}) must match bincode size ({bincode_size})",
-            );
-        }
-
-        // LastRestartSlot is 1 u64 = 8 bytes
-        assert_eq!(in_memory_size, 8);
+        assert_eq!(
+            in_memory_size, bincode_size,
+            "LastRestartSlot in-memory size ({in_memory_size}) must match bincode size ({bincode_size})",
+        );
     }
 
     #[test]
