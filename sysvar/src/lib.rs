@@ -289,6 +289,8 @@ pub unsafe fn get_sysvar_unchecked(
     match result {
         solana_program_entrypoint::SUCCESS => Ok(()),
         OFFSET_LENGTH_EXCEEDS_SYSVAR => Err(solana_program_error::ProgramError::InvalidArgument),
+        SYSVAR_NOT_FOUND => Err(solana_program_error::ProgramError::UnsupportedSysvar),
+        // Unexpected errors are folded into `UnsupportedSysvar`.
         _ => Err(solana_program_error::ProgramError::UnsupportedSysvar),
     }
 }
