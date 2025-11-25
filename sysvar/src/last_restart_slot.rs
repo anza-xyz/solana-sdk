@@ -45,8 +45,46 @@ pub use {
 };
 
 impl Sysvar for LastRestartSlot {
-    impl_sysvar_get!(sol_get_last_restart_slot);
+    impl_sysvar_get!(id());
 }
 
 #[cfg(feature = "bincode")]
 impl SysvarSerialize for LastRestartSlot {}
+
+#[cfg(test)]
+mod tests {
+    use {super::*, crate::tests::to_bytes, serial_test::serial};
+
+    #[test]
+    fn test_last_restart_slot_size_matches_bincode() {
+        // Prove that Clock's in-memory layout matches its bincode serialization,
+        // so we do not need to use define_sysvar_wire.
+        let slot = LastRestartSlot::default();
+        let in_memory_size = core::mem::size_of::<LastRestartSlot>();
+
+        #[cfg(feature = "bincode")]
+        {
+            let bincode_size = bincode::serialized_size(&slot).unwrap() as usize;
+            assert_eq!(
+                in_memory_size, bincode_size,
+                "LastRestartSlot in-memory size ({in_memory_size}) must match bincode size ({bincode_size})",
+            );
+        }
+
+        // LastRestartSlot is 1 u64 = 8 bytes
+        assert_eq!(in_memory_size, 8);
+    }
+
+    #[test]
+    #[serial]
+    fn test_last_restart_slot_get_uses_sysvar_syscall() {
+        let expected = LastRestartSlot {
+            last_restart_slot: 9999,
+        };
+        let data = to_bytes(&expected);
+        crate::tests::mock_get_sysvar_syscall(&data);
+
+        let got = LastRestartSlot::get().unwrap();
+        assert_eq!(got, expected);
+    }
+}

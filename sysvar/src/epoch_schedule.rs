@@ -121,15 +121,86 @@
 //! ```
 #[cfg(feature = "bincode")]
 use crate::SysvarSerialize;
-use crate::{impl_sysvar_get, Sysvar};
+use crate::{get_sysvar_via_packed, sysvar_packed_struct, Sysvar};
 pub use {
     solana_epoch_schedule::EpochSchedule,
     solana_sdk_ids::sysvar::epoch_schedule::{check_id, id, ID},
 };
 
+sysvar_packed_struct! {
+    struct EpochSchedulePacked(33) {
+        slots_per_epoch: u64,
+        leader_schedule_slot_offset: u64,
+        warmup: u8, // bool as u8
+        first_normal_epoch: u64,
+        first_normal_slot: u64,
+    }
+}
+
+impl From<EpochSchedulePacked> for EpochSchedule {
+    fn from(p: EpochSchedulePacked) -> Self {
+        Self {
+            slots_per_epoch: p.slots_per_epoch,
+            leader_schedule_slot_offset: p.leader_schedule_slot_offset,
+            warmup: p.warmup != 0,
+            first_normal_epoch: p.first_normal_epoch,
+            first_normal_slot: p.first_normal_slot,
+        }
+    }
+}
+
 impl Sysvar for EpochSchedule {
-    impl_sysvar_get!(sol_get_epoch_schedule_sysvar);
+    fn get() -> Result<Self, solana_program_error::ProgramError> {
+        get_sysvar_via_packed::<Self, EpochSchedulePacked>(&id())
+    }
 }
 
 #[cfg(feature = "bincode")]
 impl SysvarSerialize for EpochSchedule {}
+
+#[cfg(test)]
+mod tests {
+    use {super::*, crate::Sysvar, serial_test::serial};
+
+    #[test]
+    fn test_epoch_schedule_packed_size() {
+        assert_eq!(core::mem::size_of::<EpochSchedulePacked>(), 33);
+    }
+
+    #[test]
+    #[serial]
+    #[cfg(feature = "bincode")]
+    fn test_epoch_schedule_get() {
+        use {
+            crate::program_stubs::{set_syscall_stubs, SyscallStubs},
+            solana_program_entrypoint::SUCCESS,
+        };
+
+        let expected = EpochSchedule::custom(1234, 5678, false);
+        let data = bincode::serialize(&expected).unwrap();
+        assert_eq!(data.len(), 33);
+
+        struct MockSyscall {
+            data: Vec<u8>,
+        }
+        impl SyscallStubs for MockSyscall {
+            fn sol_get_sysvar(
+                &self,
+                _sysvar_id_addr: *const u8,
+                var_addr: *mut u8,
+                offset: u64,
+                length: u64,
+            ) -> u64 {
+                unsafe {
+                    let slice = core::slice::from_raw_parts_mut(var_addr, length as usize);
+                    slice.copy_from_slice(&self.data[offset as usize..(offset + length) as usize]);
+                }
+                SUCCESS
+            }
+        }
+
+        set_syscall_stubs(Box::new(MockSyscall { data }));
+        let got = EpochSchedule::get().unwrap();
+        assert_eq!(got, expected);
+    }
+}

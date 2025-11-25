@@ -161,6 +161,9 @@ pub trait SysvarSerialize:
 /// Implements the [`Sysvar::get`] method for both SBF and host targets.
 #[macro_export]
 macro_rules! impl_sysvar_get {
+    // DEPRECATED: This variant is only for the deprecated Fees sysvar and should be
+    // removed once Fees is no longer in use. It uses the old-style direct syscall
+    // approach instead of the new sol_get_sysvar syscall.
     ($syscall_name:ident) => {
         fn get() -> Result<Self, $crate::__private::ProgramError> {
             let mut var = Self::default();
@@ -179,6 +182,91 @@ macro_rules! impl_sysvar_get {
             }
         }
     };
+    ($sysvar_id:expr) => {
+        fn get() -> Result<Self, $crate::__private::ProgramError> {
+            // Allocate uninitialized memory for the sysvar struct
+            let mut uninit = core::mem::MaybeUninit::<Self>::uninit();
+            let size = core::mem::size_of::<Self>() as u64;
+            // Safety: we build a mutable slice pointing to the uninitialized
+            // buffer.  The `get_sysvar` syscall will fill exactly `size`
+            // bytes, after which the buffer is fully initialised.
+            let dst = unsafe {
+                core::slice::from_raw_parts_mut(uninit.as_mut_ptr() as *mut u8, size as usize)
+            };
+            // Attempt to load the sysvar data using the provided sysvar id.
+            $crate::get_sysvar(dst, &$sysvar_id, 0, size)?;
+            // Safety: `get_sysvar` succeeded and initialised the buffer.
+            let var = unsafe { uninit.assume_init() };
+            Ok(var)
+        }
+    };
+}
+
+/// Defines a `#[repr(C, packed)]` struct with compile-time size and alignment checking.
+///
+/// Used for sysvars whose canonical `#[repr(C)]` layout contains padding
+/// that doesn't match the runtime's compact serialization format.
+///
+/// # Example
+///
+/// ```ignore
+/// sysvar_packed_struct! {
+///     struct RentPacked(17) {
+///         lamports_per_byte_year: u64,
+///         exemption_threshold: [u8; 8],
+///         burn_percent: u8,
+///     }
+/// }
+/// ```
+#[macro_export]
+macro_rules! sysvar_packed_struct {
+    (
+        struct $name:ident($size:expr) {
+            $( $field:ident : $fty:ty ),* $(,)?
+        }
+    ) => {
+        #[repr(C, packed)]
+        #[derive(Clone, Copy)]
+        struct $name {
+            $( $field: $fty ),*
+        }
+
+        const _: () = assert!(core::mem::size_of::<$name>() == $size);
+        const _: () = assert!(core::mem::align_of::<$name>() == 1);
+    };
+}
+
+/// Generic helper to load a sysvar via a packed representation.
+///
+/// 1. Allocates uninitialized memory for the packed struct
+/// 2. Loads sysvar bytes directly into it via `get_sysvar_unchecked`
+/// 3. Converts the packed struct to the canonical type via `From`
+///
+/// # Type Parameters
+///
+/// - `T`: The canonical sysvar type
+/// - `P`: The packed struct (must be `Copy` and `From<P> for T` must exist)
+///
+/// # Safety
+///
+/// The packed struct `P` should be `#[repr(C, packed)]` to match the runtime's
+/// compact serialization format (no padding).
+pub fn get_sysvar_via_packed<T, P>(sysvar_id: &Pubkey) -> Result<T, ProgramError>
+where
+    P: Copy,
+    T: From<P>,
+{
+    let mut packed = core::mem::MaybeUninit::<P>::uninit();
+    let size = core::mem::size_of::<P>();
+    unsafe {
+        get_sysvar_unchecked(
+            packed.as_mut_ptr() as *mut u8,
+            sysvar_id as *const _ as *const u8,
+            0,
+            size as u64,
+        )?;
+        Ok(T::from(packed.assume_init()))
+    }
 }
 
 /// Handler for retrieving a slice of sysvar data from the `sol_get_sysvar`
@@ -202,6 +290,37 @@ pub fn get_sysvar(
     let result = unsafe {
         solana_define_syscall::definitions::sol_get_sysvar(sysvar_id, var_addr, offset, length)
     };
+
+    #[cfg(not(target_os = "solana"))]
+    let result = crate::program_stubs::sol_get_sysvar(sysvar_id, var_addr, offset, length);
+
+    match result {
+        solana_program_entrypoint::SUCCESS => Ok(()),
+        OFFSET_LENGTH_EXCEEDS_SYSVAR => Err(solana_program_error::ProgramError::InvalidArgument),
+        SYSVAR_NOT_FOUND => Err(solana_program_error::ProgramError::UnsupportedSysvar),
+        // Unexpected errors are folded into `UnsupportedSysvar`.
+        _ => Err(solana_program_error::ProgramError::UnsupportedSysvar),
+    }
+}
+
+/// Internal helper for retrieving sysvar data directly into a raw buffer.
+///
+/// # Safety
+///
+/// This function bypasses the slice-length check that `get_sysvar` performs.
+/// The caller must ensure that `var_addr` points to a writable buffer of at
+/// least `length` bytes. This is typically used with `MaybeUninit` to load
+/// compact representations of sysvars.
+#[doc(hidden)]
+pub unsafe fn get_sysvar_unchecked(
+    var_addr: *mut u8,
+    sysvar_id: *const u8,
+    offset: u64,
+    length: u64,
+) -> Result<(), solana_program_error::ProgramError> {
+    #[cfg(target_os = "solana")]
+    let result =
+        solana_define_syscall::definitions::sol_get_sysvar(sysvar_id, var_addr, offset, length);
 
     #[cfg(not(target_os = "solana"))]
     let result = crate::program_stubs::sol_get_sysvar(sysvar_id, var_addr, offset, length);
@@ -267,6 +386,19 @@ mod tests {
         set_syscall_stubs(Box::new(MockGetSysvarSyscall {
             data: data.to_vec(),
         }));
+    }
+
+    /// Convert a value to its in-memory byte representation.
+    ///
+    /// Safety: This relies on the type's plain old data layout. Intended for tests.
+    pub fn to_bytes<T>(value: &T) -> Vec<u8> {
+        unsafe {
+            let size = core::mem::size_of::<T>();
+            let ptr = (value as *const T) as *const u8;
+            let mut data = vec![0u8; size];
+            std::ptr::copy_nonoverlapping(ptr, data.as_mut_ptr(), size);
+            data
+        }
     }
 
     #[test]

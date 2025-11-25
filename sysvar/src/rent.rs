@@ -123,14 +123,87 @@
 //! ```
 #[cfg(feature = "bincode")]
 use crate::SysvarSerialize;
-use crate::{impl_sysvar_get, Sysvar};
+use crate::{get_sysvar_via_packed, sysvar_packed_struct, Sysvar};
 pub use {
     solana_rent::Rent,
     solana_sdk_ids::sysvar::rent::{check_id, id, ID},
 };
+
+sysvar_packed_struct! {
+    struct RentPacked(17) {
+        lamports_per_byte_year: u64,
+        exemption_threshold: [u8; 8], // f64 as little-endian bytes
+        burn_percent: u8,
+    }
+}
+
+impl From<RentPacked> for Rent {
+    fn from(p: RentPacked) -> Self {
+        Self {
+            lamports_per_byte_year: p.lamports_per_byte_year,
+            exemption_threshold: f64::from_le_bytes(p.exemption_threshold),
+            burn_percent: p.burn_percent,
+        }
+    }
+}
+
 impl Sysvar for Rent {
-    impl_sysvar_get!(sol_get_rent_sysvar);
+    fn get() -> Result<Self, solana_program_error::ProgramError> {
+        get_sysvar_via_packed::<Self, RentPacked>(&id())
+    }
 }
 
 #[cfg(feature = "bincode")]
 impl SysvarSerialize for Rent {}
+
+#[cfg(test)]
+mod tests {
+    use {super::*, crate::Sysvar, serial_test::serial};
+
+    #[test]
+    fn test_rent_packed_size() {
+        assert_eq!(core::mem::size_of::<RentPacked>(), 17);
+    }
+
+    #[test]
+    #[serial]
+    #[cfg(feature = "bincode")]
+    fn test_rent_get() {
+        use {
+            crate::program_stubs::{set_syscall_stubs, SyscallStubs},
+            solana_program_entrypoint::SUCCESS,
+        };
+
+        let expected = Rent {
+            lamports_per_byte_year: 123,
+            exemption_threshold: 2.5,
+            burn_percent: 7,
+        };
+
+        let data = bincode::serialize(&expected).unwrap();
+        assert_eq!(data.len(), 17);
+
+        struct MockSyscall {
+            data: Vec<u8>,
+        }
+        impl SyscallStubs for MockSyscall {
+            fn sol_get_sysvar(
+                &self,
+                _sysvar_id_addr: *const u8,
+                var_addr: *mut u8,
+                offset: u64,
+                length: u64,
+            ) -> u64 {
+                unsafe {
+                    let slice = core::slice::from_raw_parts_mut(var_addr, length as usize);
+                    slice.copy_from_slice(&self.data[offset as usize..(offset + length) as usize]);
+                }
+                SUCCESS
+            }
+        }
+
+        set_syscall_stubs(Box::new(MockSyscall { data }));
+        let got = Rent::get().unwrap();
+        assert_eq!(got, expected);
+    }
+}
