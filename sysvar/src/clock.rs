@@ -143,8 +143,7 @@ mod tests {
     #[test]
     #[cfg(feature = "bincode")]
     fn test_clock_size_matches_bincode() {
-        // Prove that Clock's in-memory layout matches its bincode serialization,
-        // so we do not need to use sysvar_packed_struct.
+        // Prove that Clock's in-memory layout matches its bincode serialization.
         let clock = Clock::default();
         let in_memory_size = core::mem::size_of::<Clock>();
         let bincode_size = bincode::serialized_size(&clock).unwrap() as usize;
