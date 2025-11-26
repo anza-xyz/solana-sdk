@@ -15,6 +15,8 @@ extern crate std;
 use core::error::Error;
 #[cfg(feature = "std")]
 use std::vec::Vec;
+#[cfg(feature = "wincode")]
+use wincode::{SchemaRead, SchemaWrite};
 #[cfg(feature = "serde")]
 use {
     serde_big_array::BigArray,
@@ -36,6 +38,7 @@ const MAX_BASE58_SIGNATURE_LEN: usize = 88;
     derive(bytemuck_derive::Pod, bytemuck_derive::Zeroable)
 )]
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
+#[cfg_attr(feature = "wincode", derive(SchemaWrite, SchemaRead))]
 pub struct Signature(
     #[cfg_attr(feature = "serde", serde(with = "BigArray"))] [u8; SIGNATURE_BYTES],
 );

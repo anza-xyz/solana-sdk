@@ -17,13 +17,14 @@ rustdoc-args = ["--cfg=docsrs"]
 
 [features]
 default = ["std", "alloc"]
-alloc = []
+alloc = ["wincode?/alloc"]
 bytemuck = ["dep:bytemuck", "dep:bytemuck_derive"]
 frozen-abi = ["dep:solana-frozen-abi", "dep:solana-frozen-abi-macro", "std"]
 rand = ["dep:rand"]
 serde = ["dep:serde", "dep:serde_derive", "dep:serde-big-array"]
-std = ["alloc", "serde?/std"]
+std = ["alloc", "serde?/std", "wincode?/std"]
 verify = ["dep:ed25519-dalek"]
+wincode = ["dep:wincode"]
 
 [dependencies]
 bytemuck = { workspace = true, optional = true }
@@ -37,6 +38,7 @@ serde_derive = { workspace = true, optional = true }
 solana-frozen-abi = { workspace = true, optional = true, features = ["frozen-abi"] }
 solana-frozen-abi-macro = { workspace = true, optional = true, features = ["frozen-abi"] }
 solana-sanitize = { workspace = true }
+wincode = { workspace = true, optional = true }
 
 [dev-dependencies]
 bincode = { workspace = true }

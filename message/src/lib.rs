@@ -48,6 +48,8 @@ pub mod legacy;
 use serde_derive::{Deserialize, Serialize};
 #[cfg(feature = "frozen-abi")]
 use solana_frozen_abi_macro::AbiExample;
+#[cfg(feature = "wincode")]
+use wincode::{SchemaRead, SchemaWrite};
 
 #[cfg(not(target_os = "solana"))]
 #[path = ""]
@@ -111,6 +113,11 @@ pub const MESSAGE_HEADER_LENGTH: usize = 3;
     feature = "serde",
     derive(Deserialize, Serialize),
     serde(rename_all = "camelCase")
+)]
+#[cfg_attr(
+    feature = "wincode",
+    derive(SchemaWrite, SchemaRead),
+    wincode(struct_extensions)
 )]
 #[derive(Default, Debug, PartialEq, Eq, Clone, Copy)]
 pub struct MessageHeader {

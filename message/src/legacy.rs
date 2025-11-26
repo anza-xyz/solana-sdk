@@ -15,6 +15,8 @@
 use serde_derive::{Deserialize, Serialize};
 #[cfg(feature = "frozen-abi")]
 use solana_frozen_abi_macro::{frozen_abi, AbiExample};
+#[cfg(feature = "wincode")]
+use wincode::{containers, len::ShortU16Len, SchemaRead, SchemaWrite};
 use {
     crate::{
         compiled_instruction::CompiledInstruction, compiled_keys::CompiledKeys,
@@ -74,6 +76,11 @@ fn compile_instructions(ixs: &[Instruction], keys: &[Address]) -> Vec<CompiledIn
     derive(Deserialize, Serialize),
     serde(rename_all = "camelCase")
 )]
+#[cfg_attr(
+    feature = "wincode",
+    derive(SchemaWrite, SchemaRead),
+    wincode(struct_extensions)
+)]
 #[derive(Default, Debug, PartialEq, Eq, Clone)]
 pub struct Message {
     /// The message header, identifying signed and read-only `account_keys`.
@@ -82,6 +89,7 @@ pub struct Message {
 
     /// All the account keys used by this transaction.
     #[cfg_attr(feature = "serde", serde(with = "solana_short_vec"))]
+    #[cfg_attr(feature = "wincode", wincode(with = "containers::Vec<_, ShortU16Len>"))]
     pub account_keys: Vec<Address>,
 
     /// The id of a recent ledger entry.
@@ -90,6 +98,7 @@ pub struct Message {
     /// Programs that will be executed in sequence and committed in one atomic transaction if all
     /// succeed.
     #[cfg_attr(feature = "serde", serde(with = "solana_short_vec"))]
+    #[cfg_attr(feature = "wincode", wincode(with = "containers::Vec<_, ShortU16Len>"))]
     pub instructions: Vec<CompiledInstruction>,
 }
 

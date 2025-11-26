@@ -25,7 +25,8 @@ default = []
 frozen-abi = ["dep:solana-frozen-abi", "dep:solana-frozen-abi-macro", "std"]
 sanitize = ["dep:solana-sanitize"]
 serde = ["dep:serde", "dep:serde_derive"]
-std = ["borsh?/std", "serde?/std"]
+std = ["borsh?/std", "serde?/std", "wincode?/std"]
+wincode = ["dep:wincode"]
 
 [dependencies]
 borsh = { workspace = true, optional = true }
@@ -38,6 +39,7 @@ solana-atomic-u64 = { workspace = true, optional = true }
 solana-frozen-abi = { workspace = true, optional = true, features = ["frozen-abi"] }
 solana-frozen-abi-macro = { workspace = true, optional = true, features = ["frozen-abi"] }
 solana-sanitize = { workspace = true, optional = true }
+wincode = { workspace = true, optional = true }
 
 [dev-dependencies]
 bs58 = { workspace = true, default-features = false, features = ["alloc"] }
