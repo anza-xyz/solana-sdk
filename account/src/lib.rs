@@ -4,10 +4,11 @@
 
 #[cfg(feature = "dev-context-only-utils")]
 use qualifier_attr::qualifiers;
+use rand::{distributions::Standard, prelude::Distribution, Rng};
 #[cfg(feature = "serde")]
 use serde::ser::{Serialize, Serializer};
 #[cfg(feature = "frozen-abi")]
-use solana_frozen_abi_macro::{frozen_abi, AbiExample};
+use solana_frozen_abi_macro::{frozen_abi, AbiExample, StableAbi};
 #[cfg(feature = "bincode")]
 use solana_sysvar::SysvarSerialize;
 use {
@@ -32,8 +33,11 @@ pub mod state_traits;
 #[repr(C)]
 #[cfg_attr(
     feature = "frozen-abi",
-    derive(AbiExample),
-    frozen_abi(digest = "62EqVoynUFvuui7DVfqWCvZP7bxKGJGioeSBnWrdjRME")
+    derive(AbiExample, StableAbi),
+    frozen_abi(
+        api_digest = "62EqVoynUFvuui7DVfqWCvZP7bxKGJGioeSBnWrdjRME",
+        abi_digest = "Cms628BvHUgXEPDU1qV6sAXNr875LnMAMLskNohMngu"
+    )
 )]
 #[cfg_attr(
     feature = "serde",
@@ -55,6 +59,18 @@ pub struct Account {
     pub rent_epoch: Epoch,
 }
 
+impl Distribution<Account> for Standard {
+    fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> Account {
+        Account {
+            lamports: rng.gen(),
+            data: (0..1000).map(|_| rng.gen()).collect(),
+            owner: Pubkey::new_from_array(rng.gen()),
+            executable: rng.gen(),
+            rent_epoch: rng.gen(),
+        }
+    }
+}
+
 // mod because we need 'Account' below to have the name 'Account' to match expected serialization
 #[cfg(feature = "serde")]
 mod account_serialize {
@@ -70,7 +86,7 @@ mod account_serialize {
     #[cfg_attr(
         feature = "frozen-abi",
         derive(AbiExample),
-        frozen_abi(digest = "62EqVoynUFvuui7DVfqWCvZP7bxKGJGioeSBnWrdjRME")
+        frozen_abi(api_digest = "62EqVoynUFvuui7DVfqWCvZP7bxKGJGioeSBnWrdjRME",)
     )]
     #[derive(serde_derive::Serialize)]
     #[serde(rename_all = "camelCase")]
