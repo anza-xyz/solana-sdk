@@ -123,43 +123,14 @@
 //! ```
 #[cfg(feature = "bincode")]
 use crate::SysvarSerialize;
-use crate::{get_sysvar_via_packed, Sysvar};
+use crate::{impl_sysvar_get, Sysvar};
 pub use {
     solana_rent::Rent,
     solana_sdk_ids::sysvar::rent::{check_id, id, ID},
 };
 
-#[repr(C, packed)]
-#[derive(Clone, Copy)]
-struct RentPacked {
-    lamports_per_byte_year: u64,
-    exemption_threshold: [u8; 8], // f64 as little-endian bytes
-    burn_percent: u8,
-}
-
-const _: () = assert!(core::mem::size_of::<RentPacked>() == 17);
-
-impl From<RentPacked> for Rent {
-    fn from(p: RentPacked) -> Self {
-        // Ensure field parity at compile time
-        let RentPacked {
-            lamports_per_byte_year,
-            exemption_threshold,
-            burn_percent,
-        } = p;
-
-        Self {
-            lamports_per_byte_year,
-            exemption_threshold: f64::from_le_bytes(exemption_threshold),
-            burn_percent,
-        }
-    }
-}
-
 impl Sysvar for Rent {
-    fn get() -> Result<Self, solana_program_error::ProgramError> {
-        get_sysvar_via_packed::<Self, RentPacked>(&id())
-    }
+    impl_sysvar_get!(id());
 }
 
 #[cfg(feature = "bincode")]
@@ -173,12 +144,7 @@ mod tests {
     #[serial]
     #[cfg(feature = "bincode")]
     fn test_rent_get() {
-        let expected = Rent {
-            lamports_per_byte_year: 123,
-            exemption_threshold: 2.5,
-            burn_percent: 7,
-        };
-
+        let expected = Rent::new(123, 2.5, 7);
         let data = bincode::serialize(&expected).unwrap();
         assert_eq!(data.len(), 17);
 

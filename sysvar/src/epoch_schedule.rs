@@ -121,49 +121,14 @@
 //! ```
 #[cfg(feature = "bincode")]
 use crate::SysvarSerialize;
-use crate::{get_sysvar_via_packed, Sysvar};
+use crate::{impl_sysvar_get, Sysvar};
 pub use {
     solana_epoch_schedule::EpochSchedule,
     solana_sdk_ids::sysvar::epoch_schedule::{check_id, id, ID},
 };
 
-#[repr(C, packed)]
-#[derive(Clone, Copy)]
-struct EpochSchedulePacked {
-    slots_per_epoch: u64,
-    leader_schedule_slot_offset: u64,
-    warmup: u8, // bool as u8
-    first_normal_epoch: u64,
-    first_normal_slot: u64,
-}
-
-const _: () = assert!(core::mem::size_of::<EpochSchedulePacked>() == 33);
-
-impl From<EpochSchedulePacked> for EpochSchedule {
-    fn from(p: EpochSchedulePacked) -> Self {
-        // Ensure field parity at compile time
-        let EpochSchedulePacked {
-            slots_per_epoch,
-            leader_schedule_slot_offset,
-            warmup,
-            first_normal_epoch,
-            first_normal_slot,
-        } = p;
-
-        Self {
-            slots_per_epoch,
-            leader_schedule_slot_offset,
-            warmup: warmup != 0,
-            first_normal_epoch,
-            first_normal_slot,
-        }
-    }
-}
-
 impl Sysvar for EpochSchedule {
-    fn get() -> Result<Self, solana_program_error::ProgramError> {
-        get_sysvar_via_packed::<Self, EpochSchedulePacked>(&id())
-    }
+    impl_sysvar_get!(id());
 }
 
 #[cfg(feature = "bincode")]

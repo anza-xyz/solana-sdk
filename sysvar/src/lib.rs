@@ -199,39 +199,6 @@ macro_rules! impl_sysvar_get {
     };
 }
 
-/// Generic helper to load a sysvar via a packed representation.
-///
-/// 1. Allocates uninitialized memory for the packed struct
-/// 2. Loads sysvar bytes directly into it via `get_sysvar_unchecked`
-/// 3. Converts the packed struct to the canonical type via `From`
-///
-/// # Type Parameters
-///
-/// - `T`: The canonical sysvar type
-/// - `P`: The packed struct (must be `Copy` and `From<P> for T` must exist)
-///
-/// # Safety
-///
-/// The packed struct `P` should be `#[repr(C, packed)]` to match the runtime's
-/// compact serialization format (no padding).
-pub fn get_sysvar_via_packed<T, P>(sysvar_id: &Pubkey) -> Result<T, ProgramError>
-where
-    P: Copy,
-    T: From<P>,
-{
-    let mut packed = core::mem::MaybeUninit::<P>::uninit();
-    let size = core::mem::size_of::<P>();
-    unsafe {
-        get_sysvar_unchecked(
-            packed.as_mut_ptr() as *mut u8,
-            sysvar_id as *const _ as *const u8,
-            0,
-            size as u64,
-        )?;
-        Ok(T::from(packed.assume_init()))
-    }
-}
-
 /// Handler for retrieving a slice of sysvar data from the `sol_get_sysvar`
 /// syscall.
 pub fn get_sysvar(
