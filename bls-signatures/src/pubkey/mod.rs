@@ -2,12 +2,13 @@ pub mod bytes;
 pub mod conversion;
 pub mod points;
 
+pub use bytes::{
+    Pubkey, PubkeyCompressed, BLS_PUBLIC_KEY_AFFINE_BASE64_SIZE, BLS_PUBLIC_KEY_AFFINE_SIZE,
+    BLS_PUBLIC_KEY_COMPRESSED_BASE64_SIZE, BLS_PUBLIC_KEY_COMPRESSED_SIZE,
+};
+#[cfg(not(target_os = "solana"))]
 pub use {
-    bytes::{
-        AsPubkey, Pubkey, PubkeyCompressed, VerifiablePubkey, BLS_PUBLIC_KEY_AFFINE_BASE64_SIZE,
-        BLS_PUBLIC_KEY_AFFINE_SIZE, BLS_PUBLIC_KEY_COMPRESSED_BASE64_SIZE,
-        BLS_PUBLIC_KEY_COMPRESSED_SIZE,
-    },
+    bytes::{AsPubkey, VerifiablePubkey},
     points::{AsPubkeyProjective, PubkeyProjective},
 };
 

@@ -1,13 +1,13 @@
 #[cfg(all(feature = "parallel", not(target_os = "solana")))]
 use rayon::prelude::*;
-#[cfg(all(not(target_os = "solana"), feature = "std"))]
-use std::sync::LazyLock;
 #[cfg(not(target_os = "solana"))]
 use {
     crate::{error::BlsError, secret_key::SecretKey},
-    blstrs::{G1Affine, G1Projective},
+    blstrs::G1Projective,
     group::Group,
 };
+#[cfg(all(not(target_os = "solana"), feature = "std"))]
+use {blstrs::G1Affine, std::sync::LazyLock};
 
 #[cfg(all(not(target_os = "solana"), feature = "std"))]
 pub(crate) static NEG_G1_GENERATOR_AFFINE: LazyLock<G1Affine> =

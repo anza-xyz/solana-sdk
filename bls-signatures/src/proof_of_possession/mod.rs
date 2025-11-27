@@ -3,12 +3,14 @@ pub mod conversion;
 pub mod points;
 
 // Re-export public types and constants
+pub use bytes::{
+    ProofOfPossession, ProofOfPossessionCompressed, BLS_PROOF_OF_POSSESSION_AFFINE_BASE64_SIZE,
+    BLS_PROOF_OF_POSSESSION_AFFINE_SIZE, BLS_PROOF_OF_POSSESSION_COMPRESSED_BASE64_SIZE,
+    BLS_PROOF_OF_POSSESSION_COMPRESSED_SIZE,
+};
+#[cfg(not(target_os = "solana"))]
 pub use {
-    bytes::{
-        AsProofOfPossession, ProofOfPossession, ProofOfPossessionCompressed,
-        BLS_PROOF_OF_POSSESSION_AFFINE_BASE64_SIZE, BLS_PROOF_OF_POSSESSION_AFFINE_SIZE,
-        BLS_PROOF_OF_POSSESSION_COMPRESSED_BASE64_SIZE, BLS_PROOF_OF_POSSESSION_COMPRESSED_SIZE,
-    },
+    bytes::AsProofOfPossession,
     points::{
         AsProofOfPossessionProjective, ProofOfPossessionProjective, VerifiableProofOfPossession,
     },

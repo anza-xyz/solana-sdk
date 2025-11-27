@@ -1,3 +1,7 @@
+#[cfg(all(not(target_os = "solana"), feature = "std"))]
+use crate::pubkey::points::NEG_G1_GENERATOR_AFFINE;
+#[cfg(not(feature = "std"))]
+use blstrs::G1Projective;
 #[cfg(feature = "bytemuck")]
 use bytemuck::{Pod, PodInOption, Zeroable, ZeroableInOption};
 #[cfg(not(target_os = "solana"))]
@@ -6,7 +10,7 @@ use {
         error::BlsError,
         hash::{hash_message_to_point, hash_pubkey_to_g2},
         proof_of_possession::{AsProofOfPossession, ProofOfPossession},
-        pubkey::points::{PubkeyProjective, NEG_G1_GENERATOR_AFFINE},
+        pubkey::points::PubkeyProjective,
         signature::{AsSignature, Signature},
     },
     blstrs::{Bls12, G1Affine, G2Affine, G2Prepared, Gt},

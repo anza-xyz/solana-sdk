@@ -2,17 +2,20 @@ pub mod bytes;
 pub mod conversion;
 pub mod points;
 
+pub use bytes::{
+    Signature, SignatureCompressed, BLS_SIGNATURE_AFFINE_BASE64_SIZE, BLS_SIGNATURE_AFFINE_SIZE,
+    BLS_SIGNATURE_COMPRESSED_BASE64_SIZE, BLS_SIGNATURE_COMPRESSED_SIZE,
+};
+#[cfg(not(target_os = "solana"))]
 pub use {
-    bytes::{
-        AsSignature, Signature, SignatureCompressed, BLS_SIGNATURE_AFFINE_BASE64_SIZE,
-        BLS_SIGNATURE_AFFINE_SIZE, BLS_SIGNATURE_COMPRESSED_BASE64_SIZE,
-        BLS_SIGNATURE_COMPRESSED_SIZE,
-    },
+    bytes::AsSignature,
     points::{AsSignatureProjective, SignatureProjective, VerifiableSignature},
 };
 
 #[cfg(test)]
 mod tests {
+    #[cfg(feature = "parallel")]
+    use rayon::prelude::*;
     use {
         super::*,
         crate::{
@@ -25,9 +28,6 @@ mod tests {
         core::{iter::empty, str::FromStr},
         std::{string::ToString, vec::Vec},
     };
-
-    #[cfg(feature = "parallel")]
-    use rayon::prelude::*;
 
     #[test]
     fn test_signature_verification() {
