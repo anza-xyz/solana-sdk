@@ -45,8 +45,40 @@ pub use {
 };
 
 impl Sysvar for LastRestartSlot {
-    impl_sysvar_get!(sol_get_last_restart_slot);
+    impl_sysvar_get!(id());
 }
 
 #[cfg(feature = "bincode")]
 impl SysvarSerialize for LastRestartSlot {}
+
+#[cfg(test)]
+mod tests {
+    use {super::*, crate::tests::to_bytes, serial_test::serial};
+
+    #[test]
+    #[cfg(feature = "bincode")]
+    fn test_last_restart_slot_size_matches_bincode() {
+        // Prove that LastRestartSlot's in-memory layout matches its bincode serialization.
+        let slot = LastRestartSlot::default();
+        let in_memory_size = core::mem::size_of::<LastRestartSlot>();
+        let bincode_size = bincode::serialized_size(&slot).unwrap() as usize;
+
+        assert_eq!(
+            in_memory_size, bincode_size,
+            "LastRestartSlot in-memory size ({in_memory_size}) must match bincode size ({bincode_size})",
+        );
+    }
+
+    #[test]
+    #[serial]
+    fn test_last_restart_slot_get_uses_sysvar_syscall() {
+        let expected = LastRestartSlot {
+            last_restart_slot: 9999,
+        };
+        let data = to_bytes(&expected);
+        crate::tests::mock_get_sysvar_syscall(&data);
+
+        let got = LastRestartSlot::get().unwrap();
+        assert_eq!(got, expected);
+    }
+}

@@ -64,7 +64,7 @@ impl SysvarSerialize for Fees {}
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use {super::*, serial_test::serial};
 
     #[test]
     fn test_clone() {
@@ -75,5 +75,51 @@ mod tests {
         };
         let cloned_fees = fees.clone();
         assert_eq!(cloned_fees, fees);
+    }
+
+    struct MockFeesSyscall;
+    impl crate::program_stubs::SyscallStubs for MockFeesSyscall {
+        fn sol_get_fees_sysvar(&self, var_addr: *mut u8) -> u64 {
+            let fees = Fees {
+                fee_calculator: FeeCalculator {
+                    lamports_per_signature: 42,
+                },
+            };
+            unsafe {
+                std::ptr::copy_nonoverlapping(
+                    &fees as *const _ as *const u8,
+                    var_addr,
+                    core::mem::size_of::<Fees>(),
+                );
+            }
+            solana_program_entrypoint::SUCCESS
+        }
+    }
+
+    #[test]
+    #[serial]
+    fn test_fees_get_deprecated_syscall_path() {
+        let _ = crate::program_stubs::set_syscall_stubs(Box::new(MockFeesSyscall));
+        let got = Fees::get().unwrap();
+        assert_eq!(got.fee_calculator.lamports_per_signature, 42);
+    }
+
+    struct FailFeesSyscall;
+    impl crate::program_stubs::SyscallStubs for FailFeesSyscall {
+        fn sol_get_fees_sysvar(&self, _var_addr: *mut u8) -> u64 {
+            9999
+        }
+    }
+
+    #[test]
+    #[serial]
+    fn test_fees_get_deprecated_non_success_maps_to_unsupported() {
+        let prev = crate::program_stubs::set_syscall_stubs(Box::new(FailFeesSyscall));
+        let got = Fees::get();
+        assert_eq!(
+            got,
+            Err(solana_program_error::ProgramError::UnsupportedSysvar)
+        );
+        let _ = crate::program_stubs::set_syscall_stubs(prev);
     }
 }

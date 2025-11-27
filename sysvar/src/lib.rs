@@ -161,6 +161,9 @@ pub trait SysvarSerialize:
 /// Implements the [`Sysvar::get`] method for both SBF and host targets.
 #[macro_export]
 macro_rules! impl_sysvar_get {
+    // DEPRECATED: This variant is only for the deprecated Fees sysvar and should be
+    // removed once Fees is no longer in use. It uses the old-style direct syscall
+    // approach instead of the new sol_get_sysvar syscall.
     ($syscall_name:ident) => {
         fn get() -> Result<Self, $crate::__private::ProgramError> {
             let mut var = Self::default();
@@ -174,8 +177,23 @@ macro_rules! impl_sysvar_get {
 
             match result {
                 $crate::__private::SUCCESS => Ok(var),
-                // Unexpected errors are folded into `UnsupportedSysvar`.
                 _ => Err($crate::__private::ProgramError::UnsupportedSysvar),
+            }
+        }
+    };
+    ($sysvar_id:expr) => {
+        fn get() -> Result<Self, $crate::__private::ProgramError> {
+            let mut uninit = core::mem::MaybeUninit::<Self>::uninit();
+            let size = core::mem::size_of::<Self>() as u64;
+            let sysvar_id_ptr = (&$sysvar_id) as *const _ as *const u8;
+            unsafe {
+                $crate::get_sysvar_unchecked(
+                    uninit.as_mut_ptr() as *mut u8,
+                    sysvar_id_ptr,
+                    0,
+                    size,
+                )?;
+                Ok(uninit.assume_init())
             }
         }
     };
@@ -202,6 +220,35 @@ pub fn get_sysvar(
     let result = unsafe {
         solana_define_syscall::definitions::sol_get_sysvar(sysvar_id, var_addr, offset, length)
     };
+
+    #[cfg(not(target_os = "solana"))]
+    let result = crate::program_stubs::sol_get_sysvar(sysvar_id, var_addr, offset, length);
+
+    match result {
+        solana_program_entrypoint::SUCCESS => Ok(()),
+        OFFSET_LENGTH_EXCEEDS_SYSVAR => Err(solana_program_error::ProgramError::InvalidArgument),
+        _ => Err(solana_program_error::ProgramError::UnsupportedSysvar),
+    }
+}
+
+/// Internal helper for retrieving sysvar data directly into a raw buffer.
+///
+/// # Safety
+///
+/// This function bypasses the slice-length check that `get_sysvar` performs.
+/// The caller must ensure that `var_addr` points to a writable buffer of at
+/// least `length` bytes. This is typically used with `MaybeUninit` to load
+/// compact representations of sysvars.
+#[doc(hidden)]
+pub unsafe fn get_sysvar_unchecked(
+    var_addr: *mut u8,
+    sysvar_id: *const u8,
+    offset: u64,
+    length: u64,
+) -> Result<(), solana_program_error::ProgramError> {
+    #[cfg(target_os = "solana")]
+    let result =
+        solana_define_syscall::definitions::sol_get_sysvar(sysvar_id, var_addr, offset, length);
 
     #[cfg(not(target_os = "solana"))]
     let result = crate::program_stubs::sol_get_sysvar(sysvar_id, var_addr, offset, length);
@@ -245,10 +292,13 @@ mod tests {
     impl Sysvar for TestSysvar {}
     impl SysvarSerialize for TestSysvar {}
 
-    // NOTE tests that use this mock MUST carry the #[serial] attribute
+    // NOTE: Tests using these mocks MUST carry the #[serial] attribute
+    // because they modify global SYSCALL_STUBS state.
+
     struct MockGetSysvarSyscall {
         data: Vec<u8>,
     }
+
     impl SyscallStubs for MockGetSysvarSyscall {
         #[allow(clippy::arithmetic_side_effects)]
         fn sol_get_sysvar(
@@ -263,10 +313,63 @@ mod tests {
             SUCCESS
         }
     }
+
+    /// Mock syscall stub for tests. Requires `#[serial]` attribute.
     pub fn mock_get_sysvar_syscall(data: &[u8]) {
         set_syscall_stubs(Box::new(MockGetSysvarSyscall {
             data: data.to_vec(),
         }));
+    }
+
+    struct ValidateIdSyscall {
+        data: Vec<u8>,
+        expected_id: Pubkey,
+    }
+
+    impl SyscallStubs for ValidateIdSyscall {
+        #[allow(clippy::arithmetic_side_effects)]
+        fn sol_get_sysvar(
+            &self,
+            sysvar_id_addr: *const u8,
+            var_addr: *mut u8,
+            offset: u64,
+            length: u64,
+        ) -> u64 {
+            // Validate that the correct sysvar id pointer was passed
+            let passed_id = unsafe { *(sysvar_id_addr as *const Pubkey) };
+            assert_eq!(passed_id, self.expected_id);
+
+            let slice = unsafe { std::slice::from_raw_parts_mut(var_addr, length as usize) };
+            slice.copy_from_slice(&self.data[offset as usize..(offset + length) as usize]);
+            SUCCESS
+        }
+    }
+
+    /// Mock syscall stub that validates sysvar ID. Requires `#[serial]` attribute.
+    pub fn mock_get_sysvar_syscall_with_id(
+        data: &[u8],
+        expected_id: &Pubkey,
+    ) -> Box<dyn SyscallStubs> {
+        set_syscall_stubs(Box::new(ValidateIdSyscall {
+            data: data.to_vec(),
+            expected_id: *expected_id,
+        }))
+    }
+
+    /// Convert a value to its in-memory byte representation.
+    ///
+    /// # Safety
+    ///
+    /// This function is only safe for plain-old-data types with no padding.
+    /// Intended for test use only.
+    pub fn to_bytes<T>(value: &T) -> Vec<u8> {
+        let size = core::mem::size_of::<T>();
+        let ptr = (value as *const T) as *const u8;
+        let mut data = vec![0u8; size];
+        unsafe {
+            std::ptr::copy_nonoverlapping(ptr, data.as_mut_ptr(), size);
+        }
+        data
     }
 
     #[test]

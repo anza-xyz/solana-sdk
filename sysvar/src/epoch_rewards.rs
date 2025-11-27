@@ -49,13 +49,7 @@
 //! # use solana_sysvar_id::SysvarId;
 //! # let p = EpochRewards::id();
 //! # let l = &mut 1559040;
-//! # let epoch_rewards = EpochRewards {
-//! #     distribution_starting_block_height: 42,
-//! #     total_rewards: 100,
-//! #     distributed_rewards: 10,
-//! #     active: true,
-//! #     ..EpochRewards::default()
-//! # };
+//! # let epoch_rewards = EpochRewards::new(100, 10, 42);
 //! # let mut d: Vec<u8> = bincode::serialize(&epoch_rewards).unwrap();
 //! # let a = AccountInfo::new(&p, false, false, l, &mut d, &p, false);
 //! # let accounts = &[a.clone(), a];
@@ -97,13 +91,7 @@
 //! # use solana_sysvar_id::SysvarId;
 //! # let p = EpochRewards::id();
 //! # let l = &mut 1559040;
-//! # let epoch_rewards = EpochRewards {
-//! #     distribution_starting_block_height: 42,
-//! #     total_rewards: 100,
-//! #     distributed_rewards: 10,
-//! #     active: true,
-//! #     ..EpochRewards::default()
-//! # };
+//! # let epoch_rewards = EpochRewards::new(100, 10, 42);
 //! # let mut d: Vec<u8> = bincode::serialize(&epoch_rewards).unwrap();
 //! # let a = AccountInfo::new(&p, false, false, l, &mut d, &p, false);
 //! # let accounts = &[a.clone(), a];
@@ -127,13 +115,7 @@
 //! # use anyhow::Result;
 //! #
 //! fn print_sysvar_epoch_rewards(client: &RpcClient) -> Result<()> {
-//! #   let epoch_rewards = EpochRewards {
-//! #       distribution_starting_block_height: 42,
-//! #       total_rewards: 100,
-//! #       distributed_rewards: 10,
-//! #       active: true,
-//! #       ..EpochRewards::default()
-//! #   };
+//! #   let epoch_rewards = EpochRewards::new(100, 10, 42);
 //! #   let data: Vec<u8> = bincode::serialize(&epoch_rewards)?;
 //! #   client.set_get_account_response(epoch_rewards::ID, Account {
 //! #       lamports: 1120560,
@@ -163,8 +145,27 @@ pub use {
 };
 
 impl Sysvar for EpochRewards {
-    impl_sysvar_get!(sol_get_epoch_rewards_sysvar);
+    impl_sysvar_get!(id());
 }
 
 #[cfg(feature = "bincode")]
 impl SysvarSerialize for EpochRewards {}
+
+#[cfg(test)]
+mod tests {
+    use {super::*, crate::Sysvar, serial_test::serial};
+
+    #[test]
+    #[serial]
+    #[cfg(feature = "bincode")]
+    fn test_epoch_rewards_get() {
+        let expected = EpochRewards::new(100, 10, 42);
+
+        let data = bincode::serialize(&expected).unwrap();
+        assert_eq!(data.len(), 81);
+
+        crate::tests::mock_get_sysvar_syscall(&data);
+        let got = EpochRewards::get().unwrap();
+        assert_eq!(got, expected);
+    }
+}
