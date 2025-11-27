@@ -3,7 +3,7 @@ name = "solana-instruction-view"
 description = "Lightweight instruction representation"
 documentation = "https://docs.rs/solana-instruction-view"
 version = "1.0.0"
-rust-version = "1.82.0"
+rust-version = "1.85.0"
 authors = { workspace = true }
 repository = { workspace = true }
 homepage = { workspace = true }

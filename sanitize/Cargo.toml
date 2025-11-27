@@ -2,7 +2,7 @@
 name = "solana-sanitize"
 description = "Solana Message Sanitization"
 documentation = "https://docs.rs/solana-sanitize"
-rust-version = "1.81.0"
+rust-version = "1.85.0"
 version = "3.0.1"
 authors = { workspace = true }
 repository = { workspace = true }
