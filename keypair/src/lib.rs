@@ -35,8 +35,8 @@ impl Keypair {
     /// Constructs a new, random `Keypair` using `OsRng`
     #[allow(clippy::new_without_default)]
     pub fn new() -> Self {
-        let mut rng = OsRng;
-        Self(ed25519_zebra::SigningKey::new(&mut rng))
+        let rng = OsRng;
+        Self(ed25519_zebra::SigningKey::new(rng))
     }
 
     /// Constructs a new `Keypair` using secret key bytes
@@ -86,7 +86,7 @@ impl Keypair {
     /// Only use this in tests or when strictly required. Consider using [`std::sync::Arc<Keypair>`]
     /// instead.
     pub fn insecure_clone(&self) -> Self {
-        Self(self.0.clone())
+        Self(self.0)
     }
 }
 
@@ -101,9 +101,9 @@ impl TryFrom<&[u8]> for Keypair {
         })?;
         let (secret_key, verifying_key) = keypair_bytes.split_at(SECRET_KEY_LENGTH);
         let signing_key = ed25519_zebra::SigningKey::try_from(secret_key)
-            .map_err(|e| SignatureError::from_source(format!("invalid secret key: {}", e)))?;
+            .map_err(|e| SignatureError::from_source(format!("invalid secret key: {e}")))?;
         let verifying_key = ed25519_zebra::VerificationKey::try_from(verifying_key)
-            .map_err(|e| SignatureError::from_source(format!("invalid verification key: {}", e)))?;
+            .map_err(|e| SignatureError::from_source(format!("invalid verification key: {e}")))?;
 
         if signing_key.verification_key() != verifying_key {
             return Err(SignatureError::from_source(String::from(
@@ -192,7 +192,7 @@ pub fn read_keypair<R: Read>(reader: &mut R) -> Result<Keypair, Box<dyn error::E
     let elements: [&str; KEYPAIR_LENGTH] = elements_vec.try_into().map_err(|_| {
         std::io::Error::new(
             std::io::ErrorKind::InvalidData,
-            format!("Expected {} elements, found {}", KEYPAIR_LENGTH, len),
+            format!("Expected {KEYPAIR_LENGTH} elements, found {len}"),
         )
     })?;
     let mut out = [0u8; KEYPAIR_LENGTH];
