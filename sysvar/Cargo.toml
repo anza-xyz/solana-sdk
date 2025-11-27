@@ -2,7 +2,7 @@
 name = "solana-sysvar"
 description = "Solana sysvar account types"
 documentation = "https://docs.rs/solana-sysvar"
-version = "3.1.0"
+version = "3.1.1"
 authors = { workspace = true }
 repository = { workspace = true }
 homepage = { workspace = true }

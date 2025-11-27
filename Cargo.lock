@@ -3165,7 +3165,7 @@ dependencies = [
 
 [[package]]
 name = "solana-frozen-abi"
-version = "3.0.1"
+version = "3.1.0"
 dependencies = [
  "bitflags 2.9.4",
  "boxcar",
@@ -3176,6 +3176,7 @@ dependencies = [
  "im",
  "log",
  "memmap2",
+ "rand",
  "serde",
  "serde_bytes",
  "serde_derive",
@@ -3187,7 +3188,7 @@ dependencies = [
 
 [[package]]
 name = "solana-frozen-abi-macro"
-version = "3.1.0"
+version = "3.2.0"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -4061,7 +4062,7 @@ dependencies = [
 
 [[package]]
 name = "solana-sysvar"
-version = "3.1.0"
+version = "3.1.1"
 dependencies = [
  "anyhow",
  "base64 0.22.1",

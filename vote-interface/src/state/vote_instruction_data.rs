@@ -255,7 +255,7 @@ pub struct VoterWithBLSArgs {
         feature = "serde",
         serde_as(as = "[_; BLS_PUBLIC_KEY_COMPRESSED_SIZE]")
     )]
-    pub bls_pub_key: [u8; BLS_PUBLIC_KEY_COMPRESSED_SIZE],
+    pub bls_pubkey: [u8; BLS_PUBLIC_KEY_COMPRESSED_SIZE],
     #[cfg_attr(
         feature = "serde",
         serde_as(as = "[_; BLS_PROOF_OF_POSSESSION_COMPRESSED_SIZE]")
@@ -266,7 +266,7 @@ pub struct VoterWithBLSArgs {
 impl Default for VoterWithBLSArgs {
     fn default() -> Self {
         Self {
-            bls_pub_key: [0u8; BLS_PUBLIC_KEY_COMPRESSED_SIZE],
+            bls_pubkey: [0u8; BLS_PUBLIC_KEY_COMPRESSED_SIZE],
             bls_proof_of_possession: [0u8; BLS_PROOF_OF_POSSESSION_COMPRESSED_SIZE],
         }
     }
