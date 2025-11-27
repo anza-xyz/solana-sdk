@@ -22,6 +22,14 @@ use {
     serde_derive::{Deserialize, Serialize},
 };
 
+#[repr(u8)]
+#[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub enum CommissionKind {
+    InflationRewards = 0,
+    BlockRevenue = 1,
+}
+
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum VoteInstruction {
@@ -190,6 +198,16 @@ pub enum VoteInstruction {
     ///   0. `[WRITE]` Uninitialized vote account
     ///   1. `[SIGNER]` New validator identity (node_pubkey)
     InitializeAccountV2(VoteInitV2),
+
+    /// Update the commission collector for the vote account
+    ///
+    /// # Account references
+    ///   0. `[WRITE]` Vote account to be updated with the new collector public key
+    ///   1. `[WRITE]` New collector account. Must be set to the vote account or
+    ///      a system program owned account. Must be writable to ensure the
+    ///      account is not reserved.
+    ///   2. `[SIGNER]` Vote account withdraw authority
+    UpdateCommissionCollector(CommissionKind),
 }
 
 impl VoteInstruction {
@@ -505,6 +523,26 @@ pub fn update_commission(
     Instruction::new_with_bincode(
         id(),
         &VoteInstruction::UpdateCommission(commission),
+        account_metas,
+    )
+}
+
+#[cfg(feature = "bincode")]
+pub fn update_commission_collector(
+    vote_pubkey: &Pubkey,
+    authorized_withdrawer_pubkey: &Pubkey,
+    new_collector_pubkey: &Pubkey,
+    kind: CommissionKind,
+) -> Instruction {
+    let account_metas = vec![
+        AccountMeta::new(*vote_pubkey, false),
+        AccountMeta::new(*new_collector_pubkey, false),
+        AccountMeta::new_readonly(*authorized_withdrawer_pubkey, true),
+    ];
+
+    Instruction::new_with_bincode(
+        id(),
+        &VoteInstruction::UpdateCommissionCollector(kind),
         account_metas,
     )
 }
