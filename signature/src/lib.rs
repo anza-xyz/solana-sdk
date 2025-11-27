@@ -2,8 +2,6 @@
 #![no_std]
 #![cfg_attr(docsrs, feature(doc_cfg))]
 #![cfg_attr(feature = "frozen-abi", feature(min_specialization))]
-#[cfg(any(test, feature = "verify"))]
-use core::convert::TryInto;
 use core::{
     fmt,
     str::{from_utf8_unchecked, FromStr},
@@ -69,10 +67,10 @@ impl Signature {
         &self,
         pubkey_bytes: &[u8],
         message_bytes: &[u8],
-    ) -> Result<(), ed25519_dalek::SignatureError> {
-        let publickey = ed25519_dalek::VerifyingKey::try_from(pubkey_bytes)?;
-        let signature = self.0.as_slice().try_into()?;
-        publickey.verify_strict(message_bytes, &signature)
+    ) -> Result<(), ed25519_zebra::Error> {
+        let publickey = ed25519_zebra::VerificationKey::try_from(pubkey_bytes)?;
+        let signature = self.0.into();
+        publickey.verify_heea(&signature, message_bytes)
     }
 
     pub fn verify(&self, pubkey_bytes: &[u8], message_bytes: &[u8]) -> bool {

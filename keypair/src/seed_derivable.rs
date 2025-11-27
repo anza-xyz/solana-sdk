@@ -45,5 +45,9 @@ fn bip32_derived_keypair(
 ) -> Result<Keypair, Bip32Error> {
     let extended = ed25519_dalek_bip32::ExtendedSigningKey::from_seed(seed)
         .and_then(|extended| extended.derive(&derivation_path))?;
-    Ok(Keypair(extended.signing_key))
+    // Convert ed25519_dalek SigningKey to ed25519_zebra SigningKey
+    let secret_bytes = extended.signing_key.to_bytes();
+    Ok(Keypair(ed25519_zebra::SigningKey::from_bytes(
+        &secret_bytes,
+    )))
 }

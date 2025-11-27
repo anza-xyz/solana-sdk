@@ -1,7 +1,6 @@
 //! Concrete implementation of a Solana `Signer` from raw bytes
 #![cfg_attr(docsrs, feature(doc_cfg))]
 use {
-    ed25519_dalek::Signer as DalekSigner,
     rand::rngs::OsRng,
     solana_seed_phrase::generate_seed_from_seed_phrase_and_passphrase,
     solana_signer::SignerError,
@@ -11,6 +10,7 @@ use {
         path::Path,
     },
 };
+
 pub use {
     solana_address::Address,
     solana_signature::{error::Error as SignatureError, Signature},
@@ -23,8 +23,10 @@ pub mod signable;
 
 /// A vanilla Ed25519 key pair
 #[derive(Debug)]
-pub struct Keypair(ed25519_dalek::SigningKey);
+pub struct Keypair(ed25519_zebra::SigningKey);
 
+// ed25519_zebra's signing_key module is private, so we define this constant ourselves
+pub const SECRET_KEY_LENGTH: usize = 32;
 pub const KEYPAIR_LENGTH: usize = 64;
 
 impl Keypair {
@@ -35,22 +37,32 @@ impl Keypair {
     #[allow(clippy::new_without_default)]
     pub fn new() -> Self {
         let mut rng = OsRng;
-        Self(ed25519_dalek::SigningKey::generate(&mut rng))
+        Self(ed25519_zebra::SigningKey::new(&mut rng))
     }
 
     /// Constructs a new `Keypair` using secret key bytes
     pub fn new_from_array(secret_key: [u8; 32]) -> Self {
-        Self(ed25519_dalek::SigningKey::from(secret_key))
+        Self(ed25519_zebra::SigningKey::from(secret_key))
     }
 
     /// Returns this `Keypair` as a byte array
     pub fn to_bytes(&self) -> [u8; KEYPAIR_LENGTH] {
-        self.0.to_keypair_bytes()
+        // Zebra simplified dalek and removed the struct `Keypair`.
+        // For this lib to be backwards compatible while using zebra,
+        // we manually write the to_bytes() function, which is
+        // [ sk | vk ]
+        [
+            self.0.to_bytes().as_ref(),
+            self.0.verification_key().as_ref(),
+        ]
+        .concat()
+        .try_into()
+        .expect("fail to convert keypair to byte array")
     }
 
     /// Recovers a `Keypair` from a base58-encoded string
     pub fn from_base58_string(s: &str) -> Self {
-        let mut buf = [0u8; ed25519_dalek::KEYPAIR_LENGTH];
+        let mut buf = [0u8; KEYPAIR_LENGTH];
         five8::decode_64(s, &mut buf).unwrap();
         Self::try_from(&buf[..]).unwrap()
     }
@@ -83,29 +95,35 @@ impl TryFrom<&[u8]> for Keypair {
     type Error = SignatureError;
 
     fn try_from(bytes: &[u8]) -> Result<Self, Self::Error> {
-        let keypair_bytes: &[u8; ed25519_dalek::KEYPAIR_LENGTH] =
-            bytes.try_into().map_err(|_| {
-                SignatureError::from_source(String::from(
-                    "candidate keypair byte array is the wrong length",
-                ))
-            })?;
-        ed25519_dalek::SigningKey::from_keypair_bytes(keypair_bytes)
-            .map_err(|_| {
-                SignatureError::from_source(String::from(
-                    "keypair bytes do not specify same pubkey as derived from their secret key",
-                ))
-            })
-            .map(Self)
+        let keypair_bytes: &[u8; KEYPAIR_LENGTH] = bytes.try_into().map_err(|_| {
+            SignatureError::from_source(String::from(
+                "candidate keypair byte array is the wrong length",
+            ))
+        })?;
+        let (secret_key, verifying_key) = keypair_bytes.split_at(SECRET_KEY_LENGTH);
+        let signing_key = ed25519_zebra::SigningKey::try_from(secret_key)
+            .map_err(|e| SignatureError::from_source(format!("invalid secret key: {}", e)))?;
+        let verifying_key = ed25519_zebra::VerificationKey::try_from(verifying_key)
+            .map_err(|e| SignatureError::from_source(format!("invalid verification key: {}", e)))?;
+
+        if signing_key.verification_key() != verifying_key {
+            return Err(SignatureError::from_source(String::from(
+                "deserialized keypair's public key does not match the secret key",
+            )));
+        }
+
+        Ok(Self(signing_key))
     }
 }
 
 #[cfg(test)]
-static_assertions::const_assert_eq!(Keypair::SECRET_KEY_LENGTH, ed25519_dalek::SECRET_KEY_LENGTH);
+static_assertions::const_assert_eq!(Keypair::SECRET_KEY_LENGTH, SECRET_KEY_LENGTH);
 
 impl Signer for Keypair {
     #[inline]
     fn pubkey(&self) -> Address {
-        Address::from(self.0.verifying_key().to_bytes())
+        let vk_bytes: [u8; 32] = self.0.verification_key().into();
+        Address::from(vk_bytes)
     }
 
     fn try_pubkey(&self) -> Result<Address, SignerError> {
@@ -172,18 +190,13 @@ pub fn read_keypair<R: Read>(reader: &mut R) -> Result<Keypair, Box<dyn error::E
     let contents = &trimmed[1..trimmed.len() - 1];
     let elements_vec: Vec<&str> = contents.split(',').map(|s| s.trim()).collect();
     let len = elements_vec.len();
-    let elements: [&str; ed25519_dalek::KEYPAIR_LENGTH] =
-        elements_vec.try_into().map_err(|_| {
-            std::io::Error::new(
-                std::io::ErrorKind::InvalidData,
-                format!(
-                    "Expected {} elements, found {}",
-                    ed25519_dalek::KEYPAIR_LENGTH,
-                    len
-                ),
-            )
-        })?;
-    let mut out = [0u8; ed25519_dalek::KEYPAIR_LENGTH];
+    let elements: [&str; KEYPAIR_LENGTH] = elements_vec.try_into().map_err(|_| {
+        std::io::Error::new(
+            std::io::ErrorKind::InvalidData,
+            format!("Expected {} elements, found {}", KEYPAIR_LENGTH, len),
+        )
+    })?;
+    let mut out = [0u8; KEYPAIR_LENGTH];
     for (idx, element) in elements.into_iter().enumerate() {
         let parsed: u8 = element.parse()?;
         out[idx] = parsed;
@@ -232,12 +245,12 @@ pub fn write_keypair_file<F: AsRef<Path>>(
 
 /// Constructs a `Keypair` from caller-provided seed entropy
 pub fn keypair_from_seed(seed: &[u8]) -> Result<Keypair, Box<dyn error::Error>> {
-    if seed.len() < ed25519_dalek::SECRET_KEY_LENGTH {
+    if seed.len() < SECRET_KEY_LENGTH {
         return Err("Seed is too short".into());
     }
     // this won't fail as we've already checked the length
-    let secret_key = ed25519_dalek::SecretKey::try_from(&seed[..ed25519_dalek::SECRET_KEY_LENGTH])?;
-    Ok(Keypair(ed25519_dalek::SigningKey::from(secret_key)))
+    let secret_key: &[u8; SECRET_KEY_LENGTH] = seed[..SECRET_KEY_LENGTH].try_into()?;
+    Ok(Keypair(ed25519_zebra::SigningKey::from_bytes(secret_key)))
 }
 
 pub fn keypair_from_seed_phrase_and_passphrase(
