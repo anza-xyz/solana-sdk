@@ -1,7 +1,5 @@
 #[cfg(feature = "serde")]
 use serde_derive::{Deserialize, Serialize};
-#[cfg(feature = "wincode")]
-use wincode::{SchemaRead, SchemaWrite};
 use {
     crate::{v0, AccountKeys},
     solana_address::Address,
