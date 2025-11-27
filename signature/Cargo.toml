@@ -3,7 +3,7 @@ name = "solana-signature"
 description = "Solana 64-byte signature type"
 documentation = "https://docs.rs/solana-signature"
 version = "3.1.0"
-rust-version = "1.81.0"
+rust-version = "1.85.0"
 authors = { workspace = true }
 repository = { workspace = true }
 homepage = { workspace = true }
@@ -23,12 +23,12 @@ frozen-abi = ["dep:solana-frozen-abi", "dep:solana-frozen-abi-macro", "std"]
 rand = ["dep:rand"]
 serde = ["dep:serde", "dep:serde_derive", "dep:serde-big-array"]
 std = ["alloc", "serde?/std"]
-verify = ["dep:ed25519-dalek"]
+verify = ["dep:ed25519-zebra"]
 
 [dependencies]
 bytemuck = { workspace = true, optional = true }
 bytemuck_derive = { workspace = true, optional = true }
-ed25519-dalek = { workspace = true, optional = true }
+ed25519-zebra = { workspace = true, optional = true }
 five8 = { workspace = true }
 rand = { workspace = true, optional = true }
 serde = { workspace = true, optional = true }
@@ -42,7 +42,7 @@ solana-sanitize = { workspace = true }
 bincode = { workspace = true }
 bs58 = { workspace = true, features = ["std"] }
 curve25519-dalek = { workspace = true }
-ed25519-dalek = { workspace = true }
+ed25519-zebra = { workspace = true }
 serde_derive = { workspace = true }
 serde_json = { workspace = true }
 solana-pubkey = { workspace = true, features = ["std"] }

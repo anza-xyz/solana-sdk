@@ -3,7 +3,7 @@ name = "solana-address"
 description = "Solana account addresses"
 documentation = "https://docs.rs/solana-address"
 version = "2.0.0"
-rust-version = "1.81.0"
+rust-version = "1.85.0"
 authors = { workspace = true }
 repository = { workspace = true }
 homepage = { workspace = true }
@@ -20,7 +20,7 @@ atomic = ["dep:solana-atomic-u64"]
 borsh = ["dep:borsh", "alloc"]
 bytemuck = ["copy", "dep:bytemuck", "dep:bytemuck_derive"]
 copy = []
-curve25519 = ["dep:curve25519-dalek", "sha2", "syscalls"]
+curve25519 = ["dep:curve25519-dalek", "sha2", "syscalls", "alloc"]
 decode = ["dep:five8", "dep:five8_const", "error"]
 dev-context-only-utils = ["dep:arbitrary", "rand"]
 error = ["dep:solana-program-error"]

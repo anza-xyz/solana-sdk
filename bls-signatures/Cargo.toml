@@ -3,7 +3,7 @@ name = "solana-bls-signatures"
 description = "Solana BLS Signatures"
 documentation = "https://docs.rs/solana-bls-signatures"
 version = "1.0.0"
-rust-version = "1.81.0"
+rust-version = "1.85.0"
 authors = { workspace = true }
 repository = { workspace = true }
 homepage = { workspace = true }
