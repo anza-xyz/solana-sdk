@@ -35,6 +35,7 @@ serde = [
     "solana-address/serde",
     "solana-hash/serde",
 ]
+wincode = ["dep:wincode", "solana-hash/wincode", "solana-address/wincode"]
 
 [dependencies]
 bincode = { workspace = true, optional = true }
@@ -51,6 +52,10 @@ solana-sanitize = { workspace = true }
 solana-sdk-ids = { workspace = true }
 solana-short-vec = { workspace = true, optional = true }
 solana-transaction-error = { workspace = true }
+wincode = { workspace = true, optional = true, features = [
+    "std",
+    "solana-short-vec",
+] }
 
 [dev-dependencies]
 anyhow = { workspace = true }

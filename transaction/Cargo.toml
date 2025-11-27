@@ -37,6 +37,7 @@ serde = [
     "solana-transaction-error/serde",
 ]
 verify = ["blake3", "solana-signature/verify"]
+wincode = ["dep:wincode", "solana-message/wincode", "solana-signature/wincode"]
 
 [dependencies]
 bincode = { workspace = true, optional = true }
@@ -55,11 +56,16 @@ solana-short-vec = { workspace = true, optional = true }
 solana-signature = { workspace = true }
 solana-signer = { workspace = true, optional = true }
 solana-transaction-error = { workspace = true }
+wincode = { workspace = true, optional = true, features = [
+    "solana-short-vec",
+    "alloc",
+] }
 
 [dev-dependencies]
 anyhow = { workspace = true }
 bincode = { workspace = true }
 borsh = { workspace = true }
+proptest = { workspace = true }
 solana-example-mocks = { path = "../example-mocks" }
 solana-hash = { workspace = true, features = ["atomic"] }
 solana-instruction = { workspace = true, features = ["borsh"] }

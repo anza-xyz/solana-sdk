@@ -20,6 +20,8 @@ use solana_sanitize::Sanitize;
 extern crate alloc;
 #[cfg(feature = "borsh")]
 use alloc::string::ToString;
+#[cfg(feature = "wincode")]
+use wincode::{SchemaRead, SchemaWrite};
 
 /// Size of a hash in bytes.
 pub const HASH_BYTES: usize = 32;
@@ -42,6 +44,7 @@ pub const MAX_BASE58_LEN: usize = 44;
 #[cfg_attr(feature = "borsh", derive(BorshSchema))]
 #[cfg_attr(feature = "bytemuck", derive(Pod, Zeroable))]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize,))]
+#[cfg_attr(feature = "wincode", derive(SchemaWrite, SchemaRead))]
 #[cfg_attr(feature = "copy", derive(Copy))]
 #[cfg_attr(not(feature = "decode"), derive(Debug))]
 #[derive(Clone, Default, Eq, PartialEq, Ord, PartialOrd, Hash)]

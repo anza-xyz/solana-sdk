@@ -10,6 +10,14 @@ use {
     solana_sanitize::{Sanitize, SanitizeError},
     std::collections::HashSet,
 };
+#[cfg(feature = "wincode")]
+use {
+    core::mem::MaybeUninit,
+    wincode::{
+        io::{Reader, Writer},
+        ReadResult, SchemaRead, SchemaWrite, WriteResult,
+    },
+};
 #[cfg(feature = "serde")]
 use {
     serde::{
@@ -323,6 +331,78 @@ impl<'de> serde::Deserialize<'de> for VersionedMessage {
         }
 
         deserializer.deserialize_tuple(2, MessageVisitor)
+    }
+}
+
+#[cfg(feature = "wincode")]
+impl SchemaWrite for VersionedMessage {
+    type Src = Self;
+
+    #[inline(always)]
+    fn size_of(src: &Self::Src) -> WriteResult<usize> {
+        match src {
+            VersionedMessage::Legacy(message) => LegacyMessage::size_of(message),
+            // +1 for message version prefix
+            VersionedMessage::V0(message) => Ok(1 + v0::Message::size_of(message)?),
+        }
+    }
+
+    #[inline(always)]
+    fn write(writer: &mut impl Writer, src: &Self::Src) -> WriteResult<()> {
+        match src {
+            VersionedMessage::Legacy(message) => LegacyMessage::write(writer, message),
+            VersionedMessage::V0(message) => {
+                u8::write(writer, &MESSAGE_VERSION_PREFIX)?;
+                v0::Message::write(writer, message)
+            }
+        }
+    }
+}
+
+#[cfg(feature = "wincode")]
+impl<'de> SchemaRead<'de> for VersionedMessage {
+    type Dst = Self;
+
+    fn read(reader: &mut impl Reader<'de>, dst: &mut MaybeUninit<Self::Dst>) -> ReadResult<()> {
+        // If the first bit is set, the remaining 7 bits will be used to determine
+        // which message version is serialized starting from version `0`. If the first
+        // is bit is not set, all bytes are used to encode the legacy `Message`
+        // format.
+        let variant = u8::get(reader)?;
+
+        if variant & MESSAGE_VERSION_PREFIX != 0 {
+            use wincode::error::invalid_tag_encoding;
+
+            let version = variant & !MESSAGE_VERSION_PREFIX;
+            return match version {
+                0 => {
+                    let msg = v0::Message::get(reader)?;
+                    dst.write(VersionedMessage::V0(msg));
+                    Ok(())
+                }
+                _ => Err(invalid_tag_encoding(version as usize)),
+            };
+        }
+
+        let mut msg = MaybeUninit::<LegacyMessage>::uninit();
+        // We've already read the variant byte which, in the legacy case, represents
+        // the `num_required_signatures` field.
+        // As such, we need to write the remaining fields into the message manually,
+        // as calling `LegacyMessage::read` will miss the first field.
+        let header_uninit = LegacyMessage::uninit_header_mut(&mut msg);
+
+        MessageHeader::write_uninit_num_required_signatures(variant, header_uninit);
+        MessageHeader::read_num_readonly_signed_accounts(reader, header_uninit)?;
+        MessageHeader::read_num_readonly_unsigned_accounts(reader, header_uninit)?;
+
+        LegacyMessage::read_account_keys(reader, &mut msg)?;
+        LegacyMessage::read_recent_blockhash(reader, &mut msg)?;
+        LegacyMessage::read_instructions(reader, &mut msg)?;
+
+        let msg = unsafe { msg.assume_init() };
+        dst.write(VersionedMessage::Legacy(msg));
+
+        Ok(())
     }
 }
 

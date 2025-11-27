@@ -42,6 +42,8 @@ use core::{
 };
 #[cfg(feature = "serde")]
 use serde_derive::{Deserialize, Serialize};
+#[cfg(feature = "wincode")]
+use wincode::{SchemaRead, SchemaWrite};
 #[cfg(feature = "borsh")]
 use {
     alloc::string::ToString,
@@ -89,6 +91,7 @@ pub const PDA_MARKER: &[u8; 21] = b"ProgramDerivedAddress";
 #[cfg_attr(feature = "borsh", derive(BorshSchema))]
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[cfg_attr(feature = "bytemuck", derive(Pod, Zeroable))]
+#[cfg_attr(feature = "wincode", derive(SchemaWrite, SchemaRead))]
 #[cfg_attr(feature = "dev-context-only-utils", derive(Arbitrary))]
 #[cfg_attr(not(feature = "decode"), derive(Debug))]
 #[cfg_attr(feature = "copy", derive(Copy))]

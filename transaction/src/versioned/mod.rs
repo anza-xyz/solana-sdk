@@ -2,6 +2,8 @@
 
 #[cfg(feature = "bincode")]
 use solana_signer::{signers::Signers, SignerError};
+#[cfg(feature = "wincode")]
+use wincode::{containers, len::ShortU16Len, SchemaRead, SchemaWrite};
 use {
     crate::Transaction,
     solana_message::{inline_nonce::is_advance_nonce_instruction_data, VersionedMessage},
@@ -48,10 +50,12 @@ impl TransactionVersion {
 /// An atomic transaction
 #[cfg_attr(feature = "frozen-abi", derive(solana_frozen_abi_macro::AbiExample))]
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
+#[cfg_attr(feature = "wincode", derive(SchemaWrite, SchemaRead))]
 #[derive(Debug, PartialEq, Default, Eq, Clone)]
 pub struct VersionedTransaction {
     /// List of signatures
     #[cfg_attr(feature = "serde", serde(with = "short_vec"))]
+    #[cfg_attr(feature = "wincode", wincode(with = "containers::Vec<_, ShortU16Len>"))]
     pub signatures: Vec<Signature>,
     /// Message to sign.
     pub message: VersionedMessage,
@@ -369,5 +373,137 @@ mod tests {
             VersionedTransaction::sanitize_signatures_inner(1, 1, 1),
             Ok(())
         );
+    }
+
+    #[cfg(feature = "wincode")]
+    #[test]
+    fn versioned_transaction_wincode_bincode_roundtrip() {
+        use {
+            super::*,
+            proptest::prelude::*,
+            solana_address::{Address, ADDRESS_BYTES},
+            solana_hash::{Hash, HASH_BYTES},
+            solana_message::{
+                compiled_instruction::CompiledInstruction,
+                v0::{self, MessageAddressTableLookup},
+                Message as LegacyMessage, MessageHeader,
+            },
+            solana_signature::SIGNATURE_BYTES,
+        };
+
+        fn strat_byte_vec(max_len: usize) -> impl Strategy<Value = Vec<u8>> {
+            proptest::collection::vec(any::<u8>(), 0..=max_len)
+        }
+
+        fn strat_signature() -> impl Strategy<Value = Signature> {
+            any::<[u8; SIGNATURE_BYTES]>().prop_map(Signature::from)
+        }
+
+        fn strat_address() -> impl Strategy<Value = Address> {
+            any::<[u8; ADDRESS_BYTES]>().prop_map(Address::new_from_array)
+        }
+
+        fn strat_hash() -> impl Strategy<Value = Hash> {
+            any::<[u8; HASH_BYTES]>().prop_map(Hash::new_from_array)
+        }
+
+        fn strat_message_header() -> impl Strategy<Value = MessageHeader> {
+            (0u8..128, any::<u8>(), any::<u8>()).prop_map(|(a, b, c)| MessageHeader {
+                num_required_signatures: a,
+                num_readonly_signed_accounts: b,
+                num_readonly_unsigned_accounts: c,
+            })
+        }
+
+        fn strat_compiled_instruction() -> impl Strategy<Value = CompiledInstruction> {
+            (any::<u8>(), strat_byte_vec(128), strat_byte_vec(128)).prop_map(
+                |(program_id_index, accounts, data)| {
+                    CompiledInstruction::new_from_raw_parts(program_id_index, accounts, data)
+                },
+            )
+        }
+
+        fn strat_address_table_lookup() -> impl Strategy<Value = MessageAddressTableLookup> {
+            (strat_address(), strat_byte_vec(128), strat_byte_vec(128)).prop_map(
+                |(account_key, writable_indexes, readonly_indexes)| MessageAddressTableLookup {
+                    account_key,
+                    writable_indexes,
+                    readonly_indexes,
+                },
+            )
+        }
+
+        fn strat_legacy_message() -> impl Strategy<Value = LegacyMessage> {
+            (
+                strat_message_header(),
+                proptest::collection::vec(strat_address(), 0..=8),
+                strat_hash(),
+                proptest::collection::vec(strat_compiled_instruction(), 0..=8),
+            )
+                .prop_map(|(header, account_keys, recent_blockhash, instructions)| {
+                    LegacyMessage {
+                        header,
+                        account_keys,
+                        recent_blockhash,
+                        instructions,
+                    }
+                })
+        }
+
+        fn strat_v0_message() -> impl Strategy<Value = v0::Message> {
+            (
+                strat_message_header(),
+                proptest::collection::vec(strat_address(), 0..=8),
+                strat_hash(),
+                proptest::collection::vec(strat_compiled_instruction(), 0..=4),
+                proptest::collection::vec(strat_address_table_lookup(), 0..=4),
+            )
+                .prop_map(
+                    |(
+                        header,
+                        account_keys,
+                        recent_blockhash,
+                        instructions,
+                        address_table_lookups,
+                    )| {
+                        v0::Message {
+                            header,
+                            account_keys,
+                            recent_blockhash,
+                            instructions,
+                            address_table_lookups,
+                        }
+                    },
+                )
+        }
+
+        fn strat_versioned_message() -> impl Strategy<Value = VersionedMessage> {
+            prop_oneof![
+                strat_legacy_message().prop_map(VersionedMessage::Legacy),
+                strat_v0_message().prop_map(VersionedMessage::V0),
+            ]
+        }
+
+        fn strat_versioned_transaction() -> impl Strategy<Value = VersionedTransaction> {
+            (
+                proptest::collection::vec(strat_signature(), 0..=8),
+                strat_versioned_message(),
+            )
+                .prop_map(|(signatures, message)| VersionedTransaction {
+                    signatures,
+                    message,
+                })
+        }
+
+        proptest!(|(tx in strat_versioned_transaction())| {
+            let bincode_serialized = bincode::serialize(&tx).unwrap();
+            let wincode_serialized = wincode::serialize(&tx).unwrap();
+            assert_eq!(bincode_serialized, wincode_serialized);
+
+            let bincode_deserialized: VersionedTransaction = bincode::deserialize(&bincode_serialized).unwrap();
+            let wincode_deserialized = wincode::deserialize(&wincode_serialized).unwrap();
+            assert_eq!(&bincode_deserialized, &wincode_deserialized);
+            assert_eq!(wincode_deserialized, tx);
+        });
     }
 }

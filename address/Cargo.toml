@@ -34,9 +34,10 @@ rand = ["dep:rand", "atomic", "std"]
 sanitize = ["dep:solana-sanitize"]
 serde = ["dep:serde", "dep:serde_derive"]
 sha2 = ["dep:solana-sha256-hasher", "error"]
-std = ["decode", "borsh?/std", "serde?/std", "alloc"]
-alloc = []
+std = ["decode", "borsh?/std", "serde?/std", "wincode?/std", "alloc"]
+alloc = ["wincode?/alloc"]
 syscalls = ["dep:solana-define-syscall", "error"]
+wincode = ["dep:wincode"]
 
 [dependencies]
 arbitrary = { workspace = true, features = ["derive"], optional = true }
@@ -53,6 +54,7 @@ solana-frozen-abi = { workspace = true, features = ["frozen-abi"], optional = tr
 solana-frozen-abi-macro = { workspace = true, features = ["frozen-abi"], optional = true }
 solana-program-error = { workspace = true, optional = true }
 solana-sanitize = { workspace = true, optional = true }
+wincode = { workspace = true, optional = true }
 
 [target.'cfg(any(target_os = "solana", target_arch = "bpf"))'.dependencies]
 solana-define-syscall = { workspace = true, optional = true }
