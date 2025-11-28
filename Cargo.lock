@@ -2782,6 +2782,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "solana-bls12-381"
+version = "0.1.0"
+dependencies = [
+ "array-bytes",
+ "blst",
+ "blstrs",
+ "criterion",
+ "group",
+ "pairing",
+ "serde",
+ "serde_derive",
+ "serde_json",
+ "solana-define-syscall",
+]
+
+[[package]]
 name = "solana-bn254"
 version = "3.1.2"
 dependencies = [

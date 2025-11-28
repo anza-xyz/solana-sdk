@@ -1,0 +1,41 @@
+#![cfg(not(target_os = "solana"))]
+#![cfg_attr(docsrs, feature(doc_cfg))]
+
+pub use crate::{
+    addition::{bls12_381_g1_addition, bls12_381_g2_addition},
+    decompression::{bls12_381_g1_decompress, bls12_381_g2_decompress},
+    multiplication::{bls12_381_g1_multiplication, bls12_381_g2_multiplication},
+    pairing::bls12_381_pairing_map,
+    subtraction::{bls12_381_g1_subtraction, bls12_381_g2_subtraction},
+    validation::{bls12_381_g1_point_validation, bls12_381_g2_point_validation},
+};
+
+pub(crate) mod addition;
+pub(crate) mod decompression;
+pub(crate) mod multiplication;
+pub(crate) mod pairing;
+pub(crate) mod subtraction;
+pub(crate) mod validation;
+
+pub enum Endianness {
+    BE,
+    LE,
+}
+
+pub enum Version {
+    /// SIMD-388: BLS12-381 Elliptic Curve Syscalls
+    V0,
+}
+
+fn reverse_48_byte_chunks(bytes: &mut [u8]) {
+    for chunk in bytes.chunks_mut(48) {
+        chunk.reverse();
+    }
+}
+
+fn swap_g2_c0_c1(bytes: &mut [u8]) {
+    for fq2_chunk in bytes.chunks_exact_mut(96) {
+        let (c0, c1) = fq2_chunk.split_at_mut(48);
+        c0.swap_with_slice(c1);
+    }
+}
