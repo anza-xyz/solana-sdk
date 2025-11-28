@@ -219,6 +219,13 @@ pub enum VoteInstruction {
         commission_bps: u16,
         kind: CommissionKind,
     },
+
+    /// Deposit lamports for distribution to stake delegators
+    ///
+    /// # Account references
+    ///   0. `[WRITE]` Vote account to be updated with the deposit
+    ///   1. `[SIGNER, WRITE]` Source account for deposit funds
+    DepositDelegatorRewards { deposit: u64 },
 }
 
 impl VoteInstruction {
@@ -576,6 +583,24 @@ pub fn update_commission_bps(
             kind,
             commission_bps,
         },
+        account_metas,
+    )
+}
+
+#[cfg(feature = "bincode")]
+pub fn deposit_delegator_rewards(
+    vote_pubkey: &Pubkey,
+    source_pubkey: &Pubkey,
+    deposit: u64,
+) -> Instruction {
+    let account_metas = vec![
+        AccountMeta::new(*vote_pubkey, false),
+        AccountMeta::new(*source_pubkey, true),
+    ];
+
+    Instruction::new_with_bincode(
+        id(),
+        &VoteInstruction::DepositDelegatorRewards { deposit },
         account_metas,
     )
 }
