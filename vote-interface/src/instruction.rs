@@ -208,6 +208,17 @@ pub enum VoteInstruction {
     ///      account is not reserved.
     ///   2. `[SIGNER]` Vote account withdraw authority
     UpdateCommissionCollector(CommissionKind),
+
+    /// Update the commission rate in basis points for the specified commission
+    /// rate kind in a vote account.
+    ///
+    /// # Account references
+    ///   0. `[WRITE]` Vote account to be updated with the new commission
+    ///   1. `[SIGNER]` Vote account withdraw authority
+    UpdateCommissionBps {
+        commission_bps: u16,
+        kind: CommissionKind,
+    },
 }
 
 impl VoteInstruction {
@@ -543,6 +554,28 @@ pub fn update_commission_collector(
     Instruction::new_with_bincode(
         id(),
         &VoteInstruction::UpdateCommissionCollector(kind),
+        account_metas,
+    )
+}
+
+#[cfg(feature = "bincode")]
+pub fn update_commission_bps(
+    vote_pubkey: &Pubkey,
+    authorized_withdrawer_pubkey: &Pubkey,
+    kind: CommissionKind,
+    commission_bps: u16,
+) -> Instruction {
+    let account_metas = vec![
+        AccountMeta::new(*vote_pubkey, false),
+        AccountMeta::new_readonly(*authorized_withdrawer_pubkey, true),
+    ];
+
+    Instruction::new_with_bincode(
+        id(),
+        &VoteInstruction::UpdateCommissionBps {
+            kind,
+            commission_bps,
+        },
         account_metas,
     )
 }
