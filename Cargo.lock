@@ -3041,6 +3041,7 @@ dependencies = [
 name = "solana-frozen-abi"
 version = "3.1.0"
 dependencies = [
+ "bincode",
  "bitflags 2.8.0",
  "boxcar",
  "bs58",
@@ -3051,6 +3052,7 @@ dependencies = [
  "log",
  "memmap2",
  "rand",
+ "rand_chacha",
  "serde",
  "serde_bytes",
  "serde_derive",
