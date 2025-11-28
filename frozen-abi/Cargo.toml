@@ -37,7 +37,10 @@ thiserror = { workspace = true }
 [target.'cfg(not(target_os = "solana"))'.dependencies]
 im = { workspace = true, features = ["rayon", "serde"] }
 memmap2 = { workspace = true }
-rand = { workspace = true }
+# these are re-exports for StableAbi
+rand = "0.8.5"
+rand_chacha = "0.3.1"
+bincode = "1.3.3"
 
 [target.'cfg(not(target_os = "solana"))'.dev-dependencies]
 bitflags = { workspace = true, features = ["serde"] }
