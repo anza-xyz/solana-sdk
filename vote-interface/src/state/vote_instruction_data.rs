@@ -1,5 +1,5 @@
 #[cfg(feature = "frozen-abi")]
-use solana_frozen_abi_macro::{frozen_abi, AbiExample};
+use solana_frozen_abi_macro::{frozen_abi, AbiExample, StableAbi};
 use {
     crate::state::{
         Lockout, BLS_PROOF_OF_POSSESSION_COMPRESSED_SIZE, BLS_PUBLIC_KEY_COMPRESSED_SIZE,
@@ -18,8 +18,11 @@ use {
 
 #[cfg_attr(
     feature = "frozen-abi",
-    frozen_abi(digest = "GvUzgtcxhKVVxPAjSntXGPqjLZK5ovgZzCiUP1tDpB9q"),
-    derive(AbiExample)
+    frozen_abi(
+        api_digest = "GvUzgtcxhKVVxPAjSntXGPqjLZK5ovgZzCiUP1tDpB9q",
+        abi_digest = "BbtfeZFE7Fesk4LdkMAu2NCp4DpMLTAmAd31mcuewGJn"
+    ),
+    derive(AbiExample, StableAbi)
 )]
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[derive(Default, Debug, PartialEq, Eq, Clone)]
@@ -30,6 +33,23 @@ pub struct Vote {
     pub hash: Hash,
     /// processing timestamp of last slot
     pub timestamp: Option<UnixTimestamp>,
+}
+
+#[cfg(feature = "frozen-abi")]
+impl solana_frozen_abi::rand::prelude::Distribution<Vote>
+    for solana_frozen_abi::rand::distributions::Standard
+{
+    fn sample<R: solana_frozen_abi::rand::Rng + ?Sized>(&self, rng: &mut R) -> Vote {
+        let slots: Vec<Slot> = (0..rng.r#gen_range(0..1000))
+            .map(|_| rng.r#gen::<u64>().into())
+            .collect();
+
+        Vote {
+            slots,
+            hash: Hash::new_from_array(rng.r#gen()),
+            timestamp: Some(rng.r#gen()),
+        }
+    }
 }
 
 impl Vote {
@@ -48,8 +68,11 @@ impl Vote {
 
 #[cfg_attr(
     feature = "frozen-abi",
-    frozen_abi(digest = "CxyuwbaEdzP7jDCZyxjgQvLGXadBUZF3LoUvbSpQ6tYN"),
-    derive(AbiExample)
+    frozen_abi(
+        api_digest = "CxyuwbaEdzP7jDCZyxjgQvLGXadBUZF3LoUvbSpQ6tYN",
+        abi_digest = "7zwscqJMVfyoS4cJdcZa4fuCgwKYM3GUZhvQsFfpKm7e"
+    ),
+    derive(AbiExample, StableAbi)
 )]
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[derive(Default, Debug, PartialEq, Eq, Clone)]
@@ -62,6 +85,23 @@ pub struct VoteStateUpdate {
     pub hash: Hash,
     /// processing timestamp of last slot
     pub timestamp: Option<UnixTimestamp>,
+}
+
+#[cfg(feature = "frozen-abi")]
+impl solana_frozen_abi::rand::prelude::Distribution<VoteStateUpdate>
+    for solana_frozen_abi::rand::distributions::Standard
+{
+    fn sample<R: solana_frozen_abi::rand::Rng + ?Sized>(&self, rng: &mut R) -> VoteStateUpdate {
+        let lockouts: VecDeque<_> = (0..rng.r#gen_range(0..1000))
+            .map(|_| Lockout::new(rng.r#gen()))
+            .collect();
+        VoteStateUpdate {
+            lockouts,
+            root: Some(rng.r#gen::<u64>().into()),
+            hash: Hash::new_from_array(rng.r#gen()),
+            timestamp: Some(rng.r#gen()),
+        }
+    }
 }
 
 impl From<Vec<(Slot, u32)>> for VoteStateUpdate {
@@ -102,8 +142,11 @@ impl VoteStateUpdate {
 
 #[cfg_attr(
     feature = "frozen-abi",
-    frozen_abi(digest = "6UDiQMH4wbNwkMHosPMtekMYu2Qa6CHPZ2ymK4mc6FGu"),
-    derive(AbiExample)
+    frozen_abi(
+        api_digest = "6UDiQMH4wbNwkMHosPMtekMYu2Qa6CHPZ2ymK4mc6FGu",
+        abi_digest = "H4XQ8ftqobHG3jNoCnVgJN4wRJJq1wnUQy8vGK3mp9PX"
+    ),
+    derive(AbiExample, StableAbi)
 )]
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[derive(Default, Debug, PartialEq, Eq, Clone)]
@@ -120,6 +163,24 @@ pub struct TowerSync {
     /// including this block. Does not require replaying
     /// in order to compute.
     pub block_id: Hash,
+}
+
+#[cfg(feature = "frozen-abi")]
+impl solana_frozen_abi::rand::prelude::Distribution<TowerSync>
+    for solana_frozen_abi::rand::distributions::Standard
+{
+    fn sample<R: solana_frozen_abi::rand::Rng + ?Sized>(&self, rng: &mut R) -> TowerSync {
+        let lockouts: VecDeque<_> = (0..rng.r#gen_range(0..1000))
+            .map(|_| Lockout::new(rng.r#gen()))
+            .collect();
+        TowerSync {
+            lockouts,
+            root: Some(rng.r#gen()),
+            hash: Hash::new_from_array(rng.r#gen()),
+            timestamp: Some(rng.r#gen()),
+            block_id: Hash::new_from_array(rng.r#gen()),
+        }
+    }
 }
 
 impl From<Vec<(Slot, u32)>> for TowerSync {
