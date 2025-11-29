@@ -7,7 +7,7 @@ use serde_derive::{Deserialize, Serialize};
 #[cfg(feature = "serde")]
 use serde_with::serde_as;
 #[cfg(feature = "frozen-abi")]
-use solana_frozen_abi_macro::{frozen_abi, AbiExample};
+use solana_frozen_abi_macro::{frozen_abi, AbiExample, StableAbi};
 #[cfg(any(target_os = "solana", feature = "bincode"))]
 use solana_instruction::error::InstructionError;
 use {
@@ -20,8 +20,11 @@ use {
 
 #[cfg_attr(
     feature = "frozen-abi",
-    frozen_abi(digest = "2H9WgTh7LgdnpinvEwxzP3HF6SDuKp6qdwFmJk9jHDRP"),
-    derive(AbiExample)
+    frozen_abi(
+        api_digest = "2H9WgTh7LgdnpinvEwxzP3HF6SDuKp6qdwFmJk9jHDRP",
+        abi_digest = "4g7TRPnQxr9X61b5LHDB29LVL89EDQnZyFXbKivMccFQ"
+    ),
+    derive(AbiExample, StableAbi)
 )]
 #[cfg_attr(feature = "serde", cfg_eval::cfg_eval, serde_as)]
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
@@ -68,6 +71,46 @@ pub struct VoteStateV4 {
 
     /// Most recent timestamp submitted with a vote.
     pub last_timestamp: BlockTimestamp,
+}
+
+#[cfg(feature = "frozen-abi")]
+impl solana_frozen_abi::rand::prelude::Distribution<VoteStateV4>
+    for solana_frozen_abi::rand::distributions::Standard
+{
+    fn sample<R: solana_frozen_abi::rand::Rng + ?Sized>(&self, rng: &mut R) -> VoteStateV4 {
+        let bls_pubkey_compressed = Some(std::array::from_fn(|_| rng.gen()));
+        let votes: VecDeque<_> = (0..rng.gen_range(0..1000))
+            .map(|_| LandedVote {
+                latency: rng.gen(),
+                lockout: crate::state::Lockout::new(rng.gen()),
+            })
+            .collect();
+        let epoch_credits: Vec<_> = (0..rng.gen_range(0..1000))
+            .map(|_| (rng.gen(), rng.gen(), rng.gen()))
+            .collect();
+
+        VoteStateV4 {
+            node_pubkey: Pubkey::new_from_array(rng.r#gen()),
+            authorized_withdrawer: Pubkey::new_from_array(rng.r#gen()),
+            inflation_rewards_collector: Pubkey::new_from_array(rng.r#gen()),
+            block_revenue_collector: Pubkey::new_from_array(rng.r#gen()),
+            inflation_rewards_commission_bps: rng.r#gen(),
+            block_revenue_commission_bps: rng.r#gen(),
+            pending_delegator_rewards: rng.r#gen(),
+            bls_pubkey_compressed,
+            votes,
+            root_slot: Some(rng.r#gen()),
+            authorized_voters: AuthorizedVoters::new(
+                rng.r#gen(),
+                Pubkey::new_from_array(rng.r#gen()),
+            ),
+            epoch_credits,
+            last_timestamp: BlockTimestamp {
+                slot: rng.r#gen(),
+                timestamp: rng.r#gen(),
+            },
+        }
+    }
 }
 
 impl VoteStateV4 {
