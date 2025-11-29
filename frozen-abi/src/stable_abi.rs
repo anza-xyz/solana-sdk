@@ -5,6 +5,6 @@ pub trait StableAbi: Sized {
     where
         Standard: rand::distributions::Distribution<Self>,
     {
-        rng.gen::<Self>()
+        rng.r#gen::<Self>()
     }
 }
