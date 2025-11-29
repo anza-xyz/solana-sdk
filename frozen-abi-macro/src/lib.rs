@@ -345,9 +345,9 @@ fn quote_for_test(
         quote! {
             #[test]
             fn test_abi_digest() {
-                use ::rand::{SeedableRng, RngCore};
-                use ::rand_chacha::ChaCha8Rng;
-                use ::bincode;
+                use ::solana_frozen_abi::rand::{SeedableRng, RngCore};
+                use ::solana_frozen_abi::rand_chacha::ChaCha8Rng;
+                use ::solana_frozen_abi::bincode;
                 use ::solana_frozen_abi::stable_abi::StableAbi;
 
                 let mut rng = ChaCha8Rng::seed_from_u64(20666175621446498);
