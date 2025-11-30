@@ -1,6 +1,6 @@
 use solana_pubkey::Pubkey;
 
-#[repr(u64)]
+#[repr(u32)]
 #[cfg_attr(feature = "frozen-abi", derive(solana_frozen_abi_macro::AbiExample))]
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum LoaderV4Status {
@@ -17,13 +17,14 @@ pub enum LoaderV4Status {
 #[cfg_attr(feature = "frozen-abi", derive(solana_frozen_abi_macro::AbiExample))]
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub struct LoaderV4State {
-    /// Slot in which the program was last deployed, retracted or initialized.
-    pub slot: u64,
-    /// Address of signer which can send program management instructions when the status is not finalized.
-    /// Otherwise a forwarding to the next version of the finalized program.
-    pub authority_address_or_next_version: Pubkey,
     /// Deployment status.
     pub status: LoaderV4Status,
+    /// Length of the executable in bytes.
+    pub executable_length: u32,
+    /// Slot in which the program was last deployed, retracted or initialized.
+    pub slot: u64,
+    /// Address of signer which can send program management instructions.
+    pub authority_address: Pubkey,
     // The raw program data follows this serialized structure in the
     // account's data.
 }
@@ -41,12 +42,10 @@ mod tests {
 
     #[test]
     fn test_layout() {
-        assert_eq!(offset_of!(LoaderV4State, slot), 0x00);
-        assert_eq!(
-            offset_of!(LoaderV4State, authority_address_or_next_version),
-            0x08
-        );
-        assert_eq!(offset_of!(LoaderV4State, status), 0x28);
+        assert_eq!(offset_of!(LoaderV4State, status), 0x00);
+        assert_eq!(offset_of!(LoaderV4State, executable_length), 0x04);
+        assert_eq!(offset_of!(LoaderV4State, slot), 0x08);
+        assert_eq!(offset_of!(LoaderV4State, authority_address), 0x10);
         assert_eq!(LoaderV4State::program_data_offset(), 0x30);
     }
 }
