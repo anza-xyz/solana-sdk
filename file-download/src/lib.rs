@@ -6,7 +6,7 @@ use {
     log::*,
     std::{
         fs::{self, File},
-        io::{self, Read},
+        io::{self, BufWriter, Read},
         path::Path,
         str::FromStr,
         time::{Duration, Instant},
