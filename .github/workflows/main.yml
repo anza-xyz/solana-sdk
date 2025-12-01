@@ -454,10 +454,9 @@ jobs:
         with:
           stable-toolchain: true
           cargo-cache-key: cargo-stable-wasm
-          cargo-cache-fallback-key: cargo-stable
 
       - name: Install wasm-pack
-        uses: taiki-e/cache-cargo-install-action@v2
+        uses: taiki-e/install-action@v2
         with:
           tool: wasm-pack
 
