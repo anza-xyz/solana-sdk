@@ -155,29 +155,9 @@ impl VoteStateV3 {
 
         let variant = solana_serialize_utils::cursor::read_u32(&mut cursor)?;
         match variant {
-            // V0_23_5. not supported for bpf targets; these should not exist on mainnet
-            // supported for non-bpf targets for backwards compatibility
-            0 => {
-                #[cfg(not(target_os = "solana"))]
-                {
-                    // Safety: vote_state is valid as it comes from `&mut MaybeUninit<VoteStateV3>` or
-                    // `&mut VoteStateV3`. In the first case, the value is uninitialized so we write()
-                    // to avoid dropping invalid data; in the latter case, we `drop_in_place()`
-                    // before writing so the value has already been dropped and we just write a new
-                    // one in place.
-                    unsafe {
-                        vote_state.write(
-                            bincode::deserialize::<VoteStateVersions>(input)
-                                .map_err(|_| InstructionError::InvalidAccountData)
-                                .and_then(|versioned| versioned.try_convert_to_v3())?,
-                        );
-                    }
-                    Ok(())
-                }
-                #[cfg(target_os = "solana")]
-                Err(InstructionError::InvalidAccountData)
-            }
-            // V1_14_11. substantially different layout and data from V0_23_5
+            // Variant 0 is uninitialized.
+            0 => Err(InstructionError::UninitializedAccount),
+            // V1_14_11
             1 => deserialize_vote_state_into_v3(&mut cursor, vote_state, false),
             // V3. the only difference from V1_14_11 is the addition of a slot-latency to each vote
             2 => deserialize_vote_state_into_v3(&mut cursor, vote_state, true),
