@@ -16,7 +16,6 @@ use {
     std::{collections::VecDeque, fmt::Debug},
 };
 
-mod vote_state_0_23_5;
 pub mod vote_state_1_14_11;
 pub use vote_state_1_14_11::*;
 pub mod vote_state_versions;
@@ -399,9 +398,9 @@ pub mod serde_tower_sync {
 #[cfg(test)]
 mod tests {
     use {
-        super::*, crate::state::vote_state_0_23_5::VoteState0_23_5, bincode::serialized_size,
-        core::mem::MaybeUninit, itertools::Itertools, rand::Rng, solana_clock::Clock,
-        solana_hash::Hash, solana_instruction::error::InstructionError,
+        super::*, bincode::serialized_size, core::mem::MaybeUninit, itertools::Itertools,
+        rand::Rng, solana_clock::Clock, solana_hash::Hash,
+        solana_instruction::error::InstructionError,
     };
 
     // Test helper to create a VoteStateV4 with random data for testing
@@ -657,7 +656,7 @@ mod tests {
 
             // pure random data will ~never have a valid enum tag, so lets help it out
             if raw_data_length >= 4 && rng.random::<bool>() {
-                let tag = rng.random::<u8>() % 4;
+                let tag = rng.random_range(1u8..=3);
                 raw_data[0] = tag;
                 raw_data[1] = 0;
                 raw_data[2] = 0;
@@ -702,7 +701,7 @@ mod tests {
 
             // pure random data will ~never have a valid enum tag, so lets help it out
             if raw_data_length >= 4 && rng.random::<bool>() {
-                let tag = rng.random::<u8>() % 4;
+                let tag = rng.random_range(1u8..=3);
                 raw_data[0] = tag;
                 raw_data[1] = 0;
                 raw_data[2] = 0;
@@ -994,16 +993,13 @@ mod tests {
         let vote_pubkey = Pubkey::new_unique();
 
         // All versions before v4 should result in `None` for BLS pubkey.
-        let v0_23_5_state = VoteState0_23_5::default();
-        let v0_23_5_versioned = VoteStateVersions::V0_23_5(Box::new(v0_23_5_state));
-
         let v1_14_11_state = VoteState1_14_11::default();
         let v1_14_11_versioned = VoteStateVersions::V1_14_11(Box::new(v1_14_11_state));
 
         let v3_state = VoteStateV3::default();
         let v3_versioned = VoteStateVersions::V3(Box::new(v3_state));
 
-        for versioned in [v0_23_5_versioned, v1_14_11_versioned, v3_versioned] {
+        for versioned in [v1_14_11_versioned, v3_versioned] {
             let converted = versioned.try_convert_to_v4(&vote_pubkey).unwrap();
             assert_eq!(converted.bls_pubkey_compressed, None);
         }
