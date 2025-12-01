@@ -15,29 +15,40 @@ use {
     ark_serialize::{CanonicalDeserialize, CanonicalSerialize, Compress},
 };
 
-/// Input size for the multiplication operation.
-pub const ALT_BN128_MULTIPLICATION_INPUT_SIZE: usize =
+/// Input size for the g1 multiplication operation.
+pub const ALT_BN128_G1_MULTIPLICATION_INPUT_SIZE: usize =
     ALT_BN128_G1_POINT_SIZE + ALT_BN128_FIELD_SIZE; // 96
-/// Output size for the multiplication operation.
-pub const ALT_BN128_MULTIPLICATION_OUTPUT_SIZE: usize = ALT_BN128_G1_POINT_SIZE; // 64
+/// Output size for the g1 multiplication operation.
+pub const ALT_BN128_G1_MULTIPLICATION_OUTPUT_SIZE: usize = ALT_BN128_G1_POINT_SIZE; // 64
+
+#[deprecated(
+    since = "3.2.0",
+    note = "Please use `ALT_BN128_G1_MULTIPLICATION_INPUT_SIZE` instead"
+)]
+pub const ALT_BN128_MULTIPLICATION_INPUT_SIZE: usize = ALT_BN128_G1_MULTIPLICATION_INPUT_SIZE;
+#[deprecated(
+    since = "3.2.0",
+    note = "Please use `ALT_BN128_G1_MULTIPLICATION_OUTPUT_SIZE` instead"
+)]
+pub const ALT_BN128_MULTIPLICATION_OUTPUT_SIZE: usize = ALT_BN128_G1_MULTIPLICATION_OUTPUT_SIZE;
 
 #[deprecated(
     since = "3.1.0",
-    note = "Please use `ALT_BN128_MULTIPLICATION_INPUT_SIZE` instead"
+    note = "Please use `ALT_BN128_G1_MULTIPLICATION_INPUT_SIZE` instead"
 )]
-pub const ALT_BN128_MULTIPLICATION_INPUT_LEN: usize = ALT_BN128_MULTIPLICATION_INPUT_SIZE;
+pub const ALT_BN128_MULTIPLICATION_INPUT_LEN: usize = ALT_BN128_G1_MULTIPLICATION_INPUT_SIZE;
 #[deprecated(
     since = "3.1.0",
-    note = "Please use `ALT_BN128_MULTIPLICATION_OUTPUT_SIZE` instead"
+    note = "Please use `ALT_BN128_G1_MULTIPLICATION_OUTPUT_SIZE` instead"
 )]
-pub const ALT_BN128_MULTIPLICATION_OUTPUT_LEN: usize = ALT_BN128_MULTIPLICATION_OUTPUT_SIZE;
+pub const ALT_BN128_MULTIPLICATION_OUTPUT_LEN: usize = ALT_BN128_G1_MULTIPLICATION_OUTPUT_SIZE;
 
 pub const ALT_BN128_G1_MUL_BE: u64 = 2;
 #[deprecated(since = "3.1.0", note = "Please use `ALT_BN128_G1_MUL_BE` instead")]
 pub const ALT_BN128_MUL: u64 = ALT_BN128_G1_MUL_BE;
 pub const ALT_BN128_G1_MUL_LE: u64 = ALT_BN128_G1_MUL_BE | LE_FLAG;
 
-/// The version enum used to version changes to the `alt_bn128_multiplication` syscall.
+/// The version enum used to version changes to the `alt_bn128_g1_multiplication` syscall.
 #[cfg(not(target_os = "solana"))]
 pub enum VersionedG1Multiplication {
     V0,
@@ -45,11 +56,11 @@ pub enum VersionedG1Multiplication {
     V1,
 }
 
-/// The syscall implementation for the `alt_bn128_multiplication` syscall.
+/// The syscall implementation for the `alt_bn128_g1_multiplication` syscall.
 ///
 /// This function is intended to be used by the Agave validator client and exists primarily
 /// for validator code. Solana programs or other downstream projects should use
-/// `alt_bn128_multiplication` or `alt_bn128_multiplication_le` instead.
+/// `alt_bn128_g1_multiplication_be` or `alt_bn128_g1_multiplication_le` instead.
 ///
 /// # Warning
 ///
@@ -65,7 +76,7 @@ pub fn alt_bn128_versioned_g1_multiplication(
 ) -> Result<Vec<u8>, AltBn128Error> {
     let expected_length = match version {
         VersionedG1Multiplication::V0 => 128,
-        VersionedG1Multiplication::V1 => ALT_BN128_MULTIPLICATION_INPUT_SIZE,
+        VersionedG1Multiplication::V1 => ALT_BN128_G1_MULTIPLICATION_INPUT_SIZE,
     };
 
     match endianness {
@@ -105,7 +116,7 @@ pub fn alt_bn128_versioned_g1_multiplication(
 
     let result_point: G1 = p.mul_bigint(fr).into();
 
-    let mut result_point_data = [0u8; ALT_BN128_MULTIPLICATION_OUTPUT_SIZE];
+    let mut result_point_data = [0u8; ALT_BN128_G1_MULTIPLICATION_OUTPUT_SIZE];
 
     result_point
         .x
@@ -130,11 +141,11 @@ pub fn alt_bn128_g1_multiplication_be(input: &[u8]) -> Result<Vec<u8>, AltBn128E
     }
     #[cfg(target_os = "solana")]
     {
-        if input.len() > ALT_BN128_MULTIPLICATION_INPUT_SIZE {
+        if input.len() > ALT_BN128_G1_MULTIPLICATION_INPUT_SIZE {
             return Err(AltBn128Error::InvalidInputData);
         }
         // SAFETY: This is sound as sol_alt_bn128_group_op multiplication always fills all 64 bytes of our buffer
-        let mut result_buffer = Vec::with_capacity(ALT_BN128_MULTIPLICATION_OUTPUT_SIZE);
+        let mut result_buffer = Vec::with_capacity(ALT_BN128_G1_MULTIPLICATION_OUTPUT_SIZE);
         unsafe {
             let result = syscalls::sol_alt_bn128_group_op(
                 ALT_BN128_G1_MUL_BE,
@@ -144,7 +155,7 @@ pub fn alt_bn128_g1_multiplication_be(input: &[u8]) -> Result<Vec<u8>, AltBn128E
             );
             match result {
                 0 => {
-                    result_buffer.set_len(ALT_BN128_MULTIPLICATION_OUTPUT_SIZE);
+                    result_buffer.set_len(ALT_BN128_G1_MULTIPLICATION_OUTPUT_SIZE);
                     Ok(result_buffer)
                 }
                 _ => Err(AltBn128Error::UnexpectedError),
@@ -164,7 +175,7 @@ pub fn alt_bn128_multiplication(input: &[u8]) -> Result<Vec<u8>, AltBn128Error> 
 
 #[inline(always)]
 pub fn alt_bn128_g1_multiplication_le(
-    input: &[u8; ALT_BN128_MULTIPLICATION_INPUT_SIZE],
+    input: &[u8; ALT_BN128_G1_MULTIPLICATION_INPUT_SIZE],
 ) -> Result<Vec<u8>, AltBn128Error> {
     #[cfg(not(target_os = "solana"))]
     {
@@ -173,7 +184,7 @@ pub fn alt_bn128_g1_multiplication_le(
     #[cfg(target_os = "solana")]
     {
         // SAFETY: This is sound as sol_alt_bn128_group_op multiplication always fills all 64 bytes of our buffer
-        let mut result_buffer = Vec::with_capacity(ALT_BN128_MULTIPLICATION_OUTPUT_SIZE);
+        let mut result_buffer = Vec::with_capacity(ALT_BN128_G1_MULTIPLICATION_OUTPUT_SIZE);
         unsafe {
             let result = syscalls::sol_alt_bn128_group_op(
                 ALT_BN128_G1_MUL_LE,
@@ -183,7 +194,7 @@ pub fn alt_bn128_g1_multiplication_le(
             );
             match result {
                 0 => {
-                    result_buffer.set_len(ALT_BN128_MULTIPLICATION_OUTPUT_SIZE);
+                    result_buffer.set_len(ALT_BN128_G1_MULTIPLICATION_OUTPUT_SIZE);
                     Ok(result_buffer)
                 }
                 _ => Err(AltBn128Error::UnexpectedError),

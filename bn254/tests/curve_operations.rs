@@ -24,9 +24,9 @@ fn alt_bn128_addition_test() {
         assert_eq!(result.unwrap(), expected);
 
         // le test
-        input.resize(ALT_BN128_ADDITION_INPUT_SIZE, 0);
+        input.resize(ALT_BN128_G1_ADDITION_INPUT_SIZE, 0);
         let input_le =
-            convert_endianness::<32, ALT_BN128_ADDITION_INPUT_SIZE>(&input.try_into().unwrap());
+            convert_endianness::<32, ALT_BN128_G1_ADDITION_INPUT_SIZE>(&input.try_into().unwrap());
         let result = alt_bn128_g1_addition_le(&input_le);
         assert!(result.is_ok());
         let expected_le = convert_endianness::<32, 64>(&expected.try_into().unwrap());
@@ -54,8 +54,8 @@ fn alt_bn128_multiplication_test() {
         assert_eq!(result.unwrap(), expected);
 
         // le test
-        input.resize(ALT_BN128_MULTIPLICATION_INPUT_SIZE, 0);
-        let input_le = convert_endianness::<32, ALT_BN128_MULTIPLICATION_INPUT_SIZE>(
+        input.resize(ALT_BN128_G1_MULTIPLICATION_INPUT_SIZE, 0);
+        let input_le = convert_endianness::<32, ALT_BN128_G1_MULTIPLICATION_INPUT_SIZE>(
             &input.try_into().unwrap(),
         );
         let result = alt_bn128_g1_multiplication_le(&input_le);

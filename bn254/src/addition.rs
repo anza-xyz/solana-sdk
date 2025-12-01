@@ -10,21 +10,32 @@ use {
     ark_serialize::{CanonicalSerialize, Compress},
 };
 
-/// Input size for the add operation.
-pub const ALT_BN128_ADDITION_INPUT_SIZE: usize = ALT_BN128_G1_POINT_SIZE * 2; // 128
-/// Output size for the add operation.
-pub const ALT_BN128_ADDITION_OUTPUT_SIZE: usize = ALT_BN128_G1_POINT_SIZE; // 64
+/// Input size for the g1 add operation.
+pub const ALT_BN128_G1_ADDITION_INPUT_SIZE: usize = ALT_BN128_G1_POINT_SIZE * 2; // 128
+/// Output size for the g1 add operation.
+pub const ALT_BN128_G1_ADDITION_OUTPUT_SIZE: usize = ALT_BN128_G1_POINT_SIZE; // 64
+
+#[deprecated(
+    since = "3.2.0",
+    note = "Please use `ALT_BN128_G1_ADDITION_INPUT_SIZE` instead"
+)]
+pub const ALT_BN128_ADDITION_INPUT_SIZE: usize = ALT_BN128_G1_ADDITION_INPUT_SIZE;
+#[deprecated(
+    since = "3.2.0",
+    note = "Please use `ALT_BN128_G1_ADDITION_OUTPUT_SIZE` instead"
+)]
+pub const ALT_BN128_ADDITION_OUTPUT_SIZE: usize = ALT_BN128_G1_ADDITION_OUTPUT_SIZE;
 
 #[deprecated(
     since = "3.1.0",
-    note = "Please use `ALT_BN128_ADDITION_INPUT_SIZE` instead"
+    note = "Please use `ALT_BN128_G1_ADDITION_INPUT_SIZE` instead"
 )]
-pub const ALT_BN128_ADDITION_INPUT_LEN: usize = ALT_BN128_ADDITION_INPUT_SIZE;
+pub const ALT_BN128_ADDITION_INPUT_LEN: usize = ALT_BN128_G1_ADDITION_INPUT_SIZE;
 #[deprecated(
     since = "3.1.0",
-    note = "Please use `ALT_BN128_ADDITION_OUTPUT_SIZE` instead"
+    note = "Please use `ALT_BN128_G1_ADDITION_OUTPUT_SIZE` instead"
 )]
-pub const ALT_BN128_ADDITION_OUTPUT_LEN: usize = ALT_BN128_ADDITION_OUTPUT_SIZE;
+pub const ALT_BN128_ADDITION_OUTPUT_LEN: usize = ALT_BN128_G1_ADDITION_OUTPUT_SIZE;
 
 pub const ALT_BN128_G1_ADD_BE: u64 = 0;
 pub const ALT_BN128_G1_SUB_BE: u64 = 1;
@@ -35,17 +46,17 @@ pub const ALT_BN128_SUB: u64 = ALT_BN128_G1_SUB_BE;
 pub const ALT_BN128_G1_ADD_LE: u64 = ALT_BN128_G1_ADD_BE | LE_FLAG;
 pub const ALT_BN128_G1_SUB_LE: u64 = ALT_BN128_G1_SUB_BE | LE_FLAG;
 
-/// The version enum used to version changes to the `alt_bn128_addition` syscall.
+/// The version enum used to version changes to the `alt_bn128_g1_addition` syscall.
 #[cfg(not(target_os = "solana"))]
 pub enum VersionedG1Addition {
     V0,
 }
 
-/// The syscall implementation for the `alt_bn128_addition` syscall.
+/// The syscall implementation for the `alt_bn128_g1_addition` syscall.
 ///
 /// This function is intended to be used by the Agave validator client and exists primarily
 /// for validator code. Solana programs or other downstream projects should use
-/// `alt_bn128_addition` or `alt_bn128_addition_le` instead.
+/// `alt_bn128_g1_addition_be` or `alt_bn128_g1_addition_le` instead.
 ///
 /// # Warning
 ///
@@ -61,12 +72,12 @@ pub fn alt_bn128_versioned_g1_addition(
 ) -> Result<Vec<u8>, AltBn128Error> {
     match endianness {
         Endianness::BE => {
-            if input.len() > ALT_BN128_ADDITION_INPUT_SIZE {
+            if input.len() > ALT_BN128_G1_ADDITION_INPUT_SIZE {
                 return Err(AltBn128Error::InvalidInputData);
             }
         }
         Endianness::LE => {
-            if input.len() != ALT_BN128_ADDITION_INPUT_SIZE {
+            if input.len() != ALT_BN128_G1_ADDITION_INPUT_SIZE {
                 return Err(AltBn128Error::InvalidInputData);
             }
         }
@@ -74,7 +85,7 @@ pub fn alt_bn128_versioned_g1_addition(
 
     let mut input = input.to_vec();
     match endianness {
-        Endianness::BE => input.resize(ALT_BN128_ADDITION_INPUT_SIZE, 0),
+        Endianness::BE => input.resize(ALT_BN128_G1_ADDITION_INPUT_SIZE, 0),
         Endianness::LE => (),
     }
 
@@ -91,7 +102,7 @@ pub fn alt_bn128_versioned_g1_addition(
     #[allow(clippy::arithmetic_side_effects)]
     let result_point = p + q;
 
-    let mut result_point_data = [0u8; ALT_BN128_ADDITION_OUTPUT_SIZE];
+    let mut result_point_data = [0u8; ALT_BN128_G1_ADDITION_OUTPUT_SIZE];
     let result_point_affine: G1 = result_point.into();
     result_point_affine
         .x
@@ -116,11 +127,11 @@ pub fn alt_bn128_g1_addition_be(input: &[u8]) -> Result<Vec<u8>, AltBn128Error> 
     }
     #[cfg(target_os = "solana")]
     {
-        if input.len() > ALT_BN128_ADDITION_INPUT_SIZE {
+        if input.len() > ALT_BN128_G1_ADDITION_INPUT_SIZE {
             return Err(AltBn128Error::InvalidInputData);
         }
-        // SAFETY: This is sound as sol_alt_bn128_group_op addition always fills all 32 bytes of our buffer
-        let mut result_buffer = Vec::with_capacity(ALT_BN128_ADDITION_OUTPUT_SIZE);
+        // SAFETY: This is sound as sol_alt_bn128_group_op addition always fills all 64 bytes of our buffer
+        let mut result_buffer = Vec::with_capacity(ALT_BN128_G1_ADDITION_OUTPUT_SIZE);
         unsafe {
             let result = syscalls::sol_alt_bn128_group_op(
                 ALT_BN128_G1_ADD_BE,
@@ -130,7 +141,7 @@ pub fn alt_bn128_g1_addition_be(input: &[u8]) -> Result<Vec<u8>, AltBn128Error> 
             );
             match result {
                 0 => {
-                    result_buffer.set_len(ALT_BN128_ADDITION_OUTPUT_SIZE);
+                    result_buffer.set_len(ALT_BN128_G1_ADDITION_OUTPUT_SIZE);
                     Ok(result_buffer)
                 }
                 _ => Err(AltBn128Error::UnexpectedError),
@@ -150,7 +161,7 @@ pub fn alt_bn128_addition(input: &[u8]) -> Result<Vec<u8>, AltBn128Error> {
 
 #[inline(always)]
 pub fn alt_bn128_g1_addition_le(
-    input: &[u8; ALT_BN128_ADDITION_INPUT_SIZE],
+    input: &[u8; ALT_BN128_G1_ADDITION_INPUT_SIZE],
 ) -> Result<Vec<u8>, AltBn128Error> {
     #[cfg(not(target_os = "solana"))]
     {
@@ -158,8 +169,8 @@ pub fn alt_bn128_g1_addition_le(
     }
     #[cfg(target_os = "solana")]
     {
-        // SAFETY: This is sound as sol_alt_bn128_group_op addition always fills all 32 bytes of our buffer
-        let mut result_buffer = Vec::with_capacity(ALT_BN128_ADDITION_OUTPUT_SIZE);
+        // SAFETY: This is sound as sol_alt_bn128_group_op addition always fills all 64 bytes of our buffer
+        let mut result_buffer = Vec::with_capacity(ALT_BN128_G1_ADDITION_OUTPUT_SIZE);
         unsafe {
             let result = syscalls::sol_alt_bn128_group_op(
                 ALT_BN128_G1_ADD_LE,
@@ -169,7 +180,7 @@ pub fn alt_bn128_g1_addition_le(
             );
             match result {
                 0 => {
-                    result_buffer.set_len(ALT_BN128_ADDITION_OUTPUT_SIZE);
+                    result_buffer.set_len(ALT_BN128_G1_ADDITION_OUTPUT_SIZE);
                     Ok(result_buffer)
                 }
                 _ => Err(AltBn128Error::UnexpectedError),
