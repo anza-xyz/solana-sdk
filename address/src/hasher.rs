@@ -5,7 +5,7 @@ use {
         hash::{BuildHasher, Hasher},
         mem,
     },
-    rand::{thread_rng, Rng},
+    rand::{rng, Rng},
 };
 
 /// A faster, but less collision resistant hasher for addresses.
@@ -64,8 +64,8 @@ impl Default for AddressHasherBuilder {
     /// `RandomState`
     fn default() -> Self {
         std::thread_local!(static OFFSET: Cell<usize>  = {
-            let mut rng = thread_rng();
-            Cell::new(rng.gen_range(0..ADDRESS_BYTES - mem::size_of::<u64>()))
+            let mut rng = rng();
+            Cell::new(rng.random_range(0..ADDRESS_BYTES - mem::size_of::<u64>()))
         });
 
         let offset = OFFSET.with(|offset| {

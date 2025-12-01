@@ -8,7 +8,9 @@ use {
 
 /// Creates a single BitVec with pseudo-random data for Base2 benchmarking.
 fn create_test_data_base2(rng: &mut ThreadRng, len: usize) -> BitVec<u8, Lsb0> {
-    iter::repeat_with(|| rng.gen_bool(0.5)).take(len).collect()
+    iter::repeat_with(|| rng.random_bool(0.5))
+        .take(len)
+        .collect()
 }
 
 /// Creates two BitVecs with a uniform distribution of valid Base3 pairs.
@@ -54,7 +56,7 @@ fn create_test_data_base3_sparse(len: usize) -> (BitVec<u8, Lsb0>, BitVec<u8, Ls
 /// Benchmarks the Base2 encoding scheme.
 fn bench_base2(c: &mut Criterion) {
     let mut group = c.benchmark_group("Base2_Encoding");
-    let mut rng = rand::thread_rng();
+    let mut rng = rand::rng();
 
     for size in [256, 512, 1024, 2048, 4096, 8192].iter() {
         let bit_vec = create_test_data_base2(&mut rng, *size);

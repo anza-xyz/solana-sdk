@@ -48,7 +48,7 @@ blst = { workspace = true }
 blstrs = { workspace = true }
 ff = { workspace = true }
 group = { workspace = true }
-rand = { workspace = true }
+rand = "0.8" # blstrs is still on rand_core v0.6, so pin this for now
 rayon = { workspace = true, optional = true }
 solana-signature = { workspace = true, optional = true }
 solana-signer = { workspace = true, optional = true }
