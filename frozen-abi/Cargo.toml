@@ -35,7 +35,8 @@ solana-frozen-abi-macro = { workspace = true }
 thiserror = { workspace = true }
 
 [target.'cfg(not(target_os = "solana"))'.dependencies]
-# This dependency is used only to back `frozen-abi` StableAbi API
+# These dependencies are used only to back `frozen-abi` StableAbi API,
+# to avoid version skew and keep digest computation stable regardless of consumer dependencies.
 bincode = "1.3.3"
 im = { workspace = true, features = ["rayon", "serde"] }
 memmap2 = { workspace = true }
