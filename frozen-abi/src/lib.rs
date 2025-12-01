@@ -11,23 +11,16 @@ pub mod abi_digester;
 pub mod abi_example;
 #[cfg(feature = "frozen-abi")]
 pub mod hash;
-#[cfg(feature = "frozen-abi")]
-#[cfg(not(target_os = "solana"))]
+
+#[cfg(all(feature = "frozen-abi", not(target_os = "solana")))]
 pub mod stable_abi;
 
 #[cfg(feature = "frozen-abi")]
 #[macro_use]
 extern crate solana_frozen_abi_macro;
 
-#[cfg(feature = "frozen-abi")]
-#[cfg(not(target_os = "solana"))]
-pub use bincode;
-#[cfg(feature = "frozen-abi")]
-#[cfg(not(target_os = "solana"))]
-pub use rand;
-#[cfg(feature = "frozen-abi")]
-#[cfg(not(target_os = "solana"))]
-pub use rand_chacha;
+#[cfg(all(feature = "frozen-abi", not(target_os = "solana")))]
+pub use {bincode, rand, rand_chacha};
 
 // Not public API. Previously referenced by macro-generated code. Remove the
 // `log` dependency from Cargo.toml when this is cleaned up in the next major
