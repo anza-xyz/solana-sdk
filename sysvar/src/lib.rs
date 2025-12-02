@@ -231,6 +231,25 @@ pub fn get_sysvar(
     }
 }
 
+/// Generic helper to fetch a Pod sysvar type.
+///
+/// Loads the sysvar data directly into an uninitialized Pod struct and returns it.
+///
+/// # Safety
+/// Caller must ensure that `size` is correct for `P`.
+pub unsafe fn fetch_pod<P>(sysvar_id: &Pubkey, size: usize) -> Result<P, ProgramError> {
+    let mut pod = core::mem::MaybeUninit::<P>::uninit();
+    // SAFETY: `get_sysvar_unchecked` will initialize `pod` with the sysvar data,
+    // or return an error if unsuccessful.
+    get_sysvar_unchecked(
+        pod.as_mut_ptr() as *mut u8,
+        sysvar_id as *const _ as *const u8,
+        0,
+        size as u64,
+    )?;
+    Ok(pod.assume_init())
+}
+
 /// Internal helper for retrieving sysvar data directly into a raw buffer.
 ///
 /// # Safety

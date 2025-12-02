@@ -178,23 +178,13 @@ pub struct PodEpochRewards {
     active: u8,
 }
 
-const _: () = assert!(core::mem::size_of::<PodEpochRewards>() == 81);
+const POD_EPOCH_REWARDS_SIZE: usize = 81;
+const _: () = assert!(core::mem::size_of::<PodEpochRewards>() == POD_EPOCH_REWARDS_SIZE);
 
 impl PodEpochRewards {
     pub fn fetch() -> Result<Self, solana_program_error::ProgramError> {
-        let mut pod = core::mem::MaybeUninit::<Self>::uninit();
-        // SAFETY: `get_sysvar_unchecked` will initialize the buffer with the sysvar data,
-        // or return an error if unsuccessful. size_of::<Self>() is compile-time asserted to be 81.
-        unsafe {
-            crate::get_sysvar_unchecked(
-                pod.as_mut_ptr() as *mut u8,
-                (&id()) as *const _ as *const u8,
-                0,
-                81,
-            )?;
-            // SAFETY: Must be initialized by `get_sysvar_unchecked` if this point is reached.
-            Ok(pod.assume_init())
-        }
+        // SAFETY: size is compile-time asserted above to be correct.
+        unsafe { crate::fetch_pod(&id(), POD_EPOCH_REWARDS_SIZE) }
     }
 
     pub fn distribution_starting_block_height(&self) -> u64 {

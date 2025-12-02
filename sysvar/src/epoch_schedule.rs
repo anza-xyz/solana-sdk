@@ -141,23 +141,13 @@ pub struct PodEpochSchedule {
     first_normal_slot: [u8; 8],
 }
 
-const _: () = assert!(core::mem::size_of::<PodEpochSchedule>() == 33);
+const POD_EPOCH_SCHEDULE_SIZE: usize = 33;
+const _: () = assert!(core::mem::size_of::<PodEpochSchedule>() == POD_EPOCH_SCHEDULE_SIZE);
 
 impl PodEpochSchedule {
     pub fn fetch() -> Result<Self, solana_program_error::ProgramError> {
-        let mut pod = core::mem::MaybeUninit::<Self>::uninit();
-        // SAFETY: `get_sysvar_unchecked` will initialize the buffer with the sysvar data,
-        // or return an error if unsuccessful. size_of::<Self>() is compile-time asserted to be 33.
-        unsafe {
-            crate::get_sysvar_unchecked(
-                pod.as_mut_ptr() as *mut u8,
-                (&id()) as *const _ as *const u8,
-                0,
-                33,
-            )?;
-            // SAFETY: Must be initialized by `get_sysvar_unchecked` if this point is reached.
-            Ok(pod.assume_init())
-        }
+        // SAFETY: size is compile-time asserted above to be correct.
+        unsafe { crate::fetch_pod(&id(), POD_EPOCH_SCHEDULE_SIZE) }
     }
 
     pub fn slots_per_epoch(&self) -> u64 {
