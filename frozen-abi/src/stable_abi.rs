@@ -1,10 +1,10 @@
-use rand::{distributions::Standard, Rng, RngCore};
+use rand::{distr::StandardUniform, Rng, RngCore};
 
 pub trait StableAbi: Sized {
     fn random(rng: &mut impl RngCore) -> Self
     where
-        Standard: rand::distributions::Distribution<Self>,
+        StandardUniform: rand::distr::Distribution<Self>,
     {
-        rng.r#gen::<Self>()
+        rng.random::<Self>()
     }
 }
