@@ -146,6 +146,8 @@ const _: () = assert!(core::mem::size_of::<PodEpochSchedule>() == 33);
 impl PodEpochSchedule {
     pub fn fetch() -> Result<Self, solana_program_error::ProgramError> {
         let mut pod = core::mem::MaybeUninit::<Self>::uninit();
+        // SAFETY: `get_sysvar_unchecked` will initialize the buffer with the sysvar data,
+        // or return an error if unsuccessful. size_of::<Self>() is compile-time asserted to be 33.
         unsafe {
             crate::get_sysvar_unchecked(
                 pod.as_mut_ptr() as *mut u8,
@@ -153,6 +155,7 @@ impl PodEpochSchedule {
                 0,
                 33,
             )?;
+            // SAFETY: Must be initialized by `get_sysvar_unchecked` if this point is reached.
             Ok(pod.assume_init())
         }
     }
