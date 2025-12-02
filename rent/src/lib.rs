@@ -81,23 +81,6 @@ impl Default for Rent {
 }
 
 impl Rent {
-    /// Creates a new `Rent` with the given parameters.
-    ///
-    /// # Panics
-    ///
-    /// Panics if `burn_percent` is not in the range [0, 100].
-    pub fn new(lamports_per_byte_year: u64, exemption_threshold: f64, burn_percent: u8) -> Self {
-        assert!(
-            burn_percent <= 100,
-            "burn_percent must be in range [0, 100]"
-        );
-        Self {
-            lamports_per_byte_year,
-            exemption_threshold,
-            burn_percent,
-        }
-    }
-
     /// Calculate how much rent to burn from the collected rent.
     ///
     /// The first value returned is the amount burned. The second is the amount
@@ -152,11 +135,11 @@ impl Rent {
         let ratio = slots_per_epoch as f64 / DEFAULT_SLOTS_PER_EPOCH as f64;
         let exemption_threshold = DEFAULT_EXEMPTION_THRESHOLD * ratio;
         let lamports_per_byte_year = (DEFAULT_LAMPORTS_PER_BYTE_YEAR as f64 / ratio) as u64;
-        Self::new(
+        Self {
             lamports_per_byte_year,
             exemption_threshold,
-            DEFAULT_BURN_PERCENT,
-        )
+            ..Self::default()
+        }
     }
 }
 
@@ -212,7 +195,11 @@ mod tests {
             RentDue::Exempt,
         );
 
-        let custom_rent = Rent::new(5, 2.5, DEFAULT_BURN_PERCENT);
+        let custom_rent = Rent {
+            lamports_per_byte_year: 5,
+            exemption_threshold: 2.5,
+            ..Rent::default()
+        };
 
         assert_eq!(
             custom_rent.due(0, 2, 1.2),
@@ -249,7 +236,11 @@ mod tests {
 
     #[test]
     fn test_clone() {
-        let rent = Rent::new(1, 2.2, 3);
+        let rent = Rent {
+            lamports_per_byte_year: 1,
+            exemption_threshold: 2.2,
+            burn_percent: 3,
+        };
         #[allow(clippy::clone_on_copy)]
         let cloned_rent = rent.clone();
         assert_eq!(cloned_rent, rent);
