@@ -145,6 +145,8 @@ const POD_EPOCH_SCHEDULE_SIZE: usize = 33;
 const _: () = assert!(core::mem::size_of::<PodEpochSchedule>() == POD_EPOCH_SCHEDULE_SIZE);
 
 impl PodEpochSchedule {
+    /// Fetch the sysvar data using the `sol_get_sysvar` syscall.
+    /// This provides an alternative to `EpochSchedule` which provides zero-copy accessors.
     pub fn fetch() -> Result<Self, solana_program_error::ProgramError> {
         let mut pod = core::mem::MaybeUninit::<Self>::uninit();
         // Safety: `get_sysvar_unchecked` will initialize `pod` with the sysvar data,
