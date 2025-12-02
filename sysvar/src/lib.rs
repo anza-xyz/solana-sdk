@@ -181,21 +181,24 @@ macro_rules! impl_sysvar_get {
             }
         }
     };
-    ($sysvar_id:expr) => {
+    // Variant for sysvars with padding at the end. Loads bincode-serialized data
+    // (size - padding bytes) and zeros the padding to avoid undefined behavior.
+    ($sysvar_id:expr, $padding:literal) => {
         fn get() -> Result<Self, $crate::__private::ProgramError> {
-            let mut uninit = core::mem::MaybeUninit::<Self>::uninit();
-            let size = core::mem::size_of::<Self>() as u64;
+            let mut var = core::mem::MaybeUninit::<Self>::uninit();
+            let var_addr = var.as_mut_ptr() as *mut u8;
+            let length = core::mem::size_of::<Self>() - $padding;
             let sysvar_id_ptr = (&$sysvar_id) as *const _ as *const u8;
             unsafe {
-                $crate::get_sysvar_unchecked(
-                    uninit.as_mut_ptr() as *mut u8,
-                    sysvar_id_ptr,
-                    0,
-                    size,
-                )?;
-                Ok(uninit.assume_init())
+                $crate::get_sysvar_unchecked(var_addr, sysvar_id_ptr, 0, length as u64)?;
+                var_addr.add(length).write_bytes(0, $padding);
+                Ok(var.assume_init())
             }
         }
+    };
+    // Variant for sysvars without padding (struct size matches bincode size).
+    ($sysvar_id:expr) => {
+        $crate::impl_sysvar_get!($sysvar_id, 0);
     };
 }
 

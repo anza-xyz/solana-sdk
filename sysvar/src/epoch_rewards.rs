@@ -154,27 +154,16 @@
 //! # Ok::<(), anyhow::Error>(())
 //! ```
 
-use crate::Sysvar;
 #[cfg(feature = "bincode")]
 use crate::SysvarSerialize;
+use crate::{impl_sysvar_get, Sysvar};
 pub use {
     solana_epoch_rewards::EpochRewards,
     solana_sdk_ids::sysvar::epoch_rewards::{check_id, id, ID},
 };
 
 impl Sysvar for EpochRewards {
-    fn get() -> Result<Self, solana_program_error::ProgramError> {
-        let mut var = core::mem::MaybeUninit::<Self>::uninit();
-        let var_addr = var.as_mut_ptr() as *mut u8;
-        // Safety: `get_sysvar_unchecked` will initialize `var` with the sysvar data,
-        // and error if unsuccessful.
-        unsafe {
-            crate::get_sysvar_unchecked(var_addr, (&id()) as *const _ as *const u8, 0, 81)?;
-            // Zero the 15 bytes of padding (bytes 81-95)
-            var_addr.add(81).write_bytes(0, 15);
-            Ok(var.assume_init())
-        }
-    }
+    impl_sysvar_get!(id(), 15);
 }
 
 #[cfg(feature = "bincode")]

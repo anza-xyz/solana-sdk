@@ -121,27 +121,16 @@
 //! #
 //! # Ok::<(), anyhow::Error>(())
 //! ```
-use crate::Sysvar;
 #[cfg(feature = "bincode")]
 use crate::SysvarSerialize;
+use crate::{impl_sysvar_get, Sysvar};
 pub use {
     solana_rent::Rent,
     solana_sdk_ids::sysvar::rent::{check_id, id, ID},
 };
 
 impl Sysvar for Rent {
-    fn get() -> Result<Self, solana_program_error::ProgramError> {
-        let mut var = core::mem::MaybeUninit::<Self>::uninit();
-        let var_addr = var.as_mut_ptr() as *mut u8;
-        // Safety: `get_sysvar_unchecked` will initialize `var` with the sysvar data,
-        // and error if unsuccessful.
-        unsafe {
-            crate::get_sysvar_unchecked(var_addr, (&id()) as *const _ as *const u8, 0, 17)?;
-            // Zero the 7 bytes of padding (bytes 17-23)
-            var_addr.add(17).write_bytes(0, 7);
-            Ok(var.assume_init())
-        }
-    }
+    impl_sysvar_get!(id(), 7);
 }
 
 #[cfg(feature = "bincode")]
