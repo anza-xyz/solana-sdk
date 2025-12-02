@@ -76,6 +76,9 @@ solana-presigner = { workspace = true }
 solana-pubkey = { workspace = true, features = ["rand"] }
 solana-sha256-hasher = { workspace = true }
 solana-system-interface = { workspace = true, features = ["bincode"] }
-solana-transaction = { path = ".", features = ["dev-context-only-utils"] }
+solana-transaction = { path = ".", features = [
+    "dev-context-only-utils",
+    "wincode",
+] }
 solana-vote-interface = { workspace = true, features = ["bincode"] }
 static_assertions = { workspace = true }
