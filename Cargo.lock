@@ -760,7 +760,7 @@ dependencies = [
 [[package]]
 name = "curve25519-dalek"
 version = "4.1.3"
-source = "git+https://github.com/zz-sol/curve25519-dalek.git?branch=zz%2Fimpl_ches25#f2ba667d323e977801d393baf23bcc2c6c210e0e"
+source = "git+https://github.com/zz-sol/curve25519-dalek.git?branch=zz%2Fimpl_ches25#56b69802767c95ff31d16e2deb824aa40add5204"
 dependencies = [
  "cfg-if",
  "cpufeatures",
@@ -775,7 +775,7 @@ dependencies = [
 [[package]]
 name = "curve25519-dalek-derive"
 version = "0.1.1"
-source = "git+https://github.com/zz-sol/curve25519-dalek.git?branch=zz%2Fimpl_ches25#f2ba667d323e977801d393baf23bcc2c6c210e0e"
+source = "git+https://github.com/zz-sol/curve25519-dalek.git?branch=zz%2Fimpl_ches25#56b69802767c95ff31d16e2deb824aa40add5204"
 dependencies = [
  "proc-macro2",
  "quote",
