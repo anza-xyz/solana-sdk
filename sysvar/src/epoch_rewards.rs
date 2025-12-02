@@ -136,16 +136,97 @@
 //! # Ok::<(), anyhow::Error>(())
 //! ```
 
+use crate::Sysvar;
 #[cfg(feature = "bincode")]
 use crate::SysvarSerialize;
-use crate::{impl_sysvar_get, Sysvar};
 pub use {
     solana_epoch_rewards::EpochRewards,
     solana_sdk_ids::sysvar::epoch_rewards::{check_id, id, ID},
 };
 
+/// Pod (Plain Old Data) representation of [`EpochRewards`] with no padding.
+///
+/// This type can be safely loaded via `sol_get_sysvar` without undefined behavior.
+/// Provides performant zero-copy accessors as an alternative to the `EpochRewards` type.
+#[repr(C)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct PodEpochRewards {
+    distribution_starting_block_height: [u8; 8],
+    num_partitions: [u8; 8],
+    parent_blockhash: [u8; 32],
+    total_points: [u8; 16],
+    total_rewards: [u8; 8],
+    distributed_rewards: [u8; 8],
+    active: u8,
+}
+
+const _: () = assert!(core::mem::size_of::<PodEpochRewards>() == 81);
+
+impl PodEpochRewards {
+    pub fn fetch() -> Result<Self, solana_program_error::ProgramError> {
+        let mut pod = core::mem::MaybeUninit::<Self>::uninit();
+        unsafe {
+            crate::get_sysvar_unchecked(
+                pod.as_mut_ptr() as *mut u8,
+                (&id()) as *const _ as *const u8,
+                0,
+                81,
+            )?;
+            Ok(pod.assume_init())
+        }
+    }
+
+    pub fn distribution_starting_block_height(&self) -> u64 {
+        u64::from_le_bytes(self.distribution_starting_block_height)
+    }
+
+    pub fn num_partitions(&self) -> u64 {
+        u64::from_le_bytes(self.num_partitions)
+    }
+
+    pub fn parent_blockhash(&self) -> solana_hash::Hash {
+        solana_hash::Hash::new_from_array(self.parent_blockhash)
+    }
+
+    pub fn total_points(&self) -> u128 {
+        u128::from_le_bytes(self.total_points)
+    }
+
+    pub fn total_rewards(&self) -> u64 {
+        u64::from_le_bytes(self.total_rewards)
+    }
+
+    pub fn distributed_rewards(&self) -> u64 {
+        u64::from_le_bytes(self.distributed_rewards)
+    }
+
+    pub fn active(&self) -> bool {
+        match self.active {
+            0 => false,
+            1 => true,
+            _ => panic!("invalid active value"),
+        }
+    }
+}
+
+impl From<PodEpochRewards> for EpochRewards {
+    fn from(pod: PodEpochRewards) -> Self {
+        Self {
+            distribution_starting_block_height: pod.distribution_starting_block_height(),
+            num_partitions: pod.num_partitions(),
+            parent_blockhash: pod.parent_blockhash(),
+            total_points: pod.total_points(),
+            total_rewards: pod.total_rewards(),
+            distributed_rewards: pod.distributed_rewards(),
+            active: pod.active(),
+        }
+    }
+}
+
 impl Sysvar for EpochRewards {
-    impl_sysvar_get!(id());
+    fn get() -> Result<Self, solana_program_error::ProgramError> {
+        Ok(Self::from(PodEpochRewards::fetch()?))
+    }
 }
 
 #[cfg(feature = "bincode")]
@@ -156,10 +237,44 @@ mod tests {
     use {super::*, crate::Sysvar, serial_test::serial};
 
     #[test]
+    fn test_pod_epoch_rewards_conversion() {
+        let pod = PodEpochRewards {
+            distribution_starting_block_height: 42u64.to_le_bytes(),
+            num_partitions: 7u64.to_le_bytes(),
+            parent_blockhash: [0xAA; 32],
+            total_points: 1234567890u128.to_le_bytes(),
+            total_rewards: 100u64.to_le_bytes(),
+            distributed_rewards: 10u64.to_le_bytes(),
+            active: 1,
+        };
+
+        let epoch_rewards = EpochRewards::from(pod);
+
+        assert_eq!(epoch_rewards.distribution_starting_block_height, 42);
+        assert_eq!(epoch_rewards.num_partitions, 7);
+        assert_eq!(
+            epoch_rewards.parent_blockhash,
+            solana_hash::Hash::new_from_array([0xAA; 32])
+        );
+        assert_eq!(epoch_rewards.total_points, 1234567890);
+        assert_eq!(epoch_rewards.total_rewards, 100);
+        assert_eq!(epoch_rewards.distributed_rewards, 10);
+        assert!(epoch_rewards.active);
+    }
+
+    #[test]
     #[serial]
     #[cfg(feature = "bincode")]
     fn test_epoch_rewards_get() {
-        let expected = EpochRewards::new(100, 10, 42);
+        let expected = EpochRewards {
+            distribution_starting_block_height: 42,
+            num_partitions: 7,
+            parent_blockhash: solana_hash::Hash::new_unique(),
+            total_points: 1234567890,
+            total_rewards: 100,
+            distributed_rewards: 10,
+            active: true,
+        };
 
         let data = bincode::serialize(&expected).unwrap();
         assert_eq!(data.len(), 81);

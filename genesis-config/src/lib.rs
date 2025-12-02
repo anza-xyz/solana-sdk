@@ -49,7 +49,7 @@ pub const UNUSED_DEFAULT: u64 = 1024;
 #[cfg_attr(
     feature = "frozen-abi",
     derive(AbiExample),
-    frozen_abi(digest = "CR76YX4Y3eHSCoRzkBEaJv7p3vAShUT56fX8WERoLBAp")
+    frozen_abi(digest = "3tUUJkZiUUGfuNCXbDuDR6KCQYPsh3m3cPw5vVUSt113")
 )]
 #[cfg_attr(
     feature = "serde",
@@ -244,8 +244,8 @@ impl fmt::Display for GenesisConfig {
             self.ticks_per_slot,
             self.poh_config.hashes_per_tick,
             self.poh_config.target_tick_duration,
-            self.epoch_schedule.slots_per_epoch(),
-            if self.epoch_schedule.warmup() {
+            self.epoch_schedule.slots_per_epoch,
+            if self.epoch_schedule.warmup {
                 "en"
             } else {
                 "dis"

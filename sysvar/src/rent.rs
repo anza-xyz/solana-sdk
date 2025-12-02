@@ -121,16 +121,25 @@
 //! #
 //! # Ok::<(), anyhow::Error>(())
 //! ```
+use crate::Sysvar;
 #[cfg(feature = "bincode")]
 use crate::SysvarSerialize;
-use crate::{impl_sysvar_get, Sysvar};
 pub use {
     solana_rent::Rent,
     solana_sdk_ids::sysvar::rent::{check_id, id, ID},
 };
 
 impl Sysvar for Rent {
-    impl_sysvar_get!(id());
+    fn get() -> Result<Self, solana_program_error::ProgramError> {
+        let mut var = core::mem::MaybeUninit::<Self>::uninit();
+        let var_addr = var.as_mut_ptr() as *mut u8;
+        unsafe {
+            crate::get_sysvar_unchecked(var_addr, (&id()) as *const _ as *const u8, 0, 17)?;
+            // Zero the 7 bytes of padding (bytes 17-23)
+            var_addr.add(17).write_bytes(0, 7);
+            Ok(var.assume_init())
+        }
+    }
 }
 
 #[cfg(feature = "bincode")]
@@ -144,7 +153,11 @@ mod tests {
     #[serial]
     #[cfg(feature = "bincode")]
     fn test_rent_get() {
-        let expected = Rent::new(123, 2.5, 7);
+        let expected = Rent {
+            lamports_per_byte_year: 123,
+            exemption_threshold: 2.5,
+            burn_percent: 7,
+        };
         let data = bincode::serialize(&expected).unwrap();
         assert_eq!(data.len(), 17);
 

@@ -56,24 +56,24 @@ pub const MINIMUM_SLOTS_PER_EPOCH: u64 = 32;
 #[derive(Debug, CloneZeroed, PartialEq, Eq)]
 pub struct EpochSchedule {
     /// The maximum number of slots in each epoch.
-    slots_per_epoch: [u8; 8],
+    pub slots_per_epoch: u64,
 
     /// A number of slots before beginning of an epoch to calculate
     /// a leader schedule for that epoch.
-    leader_schedule_slot_offset: [u8; 8],
+    pub leader_schedule_slot_offset: u64,
 
     /// Whether epochs start short and grow.
-    pub warmup: u8,
+    pub warmup: bool,
 
     /// The first epoch after the warmup period.
     ///
     /// Basically: `log2(slots_per_epoch) - log2(MINIMUM_SLOTS_PER_EPOCH)`.
-    first_normal_epoch: [u8; 8],
+    pub first_normal_epoch: u64,
 
     /// The first slot after the warmup period.
     ///
     /// Basically: `MINIMUM_SLOTS_PER_EPOCH * (2.pow(first_normal_epoch) - 1)`.
-    first_normal_slot: [u8; 8],
+    pub first_normal_slot: u64,
 }
 
 impl Default for EpochSchedule {
@@ -87,33 +87,10 @@ impl Default for EpochSchedule {
 }
 
 impl EpochSchedule {
-    pub fn slots_per_epoch(&self) -> u64 {
-        u64::from_le_bytes(self.slots_per_epoch)
-    }
-
-    pub fn leader_schedule_slot_offset(&self) -> u64 {
-        u64::from_le_bytes(self.leader_schedule_slot_offset)
-    }
-
-    pub fn warmup(&self) -> bool {
-        match self.warmup {
-            0 => false,
-            1 => true,
-            _ => panic!("invalid warmup value"),
-        }
-    }
-
-    pub fn first_normal_epoch(&self) -> u64 {
-        u64::from_le_bytes(self.first_normal_epoch)
-    }
-
-    pub fn first_normal_slot(&self) -> u64 {
-        u64::from_le_bytes(self.first_normal_slot)
-    }
-
     pub fn new(slots_per_epoch: u64) -> Self {
         Self::custom(slots_per_epoch, slots_per_epoch, true)
     }
+
     pub fn without_warmup() -> Self {
         Self::custom(
             DEFAULT_SLOTS_PER_EPOCH,
@@ -121,6 +98,7 @@ impl EpochSchedule {
             false,
         )
     }
+
     pub fn custom(slots_per_epoch: u64, leader_schedule_slot_offset: u64, warmup: bool) -> Self {
         assert!(slots_per_epoch >= MINIMUM_SLOTS_PER_EPOCH);
         let (first_normal_epoch, first_normal_slot) = if warmup {
@@ -137,40 +115,40 @@ impl EpochSchedule {
             (0, 0)
         };
         EpochSchedule {
-            slots_per_epoch: slots_per_epoch.to_le_bytes(),
-            leader_schedule_slot_offset: leader_schedule_slot_offset.to_le_bytes(),
-            warmup: warmup as u8,
-            first_normal_epoch: first_normal_epoch.to_le_bytes(),
-            first_normal_slot: first_normal_slot.to_le_bytes(),
+            slots_per_epoch,
+            leader_schedule_slot_offset,
+            warmup,
+            first_normal_epoch,
+            first_normal_slot,
         }
     }
 
     /// get the length of the given epoch (in slots)
     pub fn get_slots_in_epoch(&self, epoch: u64) -> u64 {
-        if epoch < self.first_normal_epoch() {
+        if epoch < self.first_normal_epoch {
             2u64.saturating_pow(
                 (epoch as u32).saturating_add(MINIMUM_SLOTS_PER_EPOCH.trailing_zeros()),
             )
         } else {
-            self.slots_per_epoch()
+            self.slots_per_epoch
         }
     }
 
     /// get the epoch for which the given slot should save off
     ///  information about stakers
     pub fn get_leader_schedule_epoch(&self, slot: u64) -> u64 {
-        if slot < self.first_normal_slot() {
+        if slot < self.first_normal_slot {
             // until we get to normal slots, behave as if leader_schedule_slot_offset == slots_per_epoch
             self.get_epoch_and_slot_index(slot).0.saturating_add(1)
         } else {
-            let new_slots_since_first_normal_slot = slot.saturating_sub(self.first_normal_slot());
-            let new_first_normal_leader_schedule_slot = new_slots_since_first_normal_slot
-                .saturating_add(self.leader_schedule_slot_offset());
+            let new_slots_since_first_normal_slot = slot.saturating_sub(self.first_normal_slot);
+            let new_first_normal_leader_schedule_slot =
+                new_slots_since_first_normal_slot.saturating_add(self.leader_schedule_slot_offset);
             let new_epochs_since_first_normal_leader_schedule =
                 new_first_normal_leader_schedule_slot
-                    .checked_div(self.slots_per_epoch())
+                    .checked_div(self.slots_per_epoch)
                     .unwrap_or(0);
-            self.first_normal_epoch()
+            self.first_normal_epoch
                 .saturating_add(new_epochs_since_first_normal_leader_schedule)
         }
     }
@@ -182,7 +160,7 @@ impl EpochSchedule {
 
     /// get epoch and offset into the epoch for the given slot
     pub fn get_epoch_and_slot_index(&self, slot: u64) -> (u64, u64) {
-        if slot < self.first_normal_slot() {
+        if slot < self.first_normal_slot {
             let epoch = slot
                 .saturating_add(MINIMUM_SLOTS_PER_EPOCH)
                 .saturating_add(1)
@@ -199,28 +177,28 @@ impl EpochSchedule {
                 slot.saturating_sub(epoch_len.saturating_sub(MINIMUM_SLOTS_PER_EPOCH)),
             )
         } else {
-            let normal_slot_index = slot.saturating_sub(self.first_normal_slot());
+            let normal_slot_index = slot.saturating_sub(self.first_normal_slot);
             let normal_epoch_index = normal_slot_index
-                .checked_div(self.slots_per_epoch())
+                .checked_div(self.slots_per_epoch)
                 .unwrap_or(0);
-            let epoch = self.first_normal_epoch().saturating_add(normal_epoch_index);
+            let epoch = self.first_normal_epoch.saturating_add(normal_epoch_index);
             let slot_index = normal_slot_index
-                .checked_rem(self.slots_per_epoch())
+                .checked_rem(self.slots_per_epoch)
                 .unwrap_or(0);
             (epoch, slot_index)
         }
     }
 
     pub fn get_first_slot_in_epoch(&self, epoch: u64) -> u64 {
-        if epoch <= self.first_normal_epoch() {
+        if epoch <= self.first_normal_epoch {
             2u64.saturating_pow(epoch as u32)
                 .saturating_sub(1)
                 .saturating_mul(MINIMUM_SLOTS_PER_EPOCH)
         } else {
             epoch
-                .saturating_sub(self.first_normal_epoch())
-                .saturating_mul(self.slots_per_epoch())
-                .saturating_add(self.first_normal_slot())
+                .saturating_sub(self.first_normal_epoch)
+                .saturating_mul(self.slots_per_epoch)
+                .saturating_add(self.first_normal_slot)
         }
     }
 
@@ -295,8 +273,13 @@ mod tests {
 
     #[test]
     fn test_clone() {
-        let epoch_schedule =
-            EpochSchedule::custom(MINIMUM_SLOTS_PER_EPOCH, MINIMUM_SLOTS_PER_EPOCH, true);
+        let epoch_schedule = EpochSchedule {
+            slots_per_epoch: 1,
+            leader_schedule_slot_offset: 2,
+            warmup: true,
+            first_normal_epoch: 4,
+            first_normal_slot: 5,
+        };
         #[allow(clippy::clone_on_copy)]
         let cloned_epoch_schedule = epoch_schedule.clone();
         assert_eq!(cloned_epoch_schedule, epoch_schedule);

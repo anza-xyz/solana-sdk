@@ -32,17 +32,17 @@ static_assertions::const_assert_eq!(
 #[derive(PartialEq, CloneZeroed, Debug)]
 pub struct Rent {
     /// Rental rate in lamports/byte-year.
-    lamports_per_byte_year: [u8; 8],
+    pub lamports_per_byte_year: u64,
 
     /// Amount of time (in years) a balance must include rent for the account to
     /// be rent exempt.
-    exemption_threshold: [u8; 8],
+    pub exemption_threshold: f64,
 
     /// The percentage of collected rent that is burned.
     ///
     /// Valid values are in the range [0, 100]. The remaining percentage is
     /// distributed to validators.
-    burn_percent: u8,
+    pub burn_percent: u8,
 }
 
 /// Default rental rate in lamports/byte-year.
@@ -73,26 +73,14 @@ pub const ACCOUNT_STORAGE_OVERHEAD: u64 = 128;
 impl Default for Rent {
     fn default() -> Self {
         Self {
-            lamports_per_byte_year: DEFAULT_LAMPORTS_PER_BYTE_YEAR.to_le_bytes(),
-            exemption_threshold: DEFAULT_EXEMPTION_THRESHOLD.to_le_bytes(),
+            lamports_per_byte_year: DEFAULT_LAMPORTS_PER_BYTE_YEAR,
+            exemption_threshold: DEFAULT_EXEMPTION_THRESHOLD,
             burn_percent: DEFAULT_BURN_PERCENT,
         }
     }
 }
 
 impl Rent {
-    pub fn lamports_per_byte_year(&self) -> u64 {
-        u64::from_le_bytes(self.lamports_per_byte_year)
-    }
-
-    pub fn exemption_threshold(&self) -> f64 {
-        f64::from_le_bytes(self.exemption_threshold)
-    }
-
-    pub fn burn_percent(&self) -> u8 {
-        self.burn_percent
-    }
-
     /// Creates a new `Rent` with the given parameters.
     ///
     /// # Panics
@@ -104,8 +92,8 @@ impl Rent {
             "burn_percent must be in range [0, 100]"
         );
         Self {
-            lamports_per_byte_year: lamports_per_byte_year.to_le_bytes(),
-            exemption_threshold: exemption_threshold.to_le_bytes(),
+            lamports_per_byte_year,
+            exemption_threshold,
             burn_percent,
         }
     }
@@ -122,8 +110,8 @@ impl Rent {
     /// Minimum balance due for rent-exemption of a given account data size.
     pub fn minimum_balance(&self, data_len: usize) -> u64 {
         let bytes = data_len as u64;
-        (((ACCOUNT_STORAGE_OVERHEAD + bytes) * self.lamports_per_byte_year()) as f64
-            * self.exemption_threshold()) as u64
+        (((ACCOUNT_STORAGE_OVERHEAD + bytes) * self.lamports_per_byte_year) as f64
+            * self.exemption_threshold) as u64
     }
 
     /// Whether a given balance and data length would be exempt.
@@ -143,7 +131,7 @@ impl Rent {
     /// Rent due for account that is known to be not exempt.
     pub fn due_amount(&self, data_len: usize, years_elapsed: f64) -> u64 {
         let actual_data_len = data_len as u64 + ACCOUNT_STORAGE_OVERHEAD;
-        let lamports_per_year = self.lamports_per_byte_year() * actual_data_len;
+        let lamports_per_year = self.lamports_per_byte_year * actual_data_len;
         (lamports_per_year as f64 * years_elapsed) as u64
     }
 
@@ -152,7 +140,7 @@ impl Rent {
     /// This is used for testing.
     pub fn free() -> Self {
         Self {
-            lamports_per_byte_year: 0u64.to_le_bytes(),
+            lamports_per_byte_year: 0,
             ..Rent::default()
         }
     }
@@ -229,15 +217,15 @@ mod tests {
         assert_eq!(
             custom_rent.due(0, 2, 1.2),
             RentDue::Paying(
-                (((2 + ACCOUNT_STORAGE_OVERHEAD) * custom_rent.lamports_per_byte_year()) as f64
-                    * 1.2) as u64,
+                (((2 + ACCOUNT_STORAGE_OVERHEAD) * custom_rent.lamports_per_byte_year) as f64 * 1.2)
+                    as u64,
             )
         );
 
         assert_eq!(
             custom_rent.due(
-                (((2 + ACCOUNT_STORAGE_OVERHEAD) * custom_rent.lamports_per_byte_year()) as f64
-                    * custom_rent.exemption_threshold()) as u64,
+                (((2 + ACCOUNT_STORAGE_OVERHEAD) * custom_rent.lamports_per_byte_year) as f64
+                    * custom_rent.exemption_threshold) as u64,
                 2,
                 1.2
             ),
