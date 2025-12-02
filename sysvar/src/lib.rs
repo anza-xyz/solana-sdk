@@ -183,15 +183,21 @@ macro_rules! impl_sysvar_get {
     };
     // Variant for sysvars with padding at the end. Loads bincode-serialized data
     // (size - padding bytes) and zeros the padding to avoid undefined behavior.
+    // Only supports sysvars where padding is at the end of the layout.
     ($sysvar_id:expr, $padding:literal) => {
         fn get() -> Result<Self, $crate::__private::ProgramError> {
             let mut var = core::mem::MaybeUninit::<Self>::uninit();
             let var_addr = var.as_mut_ptr() as *mut u8;
-            let length = core::mem::size_of::<Self>() - $padding;
+            let length = core::mem::size_of::<Self>().saturating_sub($padding);
             let sysvar_id_ptr = (&$sysvar_id) as *const _ as *const u8;
+            // SAFETY: The allocation is valid for `size_of::<Self>()`. We load
+            // `(size - padding)` bytes from the syscall, which matches bincode
+            // serialization. The remaining `padding` bytes are then zeroed.
             unsafe {
                 $crate::get_sysvar_unchecked(var_addr, sysvar_id_ptr, 0, length as u64)?;
                 var_addr.add(length).write_bytes(0, $padding);
+                // SAFETY: All bytes now initialized: syscall filled data
+                // bytes and we zeroed padding.
                 Ok(var.assume_init())
             }
         }
