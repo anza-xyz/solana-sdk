@@ -133,6 +133,8 @@ impl Sysvar for Rent {
     fn get() -> Result<Self, solana_program_error::ProgramError> {
         let mut var = core::mem::MaybeUninit::<Self>::uninit();
         let var_addr = var.as_mut_ptr() as *mut u8;
+        // Safety: `get_sysvar_unchecked` will initialize `var` with the sysvar data,
+        // and error if unsuccessful.
         unsafe {
             crate::get_sysvar_unchecked(var_addr, (&id()) as *const _ as *const u8, 0, 17)?;
             // Zero the 7 bytes of padding (bytes 17-23)
