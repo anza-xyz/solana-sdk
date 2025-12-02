@@ -55,19 +55,6 @@ pub struct EpochRewards {
 }
 
 impl EpochRewards {
-    pub fn new(
-        total_rewards: u64,
-        distributed_rewards: u64,
-        distribution_starting_block_height: u64,
-    ) -> Self {
-        Self {
-            distribution_starting_block_height,
-            total_rewards,
-            distributed_rewards,
-            ..Self::default()
-        }
-    }
-
     pub fn distribute(&mut self, amount: u64) {
         let new_distributed_rewards = self.distributed_rewards.saturating_add(amount);
         assert!(new_distributed_rewards <= self.total_rewards);
@@ -78,6 +65,30 @@ impl EpochRewards {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    impl EpochRewards {
+        pub fn new(
+            total_rewards: u64,
+            distributed_rewards: u64,
+            distribution_starting_block_height: u64,
+        ) -> Self {
+            Self {
+                total_rewards,
+                distributed_rewards,
+                distribution_starting_block_height,
+                ..Self::default()
+            }
+        }
+    }
+
+    #[test]
+    fn test_epoch_rewards_new() {
+        let epoch_rewards = EpochRewards::new(100, 0, 64);
+
+        assert_eq!(epoch_rewards.total_rewards, 100);
+        assert_eq!(epoch_rewards.distributed_rewards, 0);
+        assert_eq!(epoch_rewards.distribution_starting_block_height, 64);
+    }
 
     #[test]
     fn test_epoch_rewards_distribute() {

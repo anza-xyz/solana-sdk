@@ -90,7 +90,6 @@ impl EpochSchedule {
     pub fn new(slots_per_epoch: u64) -> Self {
         Self::custom(slots_per_epoch, slots_per_epoch, true)
     }
-
     pub fn without_warmup() -> Self {
         Self::custom(
             DEFAULT_SLOTS_PER_EPOCH,
@@ -98,7 +97,6 @@ impl EpochSchedule {
             false,
         )
     }
-
     pub fn custom(slots_per_epoch: u64, leader_schedule_slot_offset: u64, warmup: bool) -> Self {
         assert!(slots_per_epoch >= MINIMUM_SLOTS_PER_EPOCH);
         let (first_normal_epoch, first_normal_slot) = if warmup {

@@ -49,7 +49,13 @@
 //! # use solana_sysvar_id::SysvarId;
 //! # let p = EpochRewards::id();
 //! # let l = &mut 1559040;
-//! # let epoch_rewards = EpochRewards::new(100, 10, 42);
+//! # let epoch_rewards = EpochRewards {
+//! #     distribution_starting_block_height: 42,
+//! #     total_rewards: 100,
+//! #     distributed_rewards: 10,
+//! #     active: true,
+//! #     ..EpochRewards::default()
+//! # };
 //! # let mut d: Vec<u8> = bincode::serialize(&epoch_rewards).unwrap();
 //! # let a = AccountInfo::new(&p, false, false, l, &mut d, &p, false);
 //! # let accounts = &[a.clone(), a];
@@ -91,7 +97,13 @@
 //! # use solana_sysvar_id::SysvarId;
 //! # let p = EpochRewards::id();
 //! # let l = &mut 1559040;
-//! # let epoch_rewards = EpochRewards::new(100, 10, 42);
+//! # let epoch_rewards = EpochRewards {
+//! #     distribution_starting_block_height: 42,
+//! #     total_rewards: 100,
+//! #     distributed_rewards: 10,
+//! #     active: true,
+//! #     ..EpochRewards::default()
+//! # };
 //! # let mut d: Vec<u8> = bincode::serialize(&epoch_rewards).unwrap();
 //! # let a = AccountInfo::new(&p, false, false, l, &mut d, &p, false);
 //! # let accounts = &[a.clone(), a];
@@ -115,7 +127,13 @@
 //! # use anyhow::Result;
 //! #
 //! fn print_sysvar_epoch_rewards(client: &RpcClient) -> Result<()> {
-//! #   let epoch_rewards = EpochRewards::new(100, 10, 42);
+//! #   let epoch_rewards = EpochRewards {
+//! #       distribution_starting_block_height: 42,
+//! #       total_rewards: 100,
+//! #       distributed_rewards: 10,
+//! #       active: true,
+//! #       ..EpochRewards::default()
+//! #   };
 //! #   let data: Vec<u8> = bincode::serialize(&epoch_rewards)?;
 //! #   client.set_get_account_response(epoch_rewards::ID, Account {
 //! #       lamports: 1120560,
