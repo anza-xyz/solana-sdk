@@ -119,9 +119,9 @@
 //! #
 //! # Ok::<(), anyhow::Error>(())
 //! ```
-use crate::Sysvar;
 #[cfg(feature = "bincode")]
 use crate::SysvarSerialize;
+use {crate::Sysvar, solana_program_error::ProgramError};
 pub use {
     solana_epoch_schedule::EpochSchedule,
     solana_sdk_ids::sysvar::epoch_schedule::{check_id, id, ID},
@@ -187,21 +187,23 @@ impl PodEpochSchedule {
     }
 }
 
-impl From<PodEpochSchedule> for EpochSchedule {
-    fn from(pod: PodEpochSchedule) -> Self {
-        Self {
+impl TryFrom<PodEpochSchedule> for EpochSchedule {
+    type Error = ProgramError;
+
+    fn try_from(pod: PodEpochSchedule) -> Result<Self, Self::Error> {
+        Ok(Self {
             slots_per_epoch: pod.slots_per_epoch(),
             leader_schedule_slot_offset: pod.leader_schedule_slot_offset(),
-            warmup: pod.warmup(),
+            warmup: pod.warmup()?,
             first_normal_epoch: pod.first_normal_epoch(),
             first_normal_slot: pod.first_normal_slot(),
-        }
+        })
     }
 }
 
 impl Sysvar for EpochSchedule {
     fn get() -> Result<Self, solana_program_error::ProgramError> {
-        Ok(Self::from(PodEpochSchedule::fetch()?))
+        PodEpochSchedule::fetch()?.try_into()
     }
 }
 
@@ -222,7 +224,7 @@ mod tests {
             first_normal_slot: 524256u64.to_le_bytes(),
         };
 
-        let epoch_schedule = EpochSchedule::from(pod);
+        let epoch_schedule = EpochSchedule::try_from(pod).unwrap();
 
         assert_eq!(epoch_schedule.slots_per_epoch, 432000);
         assert_eq!(epoch_schedule.leader_schedule_slot_offset, 432000);
