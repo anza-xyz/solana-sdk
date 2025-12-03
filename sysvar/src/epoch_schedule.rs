@@ -170,8 +170,12 @@ impl PodEpochSchedule {
         u64::from_le_bytes(self.leader_schedule_slot_offset)
     }
 
-    pub fn warmup(&self) -> bool {
-        self.warmup != 0
+    pub fn warmup(&self) -> Result<bool, ProgramError> {
+        match self.warmup {
+            0 => Ok(false),
+            1 => Ok(true),
+            _ => Err(ProgramError::InvalidAccountData),
+        }
     }
 
     pub fn first_normal_epoch(&self) -> u64 {
