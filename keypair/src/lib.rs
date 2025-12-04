@@ -2,7 +2,6 @@
 #![cfg_attr(docsrs, feature(doc_cfg))]
 use {
     ed25519_dalek::Signer as DalekSigner,
-    rand::rngs::OsRng,
     solana_seed_phrase::generate_seed_from_seed_phrase_and_passphrase,
     solana_signer::SignerError,
     std::{
@@ -34,8 +33,8 @@ impl Keypair {
     /// Constructs a new, random `Keypair` using `OsRng`
     #[allow(clippy::new_without_default)]
     pub fn new() -> Self {
-        let mut rng = OsRng;
-        Self(ed25519_dalek::SigningKey::generate(&mut rng))
+        let secret_bytes = rand::random::<[u8; Self::SECRET_KEY_LENGTH]>();
+        Self(ed25519_dalek::SigningKey::from_bytes(&secret_bytes))
     }
 
     /// Constructs a new `Keypair` using secret key bytes

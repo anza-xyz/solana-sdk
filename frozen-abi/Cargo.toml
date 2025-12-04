@@ -35,9 +35,15 @@ solana-frozen-abi-macro = { workspace = true }
 thiserror = { workspace = true }
 
 [target.'cfg(not(target_os = "solana"))'.dependencies]
+# These dependencies are used only to back `frozen-abi` StableAbi API,
+# to avoid version skew and keep digest computation stable regardless of consumer dependencies.
+bincode = "1.3.3"
 im = { workspace = true, features = ["rayon", "serde"] }
 memmap2 = { workspace = true }
+# These dependencies are used only to back `frozen-abi` StableAbi API,
+# to avoid version skew and keep digest computation stable regardless of consumer dependencies.
 rand = { workspace = true }
+rand_chacha = { workspace = true }
 
 [target.'cfg(not(target_os = "solana"))'.dev-dependencies]
 bitflags = { workspace = true, features = ["serde"] }

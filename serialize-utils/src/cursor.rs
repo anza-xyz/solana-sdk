@@ -133,7 +133,7 @@ mod test {
     #[test]
     fn test_read_option_u64() {
         for _ in 0..100 {
-            let test_value = rand::random::<Option<u64>>();
+            let test_value = rand::random_bool(0.5).then(rand::random::<u64>);
             test_read(read_option_u64, test_value);
         }
     }
@@ -150,7 +150,7 @@ mod test {
     fn test_read_pubkey() {
         for _ in 0..100 {
             let mut buf = [0; 32];
-            rand::thread_rng().fill(&mut buf);
+            rand::rng().fill(&mut buf);
             let test_value = Pubkey::from(buf);
             test_read(read_pubkey, test_value);
         }

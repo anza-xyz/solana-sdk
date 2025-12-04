@@ -35,7 +35,7 @@ k256 = { workspace = true }
 [dev-dependencies]
 anyhow = { workspace = true }
 borsh = { workspace = true }
-rand = { workspace = true }
+rand = "0.8" # k256 still uses rand_core v0.6
 solana-program = { path = "../program" }
 
 [target.'cfg(not(target_os = "solana"))'.dev-dependencies]
