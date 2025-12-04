@@ -12,6 +12,9 @@ use {
 };
 #[cfg(feature = "wincode")]
 use {
+    crate::{
+        legacy::MessageUninitBuilder as LegacyMessageUninitBuilder, MessageHeaderUninitBuilder,
+    },
     core::mem::MaybeUninit,
     wincode::{
         io::{Reader, Writer},
@@ -385,19 +388,23 @@ impl<'de> SchemaRead<'de> for VersionedMessage {
         }
 
         let mut msg = MaybeUninit::<LegacyMessage>::uninit();
+        let mut msg_builder = LegacyMessageUninitBuilder::from_maybe_uninit_mut(&mut msg);
         // We've already read the variant byte which, in the legacy case, represents
         // the `num_required_signatures` field.
         // As such, we need to write the remaining fields into the message manually,
         // as calling `LegacyMessage::read` will miss the first field.
-        let header_uninit = LegacyMessage::uninit_header_mut(&mut msg);
+        let mut header_builder =
+            MessageHeaderUninitBuilder::from_maybe_uninit_mut(msg_builder.uninit_header_mut());
+        header_builder.write_num_required_signatures(variant);
+        header_builder.read_num_readonly_signed_accounts(reader)?;
+        header_builder.read_num_readonly_unsigned_accounts(reader)?;
+        header_builder.finish();
+        unsafe { msg_builder.assume_init_header() };
 
-        MessageHeader::write_uninit_num_required_signatures(variant, header_uninit);
-        MessageHeader::read_num_readonly_signed_accounts(reader, header_uninit)?;
-        MessageHeader::read_num_readonly_unsigned_accounts(reader, header_uninit)?;
-
-        LegacyMessage::read_account_keys(reader, &mut msg)?;
-        LegacyMessage::read_recent_blockhash(reader, &mut msg)?;
-        LegacyMessage::read_instructions(reader, &mut msg)?;
+        msg_builder.read_account_keys(reader)?;
+        msg_builder.read_recent_blockhash(reader)?;
+        msg_builder.read_instructions(reader)?;
+        msg_builder.finish();
 
         let msg = unsafe { msg.assume_init() };
         dst.write(VersionedMessage::Legacy(msg));
