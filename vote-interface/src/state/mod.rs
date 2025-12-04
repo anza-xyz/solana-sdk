@@ -923,13 +923,13 @@ mod tests {
         .take(32)
         .sorted_by_key(|lockout| lockout.slot())
         .collect();
-        let root = rng.random_ratio(1, 2).then(|| {
+        let root = rng.random_bool(0.5).then(|| {
             lockouts[0]
                 .slot()
                 .checked_sub(rng.random_range(0..1_000))
                 .expect("All slots should be greater than 1_000")
         });
-        let timestamp = rng.random_ratio(1, 2).then(|| rng.random());
+        let timestamp = rng.random_bool(0.5).then(|| rng.random());
         let hash = Hash::from(rng.random::<[u8; 32]>());
         let vote_state_update = VoteStateUpdate {
             lockouts,

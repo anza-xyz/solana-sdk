@@ -133,11 +133,7 @@ mod test {
     #[test]
     fn test_read_option_u64() {
         for _ in 0..100 {
-            let test_value = if rand::random_bool(0.5) {
-                Some(rand::random::<u64>())
-            } else {
-                None
-            };
+            let test_value = rand::random_bool(0.5).then(rand::random::<u64>);
             test_read(read_option_u64, test_value);
         }
     }
