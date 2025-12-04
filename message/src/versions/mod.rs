@@ -346,6 +346,7 @@ impl SchemaWrite for VersionedMessage {
         match src {
             VersionedMessage::Legacy(message) => LegacyMessage::size_of(message),
             // +1 for message version prefix
+            #[expect(clippy::arithmetic_side_effects)]
             VersionedMessage::V0(message) => Ok(1 + v0::Message::size_of(message)?),
         }
     }
