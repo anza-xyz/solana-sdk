@@ -64,16 +64,37 @@ pub struct Rent {
 /// - $1 per SOL
 /// - $0.01 per megabyte day
 /// - $3.65 per megabyte year
+#[deprecated(
+    since = "3.1.0",
+    note = "The concept of rent no longer exists, only rent-exemption. Use `DEFAULT_LAMPORTS_PER_BYTE` instead"
+)]
 pub const DEFAULT_LAMPORTS_PER_BYTE_YEAR: u64 = 1_000_000_000 / 100 * 365 / (1024 * 1024);
+
+/// Default rental rate in lamports/byte.
+///
+/// This calculation is based on:
+/// - 10^9 lamports per SOL
+/// - $1 per SOL
+/// - $0.01 per megabyte day
+/// - $7.30 per megabyte
+pub const DEFAULT_LAMPORTS_PER_BYTE: u64 = 2 * 1_000_000_000 / 100 * 365 / (1024 * 1024);
 
 /// Default amount of time (in years) the balance has to include rent for the
 /// account to be rent exempt.
+#[deprecated(
+    since = "3.1.0",
+    note = "The concept of rent no longer exists, only rent-exemption"
+)]
 pub const DEFAULT_EXEMPTION_THRESHOLD: f64 = 2.0;
 
 /// Default percentage of collected rent that is burned.
 ///
 /// Valid values are in the range [0, 100]. The remaining percentage is
 /// distributed to validators.
+#[deprecated(
+    since = "3.1.0",
+    note = "The concept of rent no longer exists, only rent-exemption"
+)]
 pub const DEFAULT_BURN_PERCENT: u8 = 50;
 
 /// Account storage overhead for calculation of base rent.
@@ -182,6 +203,7 @@ impl Rent {
     pub fn with_lamports_per_byte(lamports_per_byte: u64) -> Self {
         Self {
             lamports_per_byte_year: lamports_per_byte,
+            exemption_threshold: 1.0,
             ..Self::default()
         }
     }
