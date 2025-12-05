@@ -10,6 +10,7 @@ members = [
     "bincode",
     "blake3-hasher",
     "bls-signatures",
+    "bls12-381-core",
     "bn254",
     "borsh",
     "client-traits",
@@ -176,6 +177,7 @@ five8_const = "1.0.0"
 getrandom = "0.3.4"
 group = "0.13.0"
 hex = "0.4.3"
+hex-literal = "1.1.0"
 hmac = "0.12.1"
 im = "15.1.0"
 indicatif = "0.17.9"
@@ -227,6 +229,7 @@ solana-big-mod-exp = { path = "big-mod-exp", version = "3.0.0" }
 solana-bincode = { path = "bincode", version = "3.0.0" }
 solana-blake3-hasher = { path = "blake3-hasher", version = "3.0.0" }
 solana-bls-signatures = { path = "bls-signatures", version = "1.0.0" }
+solana-bls12-381 = { path = "bls12-381-core", version = "0.1.0" }
 solana-bn254 = { path = "bn254", version = "3.0.0" }
 solana-borsh = { path = "borsh", version = "3.0.0" }
 solana-client-traits = { path = "client-traits", version = "3.0.0" }
