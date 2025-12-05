@@ -143,6 +143,7 @@ mod tests {
     #[test]
     #[serial]
     #[cfg(feature = "bincode")]
+    #[allow(deprecated)]
     fn test_rent_get() {
         let expected = Rent {
             lamports_per_byte_year: 123,
