@@ -49,7 +49,7 @@ pub const UNUSED_DEFAULT: u64 = 1024;
 #[cfg_attr(
     feature = "frozen-abi",
     derive(AbiExample),
-    frozen_abi(digest = "3tUUJkZiUUGfuNCXbDuDR6KCQYPsh3m3cPw5vVUSt113")
+    frozen_abi(digest = "8z56w59NRUjj4SVu6RxXGfUsdyUZn835ok9LTupU6jTy")
 )]
 #[cfg_attr(
     feature = "serde",
