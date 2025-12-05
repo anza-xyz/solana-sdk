@@ -27,6 +27,7 @@ solana-sdk-macro = { workspace = true }
 solana-sysvar-id = { workspace = true, optional = true }
 
 [dev-dependencies]
+proptest = { workspace = true }
 solana-clock = { workspace = true }
 static_assertions = { workspace = true }
 
