@@ -110,6 +110,8 @@
 //! # Ok::<(), anyhow::Error>(())
 //! ```
 
+#[cfg(feature = "frozen-abi")]
+use solana_frozen_abi_macro::{frozen_abi, AbiExample, StableAbi};
 #[cfg(feature = "serde")]
 use {
     serde_derive::{Deserialize, Serialize},
@@ -177,8 +179,11 @@ const NONCED_TX_MARKER_IX_INDEX: u8 = 0;
 /// redundantly specifying the fee-payer is not strictly required.
 #[cfg_attr(
     feature = "frozen-abi",
-    derive(solana_frozen_abi_macro::AbiExample),
-    solana_frozen_abi_macro::frozen_abi(digest = "ADDDuk3dAZJ5hDxue8v4btH7nhEyngxUpXaC7A4k8gyQ")
+    derive(AbiExample, StableAbi),
+    frozen_abi(
+        api_digest = "ADDDuk3dAZJ5hDxue8v4btH7nhEyngxUpXaC7A4k8gyQ",
+        abi_digest = "B9cGfEfYQtYccbPKXWBRoWhdfLRjaUBimic11Vp5Bjzx"
+    )
 )]
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[cfg_attr(feature = "wincode", derive(SchemaWrite, SchemaRead))]
@@ -199,6 +204,39 @@ pub struct Transaction {
 
     /// The message to sign.
     pub message: Message,
+}
+
+#[cfg(feature = "frozen-abi")]
+impl solana_frozen_abi::rand::prelude::Distribution<Transaction>
+    for solana_frozen_abi::rand::distr::StandardUniform
+{
+    fn sample<R: solana_frozen_abi::rand::Rng + ?Sized>(&self, rng: &mut R) -> Transaction {
+        let signatures: Vec<Signature> = (0..rng.random_range(1..100))
+            .map(|_| Signature::from(std::array::from_fn(|_| rng.random::<u8>())))
+            .collect();
+        let accounts: Vec<AccountMeta> = (0..rng.random_range(1..100))
+            .map(|_| AccountMeta {
+                pubkey: Address::new_from_array(rng.random()),
+                is_signer: rng.random(),
+                is_writable: rng.random(),
+            })
+            .collect();
+        let data: Vec<u8> = (0..rng.random_range(1..1000))
+            .map(|_| rng.random())
+            .collect();
+        let instructions: Vec<Instruction> = (0..rng.random_range(1..100))
+            .map(|_| Instruction {
+                program_id: Address::new_from_array(rng.random()),
+                accounts: accounts.clone(),
+                data: data.clone(),
+            })
+            .collect();
+
+        Transaction {
+            signatures,
+            message: Message::new(&instructions, Some(&Address::new_from_array(rng.random()))),
+        }
+    }
 }
 
 impl Sanitize for Transaction {
