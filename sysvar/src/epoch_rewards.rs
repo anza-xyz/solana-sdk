@@ -163,6 +163,10 @@ pub use {
 };
 
 impl Sysvar for EpochRewards {
+    // SAFETY: upstream invariant: the sysvar data is created exclusively
+    // by the Solana runtime and serializes bool as 0x00 or 0x01, so the final
+    // `bool` field of `EpochRewards` can be re-aligned with padding and read
+    // directly without validation.
     impl_sysvar_get!(id(), 15);
 }
 

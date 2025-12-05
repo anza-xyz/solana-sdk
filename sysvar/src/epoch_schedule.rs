@@ -170,12 +170,10 @@ impl PodEpochSchedule {
         u64::from_le_bytes(self.leader_schedule_slot_offset)
     }
 
-    pub fn warmup(&self) -> Result<bool, ProgramError> {
-        match self.warmup {
-            0 => Ok(false),
-            1 => Ok(true),
-            _ => Err(ProgramError::InvalidAccountData),
-        }
+    pub fn warmup(&self) -> bool {
+        // SAFETY: upstream invariant: the sysvar data is created exclusively
+        // by the Solana runtime and serializes bool as 0x00 or 0x01.
+        self.warmup > 0
     }
 
     pub fn first_normal_epoch(&self) -> u64 {
@@ -194,7 +192,7 @@ impl TryFrom<PodEpochSchedule> for EpochSchedule {
         Ok(Self {
             slots_per_epoch: pod.slots_per_epoch(),
             leader_schedule_slot_offset: pod.leader_schedule_slot_offset(),
-            warmup: pod.warmup()?,
+            warmup: pod.warmup(),
             first_normal_epoch: pod.first_normal_epoch(),
             first_normal_slot: pod.first_normal_slot(),
         })
