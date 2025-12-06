@@ -7,7 +7,7 @@ use arbitrary::Arbitrary;
 #[cfg(feature = "serde")]
 use serde_derive::{Deserialize, Serialize};
 #[cfg(feature = "frozen-abi")]
-use solana_frozen_abi_macro::{frozen_abi, AbiExample};
+use solana_frozen_abi_macro::{frozen_abi, AbiExample, StableAbi};
 #[cfg(any(target_os = "solana", feature = "bincode"))]
 use solana_instruction_error::InstructionError;
 use {
@@ -21,8 +21,11 @@ use {
 
 #[cfg_attr(
     feature = "frozen-abi",
-    frozen_abi(digest = "pZqasQc6duzMYzpzU7eriHH9cMXmubuUP4NmCrkWZjt"),
-    derive(AbiExample)
+    frozen_abi(
+        api_digest = "pZqasQc6duzMYzpzU7eriHH9cMXmubuUP4NmCrkWZjt",
+        abi_digest = "GYS8SRmr3HQnLdd7Dr4dDraWj9sratTP1UchASh1BT3D"
+    ),
+    derive(AbiExample, StableAbi)
 )]
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[derive(Debug, Default, PartialEq, Eq, Clone)]
@@ -57,6 +60,50 @@ pub struct VoteStateV3 {
 
     /// most recent timestamp submitted with a vote
     pub last_timestamp: BlockTimestamp,
+}
+
+#[cfg(feature = "frozen-abi")]
+impl solana_frozen_abi::rand::prelude::Distribution<VoteStateV3>
+    for solana_frozen_abi::rand::distr::StandardUniform
+{
+    fn sample<R: solana_frozen_abi::rand::Rng + ?Sized>(&self, rng: &mut R) -> VoteStateV3 {
+        let votes: VecDeque<_> = (0..rng.random_range(0..1000))
+            .map(|_| LandedVote {
+                latency: rng.random(),
+                lockout: crate::state::Lockout::new(rng.random()),
+            })
+            .collect();
+
+        let mut prior_voters: CircBuf<(Pubkey, Epoch, Epoch)> = CircBuf::default();
+        for _ in 0..rng.random_range(0..1000) {
+            prior_voters.append((
+                Pubkey::new_from_array(rng.random()),
+                rng.random(),
+                rng.random(),
+            ));
+        }
+        let epoch_credits: Vec<_> = (0..rng.random_range(0..1000))
+            .map(|_| (rng.random(), rng.random(), rng.random()))
+            .collect();
+
+        VoteStateV3 {
+            node_pubkey: Pubkey::new_from_array(rng.random()),
+            authorized_withdrawer: Pubkey::new_from_array(rng.random()),
+            commission: rng.random(),
+            votes,
+            root_slot: Some(rng.random()),
+            authorized_voters: AuthorizedVoters::new(
+                rng.random(),
+                Pubkey::new_from_array(rng.random()),
+            ),
+            prior_voters,
+            epoch_credits,
+            last_timestamp: BlockTimestamp {
+                slot: rng.random(),
+                timestamp: rng.random(),
+            },
+        }
+    }
 }
 
 impl VoteStateV3 {
