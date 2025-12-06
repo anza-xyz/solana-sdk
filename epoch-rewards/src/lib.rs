@@ -51,6 +51,9 @@ pub struct EpochRewards {
 
     /// Whether the rewards period (including calculation and distribution) is
     /// active
+    ///
+    /// SAFETY: upstream invariant: the sysvar data is created exclusively
+    /// by the Solana runtime and serializes bool as 0x00 or 0x01.
     pub active: bool,
 }
 

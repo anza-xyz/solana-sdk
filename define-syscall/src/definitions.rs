@@ -49,12 +49,12 @@ define_syscall!(fn sol_get_return_data(data: *mut u8, length: u64, program_id: *
 // - `is_writable` (`u8`): `true` if the instruction requires the account to be writable
 define_syscall!(fn sol_get_processed_sibling_instruction(index: u64, meta: *mut u8, program_id: *mut u8, data: *mut u8, accounts: *mut u8) -> u64);
 
-// these are to be deprecated once they are superceded by sol_get_sysvar
-define_syscall!(fn sol_get_clock_sysvar(addr: *mut u8) -> u64);
-define_syscall!(fn sol_get_epoch_schedule_sysvar(addr: *mut u8) -> u64);
-define_syscall!(fn sol_get_rent_sysvar(addr: *mut u8) -> u64);
-define_syscall!(fn sol_get_last_restart_slot(addr: *mut u8) -> u64);
-define_syscall!(fn sol_get_epoch_rewards_sysvar(addr: *mut u8) -> u64);
+// these are deprecated - use sol_get_sysvar instead
+define_syscall!(#[deprecated(since = "4.1.0", note = "Use `sol_get_sysvar` with `Clock` sysvar address instead")] fn sol_get_clock_sysvar(addr: *mut u8) -> u64);
+define_syscall!(#[deprecated(since = "4.1.0", note = "Use `sol_get_sysvar` with `EpochSchedule` sysvar address instead")] fn sol_get_epoch_schedule_sysvar(addr: *mut u8) -> u64);
+define_syscall!(#[deprecated(since = "4.1.0", note = "Use `sol_get_sysvar` with `Rent` sysvar address instead")] fn sol_get_rent_sysvar(addr: *mut u8) -> u64);
+define_syscall!(#[deprecated(since = "4.1.0", note = "Use `sol_get_sysvar` with `LastRestartSlot` sysvar address instead")] fn sol_get_last_restart_slot(addr: *mut u8) -> u64);
+define_syscall!(#[deprecated(since = "4.1.0", note = "Use `sol_get_sysvar` with `EpochRewards` sysvar address instead")] fn sol_get_epoch_rewards_sysvar(addr: *mut u8) -> u64);
 
 // this cannot go through sol_get_sysvar but can be removed once no longer in use
 define_syscall!(fn sol_get_fees_sysvar(addr: *mut u8) -> u64);

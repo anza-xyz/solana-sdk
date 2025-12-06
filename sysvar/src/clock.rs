@@ -130,8 +130,64 @@ pub use {
 };
 
 impl Sysvar for Clock {
-    impl_sysvar_get!(sol_get_clock_sysvar);
+    impl_sysvar_get!(id());
 }
 
 #[cfg(feature = "bincode")]
 impl SysvarSerialize for Clock {}
+
+#[cfg(test)]
+mod tests {
+    use {super::*, crate::tests::to_bytes, serial_test::serial};
+
+    #[test]
+    #[cfg(feature = "bincode")]
+    fn test_clock_size_matches_bincode() {
+        // Prove that Clock's in-memory layout matches its bincode serialization.
+        let clock = Clock::default();
+        let in_memory_size = core::mem::size_of::<Clock>();
+        let bincode_size = bincode::serialized_size(&clock).unwrap() as usize;
+
+        assert_eq!(
+            in_memory_size, bincode_size,
+            "Clock in-memory size ({in_memory_size}) must match bincode size ({bincode_size})",
+        );
+    }
+
+    #[test]
+    #[serial]
+    fn test_clock_get_uses_sysvar_syscall() {
+        let expected = Clock {
+            slot: 1,
+            epoch_start_timestamp: 2,
+            epoch: 3,
+            leader_schedule_epoch: 4,
+            unix_timestamp: 5,
+        };
+
+        let data = to_bytes(&expected);
+        crate::tests::mock_get_sysvar_syscall(&data);
+
+        let got = Clock::get().unwrap();
+        assert_eq!(got, expected);
+    }
+
+    #[test]
+    #[serial]
+    fn test_clock_get_passes_correct_sysvar_id() {
+        let expected = Clock {
+            slot: 11,
+            epoch_start_timestamp: 22,
+            epoch: 33,
+            leader_schedule_epoch: 44,
+            unix_timestamp: 55,
+        };
+        let data = to_bytes(&expected);
+        let prev = crate::tests::mock_get_sysvar_syscall_with_id(&data, &id());
+
+        let got = Clock::get().unwrap();
+        assert_eq!(got, expected);
+
+        let _ = crate::program_stubs::set_syscall_stubs(prev);
+    }
+}
