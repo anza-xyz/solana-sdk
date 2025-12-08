@@ -164,8 +164,8 @@ impl VoteStateV4 {
 
         let variant = solana_serialize_utils::cursor::read_u32(&mut cursor)?;
         match variant {
-            // Variant 0 is uninitialized.
-            0 => Err(InstructionError::UninitializedAccount),
+            // Variant 0 is not a valid vote state.
+            0 => Err(InstructionError::InvalidAccountData),
             // V1_14_11
             1 => deserialize_vote_state_into_v4(
                 &mut cursor,
