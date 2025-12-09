@@ -26,7 +26,8 @@ pub use vote_state_v3::VoteStateV3;
 pub mod vote_state_v4;
 pub use vote_state_v4::VoteStateV4;
 mod vote_instruction_data;
-pub use vote_instruction_data::*;
+pub mod vote_state_v5;
+pub use {vote_instruction_data::*, vote_state_v5::VoteStateV5};
 #[cfg(any(target_os = "solana", feature = "bincode"))]
 pub(crate) mod vote_state_deserialize;
 
