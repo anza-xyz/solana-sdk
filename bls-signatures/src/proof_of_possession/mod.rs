@@ -140,4 +140,35 @@ mod tests {
             .verify_proof_of_possession(&proof_standard, Some(custom_payload))
             .unwrap());
     }
+
+
+    #[test]
+    fn test_proof_of_possesssion_replay_fails() {
+        let keypair = Keypair::new();
+        let payload1 = [65, 76, 80, 69, 78, 71, 76, 79, 87, 0, 0, 0, 8, 199, 236, 167, 63, 101, 177, 189, 115, 12, 120, 247, 4, 167, 122, 232, 178, 226, 21, 125, 215, 67, 140, 206, 22, 93, 47, 135, 135, 165, 117, 242, 49, 38, 146, 238, 128, 211, 251, 104, 45, 23, 90, 67, 143, 233, 208, 75, 209, 5, 124, 91, 233, 135, 108, 134, 185, 124, 28, 186, 170, 212, 189, 8, 15, 209, 84, 99, 90, 178, 203, 223, 243, 255, 191, 157, 131];
+        let payload2 = [65, 76, 80, 69, 78, 71, 76, 79, 87, 0, 0, 0, 5, 111, 0, 2, 23, 43, 141, 255, 79, 90, 50, 116, 14, 39, 25, 4, 215, 225, 136, 250, 142, 108, 237, 81, 206, 21, 6, 19, 159, 165, 117, 242, 49, 38, 146, 238, 128, 211, 251, 104, 45, 23, 90, 67, 143, 233, 208, 75, 209, 5, 124, 91, 233, 135, 108, 134, 185, 124, 28, 186, 170, 212, 189, 8, 15, 209, 84, 99, 90, 178, 203, 223, 243, 255, 191, 157, 131];
+        let proof = keypair.proof_of_possession(Some(&payload1));
+
+        assert!(keypair
+            .public
+            .verify_proof_of_possession(&proof, Some(&payload1))
+            .unwrap());
+        assert!(!keypair
+            .public
+            .verify_proof_of_possession(&proof, Some(&payload2))
+            .unwrap());
+
+        let bls_pubkey_compressed: PubkeyCompressed = keypair.public.try_into().unwrap();
+        let proof_of_possession = keypair.proof_of_possession(Some(&payload1));
+        let proof_of_possession: ProofOfPossession = proof_of_possession.into();
+        let proof_of_possession_compressed: ProofOfPossessionCompressed =
+            proof_of_possession.try_into().unwrap();
+
+        let bls_pubkey = Pubkey::try_from(bls_pubkey_compressed).unwrap();
+        let bls_proof_of_possession =
+            ProofOfPossession::try_from(proof_of_possession_compressed).unwrap();
+        assert!(bls_proof_of_possession
+            .verify(&bls_pubkey, Some(&payload2))
+            .is_err());
+    }
 }
