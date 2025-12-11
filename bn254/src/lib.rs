@@ -10,14 +10,19 @@ pub(crate) mod pairing;
 pub mod versioned {
     pub use crate::{
         addition::{
-            alt_bn128_versioned_g1_addition, VersionedG1Addition, ALT_BN128_G1_ADDITION_INPUT_SIZE,
+            alt_bn128_versioned_g1_addition, alt_bn128_versioned_g2_addition, VersionedG1Addition,
+            VersionedG2Addition, ALT_BN128_G1_ADDITION_INPUT_SIZE,
             ALT_BN128_G1_ADDITION_OUTPUT_SIZE, ALT_BN128_G1_ADD_BE, ALT_BN128_G1_ADD_LE,
-            ALT_BN128_G1_SUB_BE, ALT_BN128_G1_SUB_LE,
+            ALT_BN128_G1_SUB_BE, ALT_BN128_G1_SUB_LE, ALT_BN128_G2_ADDITION_INPUT_SIZE,
+            ALT_BN128_G2_ADDITION_OUTPUT_SIZE, ALT_BN128_G2_ADD_BE, ALT_BN128_G2_ADD_LE,
+            ALT_BN128_G2_SUB_BE, ALT_BN128_G2_SUB_LE,
         },
         multiplication::{
-            alt_bn128_versioned_g1_multiplication, VersionedG1Multiplication,
+            alt_bn128_versioned_g1_multiplication, alt_bn128_versioned_g2_multiplication,
+            VersionedG1Multiplication, VersionedG2Multiplication,
             ALT_BN128_G1_MULTIPLICATION_INPUT_SIZE, ALT_BN128_G1_MULTIPLICATION_OUTPUT_SIZE,
-            ALT_BN128_G1_MUL_BE, ALT_BN128_G1_MUL_LE,
+            ALT_BN128_G1_MUL_BE, ALT_BN128_G1_MUL_LE, ALT_BN128_G2_MULTIPLICATION_INPUT_SIZE,
+            ALT_BN128_G2_MULTIPLICATION_OUTPUT_SIZE, ALT_BN128_G2_MUL_BE, ALT_BN128_G2_MUL_LE,
         },
         pairing::{
             alt_bn128_versioned_pairing, VersionedPairing, ALT_BN128_PAIRING_BE,
@@ -63,15 +68,20 @@ pub mod prelude {
     };
     pub use crate::{
         addition::{
-            alt_bn128_g1_addition_be, alt_bn128_g1_addition_le, ALT_BN128_G1_ADDITION_INPUT_SIZE,
+            alt_bn128_g1_addition_be, alt_bn128_g1_addition_le, alt_bn128_g2_addition_be,
+            alt_bn128_g2_addition_le, ALT_BN128_G1_ADDITION_INPUT_SIZE,
             ALT_BN128_G1_ADDITION_OUTPUT_SIZE, ALT_BN128_G1_ADD_BE, ALT_BN128_G1_ADD_LE,
-            ALT_BN128_G1_SUB_BE, ALT_BN128_G1_SUB_LE,
+            ALT_BN128_G1_SUB_BE, ALT_BN128_G1_SUB_LE, ALT_BN128_G2_ADDITION_INPUT_SIZE,
+            ALT_BN128_G2_ADDITION_OUTPUT_SIZE, ALT_BN128_G2_ADD_BE, ALT_BN128_G2_ADD_LE,
+            ALT_BN128_G2_SUB_BE, ALT_BN128_G2_SUB_LE,
         },
         consts::*,
         multiplication::{
             alt_bn128_g1_multiplication_be, alt_bn128_g1_multiplication_le,
+            alt_bn128_g2_multiplication_be, alt_bn128_g2_multiplication_le,
             ALT_BN128_G1_MULTIPLICATION_INPUT_SIZE, ALT_BN128_G1_MULTIPLICATION_OUTPUT_SIZE,
-            ALT_BN128_G1_MUL_BE, ALT_BN128_G1_MUL_LE,
+            ALT_BN128_G1_MUL_BE, ALT_BN128_G1_MUL_LE, ALT_BN128_G2_MULTIPLICATION_INPUT_SIZE,
+            ALT_BN128_G2_MULTIPLICATION_OUTPUT_SIZE, ALT_BN128_G2_MUL_BE, ALT_BN128_G2_MUL_LE,
         },
         pairing::{
             alt_bn128_pairing_be, alt_bn128_pairing_le, ALT_BN128_PAIRING_BE,
@@ -338,6 +348,13 @@ mod target_arch {
     pub(crate) fn convert_endianness_64(bytes: &[u8]) -> Vec<u8> {
         bytes
             .chunks(32)
+            .flat_map(|b| b.iter().copied().rev().collect::<Vec<u8>>())
+            .collect::<Vec<u8>>()
+    }
+
+    pub(crate) fn convert_endianness_128(bytes: &[u8]) -> Vec<u8> {
+        bytes
+            .chunks(64)
             .flat_map(|b| b.iter().copied().rev().collect::<Vec<u8>>())
             .collect::<Vec<u8>>()
     }

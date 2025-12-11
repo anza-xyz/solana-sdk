@@ -4,7 +4,7 @@ use {
 };
 
 #[test]
-fn alt_bn128_addition_test() {
+fn alt_bn128_g1_addition_test() {
     let test_data = include_str!("data/addition_cases.json");
 
     #[derive(Deserialize)]
@@ -35,7 +35,38 @@ fn alt_bn128_addition_test() {
 }
 
 #[test]
-fn alt_bn128_multiplication_test() {
+fn alt_bn128_g2_addition_test() {
+    let test_data = include_str!("data/addition_g2_cases.json");
+
+    #[derive(Deserialize)]
+    #[serde(rename_all = "PascalCase")]
+    struct TestCase {
+        input: String,
+        expected: String,
+    }
+
+    let test_cases: Vec<TestCase> = serde_json::from_str(test_data).unwrap();
+
+    test_cases.iter().for_each(|test| {
+        let input = array_bytes::hex2bytes_unchecked(&test.input)
+            .try_into()
+            .unwrap();
+        let result = alt_bn128_g2_addition_be(&input);
+        assert!(result.is_ok());
+        let expected = array_bytes::hex2bytes_unchecked(&test.expected);
+        assert_eq!(result.unwrap(), expected);
+
+        // le test
+        let input_le = convert_endianness::<64, ALT_BN128_G2_ADDITION_INPUT_SIZE>(&input);
+        let result = alt_bn128_g2_addition_le(&input_le);
+        assert!(result.is_ok());
+        let expected_le = convert_endianness::<64, 128>(&expected.try_into().unwrap());
+        assert_eq!(result.unwrap(), expected_le);
+    });
+}
+
+#[test]
+fn alt_bn128_g1_multiplication_test() {
     let test_data = include_str!("data/multiplication_cases.json");
     #[derive(Deserialize)]
     #[serde(rename_all = "PascalCase")]
@@ -55,12 +86,52 @@ fn alt_bn128_multiplication_test() {
 
         // le test
         input.resize(ALT_BN128_G1_MULTIPLICATION_INPUT_SIZE, 0);
-        let input_le = convert_endianness::<32, ALT_BN128_G1_MULTIPLICATION_INPUT_SIZE>(
-            &input.try_into().unwrap(),
+        let p_le = convert_endianness::<32, ALT_BN128_G1_POINT_SIZE>(
+            &input[..ALT_BN128_G1_POINT_SIZE].try_into().unwrap(),
         );
+        let scalar_le = convert_endianness::<32, ALT_BN128_FIELD_SIZE>(
+            &input[ALT_BN128_G1_POINT_SIZE..].try_into().unwrap(),
+        );
+        let input_le = [&p_le[..], &scalar_le[..]].concat().try_into().unwrap();
         let result = alt_bn128_g1_multiplication_le(&input_le);
         assert!(result.is_ok());
         let expected_le = convert_endianness::<32, 64>(&expected.try_into().unwrap());
+        assert_eq!(result.unwrap(), expected_le);
+    });
+}
+
+#[test]
+fn alt_bn128_g2_multiplication_test() {
+    let test_data = include_str!("data/multiplication_g2_cases.json");
+    #[derive(Deserialize)]
+    #[serde(rename_all = "PascalCase")]
+    struct TestCase {
+        input: String,
+        expected: String,
+    }
+
+    let test_cases: Vec<TestCase> = serde_json::from_str(test_data).unwrap();
+
+    test_cases.iter().for_each(|test| {
+        let input = array_bytes::hex2bytes_unchecked(&test.input)
+            .try_into()
+            .unwrap();
+        let result = alt_bn128_g2_multiplication_be(&input);
+        assert!(result.is_ok());
+        let expected = array_bytes::hex2bytes_unchecked(&test.expected);
+        assert_eq!(result.unwrap(), expected);
+
+        // le test
+        let p_le = convert_endianness::<64, ALT_BN128_G2_POINT_SIZE>(
+            &input[..ALT_BN128_G2_POINT_SIZE].try_into().unwrap(),
+        );
+        let scalar_le = convert_endianness::<32, ALT_BN128_FIELD_SIZE>(
+            &input[ALT_BN128_G2_POINT_SIZE..].try_into().unwrap(),
+        );
+        let input_le = [&p_le[..], &scalar_le[..]].concat().try_into().unwrap();
+        let result = alt_bn128_g2_multiplication_le(&input_le);
+        assert!(result.is_ok());
+        let expected_le = convert_endianness::<64, 128>(&expected.try_into().unwrap());
         assert_eq!(result.unwrap(), expected_le);
     });
 }
