@@ -68,6 +68,73 @@ impl Signature {
 
 #[cfg(any(test, feature = "verify"))]
 impl Signature {
+    pub fn verify_batch_with_failure_dection<'a>(
+        sigs: impl IntoIterator<Item = &'a Self>,
+        pubkeys_bytes: impl IntoIterator<Item = &'a [u8]>,
+        messages_bytes: impl IntoIterator<Item = &'a [u8]>,
+    ) -> Vec<bool> {
+        let sigs_vec: Vec<&'a Self> = sigs.into_iter().collect();
+        let pubkeys_vec: Vec<&'a [u8]> = pubkeys_bytes.into_iter().collect();
+        let messages_vec: Vec<&'a [u8]> = messages_bytes.into_iter().collect();
+
+        debug_assert!(
+            sigs_vec.len() == pubkeys_vec.len() && sigs_vec.len() == messages_vec.len(),
+            "Mismatched lengths: signatures {}, pubkeys {}, messages {}",
+            sigs_vec.len(),
+            pubkeys_vec.len(),
+            messages_vec.len()
+        );
+
+        // First try batch verification.
+        match Self::verify_batch(
+            sigs_vec.iter().copied(),
+            pubkeys_vec.iter().copied(),
+            messages_vec.iter().copied(),
+        ) {
+            Ok(()) => alloc::vec![true; sigs_vec.len()],
+            Err(_e) => {
+                // Batch failed; fall back to per-signature verification.
+                sigs_vec
+                    .iter()
+                    .zip(pubkeys_vec.iter().zip(messages_vec.iter()))
+                    .map(|(sig, (pk, msg))| sig.verify(pk, msg))
+                    .collect()
+            }
+        }
+    }
+
+    pub fn verify_batch<'a>(
+        sigs: impl IntoIterator<Item = &'a Self>,
+        pubkeys_bytes: impl IntoIterator<Item = &'a [u8]>,
+        messages_bytes: impl IntoIterator<Item = &'a [u8]>,
+    ) -> Result<(), ed25519_dalek::SignatureError> {
+        let sigs_vec: Result<Vec<_>, ed25519_dalek::SignatureError> = sigs
+            .into_iter()
+            .map(|sig| ed25519_dalek::Signature::try_from(&sig.0[..]))
+            .collect();
+        let sigs_vec = sigs_vec?;
+
+        let pubkeys_vec: Result<Vec<_>, ed25519_dalek::SignatureError> = pubkeys_bytes
+            .into_iter()
+            .map(ed25519_dalek::VerifyingKey::try_from)
+            .collect();
+        let pubkeys_vec = pubkeys_vec?;
+
+        let messages_vec: Vec<&[u8]> = messages_bytes.into_iter().collect();
+
+        debug_assert!(
+            sigs_vec.len() == pubkeys_vec.len() && sigs_vec.len() == messages_vec.len(),
+            "Mismatched lengths: signatures {}, pubkeys {}, messages {}",
+            sigs_vec.len(),
+            pubkeys_vec.len(),
+            messages_vec.len()
+        );
+
+        // Delegate to dalek's batch verification.
+        // This requires ed25519-dalek/batch feature to be enabled.
+        ed25519_dalek::verify_batch(&messages_vec, &sigs_vec, &pubkeys_vec)
+    }
+
     pub(self) fn verify_verbose(
         &self,
         pubkey_bytes: &[u8],
@@ -75,7 +142,7 @@ impl Signature {
     ) -> Result<(), ed25519_dalek::SignatureError> {
         let publickey = ed25519_dalek::VerifyingKey::try_from(pubkey_bytes)?;
         let signature = self.0.as_slice().try_into()?;
-        publickey.verify_strict(message_bytes, &signature)
+        publickey.verify_heea(message_bytes, &signature)
     }
 
     pub fn verify(&self, pubkey_bytes: &[u8], message_bytes: &[u8]) -> bool {
@@ -184,6 +251,7 @@ impl FromStr for Signature {
 mod tests {
     use {
         super::*,
+        alloc::vec,
         serde_derive::{Deserialize, Serialize},
         solana_pubkey::Pubkey,
     };
@@ -204,7 +272,7 @@ mod tests {
         let pubkey = Pubkey::try_from(off_curve_bytes).unwrap();
         let signature = Signature::default();
         // Unfortunately, ed25519-dalek doesn't surface the internal error types that we'd ideally
-        // `source()` out of the `SignatureError` returned by `verify_strict()`.  So the best we
+        // `source()` out of the `SignatureError` returned by `verify_heea()`.  So the best we
         // can do is `is_err()` here.
         assert!(signature.verify_verbose(pubkey.as_ref(), &[0u8]).is_err());
     }
@@ -303,5 +371,181 @@ mod tests {
         );
         // Sanity check: ensure the pointer is the same.
         assert_eq!(signature.as_array().as_ptr(), signature.0.as_ptr());
+    }
+
+    #[test]
+    fn test_verify_batch_valid_signatures() {
+        use ed25519_dalek::SigningKey;
+
+        // Create test keypairs and messages
+        let signing_key1 = SigningKey::from_bytes(&[1u8; 32]);
+        let signing_key2 = SigningKey::from_bytes(&[2u8; 32]);
+        let signing_key3 = SigningKey::from_bytes(&[3u8; 32]);
+
+        let verifying_key1 = signing_key1.verifying_key();
+        let verifying_key2 = signing_key2.verifying_key();
+        let verifying_key3 = signing_key3.verifying_key();
+
+        let message1 = b"Hello, blockchain!";
+        let message2 = b"Hello, Solana";
+        let message3 = b"Hello, Anza";
+
+        // Sign messages
+        use ed25519_dalek::Signer;
+        let sig1 = signing_key1.sign(message1);
+        let sig2 = signing_key2.sign(message2);
+        let sig3 = signing_key3.sign(message3);
+
+        // Convert to Signature type
+        let signature1 = Signature::from(sig1.to_bytes());
+        let signature2 = Signature::from(sig2.to_bytes());
+        let signature3 = Signature::from(sig3.to_bytes());
+
+        // Verify batch with valid signatures
+        let sigs = vec![&signature1, &signature2, &signature3];
+        let pubkeys = vec![
+            verifying_key1.as_bytes() as &[u8],
+            verifying_key2.as_bytes() as &[u8],
+            verifying_key3.as_bytes() as &[u8],
+        ];
+        let messages = vec![message1 as &[u8], message2 as &[u8], message3 as &[u8]];
+
+        let result = Signature::verify_batch(sigs.clone(), pubkeys.clone(), messages.clone());
+        assert!(
+            result.is_ok(),
+            "Valid signatures should verify successfully"
+        );
+
+        let result = Signature::verify_batch_with_failure_dection(sigs, pubkeys, messages);
+        assert_eq!(result, vec![true, true, true], "All signatures valid");
+    }
+
+    #[test]
+    fn test_verify_batch_some_invalid_signature() {
+        use ed25519_dalek::SigningKey;
+
+        // Create test keypairs and messages
+        let signing_key1 = SigningKey::from_bytes(&[1u8; 32]);
+        let signing_key2 = SigningKey::from_bytes(&[2u8; 32]);
+
+        let verifying_key1 = signing_key1.verifying_key();
+        let _verifying_key2 = signing_key2.verifying_key();
+
+        let message1 = b"Hello, Solana";
+        let message2 = b"Hello, Anza";
+
+        // Sign messages
+        use ed25519_dalek::Signer;
+        let sig1 = signing_key1.sign(message1);
+        let sig2 = signing_key2.sign(message2);
+
+        let signature1 = Signature::from(sig1.to_bytes());
+        let signature2 = Signature::from(sig2.to_bytes());
+
+        // Use wrong public key for second signature
+        let sigs = vec![&signature1, &signature2];
+        let pubkeys = vec![
+            verifying_key1.as_bytes() as &[u8],
+            verifying_key1.as_bytes() as &[u8], 
+        ];
+        let messages = vec![message1 as &[u8], message2 as &[u8]];
+
+        let result = Signature::verify_batch(sigs.clone(), pubkeys.clone(), messages.clone());
+        assert!(
+            result.is_err(),
+            "Invalid signature should fail verification"
+        );
+
+        let result = Signature::verify_batch_with_failure_dection(sigs, pubkeys, messages);
+        assert!(
+            result == vec![true, false],
+            "First signature valid, second invalid"
+        );
+    }
+
+    #[test]
+    fn test_verify_batch_all_invalid_signature() {
+        use ed25519_dalek::SigningKey;
+
+        // Create test keypairs and messages
+        let signing_key1 = SigningKey::from_bytes(&[1u8; 32]);
+        let signing_key2 = SigningKey::from_bytes(&[2u8; 32]);
+
+        let verifying_key1 = signing_key1.verifying_key();
+        let verifying_key2 = signing_key2.verifying_key();
+
+        let message1 = b"Hello, Solana";
+        let message2 = b"Hello, Anza";
+
+        // Sign messages
+        use ed25519_dalek::Signer;
+        let sig1 = signing_key1.sign(message1);
+        let sig2 = signing_key2.sign(message2);
+
+        let signature1 = Signature::from(sig1.to_bytes());
+        let signature2 = Signature::from(sig2.to_bytes());
+
+        // Use wrong public key for second signature
+        let sigs = vec![&signature1, &signature2];
+        let pubkeys = vec![
+            verifying_key2.as_bytes() as &[u8],
+            verifying_key1.as_bytes() as &[u8], 
+        ];
+        let messages = vec![message1 as &[u8], message2 as &[u8]];
+
+        let result = Signature::verify_batch(sigs.clone(), pubkeys.clone(), messages.clone());
+        assert!(
+            result.is_err(),
+            "Invalid signature should fail verification"
+        );
+
+        let result = Signature::verify_batch_with_failure_dection(sigs, pubkeys, messages);
+        assert!(
+            result == vec![false, false],
+            "First signature valid, second invalid"
+        );
+    }
+
+    #[test]
+    fn test_verify_batch_empty() {
+        let sigs: Vec<&Signature> = vec![];
+        let pubkeys: Vec<&[u8]> = vec![];
+        let messages: Vec<&[u8]> = vec![];
+
+        let result = Signature::verify_batch(sigs, pubkeys, messages);
+        assert!(result.is_ok(), "Empty batch should verify successfully");
+
+        let result = Signature::verify_batch_with_failure_dection(vec![], vec![], vec![]);
+        assert!(
+            result.is_empty(),
+            "Empty batch should return empty result vector"
+        );
+    }
+
+    #[test]
+    fn test_verify_batch_single_signature() {
+        use ed25519_dalek::SigningKey;
+
+        let signing_key = SigningKey::from_bytes(&[42u8; 32]);
+        let verifying_key = signing_key.verifying_key();
+        let message = b"Single message test";
+
+        use ed25519_dalek::Signer;
+        let sig = signing_key.sign(message);
+        let signature = Signature::from(sig.to_bytes());
+
+        let sigs = vec![&signature];
+        let pubkeys = vec![verifying_key.as_bytes() as &[u8]];
+        let messages = vec![message as &[u8]];
+
+        let result = Signature::verify_batch(sigs.clone(), pubkeys.clone(), messages.clone());
+        assert!(result.is_ok(), "Single valid signature should verify");
+
+        let result = Signature::verify_batch_with_failure_dection(sigs, pubkeys, messages);
+        assert_eq!(
+            result,
+            vec![true],
+            "Single valid signature should be detected as valid"
+        );
     }
 }
