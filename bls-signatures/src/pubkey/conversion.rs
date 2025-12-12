@@ -1,43 +1,24 @@
 #[cfg(not(target_os = "solana"))]
 use {
-    crate::{
-        error::BlsError,
-        pubkey::{
-            bytes::{AsPubkey, Pubkey, PubkeyCompressed, BLS_PUBLIC_KEY_AFFINE_SIZE},
-            points::{AsPubkeyProjective, PubkeyProjective},
+    crate::pubkey::{
+        bytes::{
+            Pubkey, PubkeyCompressed, BLS_PUBLIC_KEY_AFFINE_SIZE, BLS_PUBLIC_KEY_COMPRESSED_SIZE,
         },
+        points::{AsPubkeyAffine, AsPubkeyProjective, PubkeyAffine, PubkeyProjective},
     },
-    blstrs::G1Affine,
+    blstrs::{G1Affine, G1Projective},
 };
 
 #[cfg(not(target_os = "solana"))]
 impl_bls_conversions!(
     PubkeyProjective,
+    PubkeyAffine,
     Pubkey,
     PubkeyCompressed,
     G1Affine,
+    G1Projective,
     AsPubkeyProjective,
-    AsPubkey
+    AsPubkeyAffine,
+    BLS_PUBLIC_KEY_COMPRESSED_SIZE,
+    BLS_PUBLIC_KEY_AFFINE_SIZE
 );
-
-#[cfg(not(target_os = "solana"))]
-impl TryFrom<&[u8]> for PubkeyProjective {
-    type Error = BlsError;
-    fn try_from(bytes: &[u8]) -> Result<Self, Self::Error> {
-        if bytes.len() != BLS_PUBLIC_KEY_AFFINE_SIZE {
-            return Err(BlsError::ParseFromBytes);
-        }
-        // unwrap safe due to the length check above
-        let public_affine = Pubkey(bytes.try_into().unwrap());
-
-        public_affine.try_into()
-    }
-}
-
-#[cfg(not(target_os = "solana"))]
-impl From<&PubkeyProjective> for [u8; BLS_PUBLIC_KEY_AFFINE_SIZE] {
-    fn from(pubkey: &PubkeyProjective) -> Self {
-        let pubkey_affine: Pubkey = (*pubkey).into();
-        pubkey_affine.0
-    }
-}

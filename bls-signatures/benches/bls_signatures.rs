@@ -32,10 +32,12 @@ fn bench_aggregate(c: &mut Criterion) {
     for num_validators in [64, 128, 256, 512, 1024, 2048].iter() {
         let message = b"test message";
         let keypairs: Vec<Keypair> = (0..*num_validators).map(|_| Keypair::new()).collect();
+
         let pubkeys: Vec<PubkeyProjective> = keypairs
             .iter()
-            .map(|kp| PubkeyProjective::try_from(&kp.public).unwrap())
+            .map(|kp| PubkeyProjective::from(&kp.public))
             .collect();
+
         let signatures: Vec<SignatureProjective> =
             keypairs.iter().map(|kp| kp.sign(message)).collect();
 
@@ -45,26 +47,44 @@ fn bench_aggregate(c: &mut Criterion) {
         });
 
         #[cfg(feature = "parallel")]
-        group.bench_function(
-            format!("{num_validators} parallel signature aggregation"),
-            |b| {
-                b.iter(|| black_box(SignatureProjective::par_aggregate(&signature_refs)));
-            },
-        );
+        {
+            // Create references for parallel benchmark
+            let signature_refs: Vec<&SignatureProjective> = signatures.iter().collect();
+
+            group.bench_function(
+                format!("{num_validators} parallel signature aggregation"),
+                |b| {
+                    use rayon::prelude::*;
+                    b.iter(|| {
+                        black_box(SignatureProjective::par_aggregate(
+                            signature_refs.par_iter().cloned(),
+                        ))
+                    });
+                },
+            );
+        }
 
         // Benchmark for aggregating multiple public keys
         group.bench_function(format!("{num_validators} pubkey aggregation"), |b| {
             b.iter(|| black_box(PubkeyProjective::aggregate(pubkeys.iter())));
         });
 
-        // Benchmark for aggregate verify
         #[cfg(feature = "parallel")]
-        group.bench_function(
-            format!("{num_validators} parallel pubkey aggregation"),
-            |b| {
-                b.iter(|| black_box(PubkeyProjective::par_aggregate(&pubkey_refs)));
-            },
-        );
+        {
+            let pubkey_refs: Vec<&PubkeyProjective> = pubkeys.iter().collect();
+
+            group.bench_function(
+                format!("{num_validators} parallel pubkey aggregation"),
+                |b| {
+                    use rayon::prelude::*;
+                    b.iter(|| {
+                        black_box(PubkeyProjective::par_aggregate(
+                            pubkey_refs.par_iter().cloned(),
+                        ))
+                    });
+                },
+            );
+        }
 
         group.bench_function(
             format!("{num_validators} sequential aggregate verification"),
@@ -89,12 +109,8 @@ fn bench_aggregate(c: &mut Criterion) {
             |b| {
                 b.iter(|| {
                     let verification_result = black_box(
-                        SignatureProjective::par_verify_aggregate(
-                            &pubkey_refs,
-                            &signature_refs,
-                            message,
-                        )
-                        .unwrap(),
+                        SignatureProjective::par_verify_aggregate(&pubkeys, &signatures, message)
+                            .unwrap(),
                     );
                     assert!(verification_result);
                 });
@@ -131,7 +147,7 @@ fn bench_batch_verification(c: &mut Criterion) {
 
     for num_validators in [64, 128, 256, 512, 1024, 2048].iter() {
         let keypairs: Vec<Keypair> = (0..*num_validators).map(|_| Keypair::new()).collect();
-        let pubkeys: Vec<Pubkey> = keypairs.iter().map(|kp| kp.public).collect();
+        let pubkeys: Vec<Pubkey> = keypairs.iter().map(|kp| kp.public.into()).collect();
 
         // Create a unique message for each validator
         let messages: Vec<Vec<u8>> = (0..*num_validators)
@@ -163,22 +179,26 @@ fn bench_batch_verification(c: &mut Criterion) {
         );
 
         #[cfg(feature = "parallel")]
-        group.bench_function(
-            format!("{num_validators} parallel batch verification"),
-            |b| {
-                b.iter(|| {
-                    let verification_result = black_box(
-                        SignatureProjective::par_verify_distinct(
-                            &pubkey_refs,
-                            &signature_refs,
-                            &message_refs,
-                        )
-                        .unwrap(),
-                    );
-                    assert!(verification_result);
-                });
-            },
-        );
+        {
+            let message_refs: Vec<&[u8]> = messages.iter().map(|v| v.as_slice()).collect();
+
+            group.bench_function(
+                format!("{num_validators} parallel batch verification"),
+                |b| {
+                    b.iter(|| {
+                        let verification_result = black_box(
+                            SignatureProjective::par_verify_distinct(
+                                &pubkeys,
+                                &signatures,
+                                &message_refs,
+                            )
+                            .unwrap(),
+                        );
+                        assert!(verification_result);
+                    });
+                },
+            );
+        }
     }
     group.finish()
 }

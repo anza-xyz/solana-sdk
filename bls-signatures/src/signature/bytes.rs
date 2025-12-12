@@ -1,5 +1,3 @@
-#[cfg(not(target_os = "solana"))]
-use crate::error::BlsError;
 #[cfg(feature = "bytemuck")]
 use bytemuck::{Pod, PodInOption, Zeroable, ZeroableInOption};
 use {
@@ -23,28 +21,6 @@ pub const BLS_SIGNATURE_AFFINE_SIZE: usize = 192;
 
 /// Size of a BLS signature in an affine point representation in base64
 pub const BLS_SIGNATURE_AFFINE_BASE64_SIZE: usize = 256;
-
-/// A trait for types that can be converted into a `Signature` (affine/uncompressed bytes).
-#[cfg(not(target_os = "solana"))]
-pub trait AsSignature {
-    /// Attempt to convert the type into a `Signature`.
-    fn try_as_affine(&self) -> Result<Signature, BlsError>;
-}
-
-#[cfg(not(target_os = "solana"))]
-impl AsSignature for [u8; BLS_SIGNATURE_COMPRESSED_SIZE] {
-    fn try_as_affine(&self) -> Result<Signature, BlsError> {
-        let compressed = SignatureCompressed(*self);
-        Signature::try_from(compressed)
-    }
-}
-
-#[cfg(not(target_os = "solana"))]
-impl AsSignature for [u8; BLS_SIGNATURE_AFFINE_SIZE] {
-    fn try_as_affine(&self) -> Result<Signature, BlsError> {
-        Ok(Signature(*self))
-    }
-}
 
 /// A serialized BLS signature in a compressed point representation
 #[cfg_attr(feature = "frozen-abi", derive(solana_frozen_abi_macro::AbiExample))]

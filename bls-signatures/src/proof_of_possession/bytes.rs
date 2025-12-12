@@ -1,5 +1,3 @@
-#[cfg(not(target_os = "solana"))]
-use crate::error::BlsError;
 #[cfg(feature = "bytemuck")]
 use bytemuck::{Pod, PodInOption, Zeroable, ZeroableInOption};
 use {
@@ -23,28 +21,6 @@ pub const BLS_PROOF_OF_POSSESSION_AFFINE_SIZE: usize = 192;
 
 /// Size of a BLS proof of possession in an affine point representation in base64
 pub const BLS_PROOF_OF_POSSESSION_AFFINE_BASE64_SIZE: usize = 256;
-
-/// A trait for types that can be converted into a `ProofOfPossession` (affine).
-#[cfg(not(target_os = "solana"))]
-pub trait AsProofOfPossession {
-    /// Attempt to convert the type into a `ProofOfPossession`.
-    fn try_as_affine(&self) -> Result<ProofOfPossession, BlsError>;
-}
-
-#[cfg(not(target_os = "solana"))]
-impl AsProofOfPossession for [u8; BLS_PROOF_OF_POSSESSION_COMPRESSED_SIZE] {
-    fn try_as_affine(&self) -> Result<ProofOfPossession, BlsError> {
-        let compressed = ProofOfPossessionCompressed(*self);
-        ProofOfPossession::try_from(compressed)
-    }
-}
-
-#[cfg(not(target_os = "solana"))]
-impl AsProofOfPossession for [u8; BLS_PROOF_OF_POSSESSION_AFFINE_SIZE] {
-    fn try_as_affine(&self) -> Result<ProofOfPossession, BlsError> {
-        Ok(ProofOfPossession(*self))
-    }
-}
 
 /// A serialized BLS proof of possession in a compressed point representation.
 #[cfg_attr(feature = "frozen-abi", derive(solana_frozen_abi_macro::AbiExample))]

@@ -7,9 +7,9 @@ pub use bytes::{
     BLS_SIGNATURE_COMPRESSED_BASE64_SIZE, BLS_SIGNATURE_COMPRESSED_SIZE,
 };
 #[cfg(not(target_os = "solana"))]
-pub use {
-    bytes::AsSignature,
-    points::{AsSignatureProjective, SignatureProjective, VerifiableSignature},
+pub use points::{
+    AsSignatureAffine, AsSignatureProjective, SignatureAffine, SignatureProjective,
+    VerifiableSignature,
 };
 
 #[cfg(test)]
@@ -22,54 +22,83 @@ mod tests {
             error::BlsError,
             keypair::Keypair,
             pubkey::{
-                AsPubkeyProjective, Pubkey, PubkeyCompressed, PubkeyProjective, VerifiablePubkey,
+                AsPubkeyProjective, Pubkey, PubkeyAffine, PubkeyCompressed, PubkeyProjective,
+                VerifiablePubkey,
             },
         },
         core::{iter::empty, str::FromStr},
         std::{string::ToString, vec::Vec},
     };
-
     #[test]
     fn test_signature_verification() {
         let keypair = Keypair::new();
         let test_message = b"test message";
+
         let signature_projective = keypair.sign(test_message);
 
-        let pubkey_projective: PubkeyProjective = (&keypair.public).try_into().unwrap();
-        let pubkey_affine: Pubkey = pubkey_projective.into();
-        let pubkey_compressed: PubkeyCompressed = pubkey_affine.try_into().unwrap();
+        let pubkey_affine: PubkeyAffine = keypair.public;
+        let pubkey_projective: PubkeyProjective = pubkey_affine.into();
+        let pubkey_uncompressed: Pubkey = pubkey_affine.into(); // [u8; 96]
+        let pubkey_compressed: PubkeyCompressed = pubkey_affine.into(); // [u8; 48]
 
-        let signature_affine: Signature = signature_projective.into();
-        let signature_compressed: SignatureCompressed = signature_affine.try_into().unwrap();
+        let signature_affine: SignatureAffine = signature_projective.into();
+        let signature_uncompressed: Signature = signature_affine.into(); // [u8; 192]
+        let signature_compressed: SignatureCompressed = signature_affine.into(); // [u8; 96]
 
-        assert!(signature_projective
-            .verify(&pubkey_projective, test_message)
+        // Verify with PubkeyProjective
+        assert!(pubkey_projective
+            .verify_signature(&signature_projective, test_message)
             .unwrap());
-        assert!(signature_affine
-            .verify(&pubkey_projective, test_message)
+        assert!(pubkey_projective
+            .verify_signature(&signature_affine, test_message)
             .unwrap());
-        assert!(signature_compressed
-            .verify(&pubkey_projective, test_message)
+        assert!(pubkey_projective
+            .verify_signature(&signature_uncompressed, test_message)
             .unwrap());
-
-        assert!(signature_projective
-            .verify(&pubkey_affine, test_message)
-            .unwrap());
-        assert!(signature_affine
-            .verify(&pubkey_affine, test_message)
-            .unwrap());
-        assert!(signature_compressed
-            .verify(&pubkey_affine, test_message)
+        assert!(pubkey_projective
+            .verify_signature(&signature_compressed, test_message)
             .unwrap());
 
-        assert!(signature_projective
-            .verify(&pubkey_compressed, test_message)
+        // Verify with PubkeyAffine
+        assert!(pubkey_affine
+            .verify_signature(&signature_projective, test_message)
             .unwrap());
-        assert!(signature_affine
-            .verify(&pubkey_compressed, test_message)
+        assert!(pubkey_affine
+            .verify_signature(&signature_affine, test_message)
             .unwrap());
-        assert!(signature_compressed
-            .verify(&pubkey_compressed, test_message)
+        assert!(pubkey_affine
+            .verify_signature(&signature_uncompressed, test_message)
+            .unwrap());
+        assert!(pubkey_affine
+            .verify_signature(&signature_compressed, test_message)
+            .unwrap());
+
+        // Verify with Pubkey (Uncompressed Bytes)
+        assert!(pubkey_uncompressed
+            .verify_signature(&signature_projective, test_message)
+            .unwrap());
+        assert!(pubkey_uncompressed
+            .verify_signature(&signature_affine, test_message)
+            .unwrap());
+        assert!(pubkey_uncompressed
+            .verify_signature(&signature_uncompressed, test_message)
+            .unwrap());
+        assert!(pubkey_uncompressed
+            .verify_signature(&signature_compressed, test_message)
+            .unwrap());
+
+        // Verify with PubkeyCompressed (Compressed Bytes)
+        assert!(pubkey_compressed
+            .verify_signature(&signature_projective, test_message)
+            .unwrap());
+        assert!(pubkey_compressed
+            .verify_signature(&signature_affine, test_message)
+            .unwrap());
+        assert!(pubkey_compressed
+            .verify_signature(&signature_uncompressed, test_message)
+            .unwrap());
+        assert!(pubkey_compressed
+            .verify_signature(&signature_compressed, test_message)
             .unwrap());
     }
 
@@ -82,37 +111,32 @@ mod tests {
         let test_message = b"test message";
         let keypair1 = Keypair::new();
         let signature1 = keypair1.sign(test_message);
-        let signature1_affine: Signature = signature1.into();
+        let signature1_affine: SignatureAffine = signature1.into();
 
         let aggregate_signature =
             SignatureProjective::aggregate([&signature0, &signature1].into_iter()).unwrap();
-
         let mut aggregate_signature_with = signature0;
         aggregate_signature_with
             .aggregate_with([&signature1_affine].into_iter())
             .unwrap();
-
         assert_eq!(aggregate_signature, aggregate_signature_with);
     }
 
     #[test]
     fn test_verify_aggregate() {
         let test_message = b"test message";
-
         let keypair0 = Keypair::new();
         let signature0 = keypair0.sign(test_message);
         assert!(keypair0
             .public
             .verify_signature(&signature0, test_message)
             .unwrap());
-
         let keypair1 = Keypair::new();
         let signature1 = keypair1.secret.sign(test_message);
         assert!(keypair1
             .public
             .verify_signature(&signature1, test_message)
             .unwrap());
-
         // basic case
         assert!(SignatureProjective::verify_aggregate(
             [&keypair0.public, &keypair1.public].into_iter(),
@@ -120,19 +144,17 @@ mod tests {
             test_message,
         )
         .unwrap());
-
         // verify with affine and compressed types
-        let pubkey0_affine: Pubkey = keypair0.public;
-        let pubkey1_affine: Pubkey = keypair1.public;
-        let signature0_affine: Signature = signature0.into();
-        let signature1_affine: Signature = signature1.into();
+        let pubkey0_affine: PubkeyAffine = keypair0.public;
+        let pubkey1_affine: PubkeyAffine = keypair1.public;
+        let signature0_affine: SignatureAffine = signature0.into();
+        let signature1_affine: SignatureAffine = signature1.into();
         assert!(SignatureProjective::verify_aggregate(
             [&pubkey0_affine, &pubkey1_affine].into_iter(),
             [&signature0_affine, &signature1_affine].into_iter(),
             test_message,
         )
         .unwrap());
-
         // pre-aggregate the signatures
         let aggregate_signature =
             SignatureProjective::aggregate([&signature0, &signature1].into_iter()).unwrap();
@@ -142,7 +164,6 @@ mod tests {
             test_message,
         )
         .unwrap());
-
         // pre-aggregate the public keys
         let aggregate_pubkey =
             PubkeyProjective::aggregate([&keypair0.public, &keypair1.public].into_iter()).unwrap();
@@ -192,7 +213,11 @@ mod tests {
         let signature2: Signature = signature2_proj.into();
 
         // Success cases
-        let pubkeys = [keypair0.public, keypair1.public, keypair2.public];
+        let pubkeys = [
+            Pubkey::from(keypair0.public),
+            Pubkey::from(keypair1.public),
+            Pubkey::from(keypair2.public),
+        ];
         let messages: Vec<&[u8]> = std::vec![message0, message1, message2];
         let signatures = std::vec![signature0, signature1, signature2];
 
@@ -221,7 +246,11 @@ mod tests {
         .unwrap());
 
         let wrong_keypair = Keypair::new();
-        let wrong_pubkeys = [keypair0.public, wrong_keypair.public, keypair2.public];
+        let wrong_pubkeys = [
+            Pubkey::from(keypair0.public),
+            Pubkey::from(wrong_keypair.public),
+            Pubkey::from(keypair2.public),
+        ];
         assert!(!SignatureProjective::verify_distinct(
             wrong_pubkeys.iter(),
             signatures.iter(),
@@ -262,7 +291,6 @@ mod tests {
     #[test]
     fn test_verify_aggregate_dyn() {
         let test_message = b"test message for dyn verify";
-
         let keypair0 = Keypair::new();
         let keypair1 = Keypair::new();
         let keypair2 = Keypair::new();
@@ -271,20 +299,18 @@ mod tests {
         let signature1_projective = keypair1.sign(test_message);
         let signature2_projective = keypair2.sign(test_message);
 
-        let pubkey0 = PubkeyProjective::try_from(keypair0.public).unwrap(); // Projective
-        let pubkey1_affine: Pubkey = keypair1.public; // Affine
-        let pubkey2_compressed: PubkeyCompressed = keypair2.public.try_into().unwrap(); // Compressed
+        let pubkey0: PubkeyProjective = keypair0.public.into(); // Projective
+        let pubkey1_affine: PubkeyAffine = keypair1.public; // Affine
+        let pubkey2_compressed: PubkeyCompressed = keypair2.public.into(); // Compressed
 
         let signature0 = signature0_projective; // Projective
-        let signature1_affine: Signature = signature1_projective.into(); // Affine
-        let signature2_compressed: SignatureCompressed =
-            Signature::from(signature2_projective).try_into().unwrap(); // Compressed
+        let signature1_affine: SignatureAffine = signature1_projective.into(); // Affine
+        let signature2_compressed: SignatureCompressed = signature2_projective.into(); // Compressed
 
         let dyn_pubkeys: Vec<&dyn AsPubkeyProjective> =
             std::vec![&pubkey0, &pubkey1_affine, &pubkey2_compressed];
         let dyn_signatures: Vec<&dyn AsSignatureProjective> =
             std::vec![&signature0, &signature1_affine, &signature2_compressed];
-
         assert!(SignatureProjective::verify_aggregate(
             dyn_pubkeys.into_iter(),
             dyn_signatures.into_iter(),
@@ -307,10 +333,10 @@ mod tests {
 
     #[test]
     fn signature_from_str() {
-        let signature_affine = Signature([1; BLS_SIGNATURE_AFFINE_SIZE]);
-        let signature_affine_string = signature_affine.to_string();
+        let signature_affine_bytes = Signature([1; BLS_SIGNATURE_AFFINE_SIZE]);
+        let signature_affine_string = signature_affine_bytes.to_string();
         let signature_affine_from_string = Signature::from_str(&signature_affine_string).unwrap();
-        assert_eq!(signature_affine, signature_affine_from_string);
+        assert_eq!(signature_affine_bytes, signature_affine_from_string);
 
         let signature_compressed = SignatureCompressed([1; BLS_SIGNATURE_COMPRESSED_SIZE]);
         let signature_compressed_string = signature_compressed.to_string();
@@ -356,7 +382,7 @@ mod tests {
         let keypairs: Vec<_> = (0..5).map(|_| Keypair::new()).collect();
         let pubkeys: Vec<_> = keypairs
             .iter()
-            .map(|kp| PubkeyProjective::try_from(&kp.public).unwrap())
+            .map(|kp| PubkeyProjective::from(&kp.public))
             .collect();
         let signatures: Vec<_> = keypairs.iter().map(|kp| kp.sign(message)).collect();
 
@@ -398,7 +424,12 @@ mod tests {
         let signature1: Signature = signature1_proj.into();
         let signature2: Signature = signature2_proj.into();
 
-        let pubkeys = [keypair0.public, keypair1.public, keypair2.public];
+        // Use Pubkey (bytes) to match par_verify_distinct signature
+        let pubkeys = [
+            Pubkey::from(keypair0.public),
+            Pubkey::from(keypair1.public),
+            Pubkey::from(keypair2.public),
+        ];
         let messages_refs: Vec<&[u8]> = std::vec![message0, message1, message2];
         let signatures = [signature0, signature1, signature2];
 
@@ -414,10 +445,8 @@ mod tests {
         let message = b"byte interop test";
         let signature_projective = keypair.sign(message);
 
-        let pubkey_bytes: [u8; 48] = PubkeyCompressed::try_from(keypair.public).unwrap().0;
-
-        let signature_affine = Signature::from(signature_projective);
-        let signature_bytes: [u8; 96] = SignatureCompressed::try_from(signature_affine).unwrap().0;
+        let pubkey_bytes = keypair.public.to_bytes_compressed();
+        let signature_bytes = signature_projective.to_bytes_compressed();
 
         assert!(pubkey_bytes
             .verify_signature(&signature_bytes, message)

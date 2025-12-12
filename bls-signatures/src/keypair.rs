@@ -1,9 +1,9 @@
 use crate::{
     error::BlsError,
     proof_of_possession::ProofOfPossessionProjective,
-    pubkey::{Pubkey, PubkeyProjective, VerifiablePubkey, BLS_PUBLIC_KEY_AFFINE_SIZE},
+    pubkey::{PubkeyAffine, PubkeyProjective, VerifiablePubkey, BLS_PUBLIC_KEY_AFFINE_SIZE},
     secret_key::{SecretKey, BLS_SECRET_KEY_SIZE},
-    signature::{AsSignature, SignatureProjective},
+    signature::{AsSignatureAffine, SignatureProjective},
 };
 #[cfg(feature = "solana-signer-derive")]
 use solana_signer::Signer;
@@ -25,7 +25,7 @@ pub const BLS_KEYPAIR_SIZE: usize = BLS_SECRET_KEY_SIZE + BLS_PUBLIC_KEY_AFFINE_
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Keypair {
     pub secret: SecretKey,
-    pub public: Pubkey,
+    pub public: PubkeyAffine,
 }
 
 impl Keypair {
@@ -63,7 +63,11 @@ impl Keypair {
     }
 
     /// Verify a signature against a message and a public key
-    pub fn verify<S: AsSignature>(&self, signature: &S, message: &[u8]) -> Result<bool, BlsError> {
+    pub fn verify<S: AsSignatureAffine>(
+        &self,
+        signature: &S,
+        message: &[u8],
+    ) -> Result<bool, BlsError> {
         self.public.verify_signature(signature, message)
     }
 }
@@ -74,14 +78,14 @@ impl TryFrom<&[u8]> for Keypair {
         if bytes.len() != BLS_KEYPAIR_SIZE {
             return Err(BlsError::ParseFromBytes);
         }
-        Ok(Self {
-            secret: SecretKey::try_from(&bytes[..BLS_SECRET_KEY_SIZE])?,
-            public: Pubkey(
-                bytes[BLS_SECRET_KEY_SIZE..]
-                    .try_into()
-                    .map_err(|_| BlsError::ParseFromBytes)?,
-            ),
-        })
+
+        let secret = SecretKey::try_from(&bytes[..BLS_SECRET_KEY_SIZE])?;
+        let pubkey_bytes: &[u8; BLS_PUBLIC_KEY_AFFINE_SIZE] = bytes[BLS_SECRET_KEY_SIZE..]
+            .try_into()
+            .map_err(|_| BlsError::ParseFromBytes)?;
+        let public = PubkeyAffine::try_from(pubkey_bytes)?;
+
+        Ok(Self { secret, public })
     }
 }
 
@@ -90,7 +94,7 @@ impl From<&Keypair> for [u8; BLS_KEYPAIR_SIZE] {
         let mut bytes = [0u8; BLS_KEYPAIR_SIZE];
         bytes[..BLS_SECRET_KEY_SIZE]
             .copy_from_slice(&Into::<[u8; BLS_SECRET_KEY_SIZE]>::into(&keypair.secret));
-        bytes[BLS_SECRET_KEY_SIZE..].copy_from_slice(&keypair.public.0);
+        bytes[BLS_SECRET_KEY_SIZE..].copy_from_slice(&keypair.public.to_bytes_uncompressed());
         bytes
     }
 }
@@ -153,7 +157,7 @@ mod tests {
     fn test_keygen_derive() {
         let ikm = b"test_ikm";
         let secret = SecretKey::derive(ikm).unwrap();
-        let public: Pubkey = PubkeyProjective::from_secret(&secret).into();
+        let public: PubkeyAffine = PubkeyProjective::from_secret(&secret).into();
         let keypair = Keypair::derive(ikm).unwrap();
         assert_eq!(keypair.secret, secret);
         assert_eq!(keypair.public, public);
@@ -164,7 +168,7 @@ mod tests {
     fn test_keygen_derive_from_signer() {
         let solana_keypair = solana_keypair::Keypair::new();
         let secret = SecretKey::derive_from_signer(&solana_keypair, b"alpenglow-vote").unwrap();
-        let public: Pubkey = PubkeyProjective::from_secret(&secret).into();
+        let public: PubkeyAffine = PubkeyProjective::from_secret(&secret).into();
         let keypair = Keypair::derive_from_signer(&solana_keypair, b"alpenglow-vote").unwrap();
 
         assert_eq!(keypair.secret, secret);

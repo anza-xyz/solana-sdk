@@ -6,7 +6,7 @@ use blstrs::G1Projective;
 use {
     crate::{
         error::BlsError,
-        hash::hash_message_to_point,
+        hash::hash_signature_message_to_point,
         pubkey::{AsPubkeyProjective, Pubkey, PubkeyProjective, VerifiablePubkey},
         signature::bytes::Signature,
     },
@@ -26,12 +26,10 @@ pub trait AsSignatureProjective {
 
 /// A trait that provides verification methods to any convertible signature type.
 #[cfg(not(target_os = "solana"))]
-pub trait VerifiableSignature: AsSignatureProjective {
+pub trait VerifiableSignature: AsSignatureAffine + Sized {
     /// Verify the signature against any convertible public key type and a message.
     fn verify<P: VerifiablePubkey>(&self, pubkey: &P, message: &[u8]) -> Result<bool, BlsError> {
-        // The logic is defined once here.
-        let signature_projective = self.try_as_projective()?;
-        pubkey.verify_signature(&signature_projective, message)
+        pubkey.verify_signature(self, message)
     }
 }
 
@@ -134,7 +132,7 @@ impl SignatureProjective {
 
         let mut prepared_hashes = alloc::vec::Vec::with_capacity(messages.len());
         for message in messages {
-            let hashed_message: G2Affine = hash_message_to_point(message).into();
+            let hashed_message: G2Affine = hash_signature_message_to_point(message).into();
             prepared_hashes.push(G2Prepared::from(hashed_message));
         }
 
@@ -261,7 +259,8 @@ impl SignatureProjective {
                     messages
                         .par_iter()
                         .map(|msg| {
-                            let hashed_message: G2Affine = hash_message_to_point(msg).into();
+                            let hashed_message: G2Affine =
+                                hash_signature_message_to_point(msg).into();
                             Ok::<_, BlsError>(G2Prepared::from(hashed_message))
                         })
                         .collect()
@@ -297,4 +296,17 @@ impl SignatureProjective {
 }
 
 #[cfg(not(target_os = "solana"))]
-impl<T: AsSignatureProjective> VerifiableSignature for T {}
+impl<T: AsSignatureAffine> VerifiableSignature for T {}
+
+/// A trait for types that can be converted into a `SignatureAffine`.
+#[cfg(not(target_os = "solana"))]
+pub trait AsSignatureAffine {
+    /// Attempt to convert the type into a `SignatureAffine`.
+    fn try_as_affine(&self) -> Result<SignatureAffine, BlsError>;
+}
+
+/// A BLS signature in an affine point representation.
+#[cfg(not(target_os = "solana"))]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[repr(transparent)]
+pub struct SignatureAffine(pub(crate) G2Affine);

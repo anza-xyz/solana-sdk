@@ -8,11 +8,9 @@ pub use bytes::{
     BLS_PROOF_OF_POSSESSION_COMPRESSED_SIZE,
 };
 #[cfg(not(target_os = "solana"))]
-pub use {
-    bytes::AsProofOfPossession,
-    points::{
-        AsProofOfPossessionProjective, ProofOfPossessionProjective, VerifiableProofOfPossession,
-    },
+pub use points::{
+    AsProofOfPossessionAffine, AsProofOfPossessionProjective, ProofOfPossessionAffine,
+    ProofOfPossessionProjective, VerifiableProofOfPossession,
 };
 
 /// Domain separation tag used when hashing public keys to G2 in the proof of
@@ -26,7 +24,7 @@ mod tests {
         super::*,
         crate::{
             keypair::Keypair,
-            pubkey::{Pubkey, PubkeyCompressed, PubkeyProjective, VerifiablePubkey},
+            pubkey::{Pubkey, PubkeyAffine, PubkeyCompressed, PubkeyProjective, VerifiablePubkey},
         },
         core::str::FromStr,
         std::string::ToString,
@@ -37,23 +35,39 @@ mod tests {
         let keypair = Keypair::new();
         let proof_projective = keypair.proof_of_possession(None);
 
-        let pubkey_projective: PubkeyProjective = (&keypair.public).try_into().unwrap();
-        let pubkey_affine: Pubkey = keypair.public;
-        let pubkey_compressed: PubkeyCompressed = pubkey_affine.try_into().unwrap();
+        let pubkey_affine: PubkeyAffine = keypair.public;
+        let pubkey_projective: PubkeyProjective = pubkey_affine.into();
+        let pubkey_uncompressed: Pubkey = pubkey_affine.into(); // [u8; 96]
+        let pubkey_compressed: PubkeyCompressed = pubkey_affine.into(); // [u8; 48]
 
-        let proof_affine: ProofOfPossession = proof_projective.into();
-        let proof_compressed: ProofOfPossessionCompressed = proof_affine.try_into().unwrap();
+        let proof_affine: ProofOfPossessionAffine = proof_projective.into();
+        let proof_uncompressed: ProofOfPossession = proof_affine.into(); // [u8; 96]
+        let proof_compressed: ProofOfPossessionCompressed = proof_affine.into(); // [u8; 48]
 
+        // Verify with PubkeyProjective
         assert!(proof_projective.verify(&pubkey_projective, None).unwrap());
         assert!(proof_affine.verify(&pubkey_projective, None).unwrap());
+        assert!(proof_uncompressed.verify(&pubkey_projective, None).unwrap());
         assert!(proof_compressed.verify(&pubkey_projective, None).unwrap());
 
+        // Verify with PubkeyAffine
         assert!(proof_projective.verify(&pubkey_affine, None).unwrap());
         assert!(proof_affine.verify(&pubkey_affine, None).unwrap());
+        assert!(proof_uncompressed.verify(&pubkey_affine, None).unwrap());
         assert!(proof_compressed.verify(&pubkey_affine, None).unwrap());
 
+        // Verify with Pubkey (Uncompressed Bytes)
+        assert!(proof_projective.verify(&pubkey_uncompressed, None).unwrap());
+        assert!(proof_affine.verify(&pubkey_uncompressed, None).unwrap());
+        assert!(proof_uncompressed
+            .verify(&pubkey_uncompressed, None)
+            .unwrap());
+        assert!(proof_compressed.verify(&pubkey_uncompressed, None).unwrap());
+
+        // Verify with PubkeyCompressed (Compressed Bytes)
         assert!(proof_projective.verify(&pubkey_compressed, None).unwrap());
         assert!(proof_affine.verify(&pubkey_compressed, None).unwrap());
+        assert!(proof_uncompressed.verify(&pubkey_compressed, None).unwrap());
         assert!(proof_compressed.verify(&pubkey_compressed, None).unwrap());
     }
 
@@ -145,11 +159,8 @@ mod tests {
     fn test_verify_proof_of_possession_with_raw_bytes() {
         let keypair = Keypair::new();
         let pop_projective = keypair.proof_of_possession(None);
-
-        let pubkey_bytes: [u8; 48] = PubkeyCompressed::try_from(keypair.public).unwrap().0;
-
-        let pop_affine = ProofOfPossession::from(pop_projective);
-        let pop_bytes: [u8; 96] = ProofOfPossessionCompressed::try_from(pop_affine).unwrap().0;
+        let pubkey_bytes = keypair.public.to_bytes_compressed();
+        let pop_bytes = pop_projective.to_bytes_compressed();
 
         assert!(pubkey_bytes
             .verify_proof_of_possession(&pop_bytes, None)
@@ -170,7 +181,7 @@ mod tests {
         let mut bad_pop_bytes = pop_bytes;
         bad_pop_bytes[0] ^= 0xFF;
 
-        let result = pop_bytes.verify_proof_of_possession(&bad_pop_bytes, None);
+        let result = pubkey_bytes.verify_proof_of_possession(&bad_pop_bytes, None);
         assert!(result.is_err());
     }
 }
