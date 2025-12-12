@@ -5,6 +5,7 @@
 //! serialization format.
 //!
 //! [spl]: https://github.com/solana-labs/solana-program-library
+#![no_std]
 #![cfg_attr(docsrs, feature(doc_cfg))]
 
 use solana_program_error::ProgramError;
