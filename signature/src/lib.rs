@@ -446,7 +446,7 @@ mod tests {
         let sigs = vec![&signature1, &signature2];
         let pubkeys = vec![
             verifying_key1.as_bytes() as &[u8],
-            verifying_key1.as_bytes() as &[u8], 
+            verifying_key1.as_bytes() as &[u8],
         ];
         let messages = vec![message1 as &[u8], message2 as &[u8]];
 
@@ -489,7 +489,7 @@ mod tests {
         let sigs = vec![&signature1, &signature2];
         let pubkeys = vec![
             verifying_key2.as_bytes() as &[u8],
-            verifying_key1.as_bytes() as &[u8], 
+            verifying_key1.as_bytes() as &[u8],
         ];
         let messages = vec![message1 as &[u8], message2 as &[u8]];
 
