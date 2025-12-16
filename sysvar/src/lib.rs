@@ -191,20 +191,17 @@ macro_rules! impl_sysvar_get {
             let var_addr = var.as_mut_ptr() as *mut u8;
             let length = core::mem::size_of::<Self>().saturating_sub($padding);
             let sysvar_id_ptr = (&$sysvar_id) as *const _ as *const u8;
-            // SAFETY: The allocation is valid for `size_of::<Self>()`. We load
-            // `(size - padding)` bytes from the syscall, which matches bincode
-            // serialization. The remaining `padding` bytes are then zeroed.
-            let result =
-                unsafe { $crate::get_sysvar_unchecked(var_addr, sysvar_id_ptr, 0, length as u64) };
+            // SAFETY: The allocation is valid for `size_of::<Self>()`. We zero
+            // the padding bytes first, then load `(size - padding)` bytes from
+            // the syscall, which matches bincode serialization.
+            let result = unsafe {
+                var_addr.add(length).write_bytes(0, $padding);
+                $crate::get_sysvar_unchecked(var_addr, sysvar_id_ptr, 0, length as u64)
+            };
             match result {
-                Ok(()) => {
-                    // SAFETY: All bytes now initialized: syscall filled data
-                    // bytes and we zeroed padding.
-                    unsafe {
-                        var_addr.add(length).write_bytes(0, $padding);
-                        Ok(var.assume_init())
-                    }
-                }
+                // SAFETY: All bytes initialized: padding was zeroed above,
+                // syscall filled the data bytes.
+                Ok(()) => Ok(unsafe { var.assume_init() }),
                 // Unexpected errors are folded into `UnsupportedSysvar`.
                 Err(_) => Err($crate::__private::ProgramError::UnsupportedSysvar),
             }

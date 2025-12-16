@@ -193,6 +193,7 @@ mod tests {
 
         let data = bincode::serialize(&expected).unwrap();
         assert_eq!(data.len(), 81);
+        assert_eq!(data.len() + 15, core::mem::size_of::<EpochRewards>());
 
         crate::tests::mock_get_sysvar_syscall(&data);
         let got = EpochRewards::get().unwrap();

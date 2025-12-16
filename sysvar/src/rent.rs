@@ -152,6 +152,7 @@ mod tests {
         };
         let data = bincode::serialize(&expected).unwrap();
         assert_eq!(data.len(), 17);
+        assert_eq!(data.len() + 7, core::mem::size_of::<Rent>());
 
         crate::tests::mock_get_sysvar_syscall(&data);
         let got = Rent::get().unwrap();
