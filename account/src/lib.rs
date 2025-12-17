@@ -28,7 +28,7 @@ pub mod state_traits;
     derive(AbiExample, StableAbi),
     frozen_abi(
         api_digest = "62EqVoynUFvuui7DVfqWCvZP7bxKGJGioeSBnWrdjRME",
-        abi_digest = "Cms628BvHUgXEPDU1qV6sAXNr875LnMAMLskNohMngu"
+        abi_digest = "4mREmGBUAcqNdDHw5xR9hd2EznmGpfQYNB4b9aSPDsUT"
     )
 )]
 #[cfg_attr(
@@ -59,7 +59,9 @@ impl solana_frozen_abi::rand::prelude::Distribution<Account>
     fn sample<R: solana_frozen_abi::rand::Rng + ?Sized>(&self, rng: &mut R) -> Account {
         Account {
             lamports: rng.random(),
-            data: (0..1000).map(|_| rng.random()).collect(),
+            data: (0..rng.random_range(0..=10_000))
+                .map(|_| rng.random())
+                .collect(),
             owner: Pubkey::new_from_array(rng.random()),
             executable: rng.random(),
             rent_epoch: rng.random(),
