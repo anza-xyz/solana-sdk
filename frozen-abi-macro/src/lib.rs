@@ -29,6 +29,11 @@ pub fn derive_stable_abi(_item: TokenStream) -> TokenStream {
     "".parse().unwrap()
 }
 
+/// Derives `StableAbi` implementation for a type.
+///
+/// The deriving type must also implement [`Arbitrary`](arbitrary::Arbitrary)
+/// to use the default `random()` method. Apply `#[frozen_abi(api_digest = "...", abi_digest = "...")]`
+/// to generate the ABI stability test.
 #[cfg(feature = "frozen-abi")]
 #[proc_macro_derive(StableAbi)]
 pub fn derive_stable_abi(item: TokenStream) -> TokenStream {

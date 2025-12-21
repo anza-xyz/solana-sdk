@@ -21,6 +21,7 @@ default = []
 frozen-abi = []
 
 [dependencies]
+arbitrary = { workspace = true, features = ["derive"] }
 boxcar = { workspace = true }
 bs58 = { workspace = true, features = ["alloc"] }
 bv = { workspace = true, features = ["serde"] }

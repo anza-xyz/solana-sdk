@@ -27,7 +27,7 @@ pub mod stable_abi;
 extern crate solana_frozen_abi_macro;
 
 #[cfg(all(feature = "frozen-abi", not(target_os = "solana")))]
-pub use {bincode, rand, rand_chacha};
+pub use {arbitrary, bincode, rand, rand_chacha};
 
 // Not public API. Previously referenced by macro-generated code. Remove the
 // `log` dependency from Cargo.toml when this is cleaned up in the next major

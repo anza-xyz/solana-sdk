@@ -3167,6 +3167,7 @@ dependencies = [
 name = "solana-frozen-abi"
 version = "3.1.1"
 dependencies = [
+ "arbitrary",
  "bincode",
  "bitflags 2.9.4",
  "boxcar",
