@@ -28,6 +28,7 @@ frozen-abi = [
     "dep:solana-frozen-abi",
     "dep:solana-frozen-abi-macro",
     "dep:solana-program-error",
+    "dep:arbitrary",
     "std",
 ]
 rand = ["dep:rand", "atomic", "std"]
