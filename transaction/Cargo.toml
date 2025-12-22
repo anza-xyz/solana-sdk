@@ -37,6 +37,7 @@ serde = [
     "solana-message/serde",
     "solana-signature/serde",
     "solana-transaction-error/serde",
+    "solana-short-vec/serde",
 ]
 verify = ["blake3", "solana-signature/verify"]
 wincode = ["dep:wincode", "solana-message/wincode", "solana-signature/wincode"]

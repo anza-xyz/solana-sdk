@@ -48,7 +48,7 @@ ed25519-dalek = { workspace = true }
 serde_derive = { workspace = true }
 serde_json = { workspace = true }
 solana-pubkey = { workspace = true, features = ["std"] }
-solana-short-vec = { workspace = true }
+solana-short-vec = { workspace = true, features = ["serde"] }
 solana-signature = { path = ".", features = ["serde"] }
 
 [lints]

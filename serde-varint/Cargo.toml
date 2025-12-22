@@ -19,4 +19,4 @@ serde = { workspace = true }
 bincode = { workspace = true }
 rand = { workspace = true }
 serde_derive = { workspace = true }
-solana-short-vec = { workspace = true }
+solana-short-vec = { workspace = true, features = ["serde"] }

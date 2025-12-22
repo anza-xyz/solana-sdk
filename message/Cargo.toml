@@ -34,6 +34,7 @@ serde = [
     "serde/alloc",
     "solana-address/serde",
     "solana-hash/serde",
+    "solana-short-vec/serde",
 ]
 wincode = ["dep:wincode", "solana-hash/wincode", "solana-address/wincode"]
 

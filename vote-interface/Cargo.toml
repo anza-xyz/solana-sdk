@@ -45,6 +45,7 @@ serde = [
     "serde/alloc",
     "solana-hash/serde",
     "solana-pubkey/serde",
+    "solana-short-vec/serde",
 ]
 
 [dependencies]
