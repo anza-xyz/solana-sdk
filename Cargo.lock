@@ -3913,6 +3913,7 @@ dependencies = [
  "serde_json",
  "solana-frozen-abi",
  "solana-frozen-abi-macro",
+ "solana-short-vec 3.1.0",
 ]
 
 [[package]]

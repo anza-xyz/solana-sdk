@@ -30,6 +30,7 @@ solana-frozen-abi-macro = { workspace = true, optional = true, features = [
 assert_matches = { workspace = true }
 bincode = { workspace = true }
 serde_json = { workspace = true }
+solana-short-vec = { path = ".", features = ["serde"] }
 
 [lints]
 workspace = true
