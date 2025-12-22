@@ -4,13 +4,15 @@
 #![allow(clippy::arithmetic_side_effects)]
 #[cfg(feature = "frozen-abi")]
 use solana_frozen_abi_macro::AbiExample;
+use std::convert::TryFrom;
+#[cfg(feature = "serde")]
 use {
     serde_core::{
         de::{self, Deserializer, SeqAccess, Visitor},
         ser::{self, SerializeTuple, Serializer},
         Deserialize, Serialize,
     },
-    std::{convert::TryFrom, fmt, marker::PhantomData},
+    std::{fmt, marker::PhantomData},
 };
 
 /// Same as u16, but serialized with 1 to 3 bytes. If the value is above
@@ -21,6 +23,7 @@ use {
 #[cfg_attr(feature = "frozen-abi", derive(AbiExample))]
 pub struct ShortU16(pub u16);
 
+#[cfg(feature = "serde")]
 impl Serialize for ShortU16 {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
@@ -52,6 +55,7 @@ enum VisitStatus {
 }
 
 #[derive(Debug)]
+#[cfg_attr(not(feature = "serde"), allow(dead_code))]
 enum VisitError {
     TooLong(usize),
     TooShort(usize),
@@ -60,6 +64,7 @@ enum VisitError {
     ByteThreeContinues,
 }
 
+#[cfg(feature = "serde")]
 impl VisitError {
     fn into_de_error<'de, A>(self) -> A::Error
     where
@@ -118,8 +123,10 @@ fn visit_byte(elem: u8, val: u16, nth_byte: usize) -> VisitResult {
     }
 }
 
+#[cfg(feature = "serde")]
 struct ShortU16Visitor;
 
+#[cfg(feature = "serde")]
 impl<'de> Visitor<'de> for ShortU16Visitor {
     type Value = ShortU16;
 
@@ -150,6 +157,7 @@ impl<'de> Visitor<'de> for ShortU16Visitor {
     }
 }
 
+#[cfg(feature = "serde")]
 impl<'de> Deserialize<'de> for ShortU16 {
     fn deserialize<D>(deserializer: D) -> Result<ShortU16, D::Error>
     where
@@ -164,6 +172,7 @@ impl<'de> Deserialize<'de> for ShortU16 {
 ///
 /// #[serde(with = "short_vec")]
 ///
+#[cfg(feature = "serde")]
 pub fn serialize<S: Serializer, T: Serialize>(
     elements: &[T],
     serializer: S,
@@ -185,10 +194,12 @@ pub fn serialize<S: Serializer, T: Serialize>(
     seq.end()
 }
 
+#[cfg(feature = "serde")]
 struct ShortVecVisitor<T> {
     _t: PhantomData<T>,
 }
 
+#[cfg(feature = "serde")]
 impl<'de, T> Visitor<'de> for ShortVecVisitor<T>
 where
     T: Deserialize<'de>,
@@ -224,6 +235,7 @@ where
 ///
 /// #[serde(with = "short_vec")]
 ///
+#[cfg(feature = "serde")]
 pub fn deserialize<'de, D, T>(deserializer: D) -> Result<Vec<T>, D::Error>
 where
     D: Deserializer<'de>,
@@ -235,6 +247,7 @@ where
 
 pub struct ShortVec<T>(pub Vec<T>);
 
+#[cfg(feature = "serde")]
 impl<T: Serialize> Serialize for ShortVec<T> {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
@@ -244,6 +257,7 @@ impl<T: Serialize> Serialize for ShortVec<T> {
     }
 }
 
+#[cfg(feature = "serde")]
 impl<'de, T: Deserialize<'de>> Deserialize<'de> for ShortVec<T> {
     fn deserialize<D>(deserializer: D) -> Result<ShortVec<T>, D::Error>
     where
@@ -268,7 +282,7 @@ pub fn decode_shortu16_len(bytes: &[u8]) -> Result<(usize, usize), ()> {
     Err(())
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "serde"))]
 mod tests {
     use {
         super::*,
