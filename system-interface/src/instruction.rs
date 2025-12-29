@@ -264,7 +264,7 @@ pub enum SystemInstruction {
     /// current lamports must be 0.
     ///
     /// This constructor is identical to [`create_account`] with the exception that it
-    /// **does not** check that the destination account (`to_pubkey`) has a zero
+    /// **does not** check that the destination account (`to_address`) has a zero
     /// lamport balance prior to creation. This enables patterns where you first transfer
     /// lamports to prefund an account, then use `create_account_allow_prefund` as a single
     /// CPI to transfer additional lamports, allocate space, and assign ownership.
