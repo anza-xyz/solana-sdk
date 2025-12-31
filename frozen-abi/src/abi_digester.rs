@@ -53,7 +53,7 @@ pub(crate) fn shorten_serialize_with(type_name: &str) -> &str {
     // Fully qualified type names for the generated `__SerializeWith` types are very
     // long and do not add extra value to the digest. They also cause the digest
     // to change when a struct is moved to an inner module.
-    if type_name.ends_with("__SerializeWith") {
+    if type_name.contains("__SerializeWith") {
         "__SerializeWith"
     } else {
         type_name
@@ -118,7 +118,7 @@ impl AbiDigester {
 
     pub fn digest_data<T: ?Sized + Serialize>(&mut self, value: &T) -> DigestResult {
         let type_name = normalize_type_name(type_name::<T>());
-        if type_name.ends_with("__SerializeWith")
+        if type_name.contains("__SerializeWith")
             || (self.opaque_type_matcher.is_some()
                 && type_name.contains(self.opaque_type_matcher.as_ref().unwrap()))
         {
