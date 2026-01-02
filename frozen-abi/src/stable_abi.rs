@@ -17,15 +17,16 @@ pub trait StableAbi: Sized {
     where
         Self: for<'a> Arbitrary<'a>,
     {
-        // NOTE: As bytes being consumed, it might lead to buffer exhaust.
-        // In such case increase the `MAX_TYPE_SIZE` accordingly
-        // keeping in mind that increasing this value has impact on frozen-abi tests runtime.
-        const MAX_TYPE_SIZE: usize = 4096;
+        const FALLBACK_SIZE: usize = 4096;
+        const DEPTH: usize = 0;
 
-        let mut buffer = vec![0u8; MAX_TYPE_SIZE];
+        let (min, max) = Self::size_hint(DEPTH);
+        let buffer_size = max.unwrap_or(FALLBACK_SIZE).max(min);
+
+        let mut buffer = vec![0u8; buffer_size];
         rng.fill_bytes(&mut buffer);
         let mut unstructured = Unstructured::new(&buffer);
 
-        Self::arbitrary(&mut unstructured).expect("failed to fill - try increasing MAX_TYPE_SIZE")
+        Self::arbitrary(&mut unstructured).expect("failed to fill")
     }
 }
