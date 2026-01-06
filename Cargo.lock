@@ -799,7 +799,7 @@ dependencies = [
 [[package]]
 name = "curve25519-dalek"
 version = "5.0.0-pre.3"
-source = "git+https://github.com/zz-sol/curve25519-dalek?branch=zz/impl_ches25_without_ethnum#4f6e214e6a6f9b00b50baac6459fb872e9b15f58"
+source = "git+https://github.com/zz-sol/curve25519-dalek?branch=zz/impl_heea#65b6374685a9d61e4d1a0c9c6ca084b5f679df11"
 dependencies = [
  "cfg-if",
  "cpufeatures",
@@ -969,7 +969,7 @@ dependencies = [
 [[package]]
 name = "ed25519-dalek"
 version = "3.0.0-pre.3"
-source = "git+https://github.com/zz-sol/curve25519-dalek?branch=zz/impl_ches25_without_ethnum#4f6e214e6a6f9b00b50baac6459fb872e9b15f58"
+source = "git+https://github.com/zz-sol/curve25519-dalek?branch=zz/impl_heea#65b6374685a9d61e4d1a0c9c6ca084b5f679df11"
 dependencies = [
  "curve25519-dalek",
  "ed25519",
@@ -985,7 +985,7 @@ dependencies = [
 [[package]]
 name = "ed25519-dalek-bip32"
 version = "0.3.0"
-source = "git+https://github.com/zz-sol/ed25519-dalek-bip32?branch=zz/integrate_heea#f9280d1fcfd7b134fbaf7159d10961e5a68e27ce"
+source = "git+https://github.com/zz-sol/ed25519-dalek-bip32?branch=zz/integrate_heea#4da161ec28cb53e918bb349d896a01800b59d6ee"
 dependencies = [
  "derivation-path",
  "ed25519-dalek",

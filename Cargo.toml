@@ -347,6 +347,6 @@ opt-level = 1
 opt-level = 1
 
 [patch.crates-io]
-ed25519-dalek = { git = "https://github.com/zz-sol/curve25519-dalek", branch = "zz/impl_ches25_without_ethnum" }
-curve25519-dalek = { git = "https://github.com/zz-sol/curve25519-dalek", branch = "zz/impl_ches25_without_ethnum" }
+ed25519-dalek = { git = "https://github.com/zz-sol/curve25519-dalek", branch = "zz/impl_heea" }
+curve25519-dalek = { git = "https://github.com/zz-sol/curve25519-dalek", branch = "zz/impl_heea" }
 ed25519-dalek-bip32 = { git = "https://github.com/zz-sol/ed25519-dalek-bip32", branch = "zz/integrate_heea" }
