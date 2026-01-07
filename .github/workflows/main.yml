@@ -548,3 +548,32 @@ jobs:
 
       - name: Run check
         run: ./scripts/check-no-std.sh
+
+  all-jobs-done:
+    name: Run when all jobs done
+    runs-on: ubuntu-latest
+    needs:
+      - sanity
+      - check-crates
+      - audit
+      - format
+      - clippy
+      - check
+      - check-dcou
+      - check-crate-order-for-publishing
+      - check-no-std
+      - minimal-versions
+      - powerset
+      - msrv
+      - doc
+      - sort
+      - frozen-abi
+      - miri
+      - build-sbf
+      - test-bench
+      - test-coverage
+      - test-doc
+      - test-stable
+      - test-wasm
+    steps:
+      - run: echo "All done"
