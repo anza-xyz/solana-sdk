@@ -205,7 +205,10 @@ impl<'a> AddressLookupTable<'a> {
         slot_hashes: &SlotHashes,
     ) -> Result<impl Iterator<Item = Option<Pubkey>> + 'a, AddressLookupError> {
         let active_addresses_len = self.get_active_addresses_len(current_slot, slot_hashes)?;
-        let active_addresses = &self.addresses[0..active_addresses_len];
+        let active_addresses = self
+            .addresses
+            .get(0..active_addresses_len)
+            .ok_or(AddressLookupError::InvalidAccountData)?;
         Ok(indexes
             .iter()
             .map(|idx| active_addresses.get(*idx as usize).cloned()))
@@ -510,6 +513,25 @@ mod tests {
         assert_eq!(
             lookup_table.lookup(current_slot, &[10], &SlotHashes::default()),
             Err(AddressLookupError::InvalidLookupIndex),
+        );
+    }
+
+    #[test]
+    fn test_lookup_from_table_with_invalid_meta() {
+        let current_slot = 10;
+        let addresses: Vec<_> = (0..5).map(|_| Pubkey::new_unique()).collect();
+        let lookup_table = AddressLookupTable {
+            meta: LookupTableMeta {
+                last_extended_slot: current_slot,
+                last_extended_slot_start_index: 10, // larger than 5 = impossible
+                ..LookupTableMeta::default()
+            },
+            addresses: Cow::Owned(addresses.clone()),
+        };
+
+        assert_eq!(
+            lookup_table.lookup(current_slot, &[0], &SlotHashes::default()),
+            Err(AddressLookupError::InvalidAccountData),
         );
     }
 }
