@@ -3555,6 +3555,7 @@ dependencies = [
  "serde",
  "serde_bytes",
  "serde_derive",
+ "solana-bincode",
  "solana-frozen-abi",
  "solana-frozen-abi-macro",
  "solana-instruction",
