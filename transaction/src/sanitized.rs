@@ -122,8 +122,9 @@ impl SanitizedTransaction {
     pub fn try_from_legacy_transaction(
         tx: Transaction,
         reserved_account_keys: &HashSet<Address>,
+        limit_ix_accounts_simd_406: bool,
     ) -> TransactionResult<Self> {
-        tx.sanitize()?;
+        tx.sanitize(limit_ix_accounts_simd_406)?;
 
         Ok(Self {
             message_hash: tx.message.hash(),
@@ -140,7 +141,7 @@ impl SanitizedTransaction {
     #[cfg(feature = "blake3")]
     pub fn from_transaction_for_tests(tx: Transaction) -> Self {
         let empty_key_set = HashSet::default();
-        Self::try_from_legacy_transaction(tx, &empty_key_set).unwrap()
+        Self::try_from_legacy_transaction(tx, &empty_key_set, true).unwrap()
     }
 
     /// Create a sanitized transaction from fields.
@@ -410,6 +411,7 @@ mod tests {
                 ..legacy::Message::default()
             },
             &HashSet::default(),
+            true,
         )
         .unwrap();
 

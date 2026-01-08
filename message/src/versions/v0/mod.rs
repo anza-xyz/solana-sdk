@@ -110,7 +110,7 @@ pub struct Message {
 
 impl Message {
     /// Sanitize message fields and compiled instruction indexes
-    pub fn sanitize(&self) -> Result<(), SanitizeError> {
+    pub fn sanitize(&self, limit_ix_accounts_simd_406: bool) -> Result<(), SanitizeError> {
         let num_static_account_keys = self.account_keys.len();
         if usize::from(self.header.num_required_signatures)
             .saturating_add(usize::from(self.header.num_readonly_unsigned_accounts))
@@ -186,6 +186,9 @@ impl Message {
                 if usize::from(*ai) > max_account_ix {
                     return Err(SanitizeError::IndexOutOfBounds);
                 }
+            }
+            if limit_ix_accounts_simd_406 && ci.accounts.len() > 255 {
+                return Err(SanitizeError::ValueOutOfBounds);
             }
         }
 
@@ -407,7 +410,7 @@ mod tests {
             account_keys: vec![Address::new_unique()],
             ..Message::default()
         }
-        .sanitize()
+        .sanitize(true)
         .is_ok());
     }
 
@@ -426,7 +429,7 @@ mod tests {
             }],
             ..Message::default()
         }
-        .sanitize()
+        .sanitize(true)
         .is_ok());
     }
 
@@ -445,7 +448,7 @@ mod tests {
             }],
             ..Message::default()
         }
-        .sanitize()
+        .sanitize(true)
         .is_ok());
     }
 
@@ -470,7 +473,7 @@ mod tests {
             ..Message::default()
         };
 
-        assert!(message.sanitize().is_err());
+        assert!(message.sanitize(true).is_err());
     }
 
     #[test]
@@ -493,7 +496,7 @@ mod tests {
             }],
             ..Message::default()
         }
-        .sanitize()
+        .sanitize(true)
         .is_ok());
     }
 
@@ -504,7 +507,7 @@ mod tests {
             account_keys: vec![Address::new_unique()],
             ..Message::default()
         }
-        .sanitize()
+        .sanitize(true)
         .is_err());
     }
 
@@ -519,7 +522,7 @@ mod tests {
             account_keys: vec![Address::new_unique()],
             ..Message::default()
         }
-        .sanitize()
+        .sanitize(true)
         .is_err());
     }
 
@@ -538,7 +541,7 @@ mod tests {
             }],
             ..Message::default()
         }
-        .sanitize()
+        .sanitize(true)
         .is_err());
     }
 
@@ -552,7 +555,7 @@ mod tests {
             account_keys: (0..=u8::MAX).map(|_| Address::new_unique()).collect(),
             ..Message::default()
         }
-        .sanitize()
+        .sanitize(true)
         .is_ok());
     }
 
@@ -566,7 +569,7 @@ mod tests {
             account_keys: (0..=256).map(|_| Address::new_unique()).collect(),
             ..Message::default()
         }
-        .sanitize()
+        .sanitize(true)
         .is_err());
     }
 
@@ -585,7 +588,7 @@ mod tests {
             }],
             ..Message::default()
         }
-        .sanitize()
+        .sanitize(true)
         .is_ok());
     }
 
@@ -604,7 +607,7 @@ mod tests {
             }],
             ..Message::default()
         }
-        .sanitize()
+        .sanitize(true)
         .is_err());
     }
 
@@ -629,7 +632,7 @@ mod tests {
             ..Message::default()
         };
 
-        assert!(message.sanitize().is_err());
+        assert!(message.sanitize(true).is_err());
     }
 
     #[test]
@@ -652,7 +655,7 @@ mod tests {
             }],
             ..Message::default()
         }
-        .sanitize()
+        .sanitize(true)
         .is_err());
     }
 
@@ -787,5 +790,28 @@ mod tests {
         assert!(!message.is_account_maybe_reserved(2, None));
         assert!(!message.is_account_maybe_reserved(3, None));
         assert!(!message.is_account_maybe_reserved(4, None));
+    }
+
+    #[test]
+    fn test_more_than_255_accounts_in_ix() {
+        let mut accounts: Vec<u8> = (0..255).collect();
+        accounts.push(5);
+        accounts.push(4);
+        let message = Message {
+            account_keys: vec![Address::new_unique(); 256],
+            instructions: vec![CompiledInstruction::new_from_raw_parts(
+                4,
+                Vec::new(),
+                accounts,
+            )],
+            header: MessageHeader {
+                num_required_signatures: 2,
+                num_readonly_signed_accounts: 1,
+                num_readonly_unsigned_accounts: 0,
+            },
+            ..Message::default()
+        };
+        let result = message.sanitize(true);
+        assert_eq!(result.err().unwrap(), SanitizeError::ValueOutOfBounds);
     }
 }

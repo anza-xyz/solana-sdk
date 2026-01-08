@@ -103,7 +103,7 @@ pub struct Message {
 }
 
 impl Sanitize for Message {
-    fn sanitize(&self) -> std::result::Result<(), SanitizeError> {
+    fn sanitize(&self, limit_ix_accounts_simd_406: bool) -> std::result::Result<(), SanitizeError> {
         // signing area and read-only non-signing area should not overlap
         if self.header.num_required_signatures as usize
             + self.header.num_readonly_unsigned_accounts as usize
@@ -131,9 +131,9 @@ impl Sanitize for Message {
                 }
             }
         }
-        self.account_keys.sanitize()?;
-        self.recent_blockhash.sanitize()?;
-        self.instructions.sanitize()?;
+        self.account_keys.sanitize(limit_ix_accounts_simd_406)?;
+        self.recent_blockhash.sanitize(limit_ix_accounts_simd_406)?;
+        self.instructions.sanitize(limit_ix_accounts_simd_406)?;
         Ok(())
     }
 }
@@ -892,5 +892,28 @@ mod tests {
         };
         assert!(!message5.is_writable_index(0));
         assert!(!message5.is_writable_index(1));
+    }
+
+    #[test]
+    fn test_more_than_255_accounts_in_ix() {
+        let mut accounts: Vec<u8> = (0..255).collect();
+        accounts.push(5);
+        accounts.push(4);
+        let message = crate::v0::Message {
+            account_keys: vec![Address::new_unique(); 256],
+            instructions: vec![CompiledInstruction::new_from_raw_parts(
+                4,
+                Vec::new(),
+                accounts,
+            )],
+            header: MessageHeader {
+                num_required_signatures: 2,
+                num_readonly_signed_accounts: 1,
+                num_readonly_unsigned_accounts: 0,
+            },
+            ..crate::v0::Message::default()
+        };
+        let result = message.sanitize(true);
+        assert_eq!(result.err().unwrap(), SanitizeError::ValueOutOfBounds);
     }
 }

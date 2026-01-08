@@ -12,13 +12,16 @@ pub struct SanitizedVersionedMessage {
 impl TryFrom<VersionedMessage> for SanitizedVersionedMessage {
     type Error = SanitizeError;
     fn try_from(message: VersionedMessage) -> Result<Self, Self::Error> {
-        Self::try_new(message)
+        Self::try_new(message, true)
     }
 }
 
 impl SanitizedVersionedMessage {
-    pub fn try_new(message: VersionedMessage) -> Result<Self, SanitizeError> {
-        message.sanitize()?;
+    pub fn try_new(
+        message: VersionedMessage,
+        limit_ix_accounts_simd_406: bool,
+    ) -> Result<Self, SanitizeError> {
+        message.sanitize(limit_ix_accounts_simd_406)?;
         Ok(Self { message })
     }
 
