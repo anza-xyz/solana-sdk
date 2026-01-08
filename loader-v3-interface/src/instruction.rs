@@ -150,9 +150,10 @@ pub enum UpgradeableLoaderInstruction {
     /// # Account references
     ///   0. `[writable]` The ProgramData account.
     ///   1. `[writable]` The ProgramData account's associated Program account.
-    ///   2. `[]` System program (`solana_sdk::system_program::id()`), optional, used to transfer
+    ///   2. `[signer]` The program's upgrade authority.
+    ///   3. `[]` System program (`solana_sdk::system_program::id()`), optional, used to transfer
     ///      lamports from the payer to the ProgramData account.
-    ///   3. `[writable, signer]` The payer account, optional, that will pay
+    ///   4. `[writable, signer]` The payer account, optional, that will pay
     ///      necessary rent exemption costs for the increased storage size.
     ExtendProgram {
         /// Number of bytes to extend the program data.
@@ -453,6 +454,7 @@ pub fn close_any(
 /// executable data account
 pub fn extend_program(
     program_address: &Pubkey,
+    authority_address: &Pubkey,
     payer_address: Option<&Pubkey>,
     additional_bytes: u32,
 ) -> Instruction {
@@ -460,6 +462,7 @@ pub fn extend_program(
     let mut metas = vec![
         AccountMeta::new(program_data_address, false),
         AccountMeta::new(*program_address, false),
+        AccountMeta::new_readonly(*authority_address, true),
     ];
     if let Some(payer_address) = payer_address {
         metas.push(AccountMeta::new_readonly(
