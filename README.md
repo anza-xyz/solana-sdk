@@ -47,8 +47,6 @@ directly:
 * [`program_utils`](https://docs.rs/solana-sdk/latest/solana_sdk/program_utils) -> [`solana_bincode::limited_deserialize`](https://docs.rs/solana-bincode/latest/solana_bincode)
 * [`quic`](https://docs.rs/solana-sdk/latest/solana_sdk/quic) -> [`solana_quic_definitions`](https://docs.rs/solana-quic-definitions/latest/solana_quic_definitions)
 * [`reserved_account_keys`](https://docs.rs/solana-sdk/latest/solana_sdk/reserved_account_keys) -> [`agave_reserved_account_keys`](https://docs.rs/agave-reserved-account-keys/latest/agave_reserved_account_keys)
-* [`reward_info`](https://docs.rs/solana-sdk/latest/solana_sdk/reward_info) -> [`solana_reward_info`](https://docs.rs/solana-reward-info/latest/solana_reward_info)
-* [`reward_type`](https://docs.rs/solana-sdk/latest/solana_sdk/reward_type) -> [`solana_reward_info`](https://docs.rs/solana-reward-info/latest/solana_reward_info)
 * [`sdk_ids`](https://docs.rs/solana-sdk/latest/solana_sdk/sdk_ids) -> [`solana_sdk_ids`](https://docs.rs/solana-sdk-ids/latest/solana_sdk_ids)
 * [`secp256k1_instruction`](https://docs.rs/solana-sdk/latest/solana_sdk/secp256k1_instruction) -> [`solana_secp256k1_program`](https://docs.rs/solana-secp256k1-program/latest/solana_secp256k1_program)
 * [`secp256k1_recover`](https://docs.rs/solana-sdk/latest/solana_sdk/secp256k1_recover) -> [`solana_secp256k1_recover`](https://docs.rs/solana-secp256k1-recover/latest/solana_secp256k1_recover)

@@ -72,7 +72,6 @@ all_crate_dirs=(
   pubkey
   quic-definitions
   rent
-  reward-info
   sanitize
   sdk
   sdk-ids

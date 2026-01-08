@@ -3879,16 +3879,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "solana-reward-info"
-version = "4.0.0"
-dependencies = [
- "serde",
- "serde_derive",
- "solana-frozen-abi",
- "solana-frozen-abi-macro",
-]
-
-[[package]]
 name = "solana-sanitize"
 version = "3.0.1"
 
