@@ -126,18 +126,29 @@ pub enum UpgradeableLoaderInstruction {
     ///      not be upgradeable.
     SetAuthority,
 
-    /// Closes an account owned by the upgradeable loader of all lamports and
-    /// withdraws all the lamports
+    /// Closes an account owned by the upgradeable loader and withdraws all the
+    /// lamports.
+    ///
+    /// When closing a program, if `tombstone` is false the program account will
+    /// be fully deallocated and its address becomes reusable after garbage
+    /// collection. If `tombstone` is true, the program account retains the
+    /// rent-exempt minimum and is assigned to itself, permanently locking the
+    /// address.
     ///
     /// # Account references
     ///   0. `[writable]` The account to close, if closing a program must be the
     ///      ProgramData account.
     ///   1. `[writable]` The account to deposit the closed account's lamports.
     ///   2. `[signer]` The account's authority, Optional, required for
-    ///      initialized accounts.
+    ///      initialized accounts. For legacy tombstone reclamation, must be the
+    ///      program keypair.
     ///   3. `[writable]` The associated Program account if the account to close
     ///      is a ProgramData account.
-    Close,
+    Close {
+        /// If true, tombstone the program account (permanently lock the
+        /// address). If false, fully deallocate and allow address reuse.
+        tombstone: bool,
+    },
 
     /// Extend a program's ProgramData account by the specified number of bytes.
     /// Only upgradeable programs can be extended.
@@ -413,13 +424,14 @@ pub fn set_upgrade_authority_checked(
 }
 
 #[cfg(feature = "bincode")]
-/// Returns the instructions required to close a buffer account
-pub fn close(
+/// Returns the legacy instruction to close a buffer account. This instruction
+/// should only be used before feature activation of SIMD-0432.
+pub fn close_legacy(
     close_address: &Pubkey,
     recipient_address: &Pubkey,
     authority_address: &Pubkey,
 ) -> Instruction {
-    close_any(
+    close_any_legacy(
         close_address,
         recipient_address,
         Some(authority_address),
@@ -428,8 +440,10 @@ pub fn close(
 }
 
 #[cfg(feature = "bincode")]
-/// Returns the instructions required to close program, buffer, or uninitialized account
-pub fn close_any(
+/// Returns the legacy instruction to close program, buffer, or uninitialized
+/// account. This instruction should only be used before feature activation of
+/// SIMD-0432.
+pub fn close_any_legacy(
     close_address: &Pubkey,
     recipient_address: &Pubkey,
     authority_address: Option<&Pubkey>,
@@ -445,7 +459,50 @@ pub fn close_any(
     if let Some(program_address) = program_address {
         metas.push(AccountMeta::new(*program_address, false));
     }
-    Instruction::new_with_bincode(id(), &UpgradeableLoaderInstruction::Close, metas)
+    // Serialize without the tombstone field for legacy compatibility
+    Instruction::new_with_bincode(id(), &5u32, metas)
+}
+
+#[cfg(feature = "bincode")]
+/// Returns the instruction to close a buffer account.
+pub fn close(
+    close_address: &Pubkey,
+    recipient_address: &Pubkey,
+    authority_address: &Pubkey,
+) -> Instruction {
+    close_any(
+        close_address,
+        recipient_address,
+        Some(authority_address),
+        None,
+        false,
+    )
+}
+
+#[cfg(feature = "bincode")]
+/// Returns the instruction to close program, buffer, or uninitialized account.
+pub fn close_any(
+    close_address: &Pubkey,
+    recipient_address: &Pubkey,
+    authority_address: Option<&Pubkey>,
+    program_address: Option<&Pubkey>,
+    tombstone: bool,
+) -> Instruction {
+    let mut metas = vec![
+        AccountMeta::new(*close_address, false),
+        AccountMeta::new(*recipient_address, false),
+    ];
+    if let Some(authority_address) = authority_address {
+        metas.push(AccountMeta::new_readonly(*authority_address, true));
+    }
+    if let Some(program_address) = program_address {
+        metas.push(AccountMeta::new(*program_address, false));
+    }
+    Instruction::new_with_bincode(
+        id(),
+        &UpgradeableLoaderInstruction::Close { tombstone },
+        metas,
+    )
 }
 
 #[cfg(feature = "bincode")]
@@ -582,9 +639,13 @@ mod tests {
         );
         assert_eq!(expected_result, result);
 
-        let result =
-            is_instruction_fn(&bincode::serialize(&UpgradeableLoaderInstruction::Close).unwrap());
-        let expected_result = matches!(expected_instruction, UpgradeableLoaderInstruction::Close);
+        let result = is_instruction_fn(
+            &bincode::serialize(&UpgradeableLoaderInstruction::Close { tombstone: false }).unwrap(),
+        );
+        let expected_result = matches!(
+            expected_instruction,
+            UpgradeableLoaderInstruction::Close { tombstone: _ }
+        );
         assert_eq!(expected_result, result);
     }
 
