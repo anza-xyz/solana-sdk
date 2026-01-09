@@ -245,7 +245,7 @@ mod tests {
 
     proptest! {
         #[test]
-        fn test_minimum_balance(bytes in 0usize..u32::MAX as usize) {
+        fn test_minimum_balance(bytes in 0usize..=MAX_PERMITTED_DATA_LENGTH as usize) {
             let default_rent = Rent::default();
             let previous_rent = Rent {
                 lamports_per_byte: DEFAULT_LAMPORTS_PER_BYTE / 2,
