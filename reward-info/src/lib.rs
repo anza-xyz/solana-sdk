@@ -30,17 +30,3 @@ impl fmt::Display for RewardType {
         )
     }
 }
-
-#[cfg_attr(feature = "frozen-abi", derive(AbiExample))]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[derive(Debug, PartialEq, Eq, Clone, Copy)]
-pub struct RewardInfo {
-    pub reward_type: RewardType,
-    /// Reward amount
-    pub lamports: i64,
-    /// Account balance in lamports after `lamports` was applied
-    pub post_balance: u64,
-    /// Vote account commission in basis points when the reward was credited,
-    /// only present for voting and staking rewards.
-    pub commission_bps: Option<u16>,
-}
