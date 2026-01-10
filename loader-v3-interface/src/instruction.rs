@@ -81,8 +81,7 @@ pub enum UpgradeableLoaderInstruction {
     ///   1. `[writable]` The uninitialized ProgramData account.
     ///   2. `[writable]` The uninitialized Program account.
     ///   3. `[writable]` The Buffer account where the program data has been
-    ///      written.  The buffer account's authority must match the program's
-    ///      authority
+    ///      written.
     ///   4. `[]` Rent sysvar.
     ///   5. `[]` Clock sysvar.
     ///   6. `[]` System program (`solana_sdk_ids::system_program::id()`).
@@ -106,8 +105,7 @@ pub enum UpgradeableLoaderInstruction {
     ///   0. `[writable]` The ProgramData account.
     ///   1. `[writable]` The Program account.
     ///   2. `[writable]` The Buffer account where the program data has been
-    ///      written.  The buffer account's authority must match the program's
-    ///      authority
+    ///      written.
     ///   3. `[writable]` The spill account.
     ///   4. `[]` Rent sysvar.
     ///   5. `[]` Clock sysvar.
