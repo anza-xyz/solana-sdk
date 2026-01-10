@@ -204,7 +204,7 @@ impl Address {
     }
 
     #[cfg(feature = "atomic")]
-    /// Create an unique `Address` for tests and benchmarks.
+    /// Create a unique `Address` for tests and benchmarks.
     pub fn new_unique() -> Self {
         use solana_atomic_u64::AtomicU64;
         static I: AtomicU64 = AtomicU64::new(1);
