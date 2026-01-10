@@ -2,7 +2,6 @@
 #![cfg_attr(docsrs, feature(doc_cfg))]
 use {solana_keypair::Keypair, std::time::Duration};
 
-pub const QUIC_PORT_OFFSET: u16 = 6;
 // Empirically found max number of concurrent streams
 // that seems to maximize TPS on GCE (higher values don't seem to
 // give significant improvement or seem to impact stability)
@@ -37,24 +36,6 @@ pub const QUIC_SEND_FAIRNESS: bool = false;
 // applications. Different applications vary, but most seem to
 // be in the 30-60 second range
 pub const QUIC_CONNECTION_HANDSHAKE_TIMEOUT: Duration = Duration::from_secs(60);
-
-/// The receive window for QUIC connection from unstaked nodes is
-/// set to this ratio times [`solana_packet::PACKET_DATA_SIZE`]
-///
-/// [`solana_packet::PACKET_DATA_SIZE`]: https://docs.rs/solana-packet/latest/solana_packet/constant.PACKET_DATA_SIZE.html
-pub const QUIC_UNSTAKED_RECEIVE_WINDOW_RATIO: u64 = 128;
-
-/// The receive window for QUIC connection from minimum staked nodes is
-/// set to this ratio times [`solana_packet::PACKET_DATA_SIZE`]
-///
-/// [`solana_packet::PACKET_DATA_SIZE`]: https://docs.rs/solana-packet/latest/solana_packet/constant.PACKET_DATA_SIZE.html
-pub const QUIC_MIN_STAKED_RECEIVE_WINDOW_RATIO: u64 = 128;
-
-/// The receive window for QUIC connection from maximum staked nodes is
-/// set to this ratio times [`solana_packet::PACKET_DATA_SIZE`]
-///
-/// [`solana_packet::PACKET_DATA_SIZE`]: https://docs.rs/solana-packet/latest/solana_packet/constant.PACKET_DATA_SIZE.html
-pub const QUIC_MAX_STAKED_RECEIVE_WINDOW_RATIO: u64 = 512;
 
 pub trait NotifyKeyUpdate {
     fn update_key(&self, key: &Keypair) -> Result<(), Box<dyn core::error::Error>>;
