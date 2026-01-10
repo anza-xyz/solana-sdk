@@ -164,6 +164,7 @@ impl TryFrom<Vec<u8>> for Address {
         <[u8; 32]>::try_from(address).map(Self::from)
     }
 }
+
 #[cfg(feature = "decode")]
 impl TryFrom<&str> for Address {
     type Error = ParseAddressError;
@@ -172,23 +173,57 @@ impl TryFrom<&str> for Address {
     }
 }
 
-// If target_os = "solana" or target_arch = "bpf", then this panics so there
-// are no dependencies; otherwise this should be opt-in so users don't need the
-// curve25519 dependency.
-#[cfg(any(target_os = "solana", target_arch = "bpf", feature = "curve25519"))]
-#[allow(clippy::used_underscore_binding)]
-pub fn bytes_are_curve_point<T: AsRef<[u8]>>(_bytes: T) -> bool {
+/// Check whether the given bytes represent a valid curve point.
+#[cfg(any(feature = "curve25519", feature = "syscalls"))]
+#[inline(always)]
+pub fn bytes_are_curve_point<T: AsRef<[u8]>>(bytes: T) -> bool {
     #[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
     {
-        let Ok(compressed_edwards_y) =
-            curve25519_dalek::edwards::CompressedEdwardsY::from_slice(_bytes.as_ref())
-        else {
-            return false;
-        };
-        compressed_edwards_y.decompress().is_some()
+        #[cfg(feature = "curve25519")]
+        {
+            let Ok(compressed_edwards_y) =
+                curve25519_dalek::edwards::CompressedEdwardsY::from_slice(bytes.as_ref())
+            else {
+                return false;
+            };
+            compressed_edwards_y.decompress().is_some()
+        }
+
+        #[cfg(not(feature = "curve25519"))]
+        {
+            core::hint::black_box(bytes);
+            panic!("bytes_are_curve_point is only available with the `curve25519` feature enabled on this crate")
+        }
     }
+
     #[cfg(any(target_os = "solana", target_arch = "bpf"))]
-    unimplemented!();
+    {
+        #[cfg(feature = "syscalls")]
+        {
+            // ID for the Ed25519 as defined in `solana-curve25519::CURVE25519_EDWARDS`.
+            const CURVE25519_EDWARDS: u64 = 0;
+
+            // The syscall return `0` when the point is valid – i.e., on the curve;
+            // otherwise it returns `1`
+            //
+            // SAFETY: The syscall validates the input.
+            let result = unsafe {
+                syscalls::sol_curve_validate_point(
+                    CURVE25519_EDWARDS,
+                    bytes.as_ref() as *const _ as *const u8,
+                    core::ptr::null_mut(),
+                )
+            };
+
+            result == 0
+        }
+
+        #[cfg(not(feature = "syscalls"))]
+        {
+            core::hint::black_box(bytes);
+            panic!("bytes_are_curve_point is only available with the `syscalls` feature enabled on this crate")
+        }
+    }
 }
 
 impl Address {
@@ -275,10 +310,13 @@ impl Address {
         &self.0
     }
 
-    // If target_os = "solana" or target_arch = "bpf", then this panics so there
-    // are no dependencies; otherwise, this should be opt-in so users don't need
-    // the curve25519 dependency.
-    #[cfg(any(target_os = "solana", target_arch = "bpf", feature = "curve25519"))]
+    /// Checks whether the given address lies on the Ed25519 curve.
+    ///
+    /// On-curve addresses correspond to valid Ed25519 public keys (and therefore
+    /// can have associated private keys). Off-curve addresses are typically used
+    /// for program-derived addresses (PDAs).
+    #[cfg(any(feature = "curve25519", feature = "syscalls"))]
+    #[inline(always)]
     pub fn is_on_curve(&self) -> bool {
         bytes_are_curve_point(self)
     }
