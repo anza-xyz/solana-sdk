@@ -294,7 +294,6 @@ impl Address {
     // will use syscalls which bring no dependencies; otherwise, this should
     // be opt-in so users don't need the curve25519 dependency.
     #[cfg(any(target_os = "solana", target_arch = "bpf", feature = "curve25519"))]
-    #[allow(clippy::same_item_push)]
     #[inline(always)]
     pub fn try_find_program_address(
         seeds: &[&[u8]],
