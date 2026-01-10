@@ -174,17 +174,26 @@ impl TryFrom<&str> for Address {
 }
 
 /// Check whether the given bytes represent a valid curve point.
-#[cfg(any(target_os = "solana", target_arch = "bpf", feature = "curve25519"))]
+#[cfg(any(feature = "curve25519", feature = "syscalls"))]
 #[inline(always)]
 pub fn bytes_are_curve_point<T: AsRef<[u8]>>(bytes: T) -> bool {
     #[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
     {
-        let Ok(compressed_edwards_y) =
-            curve25519_dalek::edwards::CompressedEdwardsY::from_slice(bytes.as_ref())
-        else {
-            return false;
-        };
-        compressed_edwards_y.decompress().is_some()
+        #[cfg(feature = "curve25519")]
+        {
+            let Ok(compressed_edwards_y) =
+                curve25519_dalek::edwards::CompressedEdwardsY::from_slice(bytes.as_ref())
+            else {
+                return false;
+            };
+            compressed_edwards_y.decompress().is_some()
+        }
+
+        #[cfg(not(feature = "curve25519"))]
+        {
+            core::hint::black_box(bytes);
+            panic!("bytes_are_curve_point is only available with the `curve25519` feature enabled on this crate")
+        }
     }
 
     #[cfg(any(target_os = "solana", target_arch = "bpf"))]
@@ -306,7 +315,7 @@ impl Address {
     /// On-curve addresses correspond to valid Ed25519 public keys (and therefore
     /// can have associated private keys). Off-curve addresses are typically used
     /// for program-derived addresses (PDAs).
-    #[cfg(any(target_os = "solana", target_arch = "bpf", feature = "curve25519"))]
+    #[cfg(any(feature = "curve25519", feature = "syscalls"))]
     #[inline(always)]
     pub fn is_on_curve(&self) -> bool {
         bytes_are_curve_point(self)
