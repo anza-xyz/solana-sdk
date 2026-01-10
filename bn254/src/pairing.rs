@@ -73,8 +73,8 @@ pub fn alt_bn128_versioned_pairing(
                 return Err(AltBn128Error::InvalidInputData);
             }
         }
-        VersionedPairing::V1 =>
-        {
+        VersionedPairing::V1 => {
+            #[allow(unknown_lints)]
             #[allow(clippy::manual_is_multiple_of)]
             if input.len() % ALT_BN128_PAIRING_ELEMENT_SIZE != 0 {
                 return Err(AltBn128Error::InvalidInputData);

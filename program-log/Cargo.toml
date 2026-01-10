@@ -20,10 +20,14 @@ crate-type = ["rlib"]
 [features]
 default = ["macro"]
 macro = ["dep:solana-program-log-macro"]
+solana-pubkey = ["dep:solana-pubkey"]
+
 std = []
 
 [dependencies]
 solana-program-log-macro = { workspace = true, optional = true }
+solana-pubkey = { workspace = true, optional = true }
+
 
 [target.'cfg(any(target_os = "solana", target_arch = "bpf"))'.dependencies]
 solana-define-syscall = { workspace = true }

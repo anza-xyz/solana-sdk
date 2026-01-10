@@ -5,6 +5,8 @@ use core::{
 use solana_define_syscall::definitions::{
     sol_log_, sol_memcpy_, sol_memset_, sol_remaining_compute_units,
 };
+#[cfg(feature = "solana-pubkey")]
+use solana_pubkey::Pubkey;
 
 /// Bytes for a truncated `str` log message.
 const TRUNCATED_SLICE: [u8; 3] = [b'.', b'.', b'.'];
@@ -703,5 +705,66 @@ unsafe impl Log for bool {
     fn write_with_args(&self, buffer: &mut [MaybeUninit<u8>], args: &[Argument]) -> usize {
         let value = if *self { "true" } else { "false" };
         value.write_with_args(buffer, args)
+    }
+}
+
+#[cfg(feature = "solana-pubkey")]
+unsafe impl Log for Pubkey {
+    /// Logs the `Pubkey` as a 64-character hexadecimal string.
+    ///
+    /// This implementation is optimized for Compute Units (CU) and is significantly
+    /// cheaper than the standard `Display` implementation or `Pubkey::log` syscall,
+    /// which use Base58 encoding.
+    ///
+    /// The formatted string will be the 32-byte address represented as hex.
+    #[inline]
+    fn write_with_args(&self, buffer: &mut [MaybeUninit<u8>], _args: &[Argument]) -> usize {
+        // Hex encoding of 32 bytes ensures exactly 64 characters.
+        // We unroll the loop and use direct buffer writes for maximum efficiency.
+        // If the buffer is smaller than 64 bytes, we truncate and append the '@' symbol.
+
+        let bytes = self.as_ref();
+        let buffer_len = buffer.len();
+
+        if buffer_len < 64 {
+            let max_pairs = buffer_len / 2;
+            let hex = b"0123456789abcdef";
+
+            for i in 0..max_pairs {
+                // SAFETY: buffer capacity is checked above.
+                let byte = unsafe { *bytes.get_unchecked(i) };
+                unsafe {
+                    buffer.get_unchecked_mut(i * 2).write(hex[(byte >> 4) as usize]);
+                    buffer.get_unchecked_mut(i * 2 + 1).write(hex[(byte & 0xf) as usize]);
+                }
+            }
+            // If we ran out of space (even for the truncation mark), just return what we have.
+            // Otherwise, mark truncation.
+            if buffer_len > max_pairs * 2 {
+                // SAFETY: buffer capacity is checked above.
+                unsafe {
+                    buffer.get_unchecked_mut(buffer_len - 1).write(TRUNCATED);
+                }
+            } else if max_pairs * 2 > 0 {
+                // SAFETY: buffer capacity is checked above.
+                unsafe {
+                    buffer.get_unchecked_mut((max_pairs * 2) - 1).write(TRUNCATED);
+                }
+            }
+            return buffer_len;
+        }
+
+        // Fast path: buffer is large enough for full hex representation
+        let hex = b"0123456789abcdef";
+        for (i, byte) in bytes.iter().enumerate() {
+            let p = i * 2;
+            // SAFETY: buffer capacity is checked above (>= 64).
+            unsafe {
+                buffer.get_unchecked_mut(p).write(hex[(byte >> 4) as usize]);
+                buffer.get_unchecked_mut(p + 1).write(hex[(byte & 0xf) as usize]);
+            }
+        }
+
+        64
     }
 }
