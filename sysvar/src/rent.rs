@@ -145,11 +145,7 @@ mod tests {
     #[cfg(feature = "bincode")]
     #[allow(deprecated)]
     fn test_rent_get() {
-        let expected = Rent {
-            lamports_per_byte_year: 123,
-            exemption_threshold: 2.5,
-            burn_percent: 7,
-        };
+        let expected = Rent::with_lamports_per_byte(123);
         let data = bincode::serialize(&expected).unwrap();
         assert_eq!(data.len(), 17);
         assert_eq!(data.len() + 7, core::mem::size_of::<Rent>());
