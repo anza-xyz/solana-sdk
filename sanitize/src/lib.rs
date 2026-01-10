@@ -34,15 +34,15 @@ impl fmt::Display for SanitizeError {
 /// - All index values are in range.
 /// - All values are within their static max/min bounds.
 pub trait Sanitize {
-    fn sanitize(&self) -> Result<(), SanitizeError> {
+    fn sanitize(&self, _limit_ix_accounts_simd_406: bool) -> Result<(), SanitizeError> {
         Ok(())
     }
 }
 
 impl<T: Sanitize> Sanitize for [T] {
-    fn sanitize(&self) -> Result<(), SanitizeError> {
+    fn sanitize(&self, limit_ix_accounts_simd_406: bool) -> Result<(), SanitizeError> {
         for x in self.iter() {
-            x.sanitize()?;
+            x.sanitize(limit_ix_accounts_simd_406)?;
         }
         Ok(())
     }

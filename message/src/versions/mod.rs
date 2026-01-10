@@ -59,10 +59,10 @@ pub enum VersionedMessage {
 }
 
 impl VersionedMessage {
-    pub fn sanitize(&self) -> Result<(), SanitizeError> {
+    pub fn sanitize(&self, limit_ix_accounts_simd_406: bool) -> Result<(), SanitizeError> {
         match self {
-            Self::Legacy(message) => message.sanitize(),
-            Self::V0(message) => message.sanitize(),
+            Self::Legacy(message) => message.sanitize(limit_ix_accounts_simd_406),
+            Self::V0(message) => message.sanitize(limit_ix_accounts_simd_406),
         }
     }
 
