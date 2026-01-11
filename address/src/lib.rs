@@ -18,8 +18,6 @@ mod hasher;
 pub mod syscalls;
 
 #[cfg(feature = "sha2")]
-pub use crate::derive::{derive_address, derive_address_const};
-#[cfg(feature = "sha2")]
 use crate::error::AddressError;
 #[cfg(feature = "decode")]
 use crate::error::ParseAddressError;
