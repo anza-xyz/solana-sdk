@@ -1,5 +1,3 @@
-#[cfg(any(target_os = "solana", target_arch = "bpf"))]
-use solana_define_syscall::definitions::sol_sha256;
 use {
     crate::{Address, MAX_SEEDS, PDA_MARKER},
     core::mem::MaybeUninit,
@@ -14,7 +12,7 @@ impl Address {
     /// In general, the derivation uses an optional bump (byte) value to ensure a
     /// valid PDA (off-curve) is generated. Even when a program stores a bump to
     /// derive a program address, it is necessary to use the
-    /// `Address::create_program_address` to validate the derivation. In
+    /// [`Address::create_program_address`] to validate the derivation. In
     /// most cases, the program has the correct seeds for the derivation, so it would
     /// be sufficient to just perform the derivation and compare it against the
     /// expected resulting address.
@@ -26,7 +24,7 @@ impl Address {
     ///
     /// # Important
     ///
-    /// This function differs from `Address::create_program_address` in that
+    /// This function differs from [`Address::create_program_address`] in that
     /// it does not perform a validation to ensure that the derived address is a valid
     /// (off-curve) program derived address. It is intended for use in cases where the
     /// seeds, bump, and program id are known to be valid, and the caller wants to derive
@@ -86,13 +84,13 @@ impl Address {
     ///
     /// # Important
     ///
-    /// This function differs from `Address::create_program_address` in that
+    /// This function differs from [`Address::create_program_address`] in that
     /// it does not perform a validation to ensure that the derived address is a valid
     /// (off-curve) program derived address. It is intended for use in cases where the
     /// seeds, bump, and program id are known to be valid, and the caller wants to derive
     /// the address without incurring the cost of the `create_program_address` syscall.
     ///
-    /// This function is a compile-time constant version of [`derive_address`].
+    /// This function is a compile-time constant version of [`Address::derive_address`].
     pub const fn derive_address_const<const N: usize>(
         seeds: &[&[u8]; N],
         bump: Option<u8>,
