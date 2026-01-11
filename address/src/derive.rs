@@ -1,6 +1,9 @@
-use crate::{Address, MAX_SEEDS, PDA_MARKER};
-#[cfg(target_os = "solana")]
-use {core::mem::MaybeUninit, solana_define_syscall::definitions::sol_sha256};
+#[cfg(any(target_os = "solana", target_arch = "bpf"))]
+use solana_define_syscall::definitions::sol_sha256;
+use {
+    crate::{Address, MAX_SEEDS, PDA_MARKER},
+    core::mem::MaybeUninit,
+};
 
 /// Derive a [program address][pda] from the given seeds, optional bump and
 /// program id.
@@ -32,57 +35,42 @@ pub fn derive_address<const N: usize>(
     bump: Option<u8>,
     program_id: &Address,
 ) -> Address {
-    #[cfg(target_os = "solana")]
-    {
-        const {
-            assert!(N < MAX_SEEDS, "number of seeds must be less than MAX_SEEDS");
-        }
-
-        const UNINIT: MaybeUninit<&[u8]> = MaybeUninit::<&[u8]>::uninit();
-        let mut data = [UNINIT; MAX_SEEDS + 2];
-        let mut i = 0;
-
-        while i < N {
-            // SAFETY: `data` is guaranteed to have enough space for `N` seeds,
-            // so `i` will always be within bounds.
-            unsafe {
-                data.get_unchecked_mut(i).write(seeds.get_unchecked(i));
-            }
-            i += 1;
-        }
-
-        // TODO: replace this with `as_slice` when the MSRV is upgraded
-        // to `1.84.0+`.
-        let bump_seed = [bump.unwrap_or_default()];
-
-        // SAFETY: `data` is guaranteed to have enough space for `MAX_SEEDS + 2`
-        // elements, and `MAX_SEEDS` is as large as `N`.
-        unsafe {
-            if bump.is_some() {
-                data.get_unchecked_mut(i).write(&bump_seed);
-                i += 1;
-            }
-            data.get_unchecked_mut(i).write(program_id.as_ref());
-            data.get_unchecked_mut(i + 1).write(PDA_MARKER.as_ref());
-        }
-
-        let mut pda = MaybeUninit::<Address>::uninit();
-
-        // SAFETY: `data` has `i + 2` elements initialized.
-        unsafe {
-            sol_sha256(
-                data.as_ptr() as *const u8,
-                (i + 2) as u64,
-                pda.as_mut_ptr() as *mut u8,
-            );
-        }
-
-        // SAFETY: `pda` has been initialized by the syscall.
-        unsafe { pda.assume_init() }
+    const {
+        assert!(N < MAX_SEEDS, "number of seeds must be less than MAX_SEEDS");
     }
 
-    #[cfg(not(target_os = "solana"))]
-    derive_address_const(seeds, bump, program_id)
+    const UNINIT: MaybeUninit<&[u8]> = MaybeUninit::<&[u8]>::uninit();
+    let mut data = [UNINIT; MAX_SEEDS + 2];
+    let mut i = 0;
+
+    while i < N {
+        // SAFETY: `data` is guaranteed to have enough space for `N` seeds,
+        // so `i` will always be within bounds.
+        unsafe {
+            data.get_unchecked_mut(i).write(seeds.get_unchecked(i));
+        }
+        i += 1;
+    }
+
+    // TODO: replace this with `as_slice` when the MSRV is upgraded
+    // to `1.84.0+`.
+    let bump_seed = [bump.unwrap_or_default()];
+
+    // SAFETY: `data` is guaranteed to have enough space for `MAX_SEEDS + 2`
+    // elements, and `MAX_SEEDS` is as large as `N`.
+    unsafe {
+        if bump.is_some() {
+            data.get_unchecked_mut(i).write(&bump_seed);
+            i += 1;
+        }
+        data.get_unchecked_mut(i).write(program_id.as_ref());
+        data.get_unchecked_mut(i + 1).write(PDA_MARKER.as_ref());
+    }
+
+    let hash = solana_sha256_hasher::hashv(unsafe {
+        core::slice::from_raw_parts(data.as_ptr() as *const &[u8], i + 2)
+    });
+    Address::from(hash.to_bytes())
 }
 
 /// Derive a [program address][pda] from the given seeds, optional bump and
@@ -139,4 +127,24 @@ pub const fn derive_address_const<const N: usize>(
             .update(PDA_MARKER)
             .finalize()
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::{
+        derive::{derive_address, derive_address_const},
+        Address,
+    };
+
+    #[test]
+    fn test_derive_address() {
+        let program_id = Address::new_from_array([1u8; 32]);
+        let seeds: &[&[u8]; 2] = &[b"seed1", b"seed2"];
+        let bump = Some(255u8);
+
+        let derived_address = derive_address(seeds, bump, &program_id);
+        let derived_address_const = derive_address_const(seeds, bump, &program_id);
+
+        assert_eq!(derived_address, derived_address_const);
+    }
 }

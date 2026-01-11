@@ -22,7 +22,6 @@ bytemuck = ["copy", "dep:bytemuck", "dep:bytemuck_derive"]
 copy = []
 curve25519 = ["dep:curve25519-dalek", "sha2", "syscalls"]
 decode = ["dep:five8", "dep:five8_const", "error"]
-derive = ["dep:sha2-const-stable", "dep:solana-define-syscall"]
 dev-context-only-utils = ["dep:arbitrary", "rand"]
 error = ["dep:solana-program-error"]
 frozen-abi = [
@@ -34,7 +33,7 @@ frozen-abi = [
 rand = ["dep:rand", "atomic", "std"]
 sanitize = ["dep:solana-sanitize"]
 serde = ["dep:serde", "dep:serde_derive"]
-sha2 = ["dep:solana-sha256-hasher", "error"]
+sha2 = ["dep:sha2-const-stable", "dep:solana-sha256-hasher", "dep:solana-define-syscall", "error"]
 std = ["decode", "borsh?/std", "serde?/std", "wincode?/std", "alloc"]
 alloc = ["wincode?/alloc"]
 syscalls = ["dep:solana-define-syscall", "error"]
@@ -77,6 +76,7 @@ solana-address = { path = ".", features = [
     "dev-context-only-utils",
     "error",
     "sanitize",
+    "sha2",
     "std",
     "syscalls",
 ] }
