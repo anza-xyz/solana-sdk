@@ -112,6 +112,7 @@ impl From<AltBn128CompressionError> for u64 {
 #[cfg(not(target_os = "solana"))]
 mod target_arch {
 
+    pub use crate::target_arch::convert_endianness;
     use {
         super::*,
         crate::compression::alt_bn128_compression_size,
@@ -364,20 +365,6 @@ mod target_arch {
             Endianness::BE => Ok(convert_endianness::<64, 64>(&g2_bytes)),
             Endianness::LE => Ok(g2_bytes),
         }
-    }
-
-    pub fn convert_endianness<const CHUNK_SIZE: usize, const ARRAY_SIZE: usize>(
-        bytes: &[u8; ARRAY_SIZE],
-    ) -> [u8; ARRAY_SIZE] {
-        let reversed: [_; ARRAY_SIZE] = bytes
-            .chunks_exact(CHUNK_SIZE)
-            .flat_map(|chunk| chunk.iter().rev().copied())
-            .enumerate()
-            .fold([0u8; ARRAY_SIZE], |mut acc, (i, v)| {
-                acc[i] = v;
-                acc
-            });
-        reversed
     }
 }
 

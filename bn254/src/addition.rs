@@ -8,7 +8,7 @@ use solana_define_syscall::definitions as syscalls;
 use {
     crate::{
         consts::{ALT_BN128_FIELD_SIZE, ALT_BN128_FQ2_SIZE},
-        target_arch::{convert_endianness_128, convert_endianness_64, Endianness, G1, G2},
+        target_arch::{convert_endianness, Endianness, G1, G2},
         PodG1, PodG2,
     },
     ark_serialize::{CanonicalSerialize, Compress},
@@ -131,7 +131,10 @@ pub fn alt_bn128_versioned_g1_addition(
         .map_err(|_| AltBn128Error::InvalidInputData)?;
 
     match endianness {
-        Endianness::BE => Ok(convert_endianness_64(&result_point_data[..])),
+        Endianness::BE => Ok(
+            convert_endianness::<ALT_BN128_FIELD_SIZE, ALT_BN128_G1_POINT_SIZE>(&result_point_data)
+                .to_vec(),
+        ),
         Endianness::LE => Ok(result_point_data.to_vec()),
     }
 }
@@ -261,7 +264,10 @@ pub fn alt_bn128_versioned_g2_addition(
         .map_err(|_| AltBn128Error::InvalidInputData)?;
 
     match endianness {
-        Endianness::BE => Ok(convert_endianness_128(&result_point_data[..])),
+        Endianness::BE => Ok(
+            convert_endianness::<ALT_BN128_FQ2_SIZE, ALT_BN128_G2_POINT_SIZE>(&result_point_data)
+                .to_vec(),
+        ),
         Endianness::LE => Ok(result_point_data.to_vec()),
     }
 }

@@ -157,8 +157,8 @@ impl From<AltBn128Error> for u64 {
 
 #[cfg(not(target_os = "solana"))]
 use consts::{
-    ALT_BN128_FIELD_SIZE as FIELD_SIZE, ALT_BN128_G1_POINT_SIZE as G1_POINT_SIZE,
-    ALT_BN128_G2_POINT_SIZE as G2_POINT_SIZE,
+    ALT_BN128_FIELD_SIZE as FIELD_SIZE, ALT_BN128_FQ2_SIZE as FQ2_SIZE,
+    ALT_BN128_G1_POINT_SIZE as G1_POINT_SIZE, ALT_BN128_G2_POINT_SIZE as G2_POINT_SIZE,
 };
 
 /// A bitmask used to indicate that an operation's input data is little-endian.
@@ -216,12 +216,11 @@ mod target_arch {
         /// Takes in an EIP-197 (big-endian) byte encoding of a group element in G1 and constructs a
         /// `PodG1` struct that encodes the same bytes in little-endian.
         pub(crate) fn from_be_bytes(be_bytes: &[u8]) -> Result<Self, AltBn128Error> {
-            if be_bytes.len() != G1_POINT_SIZE {
-                return Err(AltBn128Error::SliceOutOfBounds);
-            }
-            let mut pod_bytes = [0u8; G1_POINT_SIZE];
-            reverse_copy(&be_bytes[..FIELD_SIZE], &mut pod_bytes[..FIELD_SIZE])?;
-            reverse_copy(&be_bytes[FIELD_SIZE..], &mut pod_bytes[FIELD_SIZE..])?;
+            let pod_bytes = convert_endianness::<FIELD_SIZE, G1_POINT_SIZE>(
+                be_bytes
+                    .try_into()
+                    .map_err(|_| AltBn128Error::SliceOutOfBounds)?,
+            );
             Ok(Self(pod_bytes))
         }
 
@@ -242,37 +241,11 @@ mod target_arch {
         /// and constructs a `PodG2` struct that encodes the same bytes in
         /// little-endian.
         pub(crate) fn from_be_bytes(be_bytes: &[u8]) -> Result<Self, AltBn128Error> {
-            if be_bytes.len() != G2_POINT_SIZE {
-                return Err(AltBn128Error::SliceOutOfBounds);
-            }
-            // note the cross order
-            const SOURCE_X1_INDEX: usize = 0;
-            const SOURCE_X0_INDEX: usize = SOURCE_X1_INDEX.saturating_add(FIELD_SIZE);
-            const SOURCE_Y1_INDEX: usize = SOURCE_X0_INDEX.saturating_add(FIELD_SIZE);
-            const SOURCE_Y0_INDEX: usize = SOURCE_Y1_INDEX.saturating_add(FIELD_SIZE);
-
-            const TARGET_X0_INDEX: usize = 0;
-            const TARGET_X1_INDEX: usize = TARGET_X0_INDEX.saturating_add(FIELD_SIZE);
-            const TARGET_Y0_INDEX: usize = TARGET_X1_INDEX.saturating_add(FIELD_SIZE);
-            const TARGET_Y1_INDEX: usize = TARGET_Y0_INDEX.saturating_add(FIELD_SIZE);
-
-            let mut pod_bytes = [0u8; G2_POINT_SIZE];
-            reverse_copy(
-                &be_bytes[SOURCE_X1_INDEX..SOURCE_X1_INDEX.saturating_add(FIELD_SIZE)],
-                &mut pod_bytes[TARGET_X1_INDEX..TARGET_X1_INDEX.saturating_add(FIELD_SIZE)],
-            )?;
-            reverse_copy(
-                &be_bytes[SOURCE_X0_INDEX..SOURCE_X0_INDEX.saturating_add(FIELD_SIZE)],
-                &mut pod_bytes[TARGET_X0_INDEX..TARGET_X0_INDEX.saturating_add(FIELD_SIZE)],
-            )?;
-            reverse_copy(
-                &be_bytes[SOURCE_Y1_INDEX..SOURCE_Y1_INDEX.saturating_add(FIELD_SIZE)],
-                &mut pod_bytes[TARGET_Y1_INDEX..TARGET_Y1_INDEX.saturating_add(FIELD_SIZE)],
-            )?;
-            reverse_copy(
-                &be_bytes[SOURCE_Y0_INDEX..SOURCE_Y0_INDEX.saturating_add(FIELD_SIZE)],
-                &mut pod_bytes[TARGET_Y0_INDEX..TARGET_Y0_INDEX.saturating_add(FIELD_SIZE)],
-            )?;
+            let pod_bytes = convert_endianness::<FQ2_SIZE, G2_POINT_SIZE>(
+                be_bytes
+                    .try_into()
+                    .map_err(|_| AltBn128Error::SliceOutOfBounds)?,
+            );
             Ok(Self(pod_bytes))
         }
 
@@ -345,29 +318,25 @@ mod target_arch {
         LE,
     }
 
-    pub(crate) fn convert_endianness_64(bytes: &[u8]) -> Vec<u8> {
-        bytes
-            .chunks(32)
-            .flat_map(|b| b.iter().copied().rev().collect::<Vec<u8>>())
-            .collect::<Vec<u8>>()
-    }
-
-    pub(crate) fn convert_endianness_128(bytes: &[u8]) -> Vec<u8> {
-        bytes
-            .chunks(64)
-            .flat_map(|b| b.iter().copied().rev().collect::<Vec<u8>>())
-            .collect::<Vec<u8>>()
-    }
-
-    /// Copies a `source` byte slice into a `destination` byte slice in reverse order.
-    pub(crate) fn reverse_copy(source: &[u8], destination: &mut [u8]) -> Result<(), AltBn128Error> {
-        if source.len() != destination.len() {
-            return Err(AltBn128Error::SliceOutOfBounds);
-        }
-        for (source_index, destination_index) in source.iter().rev().zip(destination.iter_mut()) {
-            *destination_index = *source_index;
-        }
-        Ok(())
+    /// This function converts between big-endian and little-endian formats.
+    /// It splits the input byte array of size `ARRAY_SIZE` into chunks of `CHUNK_SIZE`
+    /// and reverses the byte order within each chunk.
+    /// Typical use cases:
+    /// - convert_endianness::<32, 64>  to convert G1 points
+    /// - convert_endianness::<64, 128> to convert G2 points
+    /// - convert_endianness::<32, 32>  to convert scalars
+    pub fn convert_endianness<const CHUNK_SIZE: usize, const ARRAY_SIZE: usize>(
+        bytes: &[u8; ARRAY_SIZE],
+    ) -> [u8; ARRAY_SIZE] {
+        let reversed: [_; ARRAY_SIZE] = bytes
+            .chunks_exact(CHUNK_SIZE)
+            .flat_map(|chunk| chunk.iter().rev().copied())
+            .enumerate()
+            .fold([0u8; ARRAY_SIZE], |mut acc, (i, v)| {
+                acc[i] = v;
+                acc
+            });
+        reversed
     }
 }
 
