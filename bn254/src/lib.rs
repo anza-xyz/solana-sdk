@@ -11,18 +11,17 @@ pub mod versioned {
     pub use crate::{
         addition::{
             alt_bn128_versioned_g1_addition, alt_bn128_versioned_g2_addition, VersionedG1Addition,
-            VersionedG2Addition, ALT_BN128_G1_ADDITION_INPUT_SIZE,
-            ALT_BN128_G1_ADDITION_OUTPUT_SIZE, ALT_BN128_G1_ADD_BE, ALT_BN128_G1_ADD_LE,
-            ALT_BN128_G1_SUB_BE, ALT_BN128_G1_SUB_LE, ALT_BN128_G2_ADDITION_INPUT_SIZE,
-            ALT_BN128_G2_ADDITION_OUTPUT_SIZE, ALT_BN128_G2_ADD_BE, ALT_BN128_G2_ADD_LE,
+            VersionedG2Addition, ALT_BN128_G1_ADDITION_INPUT_SIZE, ALT_BN128_G1_ADD_BE,
+            ALT_BN128_G1_ADD_LE, ALT_BN128_G1_SUB_BE, ALT_BN128_G1_SUB_LE,
+            ALT_BN128_G2_ADDITION_INPUT_SIZE, ALT_BN128_G2_ADD_BE, ALT_BN128_G2_ADD_LE,
             ALT_BN128_G2_SUB_BE, ALT_BN128_G2_SUB_LE,
         },
+        consts::*,
         multiplication::{
             alt_bn128_versioned_g1_multiplication, alt_bn128_versioned_g2_multiplication,
             VersionedG1Multiplication, VersionedG2Multiplication,
-            ALT_BN128_G1_MULTIPLICATION_INPUT_SIZE, ALT_BN128_G1_MULTIPLICATION_OUTPUT_SIZE,
-            ALT_BN128_G1_MUL_BE, ALT_BN128_G1_MUL_LE, ALT_BN128_G2_MULTIPLICATION_INPUT_SIZE,
-            ALT_BN128_G2_MULTIPLICATION_OUTPUT_SIZE, ALT_BN128_G2_MUL_BE, ALT_BN128_G2_MUL_LE,
+            ALT_BN128_G1_MULTIPLICATION_INPUT_SIZE, ALT_BN128_G1_MUL_BE, ALT_BN128_G1_MUL_LE,
+            ALT_BN128_G2_MULTIPLICATION_INPUT_SIZE, ALT_BN128_G2_MUL_BE, ALT_BN128_G2_MUL_LE,
         },
         pairing::{
             alt_bn128_versioned_pairing, VersionedPairing, ALT_BN128_PAIRING_BE,
@@ -69,19 +68,17 @@ pub mod prelude {
     pub use crate::{
         addition::{
             alt_bn128_g1_addition_be, alt_bn128_g1_addition_le, alt_bn128_g2_addition_be,
-            alt_bn128_g2_addition_le, ALT_BN128_G1_ADDITION_INPUT_SIZE,
-            ALT_BN128_G1_ADDITION_OUTPUT_SIZE, ALT_BN128_G1_ADD_BE, ALT_BN128_G1_ADD_LE,
-            ALT_BN128_G1_SUB_BE, ALT_BN128_G1_SUB_LE, ALT_BN128_G2_ADDITION_INPUT_SIZE,
-            ALT_BN128_G2_ADDITION_OUTPUT_SIZE, ALT_BN128_G2_ADD_BE, ALT_BN128_G2_ADD_LE,
+            alt_bn128_g2_addition_le, ALT_BN128_G1_ADDITION_INPUT_SIZE, ALT_BN128_G1_ADD_BE,
+            ALT_BN128_G1_ADD_LE, ALT_BN128_G1_SUB_BE, ALT_BN128_G1_SUB_LE,
+            ALT_BN128_G2_ADDITION_INPUT_SIZE, ALT_BN128_G2_ADD_BE, ALT_BN128_G2_ADD_LE,
             ALT_BN128_G2_SUB_BE, ALT_BN128_G2_SUB_LE,
         },
         consts::*,
         multiplication::{
             alt_bn128_g1_multiplication_be, alt_bn128_g1_multiplication_le,
             alt_bn128_g2_multiplication_be, alt_bn128_g2_multiplication_le,
-            ALT_BN128_G1_MULTIPLICATION_INPUT_SIZE, ALT_BN128_G1_MULTIPLICATION_OUTPUT_SIZE,
-            ALT_BN128_G1_MUL_BE, ALT_BN128_G1_MUL_LE, ALT_BN128_G2_MULTIPLICATION_INPUT_SIZE,
-            ALT_BN128_G2_MULTIPLICATION_OUTPUT_SIZE, ALT_BN128_G2_MUL_BE, ALT_BN128_G2_MUL_LE,
+            ALT_BN128_G1_MULTIPLICATION_INPUT_SIZE, ALT_BN128_G1_MUL_BE, ALT_BN128_G1_MUL_LE,
+            ALT_BN128_G2_MULTIPLICATION_INPUT_SIZE, ALT_BN128_G2_MUL_BE, ALT_BN128_G2_MUL_LE,
         },
         pairing::{
             alt_bn128_pairing_be, alt_bn128_pairing_le, ALT_BN128_PAIRING_BE,
@@ -99,6 +96,9 @@ mod consts {
     /// Size of the EC point field, in bytes.
     pub const ALT_BN128_FIELD_SIZE: usize = 32;
 
+    /// Size of the extension field element (Fq2), in bytes.
+    pub const ALT_BN128_FQ2_SIZE: usize = ALT_BN128_FIELD_SIZE * 2;
+
     /// Size of the EC point. `alt_bn128` point contains
     /// the consistently united x and y fields as 64 bytes.
     pub const ALT_BN128_G1_POINT_SIZE: usize = ALT_BN128_FIELD_SIZE * 2;
@@ -107,7 +107,7 @@ mod consts {
     pub const ALT_BN128_POINT_SIZE: usize = ALT_BN128_G1_POINT_SIZE;
 
     /// Elements in G2 is represented by 2 field-extension elements `(x, y)`.
-    pub const ALT_BN128_G2_POINT_SIZE: usize = ALT_BN128_FIELD_SIZE * 4;
+    pub const ALT_BN128_G2_POINT_SIZE: usize = ALT_BN128_FQ2_SIZE * 2;
 }
 
 // AltBn128Error must be removed once the
