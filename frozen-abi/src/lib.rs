@@ -1,7 +1,8 @@
 //! # StableAbi
 //!
-//! The `StableAbi` is an optional extension to `frozen-abi` that provides functionality for detecting unintended encoding changes.
-//! It is designed to be used in conjuction with the mandatory `AbiExample`.
+//! The `StableAbi` is an optional extension to `frozen-abi` that provides functionality for
+//! detecting unintended encoding changes. It is designed to be used in conjunction with the
+//! mandatory `AbiExample`.
 //!
 //! ## How it works?
 //!
@@ -19,9 +20,9 @@
 //! - Hashes all serialized bytes together
 //! - Compares the resulting hash against the provided in `abi_digest` attribute
 //!
-//!
-//! Using the seeded RNG ensures same sequence of random values across runs, while the 10_000 iterations brings a wide range of value combinations.
-//! By hashing serialized bytes, changes to padding, endiannes or encoding are detected.
+//! Using the seeded RNG ensures same sequence of random values across runs, while the 10_000
+//! iterations brings a wide range of value combinations. By hashing serialized bytes, changes
+//! to padding, endianness or encoding are detected.
 //!
 //!
 //! ## Adding StableAbi to a New Type
@@ -34,7 +35,7 @@
 //!    struct MyType { ... }
 //! ```
 //!
-//! For types which don't implement `Distribution`, you must provide as well a custom implementation:
+//! For types which don't, you must provide as well a custom implementation:
 //!
 //! ```rust,ignore
 //! #[cfg(feature = "frozen-abi")]
@@ -50,7 +51,8 @@
 //!    }
 //! ```
 //!
-//! Deriving the `StableAbi` adds the following impl, which comes with the default `random()` implementation:
+//! Deriving the `StableAbi` adds the following impl, which comes with the default `random()`
+//! implementation:
 //!
 //! ```rust,ignore
 //! impl ::solana_frozen_abi::stable_abi::StableAbi for MyType {}
@@ -58,9 +60,12 @@
 //!
 //! ## Edge Cases
 //!
-//! 1. It will not detect field name or order changes, nor same size type swaps (e.g., `i64` and `u64`). These cases are still covered by `AbiExample`
-//! 2. The implementor must ensure a consistent order of `rng.random()` calls, as any change will result in different hash
-//! 3. For collection types with non deterministic ordering (e.g., `HashMap`), it is recommended to insert only one item to avoid false positives caused by iteration order differences
+//! 1. It will not detect field name or order changes, nor same size type swaps (e.g., `i64`
+//!    and `u64`). These cases are still covered by `AbiExample`
+//! 2. The implementor must ensure a consistent order of `rng.random()` calls, as any change
+//!    will result in different hash
+//! 3. For collection types with non deterministic ordering (e.g., `HashMap`), it is recommended
+//!    to insert only one item to avoid false positives caused by iteration order differences
 
 #![allow(incomplete_features)]
 #![cfg_attr(docsrs, feature(doc_cfg))]
