@@ -137,6 +137,7 @@ use {
 
 pub mod sanitized;
 pub mod simple_vote_transaction_checker;
+pub mod v1;
 pub mod versioned;
 
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]

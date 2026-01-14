@@ -4,11 +4,11 @@
 #![allow(non_snake_case)]
 
 use {
-    crate::address::Address, js_sys::Uint8Array, solana_packet::PACKET_DATA_SIZE,
+    crate::address::Address, js_sys::Uint8Array, solana_packet::PACKET_DATA_SIZE_V1,
     wasm_bindgen::prelude::*,
 };
 
-const MAX_INSTRUCTION_DATA_LEN: usize = PACKET_DATA_SIZE;
+const MAX_INSTRUCTION_DATA_LEN: usize = PACKET_DATA_SIZE_V1;
 
 /// wasm-bindgen version of the Instruction struct.
 /// This duplication is required until https://github.com/rustwasm/wasm-bindgen/issues/3671

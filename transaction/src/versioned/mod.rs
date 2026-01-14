@@ -160,6 +160,7 @@ impl VersionedTransaction {
         match self.message {
             VersionedMessage::Legacy(_) => TransactionVersion::LEGACY,
             VersionedMessage::V0(_) => TransactionVersion::Number(0),
+            VersionedMessage::V1(_) => TransactionVersion::Number(1),
         }
     }
 
@@ -281,6 +282,57 @@ mod tests {
         }
     }
 
+    #[test]
+    fn test_v1_transaction_sign_verify_and_roundtrip() {
+        use solana_message::{compiled_instruction::CompiledInstruction, v1::Message as V1Message};
+
+        let keypair0 = Keypair::new();
+        let keypair1 = Keypair::new();
+        let program_id = Pubkey::new_unique();
+
+        // Create V1 message with two signers
+        let message = V1Message::builder()
+            .num_required_signatures(2)
+            .lifetime_specifier(Hash::new_unique())
+            .account_keys(vec![keypair0.pubkey(), keypair1.pubkey(), program_id])
+            .priority_fee(1000)
+            .compute_unit_limit(200_000)
+            .instruction(CompiledInstruction {
+                program_id_index: 2,
+                accounts: vec![0, 1],
+                data: vec![1, 2, 3, 4],
+            })
+            .build()
+            .unwrap();
+
+        let versioned_message = VersionedMessage::V1(message);
+
+        // Sign the transaction
+        let tx = VersionedTransaction::try_new(versioned_message.clone(), &[&keypair0, &keypair1])
+            .unwrap();
+
+        // Verify signatures
+        assert_eq!(tx.signatures.len(), 2);
+        assert!(tx.verify_with_results().iter().all(|&r| r));
+
+        // V1 messages don't support serde/bincode serialization.
+        // Test raw bytes roundtrip using message.serialize() instead.
+        let message_bytes = versioned_message.serialize();
+        let parsed_message =
+            VersionedMessage::V1(solana_message::v1::Message::from_bytes(&message_bytes).unwrap());
+
+        // Verify message content preserved
+        match &parsed_message {
+            VersionedMessage::V1(msg) => {
+                assert_eq!(msg.header.num_required_signatures, 2);
+                assert_eq!(msg.config.priority_fee, Some(1000));
+                assert_eq!(msg.config.compute_unit_limit, Some(200_000));
+                assert_eq!(msg.instructions.len(), 1);
+            }
+            _ => panic!("Expected V1 message"),
+        }
+    }
+
     fn nonced_transfer_tx() -> (Pubkey, Pubkey, VersionedTransaction) {
         let from_keypair = Keypair::new();
         let from_pubkey = from_keypair.pubkey();
@@ -313,7 +365,7 @@ mod tests {
             VersionedMessage::Legacy(message) => {
                 message.instructions.get_mut(0).unwrap().program_id_index = 255u8;
             }
-            VersionedMessage::V0(_) => unreachable!(),
+            VersionedMessage::V0(_) | VersionedMessage::V1(_) => unreachable!(),
         };
         assert!(!tx.uses_durable_nonce());
     }

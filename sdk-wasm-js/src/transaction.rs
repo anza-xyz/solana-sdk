@@ -5,11 +5,11 @@ use {
         address::Address, hash::Hash, instruction::Instruction, keypair::Keypair, message::Message,
     },
     js_sys::Uint8Array,
-    solana_packet::PACKET_DATA_SIZE,
+    solana_packet::PACKET_DATA_SIZE_V1,
     wasm_bindgen::prelude::{wasm_bindgen, JsValue},
 };
 
-const MAX_TRANSACTION_SIZE: usize = PACKET_DATA_SIZE;
+const MAX_TRANSACTION_SIZE: usize = PACKET_DATA_SIZE_V1;
 
 /// wasm-bindgen version of the Transaction struct.
 /// This duplication is required until https://github.com/rustwasm/wasm-bindgen/issues/3671
