@@ -16,6 +16,7 @@ rustdoc-args = ["--cfg=docsrs"]
 
 [features]
 bincode = ["dep:bincode", "dep:solana-sysvar", "serde"]
+wincode = ["dep:wincode", "wincode/alloc", "solana-pubkey/wincode"]
 dev-context-only-utils = ["bincode", "dep:qualifier_attr"]
 frozen-abi = [
     "dep:solana-frozen-abi",
@@ -43,6 +44,7 @@ solana-instruction-error = { workspace = true }
 solana-pubkey = { workspace = true }
 solana-sdk-ids = { workspace = true }
 solana-sysvar = { workspace = true, features = ["bincode"], optional = true }
+wincode = { workspace = true, optional= true }
 
 [dev-dependencies]
 solana-account = { path = ".", features = ["dev-context-only-utils"] }

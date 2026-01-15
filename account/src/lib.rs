@@ -33,6 +33,7 @@ pub mod state_traits;
     derive(serde_derive::Deserialize),
     serde(rename_all = "camelCase")
 )]
+#[cfg_attr(feature = "wincode", derive(wincode::SchemaRead, wincode::SchemaWrite))]
 #[derive(PartialEq, Eq, Clone, Default)]
 pub struct Account {
     /// lamports in the account
@@ -125,6 +126,7 @@ impl Serialize for AccountSharedData {
     derive(serde_derive::Deserialize),
     serde(from = "Account")
 )]
+#[cfg_attr(feature = "wincode", derive(wincode::SchemaRead, wincode::SchemaWrite))]
 #[derive(PartialEq, Eq, Clone, Default)]
 pub struct AccountSharedData {
     /// lamports in the account

@@ -18,6 +18,7 @@ rustdoc-args = ["--cfg=docsrs"]
 [features]
 frozen-abi = ["dep:solana-frozen-abi", "dep:solana-frozen-abi-macro", "serde"]
 serde = ["dep:serde", "dep:serde_derive", "solana-instruction-error/serde"]
+wincode = ["dep:wincode", "solana-instruction-error/wincode"]
 
 [dependencies]
 serde = { workspace = true, optional = true }
@@ -26,6 +27,7 @@ solana-frozen-abi = { workspace = true, optional = true }
 solana-frozen-abi-macro = { workspace = true, optional = true }
 solana-instruction-error = { workspace = true }
 solana-sanitize = { workspace = true }
+wincode = { workspace = true, optional = true }
 
 [lints]
 workspace = true

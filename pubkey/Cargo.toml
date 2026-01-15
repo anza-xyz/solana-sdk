@@ -28,6 +28,7 @@ sha2 = ["solana-address/sha2"]
 std = ["solana-address/atomic", "solana-address/std"]
 wincode = ["solana-address/wincode"]
 alloc = ["solana-address/alloc"]
+wincode= ["solana-address/wincode"]
 
 [dependencies]
 rand = { workspace = true, optional = true }
