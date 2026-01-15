@@ -2,7 +2,7 @@
 
 use {
     super::{
-        Message, TransactionConfig, TransactionConfigMask, V1MessageError, MAX_ADDRESSES,
+        ComputeBudgetConfig, ComputeBudgetConfigMask, Message, MessageError, MAX_ADDRESSES,
         MAX_INSTRUCTIONS, MAX_SIGNATURES, MAX_TRANSACTION_SIZE,
     },
     crate::{compiled_instruction::CompiledInstruction, MessageHeader},
@@ -14,7 +14,7 @@ use {
 #[derive(Debug, Clone, Default)]
 pub struct MessageBuilder {
     header: MessageHeader,
-    config: TransactionConfig,
+    config: ComputeBudgetConfig,
     lifetime_specifier: Option<Hash>,
     account_keys: Vec<Address>,
     instructions: Vec<CompiledInstruction>,
@@ -50,7 +50,7 @@ impl MessageBuilder {
     }
 
     #[must_use]
-    pub fn config(mut self, config: TransactionConfig) -> Self {
+    pub fn config(mut self, config: ComputeBudgetConfig) -> Self {
         self.config = config;
         self
     }
@@ -104,52 +104,52 @@ impl MessageBuilder {
     }
 
     /// Build the message, validating all constraints.
-    pub fn build(self) -> Result<Message, V1MessageError> {
+    pub fn build(self) -> Result<Message, MessageError> {
         let lifetime_specifier = self
             .lifetime_specifier
-            .ok_or(V1MessageError::MissingLifetimeSpecifier)?;
+            .ok_or(MessageError::MissingLifetimeSpecifier)?;
 
         // Validate signer count
         if self.header.num_required_signatures == 0 {
-            return Err(V1MessageError::ZeroSigners);
+            return Err(MessageError::ZeroSigners);
         }
         if self.header.num_required_signatures > MAX_SIGNATURES {
-            return Err(V1MessageError::TooManySignatures);
+            return Err(MessageError::TooManySignatures);
         }
 
         // Validate address count
         if self.account_keys.len() > MAX_ADDRESSES as usize {
-            return Err(V1MessageError::TooManyAddresses);
+            return Err(MessageError::TooManyAddresses);
         }
         if (self.header.num_required_signatures as usize) > self.account_keys.len() {
-            return Err(V1MessageError::NotEnoughAddressesForSignatures);
+            return Err(MessageError::NotEnoughAddressesForSignatures);
         }
 
         // Validate instruction count
         if self.instructions.len() > MAX_INSTRUCTIONS as usize {
-            return Err(V1MessageError::TooManyInstructions);
+            return Err(MessageError::TooManyInstructions);
         }
 
         // Validate config mask (priority fee bits must be both set or both unset)
-        let mask = TransactionConfigMask::from_config(&self.config);
+        let mask = ComputeBudgetConfigMask::from_config(&self.config);
         if mask.has_invalid_priority_fee_bits() {
-            return Err(V1MessageError::InvalidConfigMask);
+            return Err(MessageError::InvalidConfigMask);
         }
 
         // Validate heap size alignment
         if let Some(heap_size) = self.config.heap_size {
             if heap_size % 1024 != 0 {
-                return Err(V1MessageError::InvalidHeapSize);
+                return Err(MessageError::InvalidHeapSize);
             }
         }
 
         // Validate instruction constraints
         for ix in &self.instructions {
             if ix.accounts.len() > u8::MAX as usize {
-                return Err(V1MessageError::InstructionAccountsTooLarge);
+                return Err(MessageError::InstructionAccountsTooLarge);
             }
             if ix.data.len() > u16::MAX as usize {
-                return Err(V1MessageError::InstructionDataTooLarge);
+                return Err(MessageError::InstructionDataTooLarge);
             }
         }
 
@@ -163,7 +163,7 @@ impl MessageBuilder {
 
         // Validate transaction size (message + signatures)
         if message.transaction_size() > MAX_TRANSACTION_SIZE {
-            return Err(V1MessageError::TransactionTooLarge);
+            return Err(MessageError::TransactionTooLarge);
         }
 
         Ok(message)
@@ -187,7 +187,7 @@ mod tests {
             .account_key(Address::new_unique())
             .build();
 
-        assert_eq!(result, Err(V1MessageError::MissingLifetimeSpecifier));
+        assert_eq!(result, Err(MessageError::MissingLifetimeSpecifier));
     }
 
     #[test]
@@ -198,7 +198,7 @@ mod tests {
             .account_key(Address::new_unique())
             .build();
 
-        assert_eq!(result, Err(V1MessageError::ZeroSigners));
+        assert_eq!(result, Err(MessageError::ZeroSigners));
     }
 
     #[test]
@@ -209,7 +209,7 @@ mod tests {
             .account_keys((0..20).map(|_| Address::new_unique()).collect())
             .build();
 
-        assert_eq!(result, Err(V1MessageError::TooManySignatures));
+        assert_eq!(result, Err(MessageError::TooManySignatures));
     }
 
     #[test]
@@ -220,7 +220,7 @@ mod tests {
             .account_keys((0..65).map(|_| Address::new_unique()).collect())
             .build();
 
-        assert_eq!(result, Err(V1MessageError::TooManyAddresses));
+        assert_eq!(result, Err(MessageError::TooManyAddresses));
     }
 
     #[test]
@@ -231,7 +231,7 @@ mod tests {
             .account_keys(vec![Address::new_unique(), Address::new_unique()])
             .build();
 
-        assert_eq!(result, Err(V1MessageError::NotEnoughAddressesForSignatures));
+        assert_eq!(result, Err(MessageError::NotEnoughAddressesForSignatures));
     }
 
     #[test]
@@ -251,7 +251,7 @@ mod tests {
             )
             .build();
 
-        assert_eq!(result, Err(V1MessageError::TooManyInstructions));
+        assert_eq!(result, Err(MessageError::TooManyInstructions));
     }
 
     #[test]
@@ -263,7 +263,7 @@ mod tests {
             .heap_size(1025)
             .build();
 
-        assert_eq!(result, Err(V1MessageError::InvalidHeapSize));
+        assert_eq!(result, Err(MessageError::InvalidHeapSize));
     }
 
     #[test]
@@ -293,7 +293,7 @@ mod tests {
             })
             .build();
 
-        assert_eq!(result, Err(V1MessageError::InstructionAccountsTooLarge));
+        assert_eq!(result, Err(MessageError::InstructionAccountsTooLarge));
     }
 
     #[test]
@@ -366,7 +366,7 @@ mod tests {
             })
             .build();
 
-        assert_eq!(result, Err(V1MessageError::TransactionTooLarge));
+        assert_eq!(result, Err(MessageError::TransactionTooLarge));
     }
 
     #[test]

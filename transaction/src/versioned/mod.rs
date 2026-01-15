@@ -284,14 +284,14 @@ mod tests {
 
     #[test]
     fn test_v1_transaction_sign_verify_and_roundtrip() {
-        use solana_message::{compiled_instruction::CompiledInstruction, v1::Message as V1Message};
+        use solana_message::{compiled_instruction::CompiledInstruction, v1};
 
         let keypair0 = Keypair::new();
         let keypair1 = Keypair::new();
         let program_id = Pubkey::new_unique();
 
         // Create V1 message with two signers
-        let message = V1Message::builder()
+        let message = v1::Message::builder()
             .num_required_signatures(2)
             .lifetime_specifier(Hash::new_unique())
             .account_keys(vec![keypair0.pubkey(), keypair1.pubkey(), program_id])

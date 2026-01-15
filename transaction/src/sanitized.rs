@@ -5,8 +5,7 @@ use {
     solana_message::{
         legacy,
         v0::{self, LoadedAddresses},
-        v1::V1Message,
-        AddressLoader, LegacyMessage, SanitizedMessage, SanitizedVersionedMessage,
+        v1, AddressLoader, LegacyMessage, SanitizedMessage, SanitizedVersionedMessage,
         VersionedMessage,
     },
     solana_signature::Signature,
@@ -79,7 +78,7 @@ impl SanitizedTransaction {
                 ))
             }
             VersionedMessage::V1(message) => {
-                SanitizedMessage::V1(V1Message::new(message, reserved_account_keys))
+                SanitizedMessage::V1(v1::LoadedMessage::new(message, reserved_account_keys))
             }
         };
 

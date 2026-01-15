@@ -4,12 +4,12 @@ use {super::Message, crate::AccountKeys, solana_address::Address, std::collectio
 
 /// Wrapper that precomputes account writability for efficient runtime access.
 #[derive(Debug, Clone, Eq, PartialEq)]
-pub struct V1Message {
+pub struct LoadedMessage {
     message: Message,
     writability: Vec<bool>,
 }
 
-impl V1Message {
+impl LoadedMessage {
     pub fn new(message: Message, reserved_account_keys: &HashSet<Address>) -> Self {
         let writability = (0..message.account_keys.len())
             .map(|i| message.is_maybe_writable(i, Some(reserved_account_keys)))
@@ -80,7 +80,7 @@ mod tests {
     fn cache_matches_underlying() {
         let message = create_test_message();
         let reserved = HashSet::new();
-        let v1_msg = V1Message::new(message.clone(), &reserved);
+        let v1_msg = LoadedMessage::new(message.clone(), &reserved);
 
         for i in 0..message.account_keys.len() {
             assert_eq!(
@@ -94,7 +94,7 @@ mod tests {
     #[test]
     fn clone_preserves_writability_cache() {
         let message = create_test_message();
-        let v1_msg = V1Message::new(message, &HashSet::new());
+        let v1_msg = LoadedMessage::new(message, &HashSet::new());
         let cloned = v1_msg.clone();
 
         for i in 0..4 {
@@ -168,7 +168,7 @@ mod tests {
                 .build()
                 .unwrap();
 
-            let v1_msg = V1Message::new(message.clone(), &reserved);
+            let v1_msg = LoadedMessage::new(message.clone(), &reserved);
 
             for i in 0..message.account_keys.len() {
                 prop_assert_eq!(
@@ -184,12 +184,12 @@ mod tests {
     #[test]
     fn has_duplicates_detects_adjacent() {
         let mut message = create_test_message();
-        let v1_msg = V1Message::new(message.clone(), &HashSet::new());
+        let v1_msg = LoadedMessage::new(message.clone(), &HashSet::new());
         assert!(!v1_msg.has_duplicates());
 
         let dup = message.account_keys[0];
         message.account_keys[1] = dup;
-        let v1_msg = V1Message::new(message, &HashSet::new());
+        let v1_msg = LoadedMessage::new(message, &HashSet::new());
         assert!(v1_msg.has_duplicates());
     }
 
@@ -207,14 +207,14 @@ mod tests {
             ])
             .build()
             .unwrap();
-        let v1_msg = V1Message::new(message, &HashSet::new());
+        let v1_msg = LoadedMessage::new(message, &HashSet::new());
         assert!(v1_msg.has_duplicates());
     }
 
     #[test]
     fn is_key_called_as_program_delegates_to_message() {
         let message = create_test_message();
-        let v1_msg = V1Message::new(message, &HashSet::new());
+        let v1_msg = LoadedMessage::new(message, &HashSet::new());
 
         assert!(v1_msg.is_key_called_as_program(2));
         assert!(!v1_msg.is_key_called_as_program(0));
@@ -225,7 +225,7 @@ mod tests {
     #[test]
     fn is_upgradeable_loader_present_delegates_to_message() {
         let message = create_test_message();
-        let v1_msg = V1Message::new(message.clone(), &HashSet::new());
+        let v1_msg = LoadedMessage::new(message.clone(), &HashSet::new());
 
         assert_eq!(
             v1_msg.is_upgradeable_loader_present(),
@@ -237,7 +237,7 @@ mod tests {
     fn account_keys_returns_correct_length() {
         let message = create_test_message();
         let expected_len = message.account_keys.len();
-        let v1_msg = V1Message::new(message, &HashSet::new());
+        let v1_msg = LoadedMessage::new(message, &HashSet::new());
 
         assert_eq!(v1_msg.account_keys().len(), expected_len);
     }
@@ -245,7 +245,7 @@ mod tests {
     #[test]
     fn account_keys_returns_correct_content() {
         let message = create_test_message();
-        let v1_msg = V1Message::new(message.clone(), &HashSet::new());
+        let v1_msg = LoadedMessage::new(message.clone(), &HashSet::new());
 
         let keys = v1_msg.account_keys();
         assert_eq!(keys.len(), message.account_keys.len());
@@ -257,7 +257,7 @@ mod tests {
     #[test]
     fn is_writable_uses_cached_values() {
         let message = create_test_message();
-        let v1_msg = V1Message::new(message, &HashSet::new());
+        let v1_msg = LoadedMessage::new(message, &HashSet::new());
 
         assert!(v1_msg.is_writable(0));
         assert!(!v1_msg.is_writable(1));
@@ -288,7 +288,7 @@ mod tests {
             })
             .build()
             .unwrap();
-        let v1_msg = V1Message::new(message, &HashSet::new());
+        let v1_msg = LoadedMessage::new(message, &HashSet::new());
 
         assert!(v1_msg.is_writable(0));
         assert!(!v1_msg.is_writable(1));
@@ -300,11 +300,11 @@ mod tests {
         let message = create_test_message();
         let fee_payer = message.account_keys[0];
 
-        let v1_msg = V1Message::new(message.clone(), &HashSet::new());
+        let v1_msg = LoadedMessage::new(message.clone(), &HashSet::new());
         assert!(v1_msg.is_writable(0));
 
         let reserved = HashSet::from([fee_payer]);
-        let v1_msg = V1Message::new(message, &reserved);
+        let v1_msg = LoadedMessage::new(message, &reserved);
         assert!(!v1_msg.is_writable(0));
     }
 
@@ -318,11 +318,11 @@ mod tests {
             .unwrap();
         let writable_key = message.account_keys[1];
 
-        let v1_msg = V1Message::new(message.clone(), &HashSet::new());
+        let v1_msg = LoadedMessage::new(message.clone(), &HashSet::new());
         assert!(v1_msg.is_writable(1));
 
         let reserved = HashSet::from([writable_key]);
-        let v1_msg = V1Message::new(message, &reserved);
+        let v1_msg = LoadedMessage::new(message, &reserved);
         assert!(!v1_msg.is_writable(1));
     }
 
@@ -331,11 +331,11 @@ mod tests {
         let message = create_test_message();
         let readonly_key = message.account_keys[3];
 
-        let v1_msg = V1Message::new(message.clone(), &HashSet::new());
+        let v1_msg = LoadedMessage::new(message.clone(), &HashSet::new());
         assert!(!v1_msg.is_writable(3));
 
         let reserved = HashSet::from([readonly_key]);
-        let v1_msg = V1Message::new(message, &reserved);
+        let v1_msg = LoadedMessage::new(message, &reserved);
         assert!(!v1_msg.is_writable(3));
     }
 
@@ -347,7 +347,7 @@ mod tests {
             .account_key(Address::new_unique())
             .build()
             .unwrap();
-        let v1_msg = V1Message::new(message, &HashSet::new());
+        let v1_msg = LoadedMessage::new(message, &HashSet::new());
 
         assert!(v1_msg.is_writable(0));
         assert!(!v1_msg.is_writable(1));

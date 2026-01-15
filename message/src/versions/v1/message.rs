@@ -6,8 +6,8 @@ use serde_derive::{Deserialize, Serialize};
 use solana_frozen_abi_macro::AbiExample;
 use {
     super::{
-        TransactionConfig, TransactionConfigMask, MAX_ADDRESSES, MAX_INSTRUCTIONS, MAX_SIGNATURES,
-        MAX_TRANSACTION_SIZE,
+        ComputeBudgetConfig, ComputeBudgetConfigMask, MAX_ADDRESSES, MAX_INSTRUCTIONS,
+        MAX_SIGNATURES, MAX_TRANSACTION_SIZE,
     },
     crate::{compiled_instruction::CompiledInstruction, MessageHeader},
     solana_address::Address,
@@ -31,7 +31,7 @@ pub struct Message {
 
     /// Compute budget configuration embedded in the message header.
     /// Replaces separate ComputeBudget program instructions.
-    pub config: TransactionConfig,
+    pub config: ComputeBudgetConfig,
 
     /// The lifetime specifier (blockhash) that determines when this transaction expires.
     pub lifetime_specifier: Hash,
@@ -204,7 +204,7 @@ impl Sanitize for Message {
         }
 
         // Validate config mask (2-bit fields must have both bits set or neither)
-        let mask = TransactionConfigMask::from_config(&self.config);
+        let mask = ComputeBudgetConfigMask::from_config(&self.config);
         if mask.has_invalid_priority_fee_bits() {
             return Err(SanitizeError::InvalidValue);
         }
@@ -296,7 +296,7 @@ mod tests {
         // Direct construction to bypass builder validation
         let message = Message {
             header: MessageHeader::default(),
-            config: TransactionConfig::default(),
+            config: ComputeBudgetConfig::default(),
             lifetime_specifier: Hash::new_unique(),
             account_keys: vec![],
             instructions: vec![],

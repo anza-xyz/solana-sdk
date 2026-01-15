@@ -523,7 +523,7 @@ mod tests {
     #[cfg(feature = "blake3")]
     use blake3::traits::digest::Digest;
     use {
-        super::{v1::Message as V1Message, *},
+        super::*,
         crate::v0::MessageAddressTableLookup,
         solana_instruction::{AccountMeta, Instruction},
     };
@@ -616,7 +616,7 @@ mod tests {
 
     #[test]
     fn test_v1_message_raw_bytes_roundtrip() {
-        let message = V1Message::builder()
+        let message = v1::Message::builder()
             .num_required_signatures(1)
             .lifetime_specifier(Hash::new_unique())
             .account_keys(vec![Address::new_unique(), Address::new_unique()])
@@ -634,7 +634,7 @@ mod tests {
         let bytes = message.to_bytes().unwrap();
 
         // Deserialize from raw bytes
-        let parsed = V1Message::from_bytes(&bytes).unwrap();
+        let parsed = v1::Message::from_bytes(&bytes).unwrap();
         assert_eq!(message, parsed);
 
         // Wrap in VersionedMessage and test serialize()
@@ -645,7 +645,7 @@ mod tests {
 
     #[test]
     fn test_v1_versioned_message_json_roundtrip() {
-        let msg = V1Message::builder()
+        let msg = v1::Message::builder()
             .num_required_signatures(1)
             .lifetime_specifier(Hash::new_unique())
             .account_keys(vec![Address::new_unique(), Address::new_unique()])
@@ -667,7 +667,7 @@ mod tests {
 
     #[test]
     fn test_v1_versioned_message_bincode_blocked() {
-        let msg = V1Message::builder()
+        let msg = v1::Message::builder()
             .num_required_signatures(1)
             .lifetime_specifier(Hash::new_unique())
             .account_keys(vec![Address::new_unique(), Address::new_unique()])
@@ -695,7 +695,7 @@ mod tests {
     fn test_v1_wincode_roundtrip() {
         let test_messages = [
             // Minimal message
-            V1Message::builder()
+            v1::Message::builder()
                 .num_required_signatures(1)
                 .lifetime_specifier(Hash::new_unique())
                 .account_keys(vec![Address::new_unique(), Address::new_unique()])
@@ -707,7 +707,7 @@ mod tests {
                 .build()
                 .unwrap(),
             // With config
-            V1Message::builder()
+            v1::Message::builder()
                 .num_required_signatures(1)
                 .lifetime_specifier(Hash::new_unique())
                 .account_keys(vec![Address::new_unique(), Address::new_unique()])
@@ -721,7 +721,7 @@ mod tests {
                 .build()
                 .unwrap(),
             // Multiple instructions
-            V1Message::builder()
+            v1::Message::builder()
                 .num_required_signatures(2)
                 .lifetime_specifier(Hash::new_unique())
                 .account_keys(vec![
@@ -864,7 +864,7 @@ mod tests {
     #[cfg(all(feature = "blake3", feature = "bincode"))]
     #[test]
     fn test_hash_real_v1_message() {
-        let message = V1Message::builder()
+        let message = v1::Message::builder()
             .num_required_signatures(1)
             .lifetime_specifier(Hash::new_from_array([0xAB; 32]))
             .account_keys(vec![

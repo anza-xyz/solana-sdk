@@ -13,9 +13,9 @@ use std::mem::size_of;
 #[cfg_attr(feature = "frozen-abi", derive(AbiExample))]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-pub struct TransactionConfigMask(pub u32);
+pub struct ComputeBudgetConfigMask(pub u32);
 
-impl TransactionConfigMask {
+impl ComputeBudgetConfigMask {
     /// Bits 0-1: Priority fee (requires both bits set, 8 bytes as u64 LE).
     pub const PRIORITY_FEE_BITS: u32 = 0b11;
 
@@ -85,7 +85,7 @@ impl TransactionConfigMask {
         size
     }
 
-    pub const fn from_config(config: &TransactionConfig) -> Self {
+    pub const fn from_config(config: &ComputeBudgetConfig) -> Self {
         let mut mask = 0u32;
         if config.priority_fee.is_some() {
             mask |= Self::PRIORITY_FEE_BITS;
@@ -111,7 +111,7 @@ impl TransactionConfigMask {
     serde(rename_all = "camelCase")
 )]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-pub struct TransactionConfig {
+pub struct ComputeBudgetConfig {
     /// Priority fee in lamports.
     pub priority_fee: Option<u64>,
 
@@ -125,7 +125,7 @@ pub struct TransactionConfig {
     pub heap_size: Option<u32>,
 }
 
-impl TransactionConfig {
+impl ComputeBudgetConfig {
     pub const fn new() -> Self {
         Self {
             priority_fee: None,
@@ -167,37 +167,37 @@ mod tests {
 
     #[test]
     fn has_unknown_bits_detects_unsupported_bits() {
-        assert!(!TransactionConfigMask::new(0).has_unknown_bits());
-        assert!(!TransactionConfigMask::new(0b11111).has_unknown_bits());
-        assert!(TransactionConfigMask::new(0b100000).has_unknown_bits());
-        assert!(TransactionConfigMask::new(0x80000000).has_unknown_bits());
-        assert!(TransactionConfigMask::new(0b111111).has_unknown_bits());
+        assert!(!ComputeBudgetConfigMask::new(0).has_unknown_bits());
+        assert!(!ComputeBudgetConfigMask::new(0b11111).has_unknown_bits());
+        assert!(ComputeBudgetConfigMask::new(0b100000).has_unknown_bits());
+        assert!(ComputeBudgetConfigMask::new(0x80000000).has_unknown_bits());
+        assert!(ComputeBudgetConfigMask::new(0b111111).has_unknown_bits());
     }
 
     #[test]
     fn has_priority_fee_requires_both_bits() {
-        assert!(!TransactionConfigMask::new(0).has_priority_fee());
-        assert!(!TransactionConfigMask::new(0b01).has_priority_fee());
-        assert!(!TransactionConfigMask::new(0b10).has_priority_fee());
-        assert!(TransactionConfigMask::new(0b11).has_priority_fee());
+        assert!(!ComputeBudgetConfigMask::new(0).has_priority_fee());
+        assert!(!ComputeBudgetConfigMask::new(0b01).has_priority_fee());
+        assert!(!ComputeBudgetConfigMask::new(0b10).has_priority_fee());
+        assert!(ComputeBudgetConfigMask::new(0b11).has_priority_fee());
     }
 
     #[test]
     fn has_invalid_priority_fee_bits_detects_partial() {
-        assert!(!TransactionConfigMask::new(0).has_invalid_priority_fee_bits());
-        assert!(TransactionConfigMask::new(0b01).has_invalid_priority_fee_bits());
-        assert!(TransactionConfigMask::new(0b10).has_invalid_priority_fee_bits());
-        assert!(!TransactionConfigMask::new(0b11).has_invalid_priority_fee_bits());
+        assert!(!ComputeBudgetConfigMask::new(0).has_invalid_priority_fee_bits());
+        assert!(ComputeBudgetConfigMask::new(0b01).has_invalid_priority_fee_bits());
+        assert!(ComputeBudgetConfigMask::new(0b10).has_invalid_priority_fee_bits());
+        assert!(!ComputeBudgetConfigMask::new(0b11).has_invalid_priority_fee_bits());
     }
 
     #[test]
     fn has_field_methods_check_individual_bits() {
-        let mask = TransactionConfigMask::new(0b11100);
+        let mask = ComputeBudgetConfigMask::new(0b11100);
         assert!(mask.has_compute_unit_limit());
         assert!(mask.has_loaded_accounts_data_size());
         assert!(mask.has_heap_size());
 
-        let mask = TransactionConfigMask::new(0);
+        let mask = ComputeBudgetConfigMask::new(0);
         assert!(!mask.has_compute_unit_limit());
         assert!(!mask.has_loaded_accounts_data_size());
         assert!(!mask.has_heap_size());
@@ -205,19 +205,22 @@ mod tests {
 
     #[test]
     fn config_values_size_sums_field_sizes() {
-        assert_eq!(TransactionConfigMask::new(0).config_values_size(), 0);
-        assert_eq!(TransactionConfigMask::new(0b11).config_values_size(), 8);
-        assert_eq!(TransactionConfigMask::new(0b100).config_values_size(), 4);
-        assert_eq!(TransactionConfigMask::new(0b11111).config_values_size(), 20);
+        assert_eq!(ComputeBudgetConfigMask::new(0).config_values_size(), 0);
+        assert_eq!(ComputeBudgetConfigMask::new(0b11).config_values_size(), 8);
+        assert_eq!(ComputeBudgetConfigMask::new(0b100).config_values_size(), 4);
+        assert_eq!(
+            ComputeBudgetConfigMask::new(0b11111).config_values_size(),
+            20
+        );
     }
 
     #[test]
     fn from_config_sets_correct_bits() {
-        let config = TransactionConfig::new()
+        let config = ComputeBudgetConfig::new()
             .with_priority_fee(1000)
             .with_compute_unit_limit(200_000);
 
-        let mask = TransactionConfigMask::from_config(&config);
+        let mask = ComputeBudgetConfigMask::from_config(&config);
         assert!(mask.has_priority_fee());
         assert!(mask.has_compute_unit_limit());
         assert!(!mask.has_loaded_accounts_data_size());
@@ -227,7 +230,7 @@ mod tests {
     #[test]
     fn mask_invariants_hold_for_all_known_bit_patterns() {
         for raw in 0u32..(1u32 << 5) {
-            let mask = TransactionConfigMask::new(raw);
+            let mask = ComputeBudgetConfigMask::new(raw);
 
             assert!(!mask.has_unknown_bits());
 
@@ -254,7 +257,7 @@ mod tests {
 
     #[test]
     fn builder_sets_all_fields() {
-        let config = TransactionConfig::new()
+        let config = ComputeBudgetConfig::new()
             .with_priority_fee(1000)
             .with_compute_unit_limit(200_000)
             .with_loaded_accounts_data_size_limit(64 * 1024)

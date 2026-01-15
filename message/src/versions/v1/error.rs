@@ -4,7 +4,7 @@ use solana_sanitize::SanitizeError;
 
 /// Errors that can occur when working with V1 messages.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub enum V1MessageError {
+pub enum MessageError {
     /// Input buffer is too small during deserialization.
     BufferTooSmall,
     /// Heap size is not a multiple of 1024.
@@ -13,7 +13,7 @@ pub enum V1MessageError {
     InstructionAccountsTooLarge,
     /// Instruction data is too large (> 65535 bytes).
     InstructionDataTooLarge,
-    /// Invalid TransactionConfigMask.
+    /// Invalid ComputeBudgetConfigMask.
     InvalidConfigMask,
     /// Instruction account index is out of bounds.
     InvalidInstructionAccountIndex,
@@ -39,7 +39,7 @@ pub enum V1MessageError {
     ZeroSigners,
 }
 
-impl std::fmt::Display for V1MessageError {
+impl std::fmt::Display for MessageError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::BufferTooSmall => write!(f, "buffer too small"),
@@ -74,27 +74,27 @@ impl std::fmt::Display for V1MessageError {
     }
 }
 
-impl std::error::Error for V1MessageError {}
+impl std::error::Error for MessageError {}
 
-impl From<V1MessageError> for SanitizeError {
-    fn from(err: V1MessageError) -> Self {
+impl From<MessageError> for SanitizeError {
+    fn from(err: MessageError) -> Self {
         match err {
-            V1MessageError::BufferTooSmall
-            | V1MessageError::InvalidHeapSize
-            | V1MessageError::InstructionAccountsTooLarge
-            | V1MessageError::InstructionDataTooLarge
-            | V1MessageError::InvalidConfigMask
-            | V1MessageError::InvalidVersion
-            | V1MessageError::MissingLifetimeSpecifier
-            | V1MessageError::TrailingData
-            | V1MessageError::TransactionTooLarge
-            | V1MessageError::ZeroSigners => SanitizeError::InvalidValue,
-            V1MessageError::InvalidInstructionAccountIndex
-            | V1MessageError::InvalidProgramIdIndex
-            | V1MessageError::NotEnoughAddressesForSignatures
-            | V1MessageError::TooManyAddresses
-            | V1MessageError::TooManyInstructions
-            | V1MessageError::TooManySignatures => SanitizeError::IndexOutOfBounds,
+            MessageError::BufferTooSmall
+            | MessageError::InvalidHeapSize
+            | MessageError::InstructionAccountsTooLarge
+            | MessageError::InstructionDataTooLarge
+            | MessageError::InvalidConfigMask
+            | MessageError::InvalidVersion
+            | MessageError::MissingLifetimeSpecifier
+            | MessageError::TrailingData
+            | MessageError::TransactionTooLarge
+            | MessageError::ZeroSigners => SanitizeError::InvalidValue,
+            MessageError::InvalidInstructionAccountIndex
+            | MessageError::InvalidProgramIdIndex
+            | MessageError::NotEnoughAddressesForSignatures
+            | MessageError::TooManyAddresses
+            | MessageError::TooManyInstructions
+            | MessageError::TooManySignatures => SanitizeError::IndexOutOfBounds,
         }
     }
 }

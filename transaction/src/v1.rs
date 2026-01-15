@@ -5,13 +5,13 @@
 //! - Signatures come last with NO length prefix
 //! - Signature count is determined by `num_required_signatures` in the message header
 //!
-//! This format is incompatible with serde/bincode, so V1Transaction only supports
-//! raw byte serialization via [`V1Transaction::serialize`] and [`V1Transaction::from_bytes`].
+//! This format is incompatible with serde/bincode, so Transaction only supports
+//! raw byte serialization via [`Transaction::serialize`] and [`Transaction::from_bytes`].
 
 use {
     crate::versioned::VersionedTransaction,
     solana_message::{
-        v1::{Message, V1MessageError},
+        v1::{Message, MessageError},
         VersionedMessage,
     },
     solana_sanitize::{Sanitize, SanitizeError},
@@ -25,9 +25,9 @@ use {
 
 /// Errors that can occur when working with V1 transactions.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub enum V1TransactionError {
+pub enum TransactionError {
     /// Message parsing or serialization failed.
-    MessageError(V1MessageError),
+    MessageError(MessageError),
     /// Not enough account keys for the required number of signatures.
     NotEnoughAccountKeys,
     /// Not enough bytes for the expected number of signatures.
@@ -45,7 +45,7 @@ pub enum V1TransactionError {
     TrailingData,
 }
 
-impl std::fmt::Display for V1TransactionError {
+impl std::fmt::Display for TransactionError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::MessageError(e) => write!(f, "message error: {e}"),
@@ -65,10 +65,10 @@ impl std::fmt::Display for V1TransactionError {
     }
 }
 
-impl std::error::Error for V1TransactionError {}
+impl std::error::Error for TransactionError {}
 
-impl From<V1MessageError> for V1TransactionError {
-    fn from(err: V1MessageError) -> Self {
+impl From<MessageError> for TransactionError {
+    fn from(err: MessageError) -> Self {
         Self::MessageError(err)
     }
 }
@@ -80,7 +80,7 @@ impl From<V1MessageError> for V1TransactionError {
 /// - Signatures are appended directly with NO length prefix
 /// - Signature count is determined by `num_required_signatures` from the message header
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct V1Transaction {
+pub struct Transaction {
     /// The V1 message containing instructions and accounts.
     pub message: Message,
     /// Transaction signatures, one per required signer.
@@ -88,17 +88,17 @@ pub struct V1Transaction {
     pub signatures: Vec<Signature>,
 }
 
-impl V1Transaction {
+impl Transaction {
     /// Create a V1 transaction from a message and existing signatures.
     ///
     /// Returns an error if the signature count doesn't match `num_required_signatures`.
     pub fn from_signatures(
         message: Message,
         signatures: Vec<Signature>,
-    ) -> Result<Self, V1TransactionError> {
+    ) -> Result<Self, TransactionError> {
         let expected = message.header.num_required_signatures as usize;
         if signatures.len() != expected {
-            return Err(V1TransactionError::SignatureCountMismatch {
+            return Err(TransactionError::SignatureCountMismatch {
                 expected,
                 actual: signatures.len(),
             });
@@ -168,13 +168,13 @@ impl V1Transaction {
     /// Wire format: `[message bytes][signatures]`
     /// - No length prefix on signatures
     /// - Signature count determined by `num_required_signatures` in message header
-    pub fn serialize(&self) -> Result<Vec<u8>, V1TransactionError> {
+    pub fn serialize(&self) -> Result<Vec<u8>, TransactionError> {
         let mut out = self.message.to_bytes()?;
         let signature_bytes = self
             .signatures
             .len()
             .checked_mul(SIGNATURE_BYTES)
-            .ok_or(V1TransactionError::Overflow)?;
+            .ok_or(TransactionError::Overflow)?;
         out.reserve(signature_bytes);
         for sig in &self.signatures {
             out.extend_from_slice(sig.as_ref());
@@ -186,10 +186,10 @@ impl V1Transaction {
     ///
     /// Expects format: `[message bytes][signatures]`
     /// Returns an error if there is trailing data after the transaction.
-    pub fn from_bytes(bytes: &[u8]) -> Result<Self, V1TransactionError> {
+    pub fn from_bytes(bytes: &[u8]) -> Result<Self, TransactionError> {
         let (tx, consumed) = Self::from_bytes_partial(bytes)?;
         if consumed != bytes.len() {
-            return Err(V1TransactionError::TrailingData);
+            return Err(TransactionError::TrailingData);
         }
         Ok(tx)
     }
@@ -197,7 +197,7 @@ impl V1Transaction {
     /// Parse a V1 transaction from wire format, returning bytes consumed.
     ///
     /// Useful when transaction bytes are followed by other data.
-    pub fn from_bytes_partial(bytes: &[u8]) -> Result<(Self, usize), V1TransactionError> {
+    pub fn from_bytes_partial(bytes: &[u8]) -> Result<(Self, usize), TransactionError> {
         // Parse message first
         let (message, message_len) = Message::from_bytes_partial(bytes)?;
 
@@ -205,13 +205,13 @@ impl V1Transaction {
         let num_signatures = message.header.num_required_signatures as usize;
         let signatures_len = num_signatures
             .checked_mul(SIGNATURE_BYTES)
-            .ok_or(V1TransactionError::Overflow)?;
+            .ok_or(TransactionError::Overflow)?;
         let total_len = message_len
             .checked_add(signatures_len)
-            .ok_or(V1TransactionError::Overflow)?;
+            .ok_or(TransactionError::Overflow)?;
 
         if bytes.len() < total_len {
-            return Err(V1TransactionError::NotEnoughSignatureBytes);
+            return Err(TransactionError::NotEnoughSignatureBytes);
         }
 
         // Extract signatures (chunks_exact guarantees exactly SIGNATURE_BYTES per chunk)
@@ -235,7 +235,7 @@ impl V1Transaction {
     /// Returns `true` if all signatures are valid, `false` if any is invalid.
     /// Returns `Err` if the transaction is malformed or cannot be serialized.
     #[cfg(feature = "verify")]
-    pub fn verify(&self) -> Result<bool, V1TransactionError> {
+    pub fn verify(&self) -> Result<bool, TransactionError> {
         Ok(self.verify_with_results()?.iter().all(|&valid| valid))
     }
 
@@ -245,18 +245,18 @@ impl V1Transaction {
     /// each signature is valid. Returns `Err` if the transaction is malformed
     /// or the message cannot be serialized.
     #[cfg(feature = "verify")]
-    pub fn verify_with_results(&self) -> Result<Vec<bool>, V1TransactionError> {
+    pub fn verify_with_results(&self) -> Result<Vec<bool>, TransactionError> {
         let required = self.message.header.num_required_signatures as usize;
 
         // Ensure we verify exactly the signer region, not a subset
         if self.signatures.len() != required {
-            return Err(V1TransactionError::SignatureCountMismatch {
+            return Err(TransactionError::SignatureCountMismatch {
                 expected: required,
                 actual: self.signatures.len(),
             });
         }
         if self.message.account_keys.len() < required {
-            return Err(V1TransactionError::NotEnoughAccountKeys);
+            return Err(TransactionError::NotEnoughAccountKeys);
         }
 
         let message_bytes = self.message.to_bytes()?;
@@ -276,7 +276,7 @@ impl V1Transaction {
     }
 }
 
-impl Sanitize for V1Transaction {
+impl Sanitize for Transaction {
     fn sanitize(&self) -> Result<(), SanitizeError> {
         // Verify signature count matches header
         let expected = self.message.header.num_required_signatures as usize;
@@ -290,9 +290,9 @@ impl Sanitize for V1Transaction {
     }
 }
 
-/// Convert a V1Transaction into a VersionedTransaction.
-impl From<V1Transaction> for VersionedTransaction {
-    fn from(tx: V1Transaction) -> Self {
+/// Convert a Transaction into a VersionedTransaction.
+impl From<Transaction> for VersionedTransaction {
+    fn from(tx: Transaction) -> Self {
         Self {
             signatures: tx.signatures,
             message: VersionedMessage::V1(tx.message),
@@ -300,11 +300,11 @@ impl From<V1Transaction> for VersionedTransaction {
     }
 }
 
-/// Try to convert a VersionedTransaction into a V1Transaction.
+/// Try to convert a VersionedTransaction into a Transaction.
 ///
 /// Returns `Err` with the original transaction if the message is not V1
 /// or if the signature count doesn't match `num_required_signatures`.
-impl TryFrom<VersionedTransaction> for V1Transaction {
+impl TryFrom<VersionedTransaction> for Transaction {
     type Error = VersionedTransaction;
 
     fn try_from(tx: VersionedTransaction) -> Result<Self, Self::Error> {
@@ -335,7 +335,7 @@ mod tests {
         solana_hash::Hash,
         solana_message::{
             compiled_instruction::CompiledInstruction,
-            v1::{TransactionConfig, MAX_ADDRESSES, MAX_SIGNATURES, MAX_TRANSACTION_SIZE},
+            v1::{ComputeBudgetConfig, MAX_ADDRESSES, MAX_SIGNATURES, MAX_TRANSACTION_SIZE},
             MessageHeader,
         },
     };
@@ -384,8 +384,8 @@ mod tests {
         let message = create_test_message(); // requires 1 signature
 
         assert_eq!(
-            V1Transaction::from_signatures(message, vec![]),
-            Err(V1TransactionError::SignatureCountMismatch {
+            Transaction::from_signatures(message, vec![]),
+            Err(TransactionError::SignatureCountMismatch {
                 expected: 1,
                 actual: 0
             })
@@ -397,11 +397,8 @@ mod tests {
         let message = create_test_message(); // requires 1 signature
 
         assert_eq!(
-            V1Transaction::from_signatures(
-                message,
-                vec![test_signature(0x01), test_signature(0x02)]
-            ),
-            Err(V1TransactionError::SignatureCountMismatch {
+            Transaction::from_signatures(message, vec![test_signature(0x01), test_signature(0x02)]),
+            Err(TransactionError::SignatureCountMismatch {
                 expected: 1,
                 actual: 2
             })
@@ -432,7 +429,7 @@ mod tests {
             .unwrap();
 
         // Provide 3 signers
-        let result = V1Transaction::try_sign(message, &[&keypair0, &keypair1, &keypair2]);
+        let result = Transaction::try_sign(message, &[&keypair0, &keypair1, &keypair2]);
         assert!(matches!(result, Err(SignerError::TooManySigners)));
     }
 
@@ -459,7 +456,7 @@ mod tests {
             .unwrap();
 
         // Only provide 1 signer
-        let result = V1Transaction::try_sign(message, &[&keypair0]);
+        let result = Transaction::try_sign(message, &[&keypair0]);
         assert!(matches!(result, Err(SignerError::NotEnoughSigners)));
     }
 
@@ -484,7 +481,7 @@ mod tests {
             .build()
             .unwrap();
 
-        let result = V1Transaction::try_sign(message, &[&wrong_keypair]);
+        let result = Transaction::try_sign(message, &[&wrong_keypair]);
         assert!(matches!(result, Err(SignerError::KeypairPubkeyMismatch)));
     }
 
@@ -508,7 +505,7 @@ mod tests {
             .build()
             .unwrap();
 
-        let tx = V1Transaction::try_sign(message, &[&keypair]).unwrap();
+        let tx = Transaction::try_sign(message, &[&keypair]).unwrap();
 
         assert_eq!(tx.signatures.len(), 1);
 
@@ -537,7 +534,7 @@ mod tests {
             .build()
             .unwrap();
 
-        let tx = V1Transaction::try_sign(message, &[&keypair0, &keypair1]).unwrap();
+        let tx = Transaction::try_sign(message, &[&keypair0, &keypair1]).unwrap();
 
         assert_eq!(tx.signatures.len(), 2);
         assert!(tx.verify().unwrap());
@@ -566,7 +563,7 @@ mod tests {
             .unwrap();
 
         // Provide keypairs in REVERSE order
-        let tx = V1Transaction::try_sign(message, &[&keypair1, &keypair0]).unwrap();
+        let tx = Transaction::try_sign(message, &[&keypair1, &keypair0]).unwrap();
 
         // Should still verify because signatures are reordered to match account_keys
         assert!(tx.verify().unwrap());
@@ -577,7 +574,7 @@ mod tests {
     fn serialize_produces_correct_wire_format() {
         let message = create_test_message();
         let sig = test_signature(0xAA);
-        let tx = V1Transaction::from_signatures(message.clone(), vec![sig]).unwrap();
+        let tx = Transaction::from_signatures(message.clone(), vec![sig]).unwrap();
 
         let bytes = tx.serialize().unwrap();
 
@@ -593,26 +590,26 @@ mod tests {
     #[test]
     fn from_bytes_rejects_invalid_message() {
         // Empty bytes - fails at message parsing
-        let result = V1Transaction::from_bytes(&[]);
-        assert!(matches!(result, Err(V1TransactionError::MessageError(_))));
+        let result = Transaction::from_bytes(&[]);
+        assert!(matches!(result, Err(TransactionError::MessageError(_))));
 
         // Invalid version byte - fails at message parsing
-        let result = V1Transaction::from_bytes(&[0x00]);
-        assert!(matches!(result, Err(V1TransactionError::MessageError(_))));
+        let result = Transaction::from_bytes(&[0x00]);
+        assert!(matches!(result, Err(TransactionError::MessageError(_))));
     }
 
     #[test]
     fn from_bytes_rejects_truncated_signatures() {
         let message = create_test_message();
         let sig = test_signature(0xCC);
-        let tx = V1Transaction::from_signatures(message, vec![sig]).unwrap();
+        let tx = Transaction::from_signatures(message, vec![sig]).unwrap();
 
         let mut bytes = tx.serialize().unwrap();
         bytes.truncate(bytes.len() - 10); // Remove part of signature
 
         assert_eq!(
-            V1Transaction::from_bytes(&bytes),
-            Err(V1TransactionError::NotEnoughSignatureBytes)
+            Transaction::from_bytes(&bytes),
+            Err(TransactionError::NotEnoughSignatureBytes)
         );
     }
 
@@ -620,14 +617,14 @@ mod tests {
     fn from_bytes_rejects_trailing_data() {
         let message = create_test_message();
         let sig = test_signature(0xDD);
-        let tx = V1Transaction::from_signatures(message, vec![sig]).unwrap();
+        let tx = Transaction::from_signatures(message, vec![sig]).unwrap();
 
         let mut bytes = tx.serialize().unwrap();
         bytes.push(0xFF); // Extra byte
 
         assert_eq!(
-            V1Transaction::from_bytes(&bytes),
-            Err(V1TransactionError::TrailingData)
+            Transaction::from_bytes(&bytes),
+            Err(TransactionError::TrailingData)
         );
     }
 
@@ -635,10 +632,10 @@ mod tests {
     fn from_bytes_roundtrip_single_signature() {
         let message = create_test_message();
         let sig = test_signature(0xBB);
-        let tx = V1Transaction::from_signatures(message, vec![sig]).unwrap();
+        let tx = Transaction::from_signatures(message, vec![sig]).unwrap();
 
         let bytes = tx.serialize().unwrap();
-        let parsed = V1Transaction::from_bytes(&bytes).unwrap();
+        let parsed = Transaction::from_bytes(&bytes).unwrap();
 
         assert_eq!(tx.message, parsed.message);
         assert_eq!(tx.signatures, parsed.signatures);
@@ -669,10 +666,10 @@ mod tests {
             test_signature(0x22),
             test_signature(0x33),
         ];
-        let tx = V1Transaction::from_signatures(message, signatures.clone()).unwrap();
+        let tx = Transaction::from_signatures(message, signatures.clone()).unwrap();
 
         let bytes = tx.serialize().unwrap();
-        let parsed = V1Transaction::from_bytes(&bytes).unwrap();
+        let parsed = Transaction::from_bytes(&bytes).unwrap();
 
         assert_eq!(parsed.signatures.len(), 3);
         assert_eq!(parsed.signatures[0], signatures[0]);
@@ -684,13 +681,13 @@ mod tests {
     fn from_bytes_partial_returns_consumed() {
         let message = create_test_message();
         let sig = test_signature(0xEE);
-        let tx = V1Transaction::from_signatures(message, vec![sig]).unwrap();
+        let tx = Transaction::from_signatures(message, vec![sig]).unwrap();
 
         let mut bytes = tx.serialize().unwrap();
         let expected_len = bytes.len();
         bytes.extend_from_slice(&[0xAA; 100]); // Append extra data
 
-        let (parsed, consumed) = V1Transaction::from_bytes_partial(&bytes).unwrap();
+        let (parsed, consumed) = Transaction::from_bytes_partial(&bytes).unwrap();
         assert_eq!(consumed, expected_len);
         assert_eq!(parsed.message, tx.message);
         assert_eq!(parsed.signatures, tx.signatures);
@@ -701,7 +698,7 @@ mod tests {
     fn verify_returns_false_for_invalid_signature() {
         let message = create_test_message();
         // Transaction with a bogus signature (not signed by the actual key)
-        let tx = V1Transaction::from_signatures(message, vec![test_signature(0x00)]).unwrap();
+        let tx = Transaction::from_signatures(message, vec![test_signature(0x00)]).unwrap();
 
         assert!(!tx.verify().unwrap());
     }
@@ -711,14 +708,14 @@ mod tests {
     fn verify_rejects_zero_signatures() {
         // Create a malformed transaction by bypassing the constructor
         // (message requires 1 signature, but we provide 0)
-        let tx = V1Transaction {
+        let tx = Transaction {
             message: create_test_message(),
             signatures: vec![],
         };
 
         assert_eq!(
             tx.verify_with_results(),
-            Err(V1TransactionError::SignatureCountMismatch {
+            Err(TransactionError::SignatureCountMismatch {
                 expected: 1,
                 actual: 0
             })
@@ -729,7 +726,7 @@ mod tests {
     #[test]
     fn verify_rejects_too_many_signatures() {
         // Create a malformed transaction with extra signatures
-        let tx = V1Transaction {
+        let tx = Transaction {
             message: create_test_message(), // requires 1 signature
             signatures: vec![test_signature(0x01), test_signature(0x02)], // but has 2
         };
@@ -737,7 +734,7 @@ mod tests {
         let result = tx.verify_with_results();
         assert_eq!(
             result,
-            Err(V1TransactionError::SignatureCountMismatch {
+            Err(TransactionError::SignatureCountMismatch {
                 expected: 1,
                 actual: 2
             })
@@ -747,7 +744,7 @@ mod tests {
     #[cfg(feature = "verify")]
     #[test]
     fn verify_rejects_not_enough_account_keys() {
-        use solana_message::{v1::TransactionConfig, MessageHeader};
+        use solana_message::{v1::ComputeBudgetConfig, MessageHeader};
 
         // Create a malformed message where header claims more signers than account_keys
         let malformed_message = Message {
@@ -756,14 +753,14 @@ mod tests {
                 num_readonly_signed_accounts: 0,
                 num_readonly_unsigned_accounts: 0,
             },
-            config: TransactionConfig::default(),
+            config: ComputeBudgetConfig::default(),
             lifetime_specifier: Hash::new_unique(),
             account_keys: vec![Address::new_unique()], // But only 1 account
             instructions: vec![],
         };
 
         // Transaction has matching signature count (3) but not enough account_keys
-        let tx = V1Transaction {
+        let tx = Transaction {
             message: malformed_message,
             signatures: vec![
                 test_signature(0x01),
@@ -773,7 +770,7 @@ mod tests {
         };
 
         let result = tx.verify_with_results();
-        assert_eq!(result, Err(V1TransactionError::NotEnoughAccountKeys));
+        assert_eq!(result, Err(TransactionError::NotEnoughAccountKeys));
     }
 
     #[cfg(feature = "verify")]
@@ -782,11 +779,9 @@ mod tests {
         let message = create_two_signer_message();
 
         // Both signatures are bogus
-        let tx = V1Transaction::from_signatures(
-            message,
-            vec![test_signature(0x01), test_signature(0x02)],
-        )
-        .unwrap();
+        let tx =
+            Transaction::from_signatures(message, vec![test_signature(0x01), test_signature(0x02)])
+                .unwrap();
 
         let results = tx.verify_with_results().unwrap();
         assert_eq!(results.len(), 2);
@@ -799,7 +794,7 @@ mod tests {
     fn conversion_to_versioned_transaction() {
         let message = create_test_message();
         let sig = test_signature(0x77);
-        let tx = V1Transaction::from_signatures(message.clone(), vec![sig]).unwrap();
+        let tx = Transaction::from_signatures(message.clone(), vec![sig]).unwrap();
 
         let versioned: VersionedTransaction = tx.into();
 
@@ -822,7 +817,7 @@ mod tests {
         };
 
         // TryFrom should reject this
-        let result = V1Transaction::try_from(versioned);
+        let result = Transaction::try_from(versioned);
         assert!(result.is_err());
 
         // The error should return the original transaction
@@ -840,7 +835,7 @@ mod tests {
             message: VersionedMessage::V1(message.clone()),
         };
 
-        let tx = V1Transaction::try_from(versioned).unwrap();
+        let tx = Transaction::try_from(versioned).unwrap();
         assert_eq!(tx.message, message);
         assert_eq!(tx.signatures, vec![sig]);
     }
@@ -849,7 +844,7 @@ mod tests {
     fn conversion_from_versioned_legacy_fails() {
         let versioned = VersionedTransaction::default();
 
-        let result = V1Transaction::try_from(versioned);
+        let result = Transaction::try_from(versioned);
         assert!(result.is_err());
     }
 
@@ -872,14 +867,14 @@ mod tests {
             message: VersionedMessage::V0(v0_message),
         };
 
-        let result = V1Transaction::try_from(versioned);
+        let result = Transaction::try_from(versioned);
         assert!(result.is_err());
     }
 
     #[test]
     fn serialized_size_matches_serialized_bytes() {
         let message = create_test_message();
-        let tx = V1Transaction::from_signatures(message, vec![test_signature(0xAA)]).unwrap();
+        let tx = Transaction::from_signatures(message, vec![test_signature(0xAA)]).unwrap();
 
         let bytes = tx.serialize().unwrap();
         assert_eq!(tx.serialized_size(), bytes.len());
@@ -904,7 +899,7 @@ mod tests {
             .unwrap();
 
         let signatures: Vec<_> = (0..MAX_SIGNATURES).map(test_signature).collect();
-        let tx = V1Transaction::from_signatures(message, signatures).unwrap();
+        let tx = Transaction::from_signatures(message, signatures).unwrap();
 
         let bytes = tx.serialize().unwrap();
         assert_eq!(tx.serialized_size(), bytes.len());
@@ -938,8 +933,7 @@ mod tests {
             .build()
             .unwrap();
 
-        let tx =
-            V1Transaction::from_signatures(message.clone(), vec![test_signature(0x01)]).unwrap();
+        let tx = Transaction::from_signatures(message.clone(), vec![test_signature(0x01)]).unwrap();
 
         // Verify we're at exactly 4096 bytes
         assert_eq!(tx.serialized_size(), MAX_TRANSACTION_SIZE);
@@ -948,7 +942,7 @@ mod tests {
         let bytes = tx.serialize().unwrap();
         assert_eq!(bytes.len(), MAX_TRANSACTION_SIZE);
 
-        let parsed = V1Transaction::from_bytes(&bytes).unwrap();
+        let parsed = Transaction::from_bytes(&bytes).unwrap();
         assert_eq!(parsed.message, tx.message);
         assert_eq!(parsed.signatures, tx.signatures);
 
@@ -966,7 +960,7 @@ mod tests {
                 num_readonly_signed_accounts: 0,
                 num_readonly_unsigned_accounts: 0,
             },
-            config: TransactionConfig::default(),
+            config: ComputeBudgetConfig::default(),
             lifetime_specifier: Hash::new_unique(),
             account_keys: vec![Address::new_unique(), Address::new_unique()],
             instructions: vec![CompiledInstruction {
@@ -976,7 +970,7 @@ mod tests {
             }],
         };
 
-        let tx = V1Transaction::from_signatures(message, vec![test_signature(0x01)]).unwrap();
+        let tx = Transaction::from_signatures(message, vec![test_signature(0x01)]).unwrap();
 
         assert_eq!(tx.serialized_size(), MAX_TRANSACTION_SIZE + 1);
 
@@ -1002,7 +996,7 @@ mod tests {
             .unwrap();
 
         let signatures: Vec<_> = (0..MAX_SIGNATURES).map(test_signature).collect();
-        let tx = V1Transaction::from_signatures(message, signatures).unwrap();
+        let tx = Transaction::from_signatures(message, signatures).unwrap();
 
         // This configuration should fit within 4096 bytes
         // Fixed header: 42 bytes
@@ -1016,14 +1010,14 @@ mod tests {
 
         // Verify roundtrip
         let bytes = tx.serialize().unwrap();
-        let parsed = V1Transaction::from_bytes(&bytes).unwrap();
+        let parsed = Transaction::from_bytes(&bytes).unwrap();
         assert_eq!(parsed.message, tx.message);
     }
 
     #[test]
     fn sanitize_rejects_too_few_signatures() {
         // Create a malformed transaction by bypassing the constructor
-        let tx = V1Transaction {
+        let tx = Transaction {
             message: create_test_message(), // requires 1 signature
             signatures: vec![],             // but has 0
         };
@@ -1033,7 +1027,7 @@ mod tests {
 
     #[test]
     fn sanitize_rejects_too_many_signatures() {
-        let tx = V1Transaction {
+        let tx = Transaction {
             message: create_test_message(), // requires 1 signature
             signatures: vec![test_signature(0x01), test_signature(0x02)], // but has 2
         };
@@ -1044,30 +1038,30 @@ mod tests {
     #[test]
     fn sanitize_accepts_valid_transaction() {
         let message = create_test_message();
-        let tx = V1Transaction::from_signatures(message, vec![test_signature(0xFF)]).unwrap();
+        let tx = Transaction::from_signatures(message, vec![test_signature(0xFF)]).unwrap();
         assert!(tx.sanitize().is_ok());
     }
 
     #[test]
     fn error_display_formats_correctly() {
         assert_eq!(
-            V1TransactionError::MessageError(V1MessageError::BufferTooSmall).to_string(),
+            TransactionError::MessageError(MessageError::BufferTooSmall).to_string(),
             "message error: buffer too small"
         );
         assert_eq!(
-            V1TransactionError::NotEnoughAccountKeys.to_string(),
+            TransactionError::NotEnoughAccountKeys.to_string(),
             "not enough account keys for required signatures"
         );
         assert_eq!(
-            V1TransactionError::NotEnoughSignatureBytes.to_string(),
+            TransactionError::NotEnoughSignatureBytes.to_string(),
             "not enough bytes for signatures"
         );
         assert_eq!(
-            V1TransactionError::Overflow.to_string(),
+            TransactionError::Overflow.to_string(),
             "size calculation overflow"
         );
         assert_eq!(
-            V1TransactionError::SignatureCountMismatch {
+            TransactionError::SignatureCountMismatch {
                 expected: 2,
                 actual: 1
             }
@@ -1075,7 +1069,7 @@ mod tests {
             "signature count mismatch: expected 2, got 1"
         );
         assert_eq!(
-            V1TransactionError::TrailingData.to_string(),
+            TransactionError::TrailingData.to_string(),
             "unexpected trailing data after transaction"
         );
     }
@@ -1083,14 +1077,14 @@ mod tests {
     #[test]
     fn clone_and_eq_work() {
         let message = create_test_message();
-        let tx = V1Transaction::from_signatures(message, vec![test_signature(0x01)]).unwrap();
+        let tx = Transaction::from_signatures(message, vec![test_signature(0x01)]).unwrap();
 
         let cloned = tx.clone();
         assert_eq!(tx, cloned);
 
         // Different signature should not be equal
         let message2 = create_test_message();
-        let tx2 = V1Transaction::from_signatures(message2, vec![test_signature(0x02)]).unwrap();
+        let tx2 = Transaction::from_signatures(message2, vec![test_signature(0x02)]).unwrap();
         assert_ne!(tx, tx2);
     }
 
@@ -1098,9 +1092,9 @@ mod tests {
     fn destructuring_works() {
         let message = create_test_message();
         let sig = test_signature(0x99);
-        let tx = V1Transaction::from_signatures(message.clone(), vec![sig]).unwrap();
+        let tx = Transaction::from_signatures(message.clone(), vec![sig]).unwrap();
 
-        let V1Transaction {
+        let Transaction {
             message: returned_message,
             signatures: returned_sigs,
         } = tx;

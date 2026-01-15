@@ -1,6 +1,6 @@
 //! Constants for V1 message format (SIMD-0385).
 
-use {super::TransactionConfigMask, crate::MessageHeader, solana_hash::Hash, std::mem::size_of};
+use {super::ComputeBudgetConfigMask, crate::MessageHeader, solana_hash::Hash, std::mem::size_of};
 
 /// Version byte for V1 messages (`MESSAGE_VERSION_PREFIX | 1` = decimal 129).
 pub const V1_VERSION_BYTE: u8 = 0x81;
@@ -23,7 +23,7 @@ pub const DEFAULT_HEAP_SIZE: u32 = 32_768;
 /// Size of the fixed header portion of a serialized V1 message.
 pub const FIXED_HEADER_SIZE: usize = size_of::<u8>() // version
     + size_of::<MessageHeader>() // legacy header
-    + size_of::<TransactionConfigMask>() // config mask
+    + size_of::<ComputeBudgetConfigMask>() // config mask
     + size_of::<Hash>() // lifetime_specifier
     + size_of::<u8>() // num_instructions
     + size_of::<u8>(); // num_addresses

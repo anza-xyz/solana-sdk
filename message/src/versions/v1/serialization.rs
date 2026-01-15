@@ -8,7 +8,7 @@
 //! ┌────────────────────────────────────────────────────────┐
 //! │ Version (u8 = 0x81)                                    │
 //! │ LegacyHeader (3 x u8)                                  │
-//! │ TransactionConfigMask (u32, little-endian)             │
+//! │ ComputeBudgetConfigMask (u32, little-endian)             │
 //! │ LifetimeSpecifier [u8; 32] (blockhash)                 │
 //! │ NumInstructions (u8, max 64)                           │
 //! │ NumAddresses (u8, max 64)                              │
@@ -24,7 +24,7 @@
 
 use {
     super::{
-        Message, TransactionConfig, TransactionConfigMask, V1MessageError, FIXED_HEADER_SIZE,
+        ComputeBudgetConfig, ComputeBudgetConfigMask, Message, MessageError, FIXED_HEADER_SIZE,
         INSTRUCTION_HEADER_SIZE, MAX_ADDRESSES, MAX_INSTRUCTIONS, MAX_SIGNATURES, SIGNATURE_SIZE,
         V1_VERSION_BYTE,
     },
@@ -35,21 +35,19 @@ use {
 };
 
 /// Read a fixed-size array from a byte slice at the given offset.
-fn read_at<const N: usize>(bytes: &[u8], offset: usize) -> Result<[u8; N], V1MessageError> {
-    let end = offset
-        .checked_add(N)
-        .ok_or(V1MessageError::BufferTooSmall)?;
+fn read_at<const N: usize>(bytes: &[u8], offset: usize) -> Result<[u8; N], MessageError> {
+    let end = offset.checked_add(N).ok_or(MessageError::BufferTooSmall)?;
     bytes
         .get(offset..end)
         .and_then(|slice| slice.try_into().ok())
-        .ok_or(V1MessageError::BufferTooSmall)
+        .ok_or(MessageError::BufferTooSmall)
 }
 
 impl Message {
     /// Calculate the size of this message in bytes.
     pub fn size(&self) -> usize {
         let addresses_size = self.account_keys.len().saturating_mul(size_of::<Address>());
-        let config_size = TransactionConfigMask::from_config(&self.config).config_values_size();
+        let config_size = ComputeBudgetConfigMask::from_config(&self.config).config_values_size();
         let instruction_headers_size = self
             .instructions
             .len()
@@ -75,25 +73,25 @@ impl Message {
     }
 
     /// Serialize this V1 message to bytes.
-    pub fn to_bytes(&self) -> Result<Vec<u8>, V1MessageError> {
+    pub fn to_bytes(&self) -> Result<Vec<u8>, MessageError> {
         if self.instructions.len() > MAX_INSTRUCTIONS as usize {
-            return Err(V1MessageError::TooManyInstructions);
+            return Err(MessageError::TooManyInstructions);
         }
         if self.account_keys.len() > MAX_ADDRESSES as usize {
-            return Err(V1MessageError::TooManyAddresses);
+            return Err(MessageError::TooManyAddresses);
         }
         for ix in &self.instructions {
             if ix.accounts.len() > u8::MAX as usize {
-                return Err(V1MessageError::InstructionAccountsTooLarge);
+                return Err(MessageError::InstructionAccountsTooLarge);
             }
             if ix.data.len() > u16::MAX as usize {
-                return Err(V1MessageError::InstructionDataTooLarge);
+                return Err(MessageError::InstructionDataTooLarge);
             }
         }
 
         let total_size = self.size();
         let mut bytes = Vec::with_capacity(total_size);
-        let config_mask = TransactionConfigMask::from_config(&self.config);
+        let config_mask = ComputeBudgetConfigMask::from_config(&self.config);
 
         // Fixed header
         bytes.push(V1_VERSION_BYTE);
@@ -144,10 +142,10 @@ impl Message {
     ///
     /// Use this when parsing a standalone message buffer. Returns an error if
     /// there are unexpected bytes after the message. The input must start with the version byte (0x81).
-    pub fn from_bytes(bytes: &[u8]) -> Result<Self, V1MessageError> {
+    pub fn from_bytes(bytes: &[u8]) -> Result<Self, MessageError> {
         let (message, bytes_consumed) = Self::from_bytes_partial(bytes)?;
         if bytes_consumed != bytes.len() {
-            return Err(V1MessageError::TrailingData);
+            return Err(MessageError::TrailingData);
         }
         Ok(message)
     }
@@ -158,9 +156,9 @@ impl Message {
     /// parsing a V1 transaction where signatures follow the message. The returned
     /// `usize` indicates where the message ends, so you can parse subsequent data.
     /// The input must start with the version byte (0x81).
-    pub fn from_bytes_partial(bytes: &[u8]) -> Result<(Self, usize), V1MessageError> {
+    pub fn from_bytes_partial(bytes: &[u8]) -> Result<(Self, usize), MessageError> {
         if bytes.len() < FIXED_HEADER_SIZE {
-            return Err(V1MessageError::BufferTooSmall);
+            return Err(MessageError::BufferTooSmall);
         }
 
         // Track position as we parse each field sequentially.
@@ -170,7 +168,7 @@ impl Message {
 
         // Version byte
         if bytes[offset] != V1_VERSION_BYTE {
-            return Err(V1MessageError::InvalidVersion);
+            return Err(MessageError::InvalidVersion);
         }
         offset = offset.saturating_add(size_of::<u8>());
 
@@ -180,51 +178,51 @@ impl Message {
             num_readonly_signed_accounts: bytes
                 .get(offset.saturating_add(1))
                 .copied()
-                .ok_or(V1MessageError::BufferTooSmall)?,
+                .ok_or(MessageError::BufferTooSmall)?,
             num_readonly_unsigned_accounts: bytes
                 .get(offset.saturating_add(2))
                 .copied()
-                .ok_or(V1MessageError::BufferTooSmall)?,
+                .ok_or(MessageError::BufferTooSmall)?,
         };
         offset = offset.saturating_add(size_of::<MessageHeader>());
 
         if header.num_required_signatures > MAX_SIGNATURES {
-            return Err(V1MessageError::TooManySignatures);
+            return Err(MessageError::TooManySignatures);
         }
 
-        let config_mask = TransactionConfigMask::new(u32::from_le_bytes(read_at(bytes, offset)?));
-        offset = offset.saturating_add(size_of::<TransactionConfigMask>());
+        let config_mask = ComputeBudgetConfigMask::new(u32::from_le_bytes(read_at(bytes, offset)?));
+        offset = offset.saturating_add(size_of::<ComputeBudgetConfigMask>());
 
         if config_mask.has_unknown_bits() || config_mask.has_invalid_priority_fee_bits() {
-            return Err(V1MessageError::InvalidConfigMask);
+            return Err(MessageError::InvalidConfigMask);
         }
 
         let lifetime_specifier = Hash::new_from_array(read_at(bytes, offset)?);
         offset = offset.saturating_add(size_of::<Hash>());
 
-        let num_instructions = *bytes.get(offset).ok_or(V1MessageError::BufferTooSmall)?;
+        let num_instructions = *bytes.get(offset).ok_or(MessageError::BufferTooSmall)?;
         offset = offset.saturating_add(size_of::<u8>());
         if num_instructions > MAX_INSTRUCTIONS {
-            return Err(V1MessageError::TooManyInstructions);
+            return Err(MessageError::TooManyInstructions);
         }
 
-        let num_addresses = *bytes.get(offset).ok_or(V1MessageError::BufferTooSmall)?;
+        let num_addresses = *bytes.get(offset).ok_or(MessageError::BufferTooSmall)?;
         offset = offset.saturating_add(size_of::<u8>());
         if num_addresses > MAX_ADDRESSES {
-            return Err(V1MessageError::TooManyAddresses);
+            return Err(MessageError::TooManyAddresses);
         }
 
         // Validate that we have enough addresses for all required signatures
         if header.num_required_signatures > num_addresses {
-            return Err(V1MessageError::NotEnoughAddressesForSignatures);
+            return Err(MessageError::NotEnoughAddressesForSignatures);
         }
 
         // Addresses - use checked_mul for untrusted count, saturating for offset
         let addresses_size = (num_addresses as usize)
             .checked_mul(size_of::<Address>())
-            .ok_or(V1MessageError::BufferTooSmall)?;
+            .ok_or(MessageError::BufferTooSmall)?;
         if bytes.len() < offset.saturating_add(addresses_size) {
-            return Err(V1MessageError::BufferTooSmall);
+            return Err(MessageError::BufferTooSmall);
         }
 
         let mut account_keys = Vec::with_capacity(num_addresses as usize);
@@ -236,10 +234,10 @@ impl Message {
         // Config values - parsed in bit order per SIMD-0385 wire format
         let config_size = config_mask.config_values_size();
         if bytes.len() < offset.saturating_add(config_size) {
-            return Err(V1MessageError::BufferTooSmall);
+            return Err(MessageError::BufferTooSmall);
         }
 
-        let mut config = TransactionConfig::default();
+        let mut config = ComputeBudgetConfig::default();
         if config_mask.has_priority_fee() {
             config.priority_fee = Some(u64::from_le_bytes(read_at(bytes, offset)?));
             offset = offset.saturating_add(size_of::<u64>());
@@ -256,7 +254,7 @@ impl Message {
         if config_mask.has_heap_size() {
             let heap_size = u32::from_le_bytes(read_at(bytes, offset)?);
             if heap_size % 1024 != 0 {
-                return Err(V1MessageError::InvalidHeapSize);
+                return Err(MessageError::InvalidHeapSize);
             }
             config.heap_size = Some(heap_size);
             offset = offset.saturating_add(size_of::<u32>());
@@ -265,21 +263,21 @@ impl Message {
         // Instruction headers: (program_id_index: u8, num_accounts: u8, data_len: u16)
         let instruction_headers_size = (num_instructions as usize)
             .checked_mul(INSTRUCTION_HEADER_SIZE)
-            .ok_or(V1MessageError::BufferTooSmall)?;
+            .ok_or(MessageError::BufferTooSmall)?;
         if bytes.len() < offset.saturating_add(instruction_headers_size) {
-            return Err(V1MessageError::BufferTooSmall);
+            return Err(MessageError::BufferTooSmall);
         }
 
         let mut instruction_headers = Vec::with_capacity(num_instructions as usize);
         for _ in 0..num_instructions {
-            let program_id_index = *bytes.get(offset).ok_or(V1MessageError::BufferTooSmall)?;
+            let program_id_index = *bytes.get(offset).ok_or(MessageError::BufferTooSmall)?;
             // Validate program_id_index: must be < num_addresses and != 0 (fee payer)
             if program_id_index == 0 || program_id_index >= num_addresses {
-                return Err(V1MessageError::InvalidProgramIdIndex);
+                return Err(MessageError::InvalidProgramIdIndex);
             }
             let num_accounts = *bytes
                 .get(offset.saturating_add(1))
-                .ok_or(V1MessageError::BufferTooSmall)?;
+                .ok_or(MessageError::BufferTooSmall)?;
             let num_data_bytes = u16::from_le_bytes(read_at(bytes, offset.saturating_add(2))?);
             instruction_headers.push((program_id_index, num_accounts, num_data_bytes));
             offset = offset.saturating_add(INSTRUCTION_HEADER_SIZE);
@@ -293,7 +291,7 @@ impl Message {
             let payload_size = accounts_size.saturating_add(data_size);
 
             if bytes.len() < offset.saturating_add(payload_size) {
-                return Err(V1MessageError::BufferTooSmall);
+                return Err(MessageError::BufferTooSmall);
             }
 
             let accounts_end = offset.saturating_add(accounts_size);
@@ -301,7 +299,7 @@ impl Message {
             // Validate all account indices are < num_addresses
             for &account_index in &accounts {
                 if account_index >= num_addresses {
-                    return Err(V1MessageError::InvalidInstructionAccountIndex);
+                    return Err(MessageError::InvalidInstructionAccountIndex);
                 }
             }
             offset = accounts_end;
@@ -566,10 +564,7 @@ mod tests {
 
     #[test]
     fn from_bytes_rejects_empty_buffer() {
-        assert_eq!(
-            Message::from_bytes(&[]),
-            Err(V1MessageError::BufferTooSmall)
-        );
+        assert_eq!(Message::from_bytes(&[]), Err(MessageError::BufferTooSmall));
     }
 
     #[test]
@@ -597,7 +592,7 @@ mod tests {
             let err = Message::from_bytes(truncated).unwrap_err();
             assert!(matches!(
                 err,
-                V1MessageError::BufferTooSmall | V1MessageError::InvalidVersion
+                MessageError::BufferTooSmall | MessageError::InvalidVersion
             ));
         }
 
@@ -619,7 +614,7 @@ mod tests {
             bytes[0] = bad_version;
             assert_eq!(
                 Message::from_bytes(&bytes),
-                Err(V1MessageError::InvalidVersion)
+                Err(MessageError::InvalidVersion)
             );
         }
     }
@@ -638,7 +633,7 @@ mod tests {
 
         assert_eq!(
             Message::from_bytes(&bytes),
-            Err(V1MessageError::TooManySignatures)
+            Err(MessageError::TooManySignatures)
         );
     }
 
@@ -662,7 +657,7 @@ mod tests {
 
         assert_eq!(
             Message::from_bytes(&bytes),
-            Err(V1MessageError::InvalidConfigMask)
+            Err(MessageError::InvalidConfigMask)
         );
 
         // Also test only bit 1 set
@@ -672,7 +667,7 @@ mod tests {
         bytes[7] = 0;
         assert_eq!(
             Message::from_bytes(&bytes),
-            Err(V1MessageError::InvalidConfigMask)
+            Err(MessageError::InvalidConfigMask)
         );
     }
 
@@ -691,7 +686,7 @@ mod tests {
 
         assert_eq!(
             Message::from_bytes(&bytes),
-            Err(V1MessageError::InvalidConfigMask)
+            Err(MessageError::InvalidConfigMask)
         );
     }
 
@@ -710,7 +705,7 @@ mod tests {
 
         assert_eq!(
             Message::from_bytes(&bytes),
-            Err(V1MessageError::TooManyInstructions)
+            Err(MessageError::TooManyInstructions)
         );
     }
 
@@ -728,7 +723,7 @@ mod tests {
 
         assert_eq!(
             Message::from_bytes(&bytes),
-            Err(V1MessageError::TooManyAddresses)
+            Err(MessageError::TooManyAddresses)
         );
     }
 
@@ -749,7 +744,7 @@ mod tests {
 
         assert_eq!(
             Message::from_bytes(&bytes),
-            Err(V1MessageError::NotEnoughAddressesForSignatures)
+            Err(MessageError::NotEnoughAddressesForSignatures)
         );
     }
 
@@ -760,7 +755,7 @@ mod tests {
         bytes.push(1); // num_required_signatures
         bytes.push(0); // num_readonly_signed
         bytes.push(0); // num_readonly_unsigned
-        bytes.extend_from_slice(&TransactionConfigMask::HEAP_SIZE_BIT.to_le_bytes());
+        bytes.extend_from_slice(&ComputeBudgetConfigMask::HEAP_SIZE_BIT.to_le_bytes());
         bytes.extend_from_slice(&[1u8; 32]); // lifetime_specifier
         bytes.push(0); // num_instructions
         bytes.push(1); // num_addresses
@@ -769,7 +764,7 @@ mod tests {
 
         assert_eq!(
             Message::from_bytes(&bytes),
-            Err(V1MessageError::InvalidHeapSize)
+            Err(MessageError::InvalidHeapSize)
         );
     }
 
@@ -793,7 +788,7 @@ mod tests {
 
         assert_eq!(
             Message::from_bytes(&bytes),
-            Err(V1MessageError::InvalidProgramIdIndex)
+            Err(MessageError::InvalidProgramIdIndex)
         );
     }
 
@@ -816,7 +811,7 @@ mod tests {
 
         assert_eq!(
             Message::from_bytes(&bytes),
-            Err(V1MessageError::InvalidProgramIdIndex)
+            Err(MessageError::InvalidProgramIdIndex)
         );
     }
 
@@ -840,7 +835,7 @@ mod tests {
 
         assert_eq!(
             Message::from_bytes(&bytes),
-            Err(V1MessageError::InvalidInstructionAccountIndex)
+            Err(MessageError::InvalidInstructionAccountIndex)
         );
     }
 
@@ -868,7 +863,7 @@ mod tests {
         with_trailing.push(0xFF);
         assert_eq!(
             Message::from_bytes(&with_trailing),
-            Err(V1MessageError::TrailingData)
+            Err(MessageError::TrailingData)
         );
     }
 
@@ -917,7 +912,7 @@ mod tests {
 
         assert_eq!(
             Message::from_bytes(&bytes),
-            Err(V1MessageError::TooManyInstructions)
+            Err(MessageError::TooManyInstructions)
         );
     }
 
@@ -977,10 +972,10 @@ mod tests {
     fn roundtrip_preserves_sparse_config() {
         // Test each config field individually
         let configs = [
-            TransactionConfig::new().with_priority_fee(1000),
-            TransactionConfig::new().with_compute_unit_limit(200_000),
-            TransactionConfig::new().with_loaded_accounts_data_size_limit(1_000_000),
-            TransactionConfig::new().with_heap_size(65536),
+            ComputeBudgetConfig::new().with_priority_fee(1000),
+            ComputeBudgetConfig::new().with_compute_unit_limit(200_000),
+            ComputeBudgetConfig::new().with_loaded_accounts_data_size_limit(1_000_000),
+            ComputeBudgetConfig::new().with_heap_size(65536),
         ];
 
         for config in configs {
@@ -1004,13 +999,13 @@ mod tests {
 
         // Test gap combinations (skipping fields)
         let gap_configs = [
-            TransactionConfig::new()
+            ComputeBudgetConfig::new()
                 .with_compute_unit_limit(200_000)
                 .with_heap_size(65536),
-            TransactionConfig::new()
+            ComputeBudgetConfig::new()
                 .with_priority_fee(5000)
                 .with_loaded_accounts_data_size_limit(500_000),
-            TransactionConfig::new()
+            ComputeBudgetConfig::new()
                 .with_priority_fee(1000)
                 .with_heap_size(32768),
         ];
@@ -1089,7 +1084,7 @@ mod tests {
         buf.extend_from_slice(&[0xBB; 64]);
 
         // from_bytes should reject trailing data
-        assert_eq!(Message::from_bytes(&buf), Err(V1MessageError::TrailingData));
+        assert_eq!(Message::from_bytes(&buf), Err(MessageError::TrailingData));
 
         // from_bytes_partial should succeed
         let (parsed, bytes_consumed) = Message::from_bytes_partial(&buf).unwrap();

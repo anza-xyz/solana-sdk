@@ -80,7 +80,7 @@ pub enum SanitizedMessage {
     /// Sanitized version #0 message with dynamically loaded addresses
     V0(v0::LoadedMessage<'static>),
     /// Sanitized version #1 message (4KB transactions, no address lookup tables)
-    V1(v1::V1Message),
+    V1(v1::LoadedMessage),
 }
 
 impl SanitizedMessage {
@@ -107,7 +107,7 @@ impl SanitizedMessage {
             }
             VersionedMessage::V1(message) => {
                 // V1 messages do not use address lookup tables - all addresses are inline
-                SanitizedMessage::V1(v1::V1Message::new(message, reserved_account_keys))
+                SanitizedMessage::V1(v1::LoadedMessage::new(message, reserved_account_keys))
             }
         })
     }
