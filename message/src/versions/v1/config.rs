@@ -2,6 +2,8 @@
 
 #[cfg(feature = "frozen-abi")]
 use solana_frozen_abi_macro::AbiExample;
+#[cfg(feature = "serde")]
+use serde_derive::{Deserialize, Serialize};
 use std::mem::size_of;
 
 /// Bitmask indicating which configuration values are present in a V1 transaction.
@@ -9,6 +11,7 @@ use std::mem::size_of;
 /// Each bit (or bit pair) corresponds to a specific configuration field.
 /// The config values array contains entries only for fields whose bits are set.
 #[cfg_attr(feature = "frozen-abi", derive(AbiExample))]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub struct TransactionConfigMask(pub u32);
 
@@ -102,6 +105,7 @@ impl TransactionConfigMask {
 
 /// Compute budget configuration for V1 transactions.
 #[cfg_attr(feature = "frozen-abi", derive(AbiExample))]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(rename_all = "camelCase"))]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub struct TransactionConfig {
     /// Priority fee in lamports.

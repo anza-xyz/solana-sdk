@@ -2,6 +2,8 @@
 
 #[cfg(feature = "frozen-abi")]
 use solana_frozen_abi_macro::AbiExample;
+#[cfg(feature = "serde")]
+use serde_derive::{Deserialize, Serialize};
 use {
     super::{
         TransactionConfig, TransactionConfigMask, MAX_ADDRESSES, MAX_INSTRUCTIONS, MAX_SIGNATURES,
@@ -17,6 +19,7 @@ use {
 
 /// A V1 transaction message (SIMD-0385) supporting 4KB transactions with inline compute budget.
 #[cfg_attr(feature = "frozen-abi", derive(AbiExample))]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(rename_all = "camelCase"))]
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct Message {
     /// The message header describing signer/readonly account counts.
@@ -31,9 +34,11 @@ pub struct Message {
 
     /// All account addresses referenced by this message.
     /// Unlike V0, V1 does not support address lookup tables.
+    #[cfg_attr(feature = "serde", serde(with = "solana_short_vec"))]
     pub account_keys: Vec<Address>,
 
     /// Program instructions to execute.
+    #[cfg_attr(feature = "serde", serde(with = "solana_short_vec"))]
     pub instructions: Vec<CompiledInstruction>,
 }
 
