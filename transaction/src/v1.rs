@@ -335,7 +335,7 @@ mod tests {
         solana_hash::Hash,
         solana_message::{
             compiled_instruction::CompiledInstruction,
-            v1::{MAX_ADDRESSES, MAX_SIGNATURES, MAX_TRANSACTION_SIZE, TransactionConfig},
+            v1::{TransactionConfig, MAX_ADDRESSES, MAX_SIGNATURES, MAX_TRANSACTION_SIZE},
             MessageHeader,
         },
     };
