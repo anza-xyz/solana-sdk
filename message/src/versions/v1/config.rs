@@ -1,9 +1,9 @@
 //! Transaction configuration types for V1 messages.
 
-#[cfg(feature = "frozen-abi")]
-use solana_frozen_abi_macro::AbiExample;
 #[cfg(feature = "serde")]
 use serde_derive::{Deserialize, Serialize};
+#[cfg(feature = "frozen-abi")]
+use solana_frozen_abi_macro::AbiExample;
 use std::mem::size_of;
 
 /// Bitmask indicating which configuration values are present in a V1 transaction.
@@ -105,7 +105,11 @@ impl TransactionConfigMask {
 
 /// Compute budget configuration for V1 transactions.
 #[cfg_attr(feature = "frozen-abi", derive(AbiExample))]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(rename_all = "camelCase"))]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(rename_all = "camelCase")
+)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub struct TransactionConfig {
     /// Priority fee in lamports.

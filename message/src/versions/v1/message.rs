@@ -1,9 +1,9 @@
 //! Core Message type for V1 transactions (SIMD-0385).
 
-#[cfg(feature = "frozen-abi")]
-use solana_frozen_abi_macro::AbiExample;
 #[cfg(feature = "serde")]
 use serde_derive::{Deserialize, Serialize};
+#[cfg(feature = "frozen-abi")]
+use solana_frozen_abi_macro::AbiExample;
 use {
     super::{
         TransactionConfig, TransactionConfigMask, MAX_ADDRESSES, MAX_INSTRUCTIONS, MAX_SIGNATURES,
@@ -19,7 +19,11 @@ use {
 
 /// A V1 transaction message (SIMD-0385) supporting 4KB transactions with inline compute budget.
 #[cfg_attr(feature = "frozen-abi", derive(AbiExample))]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(rename_all = "camelCase"))]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(rename_all = "camelCase")
+)]
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct Message {
     /// The message header describing signer/readonly account counts.
