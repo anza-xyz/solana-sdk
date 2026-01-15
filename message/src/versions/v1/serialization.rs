@@ -214,6 +214,11 @@ impl Message {
             return Err(V1MessageError::TooManyAddresses);
         }
 
+        // Validate that we have enough addresses for all required signatures
+        if header.num_required_signatures > num_addresses {
+            return Err(V1MessageError::NotEnoughAddressesForSignatures);
+        }
+
         // Addresses - use checked_mul for untrusted count, saturating for offset
         let addresses_size = (num_addresses as usize)
             .checked_mul(size_of::<Address>())
@@ -328,7 +333,14 @@ impl Message {
 #[cfg(test)]
 #[allow(clippy::vec_init_then_push)]
 mod tests {
-    use super::*;
+    use {
+        super::*,
+        proptest::prelude::*,
+        std::{
+            collections::hash_map::DefaultHasher,
+            hash::{Hash as StdHash, Hasher},
+        },
+    };
 
     #[test]
     fn size_matches_serialized_length() {
@@ -390,12 +402,13 @@ mod tests {
 
     #[test]
     fn transaction_size_includes_signatures() {
-        for num_sigs in [0u8, 1, 2, 5] {
+        // Note: num_sigs must be >= 1 (fee payer required)
+        for num_sigs in [1u8, 2, 5, 12] {
             let message = Message::builder()
                 .num_required_signatures(num_sigs)
                 .lifetime_specifier(Hash::new_unique())
                 .account_keys(
-                    (0..std::cmp::max(1, num_sigs as usize))
+                    (0..num_sigs as usize)
                         .map(|_| Address::new_unique())
                         .collect(),
                 )
@@ -612,6 +625,24 @@ mod tests {
     }
 
     #[test]
+    fn from_bytes_rejects_over_12_signatures() {
+        let mut bytes = Vec::new();
+        bytes.push(V1_VERSION_BYTE);
+        bytes.push(MAX_SIGNATURES + 1); // too many
+        bytes.push(0);
+        bytes.push(0);
+        bytes.extend_from_slice(&0u32.to_le_bytes()); // config mask
+        bytes.extend_from_slice(&[0u8; 32]); // lifetime_specifier
+        bytes.push(0); // num_instructions
+        bytes.push(1); // num_addresses
+
+        assert_eq!(
+            Message::from_bytes(&bytes),
+            Err(V1MessageError::TooManySignatures)
+        );
+    }
+
+    #[test]
     fn from_bytes_rejects_invalid_priority_fee_mask() {
         let mut bytes = Vec::new();
         bytes.push(V1_VERSION_BYTE);
@@ -665,44 +696,6 @@ mod tests {
     }
 
     #[test]
-    fn from_bytes_rejects_unaligned_heap_size() {
-        let mut bytes = Vec::new();
-        bytes.push(V1_VERSION_BYTE);
-        bytes.push(1); // num_required_signatures
-        bytes.push(0); // num_readonly_signed
-        bytes.push(0); // num_readonly_unsigned
-        bytes.extend_from_slice(&TransactionConfigMask::HEAP_SIZE_BIT.to_le_bytes());
-        bytes.extend_from_slice(&[1u8; 32]); // lifetime_specifier
-        bytes.push(0); // num_instructions
-        bytes.push(1); // num_addresses
-        bytes.extend_from_slice(&[1u8; 32]); // one address
-        bytes.extend_from_slice(&1025u32.to_le_bytes()); // heap_size not multiple of 1024
-
-        assert_eq!(
-            Message::from_bytes(&bytes),
-            Err(V1MessageError::InvalidHeapSize)
-        );
-    }
-
-    #[test]
-    fn from_bytes_rejects_over_12_signatures() {
-        let mut bytes = Vec::new();
-        bytes.push(V1_VERSION_BYTE);
-        bytes.push(MAX_SIGNATURES + 1); // too many
-        bytes.push(0);
-        bytes.push(0);
-        bytes.extend_from_slice(&0u32.to_le_bytes()); // config mask
-        bytes.extend_from_slice(&[0u8; 32]); // lifetime_specifier
-        bytes.push(0); // num_instructions
-        bytes.push(1); // num_addresses
-
-        assert_eq!(
-            Message::from_bytes(&bytes),
-            Err(V1MessageError::TooManySignatures)
-        );
-    }
-
-    #[test]
     fn from_bytes_rejects_over_64_instructions() {
         let mut bytes = Vec::new();
         bytes.push(V1_VERSION_BYTE);
@@ -711,7 +704,7 @@ mod tests {
         bytes.push(0);
         bytes.extend_from_slice(&0u32.to_le_bytes());
         bytes.extend_from_slice(&[0u8; 32]);
-        bytes.push(MAX_INSTRUCTIONS + 1); // too many
+        bytes.push(MAX_INSTRUCTIONS + 1); // too many (65)
         bytes.push(1);
         bytes.extend_from_slice(&[1u8; 32]);
 
@@ -736,6 +729,47 @@ mod tests {
         assert_eq!(
             Message::from_bytes(&bytes),
             Err(V1MessageError::TooManyAddresses)
+        );
+    }
+
+    #[test]
+    fn from_bytes_rejects_not_enough_addresses_for_signatures() {
+        // Build bytes manually: claims 5 signers but only has 2 addresses
+        let mut bytes = Vec::new();
+        bytes.push(V1_VERSION_BYTE);
+        bytes.push(5); // num_required_signatures = 5
+        bytes.push(0); // num_readonly_signed
+        bytes.push(0); // num_readonly_unsigned
+        bytes.extend_from_slice(&0u32.to_le_bytes()); // config mask
+        bytes.extend_from_slice(&[0xAB; 32]); // lifetime_specifier
+        bytes.push(0); // num_instructions
+        bytes.push(2); // num_addresses = 2 (less than 5!)
+        bytes.extend_from_slice(&[1u8; 32]); // address 1
+        bytes.extend_from_slice(&[2u8; 32]); // address 2
+
+        assert_eq!(
+            Message::from_bytes(&bytes),
+            Err(V1MessageError::NotEnoughAddressesForSignatures)
+        );
+    }
+
+    #[test]
+    fn from_bytes_rejects_unaligned_heap_size() {
+        let mut bytes = Vec::new();
+        bytes.push(V1_VERSION_BYTE);
+        bytes.push(1); // num_required_signatures
+        bytes.push(0); // num_readonly_signed
+        bytes.push(0); // num_readonly_unsigned
+        bytes.extend_from_slice(&TransactionConfigMask::HEAP_SIZE_BIT.to_le_bytes());
+        bytes.extend_from_slice(&[1u8; 32]); // lifetime_specifier
+        bytes.push(0); // num_instructions
+        bytes.push(1); // num_addresses
+        bytes.extend_from_slice(&[1u8; 32]); // one address
+        bytes.extend_from_slice(&1025u32.to_le_bytes()); // heap_size not multiple of 1024
+
+        assert_eq!(
+            Message::from_bytes(&bytes),
+            Err(V1MessageError::InvalidHeapSize)
         );
     }
 
@@ -835,6 +869,55 @@ mod tests {
         assert_eq!(
             Message::from_bytes(&with_trailing),
             Err(V1MessageError::TrailingData)
+        );
+    }
+
+    #[test]
+    fn from_bytes_accepts_64_instructions() {
+        // Build a valid message with 64 instructions (max per SIMD-0385)
+        let num_instructions: u8 = MAX_INSTRUCTIONS;
+        let mut bytes = Vec::new();
+        bytes.push(V1_VERSION_BYTE);
+        bytes.push(1); // num_required_signatures
+        bytes.push(0); // num_readonly_signed
+        bytes.push(0); // num_readonly_unsigned
+        bytes.extend_from_slice(&0u32.to_le_bytes()); // config mask
+        bytes.extend_from_slice(&[0xAB; 32]); // lifetime_specifier
+        bytes.push(num_instructions); // num_instructions = 64
+        bytes.push(2); // num_addresses
+        bytes.extend_from_slice(&[1u8; 32]); // fee_payer
+        bytes.extend_from_slice(&[2u8; 32]); // program
+
+        // Instruction headers: all point to program (index 1), zero accounts, zero data
+        for _ in 0..num_instructions {
+            bytes.push(1); // program_id_index
+            bytes.push(0); // num_accounts
+            bytes.extend_from_slice(&0u16.to_le_bytes()); // data_len
+        }
+        // No instruction payloads needed (all have 0 accounts and 0 data)
+
+        let result = Message::from_bytes(&bytes);
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap().instructions.len(), 64);
+    }
+
+    #[test]
+    fn from_bytes_rejects_65_instructions() {
+        let mut bytes = Vec::new();
+        bytes.push(V1_VERSION_BYTE);
+        bytes.push(1);
+        bytes.push(0);
+        bytes.push(0);
+        bytes.extend_from_slice(&0u32.to_le_bytes());
+        bytes.extend_from_slice(&[0xAB; 32]);
+        bytes.push(65); // num_instructions = 65 (exceeds max 64 per SIMD-0385)
+        bytes.push(2);
+        bytes.extend_from_slice(&[1u8; 32]);
+        bytes.extend_from_slice(&[2u8; 32]);
+
+        assert_eq!(
+            Message::from_bytes(&bytes),
+            Err(V1MessageError::TooManyInstructions)
         );
     }
 
@@ -1017,5 +1100,103 @@ mod tests {
         // Verify we can locate signatures after the message
         assert_eq!(&buf[bytes_consumed..bytes_consumed + 64], &[0xAA; 64]);
         assert_eq!(&buf[bytes_consumed + 64..bytes_consumed + 128], &[0xBB; 64]);
+    }
+
+    proptest! {
+        #[test]
+        fn arbitrary_bytes_never_panic(bytes in proptest::collection::vec(any::<u8>(), 0..1000)) {
+            // Parser should never panic on arbitrary input
+            let _ = Message::from_bytes(&bytes);
+        }
+
+        #[test]
+        fn arbitrary_bytes_with_valid_prefix_never_panic(
+            rest in proptest::collection::vec(any::<u8>(), 0..1000)
+        ) {
+            // Even with valid version byte, parser should handle garbage gracefully
+            let mut bytes = vec![V1_VERSION_BYTE];
+            bytes.extend(rest);
+            let _ = Message::from_bytes(&bytes);
+        }
+
+        #[test]
+        fn roundtrip_preserves_valid_messages(
+            num_keys in 2usize..=10,
+            num_instructions in 0usize..=5,
+            seed in any::<u64>(),
+        ) {
+            // Use seed to generate deterministic but varied data
+            let mut hasher = DefaultHasher::new();
+            seed.hash(&mut hasher);
+            let hash_val = hasher.finish();
+
+            let account_keys: Vec<Address> = (0..num_keys)
+                .map(|i| {
+                    let mut addr = [0u8; 32];
+                    addr[0..8].copy_from_slice(&(hash_val.wrapping_add(i as u64)).to_le_bytes());
+                    addr[8] = i as u8;
+                    Address::new_from_array(addr)
+                })
+                .collect();
+
+            let instructions: Vec<CompiledInstruction> = (0..num_instructions)
+                .map(|i| CompiledInstruction {
+                    program_id_index: 1, // Always use index 1 as program
+                    accounts: vec![0], // Fee payer
+                    data: vec![(i % 256) as u8; i % 100], // Varied data
+                })
+                .collect();
+
+            let message = Message::builder()
+                .num_required_signatures(1)
+                .lifetime_specifier(Hash::new_from_array([hash_val as u8; 32]))
+                .account_keys(account_keys)
+                .instructions(instructions)
+                .build()
+                .unwrap();
+
+            let bytes = message.to_bytes().unwrap();
+            let parsed = Message::from_bytes(&bytes).unwrap();
+
+            prop_assert_eq!(message.header, parsed.header);
+            prop_assert_eq!(message.lifetime_specifier, parsed.lifetime_specifier);
+            prop_assert_eq!(message.account_keys, parsed.account_keys);
+            prop_assert_eq!(message.config, parsed.config);
+            prop_assert_eq!(message.instructions, parsed.instructions);
+        }
+
+        #[test]
+        fn truncated_valid_message_fails(
+            truncate_at in 1usize..200
+        ) {
+            // Create a valid message
+            let message = Message::builder()
+                .num_required_signatures(2)
+                .lifetime_specifier(Hash::new_from_array([0xCC; 32]))
+                .account_keys(vec![
+                    Address::new_from_array([1u8; 32]),
+                    Address::new_from_array([2u8; 32]),
+                    Address::new_from_array([3u8; 32]),
+                ])
+                .priority_fee(1000)
+                .compute_unit_limit(200_000)
+                .instruction(CompiledInstruction {
+                    program_id_index: 2,
+                    accounts: vec![0, 1],
+                    data: vec![0xAA; 50],
+                })
+                .build()
+                .unwrap();
+
+            let bytes = message.to_bytes().unwrap();
+            let truncate_pos = truncate_at.min(bytes.len().saturating_sub(1));
+
+            if truncate_pos < bytes.len() {
+                let truncated = &bytes[..truncate_pos];
+                let result = Message::from_bytes(truncated);
+                // Should fail, not panic
+                prop_assert!(result.is_err());
+            }
+        }
     }
 }

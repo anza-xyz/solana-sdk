@@ -520,8 +520,10 @@ impl<'de> SchemaRead<'de> for VersionedMessage {
 
 #[cfg(test)]
 mod tests {
+    #[cfg(feature = "blake3")]
+    use blake3::traits::digest::Digest;
     use {
-        super::*,
+        super::{v1::Message as V1Message, *},
         crate::v0::MessageAddressTableLookup,
         solana_instruction::{AccountMeta, Instruction},
     };
@@ -614,8 +616,6 @@ mod tests {
 
     #[test]
     fn test_v1_message_raw_bytes_roundtrip() {
-        use super::v1::Message as V1Message;
-
         let message = V1Message::builder()
             .num_required_signatures(1)
             .lifetime_specifier(Hash::new_unique())
@@ -645,8 +645,6 @@ mod tests {
 
     #[test]
     fn test_v1_versioned_message_json_roundtrip() {
-        use super::v1::Message as V1Message;
-
         let msg = V1Message::builder()
             .num_required_signatures(1)
             .lifetime_specifier(Hash::new_unique())
@@ -669,8 +667,6 @@ mod tests {
 
     #[test]
     fn test_v1_versioned_message_bincode_blocked() {
-        use super::v1::Message as V1Message;
-
         let msg = V1Message::builder()
             .num_required_signatures(1)
             .lifetime_specifier(Hash::new_unique())
@@ -697,7 +693,6 @@ mod tests {
     #[cfg(feature = "wincode")]
     #[test]
     fn test_v1_wincode_roundtrip() {
-        use super::v1::Message as V1Message;
         let test_messages = [
             // Minimal message
             V1Message::builder()
@@ -775,8 +770,6 @@ mod tests {
     #[cfg(feature = "blake3")]
     #[test]
     fn test_hash_raw_message_uses_version_specific_prefix() {
-        use blake3::traits::digest::Digest;
-
         // Test V1 message (0x81 prefix)
         let v1_bytes = &[0x81, 0x01, 0x02, 0x03];
         let v1_hash = VersionedMessage::hash_raw_message(v1_bytes);
@@ -812,5 +805,99 @@ mod tests {
         assert_ne!(v1_hash, v0_hash);
         assert_ne!(v1_hash, legacy_hash);
         assert_ne!(v0_hash, legacy_hash);
+    }
+
+    #[cfg(feature = "blake3")]
+    #[test]
+    fn test_hash_domain_separation_prevents_collision() {
+        // Same payload bytes but different version prefixes must produce different hashes
+        let payload = &[0x01, 0x02, 0x03, 0x04, 0x05];
+
+        // Create messages with same payload but different versions
+        let mut legacy_bytes = vec![0x7F]; // Legacy (< 0x80)
+        legacy_bytes.extend_from_slice(payload);
+
+        let mut v0_bytes = vec![0x80]; // V0
+        v0_bytes.extend_from_slice(payload);
+
+        let mut v1_bytes = vec![0x81]; // V1
+        v1_bytes.extend_from_slice(payload);
+
+        let legacy_hash = VersionedMessage::hash_raw_message(&legacy_bytes);
+        let v0_hash = VersionedMessage::hash_raw_message(&v0_bytes);
+        let v1_hash = VersionedMessage::hash_raw_message(&v1_bytes);
+
+        // All hashes must be different despite similar content
+        assert_ne!(legacy_hash, v0_hash, "Legacy and V0 hashes should differ");
+        assert_ne!(legacy_hash, v1_hash, "Legacy and V1 hashes should differ");
+        assert_ne!(v0_hash, v1_hash, "V0 and V1 hashes should differ");
+    }
+
+    #[cfg(feature = "blake3")]
+    #[test]
+    fn test_hash_empty_message_edge_case() {
+        // Empty message edge case
+        let empty_hash = VersionedMessage::hash_raw_message(&[]);
+
+        // Empty input should just hash empty bytes (no version prefix)
+        let mut hasher = blake3::Hasher::new();
+        hasher.update(&[]);
+        let expected: [u8; 32] = hasher.finalize().into();
+        assert_eq!(empty_hash.as_ref(), &expected);
+    }
+
+    #[cfg(feature = "blake3")]
+    #[test]
+    fn test_hash_unknown_version_uses_dynamic_prefix() {
+        // Test unknown version byte (e.g., 0x85 = version 5)
+        let future_bytes = &[0x85, 0x01, 0x02, 0x03];
+        let future_hash = VersionedMessage::hash_raw_message(future_bytes);
+
+        // Should use dynamic prefix "solana-tx-message-v5"
+        let mut expected_hasher = blake3::Hasher::new();
+        expected_hasher.update(b"solana-tx-message-v5");
+        expected_hasher.update(future_bytes);
+        let expected: [u8; 32] = expected_hasher.finalize().into();
+        assert_eq!(future_hash.as_ref(), &expected);
+    }
+
+    #[cfg(all(feature = "blake3", feature = "bincode"))]
+    #[test]
+    fn test_hash_real_v1_message() {
+        let message = V1Message::builder()
+            .num_required_signatures(1)
+            .lifetime_specifier(Hash::new_from_array([0xAB; 32]))
+            .account_keys(vec![
+                Address::new_from_array([1u8; 32]),
+                Address::new_from_array([2u8; 32]),
+            ])
+            .priority_fee(1000)
+            .compute_unit_limit(200_000)
+            .instruction(CompiledInstruction {
+                program_id_index: 1,
+                accounts: vec![0],
+                data: vec![1, 2, 3, 4],
+            })
+            .build()
+            .unwrap();
+
+        let versioned = VersionedMessage::V1(message);
+        let bytes = versioned.serialize();
+
+        // Verify first byte is V1 version
+        assert_eq!(bytes[0], 0x81);
+
+        let hash = versioned.hash();
+
+        // Hash via raw bytes should match
+        let hash_from_raw = VersionedMessage::hash_raw_message(&bytes);
+        assert_eq!(hash, hash_from_raw);
+
+        // Manually verify the domain separation
+        let mut hasher = blake3::Hasher::new();
+        hasher.update(b"solana-tx-message-v1");
+        hasher.update(&bytes);
+        let expected: [u8; 32] = hasher.finalize().into();
+        assert_eq!(hash.as_ref(), &expected);
     }
 }

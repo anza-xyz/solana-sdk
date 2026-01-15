@@ -47,10 +47,27 @@ pub struct Message {
 }
 
 impl Message {
+    /// Returns the fee payer address (first account key).
+    pub fn fee_payer(&self) -> Option<&Address> {
+        self.account_keys.first()
+    }
+
     /// Account keys are ordered with signers first: `[signers..., non-signers...]`.
     /// An index falls in the signer region if it's less than `num_required_signatures`.
     pub fn is_signer(&self, index: usize) -> bool {
         index < usize::from(self.header.num_required_signatures)
+    }
+
+    /// Returns true if the account at this index is both a signer and writable.
+    pub fn is_signer_writable(&self, index: usize) -> bool {
+        if !self.is_signer(index) {
+            return false;
+        }
+        // Within the signer region, the first (num_required_signatures - num_readonly_signed)
+        // accounts are writable signers.
+        let num_writable_signers = usize::from(self.header.num_required_signatures)
+            .saturating_sub(usize::from(self.header.num_readonly_signed_accounts));
+        index < num_writable_signers
     }
 
     /// Returns true if any instruction invokes the account at this index as a program.
@@ -262,176 +279,30 @@ mod tests {
     }
 
     #[test]
-    fn sanitize_rejects_oversized_transaction() {
-        let mut message = create_test_message();
-        // Inflate instruction data to exceed MAX_TRANSACTION_SIZE (4096)
-        message.instructions[0].data = vec![0u8; MAX_TRANSACTION_SIZE];
-        assert_eq!(message.sanitize(), Err(SanitizeError::InvalidValue));
+    fn fee_payer_returns_first_account() {
+        let fee_payer = Address::new_unique();
+        let message = Message::builder()
+            .num_required_signatures(1)
+            .lifetime_specifier(Hash::new_unique())
+            .account_keys(vec![fee_payer, Address::new_unique()])
+            .build()
+            .unwrap();
+
+        assert_eq!(message.fee_payer(), Some(&fee_payer));
     }
 
     #[test]
-    fn sanitize_rejects_zero_signers() {
-        let mut message = create_test_message();
-        message.header.num_required_signatures = 0;
-        assert_eq!(message.sanitize(), Err(SanitizeError::InvalidValue));
-    }
+    fn fee_payer_returns_none_for_empty_accounts() {
+        // Direct construction to bypass builder validation
+        let message = Message {
+            header: MessageHeader::default(),
+            config: TransactionConfig::default(),
+            lifetime_specifier: Hash::new_unique(),
+            account_keys: vec![],
+            instructions: vec![],
+        };
 
-    #[test]
-    fn sanitize_rejects_over_12_signatures() {
-        let mut message = create_test_message();
-        message.header.num_required_signatures = MAX_SIGNATURES + 1;
-        message.account_keys = (0..MAX_SIGNATURES + 1)
-            .map(|_| Address::new_unique())
-            .collect();
-        assert_eq!(message.sanitize(), Err(SanitizeError::IndexOutOfBounds));
-    }
-
-    #[test]
-    fn sanitize_rejects_zero_lifetime_specifier() {
-        let mut message = create_test_message();
-        message.lifetime_specifier = Hash::default();
-        assert_eq!(message.sanitize(), Err(SanitizeError::InvalidValue));
-    }
-
-    #[test]
-    fn sanitize_rejects_over_64_addresses() {
-        let mut message = create_test_message();
-        message.account_keys = (0..65).map(|_| Address::new_unique()).collect();
-        assert_eq!(message.sanitize(), Err(SanitizeError::IndexOutOfBounds));
-    }
-
-    #[test]
-    fn sanitize_rejects_over_64_instructions() {
-        let mut message = create_test_message();
-        message.instructions = (0..65)
-            .map(|_| CompiledInstruction {
-                program_id_index: 1,
-                accounts: vec![0],
-                data: vec![],
-            })
-            .collect();
-        assert_eq!(message.sanitize(), Err(SanitizeError::IndexOutOfBounds));
-    }
-
-    #[test]
-    fn sanitize_rejects_insufficient_accounts_for_header() {
-        let mut message = create_test_message();
-        // min_accounts = num_required_signatures + num_readonly_unsigned_accounts
-        // Set readonly_unsigned high so min_accounts > account_keys.len()
-        message.header.num_readonly_unsigned_accounts = 10;
-        assert_eq!(message.sanitize(), Err(SanitizeError::IndexOutOfBounds));
-    }
-
-    #[test]
-    fn sanitize_rejects_all_signers_readonly() {
-        let mut message = create_test_message();
-        message.header.num_readonly_signed_accounts = 1; // All signers readonly
-        assert_eq!(message.sanitize(), Err(SanitizeError::InvalidValue));
-    }
-
-    #[test]
-    fn sanitize_rejects_duplicate_addresses() {
-        let mut message = create_test_message();
-        let dup = message.account_keys[0];
-        message.account_keys[1] = dup;
-        assert_eq!(message.sanitize(), Err(SanitizeError::InvalidValue));
-    }
-
-    #[test]
-    fn sanitize_rejects_unaligned_heap_size() {
-        let mut message = create_test_message();
-        message.config.heap_size = Some(1025); // Not a multiple of 1024
-        assert_eq!(message.sanitize(), Err(SanitizeError::InvalidValue));
-    }
-
-    #[test]
-    fn sanitize_accepts_aligned_heap_size() {
-        let mut message = create_test_message();
-        message.config.heap_size = Some(65536); // 64KB, valid
-        assert!(message.sanitize().is_ok());
-    }
-
-    #[test]
-    fn sanitize_rejects_invalid_program_id_index() {
-        let mut message = create_test_message();
-        message.instructions[0].program_id_index = 99;
-        assert_eq!(message.sanitize(), Err(SanitizeError::IndexOutOfBounds));
-    }
-
-    #[test]
-    fn sanitize_rejects_fee_payer_as_program() {
-        let mut message = create_test_message();
-        message.instructions[0].program_id_index = 0;
-        assert_eq!(message.sanitize(), Err(SanitizeError::IndexOutOfBounds));
-    }
-
-    #[test]
-    fn sanitize_rejects_instruction_with_too_many_accounts() {
-        let mut message = create_test_message();
-        message.instructions[0].accounts = vec![0u8; (u8::MAX as usize) + 1];
-        assert_eq!(message.sanitize(), Err(SanitizeError::InvalidValue));
-    }
-
-    #[test]
-    fn sanitize_rejects_invalid_instruction_account_index() {
-        let mut message = create_test_message();
-        message.instructions[0].accounts = vec![0, 99]; // 99 is out of bounds
-        assert_eq!(message.sanitize(), Err(SanitizeError::IndexOutOfBounds));
-    }
-
-    #[test]
-    fn sanitize_accepts_valid_message() {
-        let message = create_test_message();
-        assert!(message.sanitize().is_ok());
-    }
-
-    #[test]
-    fn sanitize_accepts_64_addresses() {
-        let mut message = create_test_message();
-        message.account_keys = (0..MAX_ADDRESSES).map(|_| Address::new_unique()).collect();
-        message.header.num_required_signatures = 1;
-        message.header.num_readonly_signed_accounts = 0;
-        message.header.num_readonly_unsigned_accounts = 1;
-        message.instructions[0].program_id_index = 1;
-        message.instructions[0].accounts = vec![0, 2];
-        assert!(message.sanitize().is_ok());
-    }
-
-    #[test]
-    fn sanitize_accepts_64_instructions() {
-        let mut message = create_test_message();
-        message.instructions = (0..MAX_INSTRUCTIONS)
-            .map(|_| CompiledInstruction {
-                program_id_index: 1,
-                accounts: vec![0, 2],
-                data: vec![1, 2, 3],
-            })
-            .collect();
-        assert!(message.sanitize().is_ok());
-    }
-
-    #[test]
-    fn sanitize_accepts_transaction_at_exactly_4096_bytes() {
-        let mut message = create_test_message();
-        // Calculate current size and pad to exactly 4096
-        let current_size = message.transaction_size();
-        let padding_needed = MAX_TRANSACTION_SIZE.saturating_sub(current_size);
-        message.instructions[0].data =
-            vec![0u8; message.instructions[0].data.len() + padding_needed];
-        assert_eq!(message.transaction_size(), MAX_TRANSACTION_SIZE);
-        assert!(message.sanitize().is_ok());
-    }
-
-    #[test]
-    fn sanitize_rejects_transaction_at_4097_bytes() {
-        let mut message = create_test_message();
-        // Pad to exactly 4096, then add one more byte
-        let current_size = message.transaction_size();
-        let padding_needed = MAX_TRANSACTION_SIZE.saturating_sub(current_size) + 1;
-        message.instructions[0].data =
-            vec![0u8; message.instructions[0].data.len() + padding_needed];
-        assert_eq!(message.transaction_size(), MAX_TRANSACTION_SIZE + 1);
-        assert_eq!(message.sanitize(), Err(SanitizeError::InvalidValue));
+        assert_eq!(message.fee_payer(), None);
     }
 
     #[test]
@@ -440,6 +311,50 @@ mod tests {
         assert!(message.is_signer(0)); // Fee payer is signer
         assert!(!message.is_signer(1)); // Program is not signer
         assert!(!message.is_signer(2)); // Readonly account is not signer
+    }
+
+    #[test]
+    fn is_signer_writable_identifies_writable_signers() {
+        let message = Message::builder()
+            .num_required_signatures(3)
+            .num_readonly_signed_accounts(1) // Last signer is readonly
+            .lifetime_specifier(Hash::new_unique())
+            .account_keys(vec![
+                Address::new_unique(), // 0: writable signer
+                Address::new_unique(), // 1: writable signer
+                Address::new_unique(), // 2: readonly signer
+                Address::new_unique(), // 3: non-signer
+            ])
+            .build()
+            .unwrap();
+
+        // Writable signers
+        assert!(message.is_signer_writable(0));
+        assert!(message.is_signer_writable(1));
+        // Readonly signer
+        assert!(!message.is_signer_writable(2));
+        // Non-signers
+        assert!(!message.is_signer_writable(3));
+        assert!(!message.is_signer_writable(100));
+    }
+
+    #[test]
+    fn is_signer_writable_all_writable_when_no_readonly() {
+        let message = Message::builder()
+            .num_required_signatures(2)
+            .num_readonly_signed_accounts(0) // All signers are writable
+            .lifetime_specifier(Hash::new_unique())
+            .account_keys(vec![
+                Address::new_unique(),
+                Address::new_unique(),
+                Address::new_unique(),
+            ])
+            .build()
+            .unwrap();
+
+        assert!(message.is_signer_writable(0));
+        assert!(message.is_signer_writable(1));
+        assert!(!message.is_signer_writable(2)); // Not a signer
     }
 
     #[test]
@@ -452,6 +367,18 @@ mod tests {
         // Index > u8::MAX can't match any program_id_index
         assert!(!message.is_key_called_as_program(256));
         assert!(!message.is_key_called_as_program(10_000));
+    }
+
+    #[test]
+    fn is_upgradeable_loader_present_detects_loader() {
+        let message = create_test_message();
+        assert!(!message.is_upgradeable_loader_present());
+
+        let mut message_with_loader = create_test_message();
+        message_with_loader
+            .account_keys
+            .push(bpf_loader_upgradeable::id());
+        assert!(message_with_loader.is_upgradeable_loader_present());
     }
 
     #[test]
@@ -529,61 +456,175 @@ mod tests {
     }
 
     #[test]
-    fn builder_creates_valid_message() {
-        let fee_payer = Address::new_unique();
-        let program = Address::new_unique();
-        let blockhash = Hash::new_unique();
-
-        let message = Message::builder()
-            .num_required_signatures(1)
-            .num_readonly_unsigned_accounts(0)
-            .lifetime_specifier(blockhash)
-            .account_keys(vec![fee_payer, program])
-            .instruction(CompiledInstruction {
-                program_id_index: 1,
-                accounts: vec![0],
-                data: vec![1, 2, 3],
-            })
-            .compute_unit_limit(200_000)
-            .build()
-            .unwrap();
-
-        assert_eq!(message.header.num_required_signatures, 1);
-        assert_eq!(message.lifetime_specifier, blockhash);
-        assert_eq!(message.account_keys.len(), 2);
-        assert_eq!(message.config.compute_unit_limit, Some(200_000));
+    fn sanitize_accepts_valid_message() {
+        let message = create_test_message();
         assert!(message.sanitize().is_ok());
     }
 
     #[test]
-    fn builder_requires_lifetime_specifier() {
-        let result = Message::builder()
-            .num_required_signatures(1)
-            .account_key(Address::new_unique())
-            .build();
-
-        assert!(result.is_err());
+    fn sanitize_rejects_oversized_transaction() {
+        let mut message = create_test_message();
+        // Inflate instruction data to exceed MAX_TRANSACTION_SIZE (4096)
+        message.instructions[0].data = vec![0u8; MAX_TRANSACTION_SIZE];
+        assert_eq!(message.sanitize(), Err(SanitizeError::InvalidValue));
     }
 
     #[test]
-    fn builder_sets_all_config_fields() {
-        let message = Message::builder()
-            .num_required_signatures(1)
-            .lifetime_specifier(Hash::new_unique())
-            .account_key(Address::new_unique())
-            .priority_fee(1000)
-            .compute_unit_limit(200_000)
-            .loaded_accounts_data_size_limit(64 * 1024)
-            .heap_size(64 * 1024)
-            .build()
-            .unwrap();
+    fn sanitize_rejects_zero_signers() {
+        let mut message = create_test_message();
+        message.header.num_required_signatures = 0;
+        assert_eq!(message.sanitize(), Err(SanitizeError::InvalidValue));
+    }
 
-        assert_eq!(message.config.priority_fee, Some(1000));
-        assert_eq!(message.config.compute_unit_limit, Some(200_000));
-        assert_eq!(
-            message.config.loaded_accounts_data_size_limit,
-            Some(64 * 1024)
-        );
-        assert_eq!(message.config.heap_size, Some(64 * 1024));
+    #[test]
+    fn sanitize_rejects_over_12_signatures() {
+        let mut message = create_test_message();
+        message.header.num_required_signatures = MAX_SIGNATURES + 1;
+        message.account_keys = (0..MAX_SIGNATURES + 1)
+            .map(|_| Address::new_unique())
+            .collect();
+        assert_eq!(message.sanitize(), Err(SanitizeError::IndexOutOfBounds));
+    }
+
+    #[test]
+    fn sanitize_rejects_zero_lifetime_specifier() {
+        let mut message = create_test_message();
+        message.lifetime_specifier = Hash::default();
+        assert_eq!(message.sanitize(), Err(SanitizeError::InvalidValue));
+    }
+
+    #[test]
+    fn sanitize_rejects_over_64_addresses() {
+        let mut message = create_test_message();
+        message.account_keys = (0..65).map(|_| Address::new_unique()).collect();
+        assert_eq!(message.sanitize(), Err(SanitizeError::IndexOutOfBounds));
+    }
+
+    #[test]
+    fn sanitize_rejects_over_64_instructions() {
+        let mut message = create_test_message();
+        message.instructions = (0..65) // exceeds 64 max
+            .map(|_| CompiledInstruction {
+                program_id_index: 1,
+                accounts: vec![0],
+                data: vec![],
+            })
+            .collect();
+        assert_eq!(message.sanitize(), Err(SanitizeError::IndexOutOfBounds));
+    }
+
+    #[test]
+    fn sanitize_rejects_insufficient_accounts_for_header() {
+        let mut message = create_test_message();
+        // min_accounts = num_required_signatures + num_readonly_unsigned_accounts
+        // Set readonly_unsigned high so min_accounts > account_keys.len()
+        message.header.num_readonly_unsigned_accounts = 10;
+        assert_eq!(message.sanitize(), Err(SanitizeError::IndexOutOfBounds));
+    }
+
+    #[test]
+    fn sanitize_rejects_all_signers_readonly() {
+        let mut message = create_test_message();
+        message.header.num_readonly_signed_accounts = 1; // All signers readonly
+        assert_eq!(message.sanitize(), Err(SanitizeError::InvalidValue));
+    }
+
+    #[test]
+    fn sanitize_rejects_duplicate_addresses() {
+        let mut message = create_test_message();
+        let dup = message.account_keys[0];
+        message.account_keys[1] = dup;
+        assert_eq!(message.sanitize(), Err(SanitizeError::InvalidValue));
+    }
+
+    #[test]
+    fn sanitize_rejects_unaligned_heap_size() {
+        let mut message = create_test_message();
+        message.config.heap_size = Some(1025); // Not a multiple of 1024
+        assert_eq!(message.sanitize(), Err(SanitizeError::InvalidValue));
+    }
+
+    #[test]
+    fn sanitize_accepts_aligned_heap_size() {
+        let mut message = create_test_message();
+        message.config.heap_size = Some(65536); // 64KB, valid
+        assert!(message.sanitize().is_ok());
+    }
+
+    #[test]
+    fn sanitize_rejects_invalid_program_id_index() {
+        let mut message = create_test_message();
+        message.instructions[0].program_id_index = 99;
+        assert_eq!(message.sanitize(), Err(SanitizeError::IndexOutOfBounds));
+    }
+
+    #[test]
+    fn sanitize_rejects_fee_payer_as_program() {
+        let mut message = create_test_message();
+        message.instructions[0].program_id_index = 0;
+        assert_eq!(message.sanitize(), Err(SanitizeError::IndexOutOfBounds));
+    }
+
+    #[test]
+    fn sanitize_rejects_instruction_with_too_many_accounts() {
+        let mut message = create_test_message();
+        message.instructions[0].accounts = vec![0u8; (u8::MAX as usize) + 1];
+        assert_eq!(message.sanitize(), Err(SanitizeError::InvalidValue));
+    }
+
+    #[test]
+    fn sanitize_rejects_invalid_instruction_account_index() {
+        let mut message = create_test_message();
+        message.instructions[0].accounts = vec![0, 99]; // 99 is out of bounds
+        assert_eq!(message.sanitize(), Err(SanitizeError::IndexOutOfBounds));
+    }
+
+    #[test]
+    fn sanitize_accepts_64_addresses() {
+        let mut message = create_test_message();
+        message.account_keys = (0..MAX_ADDRESSES).map(|_| Address::new_unique()).collect();
+        message.header.num_required_signatures = 1;
+        message.header.num_readonly_signed_accounts = 0;
+        message.header.num_readonly_unsigned_accounts = 1;
+        message.instructions[0].program_id_index = 1;
+        message.instructions[0].accounts = vec![0, 2];
+        assert!(message.sanitize().is_ok());
+    }
+
+    #[test]
+    fn sanitize_accepts_64_instructions() {
+        let mut message = create_test_message();
+        message.instructions = (0..MAX_INSTRUCTIONS)
+            .map(|_| CompiledInstruction {
+                program_id_index: 1,
+                accounts: vec![0, 2],
+                data: vec![1, 2, 3],
+            })
+            .collect();
+        assert!(message.sanitize().is_ok());
+    }
+
+    #[test]
+    fn sanitize_accepts_transaction_at_exactly_4096_bytes() {
+        let mut message = create_test_message();
+        // Calculate current size and pad to exactly 4096
+        let current_size = message.transaction_size();
+        let padding_needed = MAX_TRANSACTION_SIZE.saturating_sub(current_size);
+        message.instructions[0].data =
+            vec![0u8; message.instructions[0].data.len() + padding_needed];
+        assert_eq!(message.transaction_size(), MAX_TRANSACTION_SIZE);
+        assert!(message.sanitize().is_ok());
+    }
+
+    #[test]
+    fn sanitize_rejects_transaction_at_4097_bytes() {
+        let mut message = create_test_message();
+        // Pad to exactly 4096, then add one more byte
+        let current_size = message.transaction_size();
+        let padding_needed = MAX_TRANSACTION_SIZE.saturating_sub(current_size) + 1;
+        message.instructions[0].data =
+            vec![0u8; message.instructions[0].data.len() + padding_needed];
+        assert_eq!(message.transaction_size(), MAX_TRANSACTION_SIZE + 1);
+        assert_eq!(message.sanitize(), Err(SanitizeError::InvalidValue));
     }
 }

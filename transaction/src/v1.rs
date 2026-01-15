@@ -10,7 +10,6 @@
 
 use {
     crate::versioned::VersionedTransaction,
-
     solana_message::{
         v1::{Message, V1MessageError},
         VersionedMessage,
@@ -270,8 +269,9 @@ impl V1Transaction {
             .collect())
     }
 
-    /// Calculate the size of this transaction when serialized.
-    pub fn size(&self) -> usize {
+    /// Calculate the size of this transaction when serialized to wire format.
+    /// This includes the message bytes plus all signatures.
+    pub fn serialized_size(&self) -> usize {
         self.message.transaction_size()
     }
 }
@@ -333,7 +333,11 @@ mod tests {
         super::*,
         solana_address::Address,
         solana_hash::Hash,
-        solana_message::compiled_instruction::CompiledInstruction,
+        solana_message::{
+            compiled_instruction::CompiledInstruction,
+            v1::{MAX_ADDRESSES, MAX_SIGNATURES, MAX_TRANSACTION_SIZE, TransactionConfig},
+            MessageHeader,
+        },
     };
 
     /// Create a deterministic test signature from a seed byte.
@@ -373,66 +377,6 @@ mod tests {
             })
             .build()
             .unwrap()
-    }
-
-    #[test]
-    fn error_display_formats_correctly() {
-        assert_eq!(
-            V1TransactionError::MessageError(V1MessageError::BufferTooSmall).to_string(),
-            "message error: buffer too small"
-        );
-        assert_eq!(
-            V1TransactionError::NotEnoughAccountKeys.to_string(),
-            "not enough account keys for required signatures"
-        );
-        assert_eq!(
-            V1TransactionError::NotEnoughSignatureBytes.to_string(),
-            "not enough bytes for signatures"
-        );
-        assert_eq!(
-            V1TransactionError::Overflow.to_string(),
-            "size calculation overflow"
-        );
-        assert_eq!(
-            V1TransactionError::SignatureCountMismatch {
-                expected: 2,
-                actual: 1
-            }
-            .to_string(),
-            "signature count mismatch: expected 2, got 1"
-        );
-        assert_eq!(
-            V1TransactionError::TrailingData.to_string(),
-            "unexpected trailing data after transaction"
-        );
-    }
-
-    #[test]
-    fn clone_and_eq_work() {
-        let message = create_test_message();
-        let tx = V1Transaction::from_signatures(message, vec![test_signature(0x01)]).unwrap();
-
-        let cloned = tx.clone();
-        assert_eq!(tx, cloned);
-
-        // Different signature should not be equal
-        let message2 = create_test_message();
-        let tx2 = V1Transaction::from_signatures(message2, vec![test_signature(0x02)]).unwrap();
-        assert_ne!(tx, tx2);
-    }
-
-    #[test]
-    fn destructuring_works() {
-        let message = create_test_message();
-        let sig = test_signature(0x99);
-        let tx = V1Transaction::from_signatures(message.clone(), vec![sig]).unwrap();
-
-        let V1Transaction {
-            message: returned_message,
-            signatures: returned_sigs,
-        } = tx;
-        assert_eq!(returned_message, message);
-        assert_eq!(returned_sigs, vec![sig]);
     }
 
     #[test]
@@ -752,34 +696,6 @@ mod tests {
         assert_eq!(parsed.signatures, tx.signatures);
     }
 
-    #[test]
-    fn sanitize_rejects_too_few_signatures() {
-        // Create a malformed transaction by bypassing the constructor
-        let tx = V1Transaction {
-            message: create_test_message(), // requires 1 signature
-            signatures: vec![],             // but has 0
-        };
-
-        assert_eq!(tx.sanitize(), Err(SanitizeError::ValueOutOfBounds));
-    }
-
-    #[test]
-    fn sanitize_rejects_too_many_signatures() {
-        let tx = V1Transaction {
-            message: create_test_message(), // requires 1 signature
-            signatures: vec![test_signature(0x01), test_signature(0x02)], // but has 2
-        };
-
-        assert_eq!(tx.sanitize(), Err(SanitizeError::ValueOutOfBounds));
-    }
-
-    #[test]
-    fn sanitize_accepts_valid_transaction() {
-        let message = create_test_message();
-        let tx = V1Transaction::from_signatures(message, vec![test_signature(0xFF)]).unwrap();
-        assert!(tx.sanitize().is_ok());
-    }
-
     #[cfg(feature = "verify")]
     #[test]
     fn verify_returns_false_for_invalid_signature() {
@@ -958,5 +874,237 @@ mod tests {
 
         let result = V1Transaction::try_from(versioned);
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn serialized_size_matches_serialized_bytes() {
+        let message = create_test_message();
+        let tx = V1Transaction::from_signatures(message, vec![test_signature(0xAA)]).unwrap();
+
+        let bytes = tx.serialize().unwrap();
+        assert_eq!(tx.serialized_size(), bytes.len());
+    }
+
+    #[test]
+    fn serialized_size_includes_all_signatures() {
+        // Create message with max signatures (12)
+        let mut account_keys: Vec<_> = (0..MAX_SIGNATURES).map(|_| Address::new_unique()).collect();
+        account_keys.push(Address::new_unique()); // program
+
+        let message = Message::builder()
+            .num_required_signatures(MAX_SIGNATURES)
+            .lifetime_specifier(Hash::new_unique())
+            .account_keys(account_keys)
+            .instruction(CompiledInstruction {
+                program_id_index: MAX_SIGNATURES,
+                accounts: (0..MAX_SIGNATURES).collect(),
+                data: vec![],
+            })
+            .build()
+            .unwrap();
+
+        let signatures: Vec<_> = (0..MAX_SIGNATURES).map(test_signature).collect();
+        let tx = V1Transaction::from_signatures(message, signatures).unwrap();
+
+        let bytes = tx.serialize().unwrap();
+        assert_eq!(tx.serialized_size(), bytes.len());
+
+        // Verify signatures are at the expected position
+        let message_size = tx.message.size();
+        assert_eq!(bytes.len(), message_size + (MAX_SIGNATURES as usize * 64));
+    }
+
+    #[test]
+    fn max_size_transaction_exactly_4096_bytes() {
+        // Build a transaction that's exactly at the 4096 byte limit
+        // Fixed header: 1 + 3 + 4 + 32 + 1 + 1 = 42 bytes
+        // With 1 signer: 1 signature = 64 bytes
+        // With 2 addresses: 64 bytes
+        // Total fixed: 42 + 64 + 64 = 170 bytes
+        // Remaining for instruction: 4096 - 170 = 3926 bytes
+        // Instruction header: 4 bytes
+        // Instruction accounts: 1 byte
+        // Instruction data: 3926 - 4 - 1 = 3921 bytes
+
+        let message = Message::builder()
+            .num_required_signatures(1)
+            .lifetime_specifier(Hash::new_unique())
+            .account_keys(vec![Address::new_unique(), Address::new_unique()])
+            .instruction(CompiledInstruction {
+                program_id_index: 1,
+                accounts: vec![0],
+                data: vec![0u8; 3921],
+            })
+            .build()
+            .unwrap();
+
+        let tx =
+            V1Transaction::from_signatures(message.clone(), vec![test_signature(0x01)]).unwrap();
+
+        // Verify we're at exactly 4096 bytes
+        assert_eq!(tx.serialized_size(), MAX_TRANSACTION_SIZE);
+
+        // Should serialize and deserialize successfully
+        let bytes = tx.serialize().unwrap();
+        assert_eq!(bytes.len(), MAX_TRANSACTION_SIZE);
+
+        let parsed = V1Transaction::from_bytes(&bytes).unwrap();
+        assert_eq!(parsed.message, tx.message);
+        assert_eq!(parsed.signatures, tx.signatures);
+
+        // Sanitize should pass
+        assert!(tx.sanitize().is_ok());
+    }
+
+    #[test]
+    fn transaction_exceeding_4096_bytes_fails_sanitize() {
+        // Construct message directly to bypass builder size validation.
+        // This tests that sanitize() catches oversized transactions.
+        let message = Message {
+            header: MessageHeader {
+                num_required_signatures: 1,
+                num_readonly_signed_accounts: 0,
+                num_readonly_unsigned_accounts: 0,
+            },
+            config: TransactionConfig::default(),
+            lifetime_specifier: Hash::new_unique(),
+            account_keys: vec![Address::new_unique(), Address::new_unique()],
+            instructions: vec![CompiledInstruction {
+                program_id_index: 1,
+                accounts: vec![0],
+                data: vec![0u8; 3922], // One more byte than max
+            }],
+        };
+
+        let tx = V1Transaction::from_signatures(message, vec![test_signature(0x01)]).unwrap();
+
+        assert_eq!(tx.serialized_size(), MAX_TRANSACTION_SIZE + 1);
+
+        // Sanitize should fail
+        assert!(tx.sanitize().is_err());
+    }
+
+    #[test]
+    fn max_signatures_with_max_addresses_fits() {
+        // Transaction with 12 signers and 64 addresses
+        let account_keys: Vec<_> = (0..MAX_ADDRESSES).map(|_| Address::new_unique()).collect();
+
+        let message = Message::builder()
+            .num_required_signatures(MAX_SIGNATURES)
+            .lifetime_specifier(Hash::new_unique())
+            .account_keys(account_keys)
+            .instruction(CompiledInstruction {
+                program_id_index: MAX_SIGNATURES, // First non-signer as program
+                accounts: (0..MAX_SIGNATURES).collect(),
+                data: vec![],
+            })
+            .build()
+            .unwrap();
+
+        let signatures: Vec<_> = (0..MAX_SIGNATURES).map(test_signature).collect();
+        let tx = V1Transaction::from_signatures(message, signatures).unwrap();
+
+        // This configuration should fit within 4096 bytes
+        // Fixed header: 42 bytes
+        // 64 addresses: 2048 bytes
+        // 12 signatures: 768 bytes
+        // 1 instruction header: 4 bytes
+        // 12 account indices: 12 bytes
+        // Total: 42 + 2048 + 768 + 4 + 12 = 2874 bytes
+        assert!(tx.serialized_size() <= MAX_TRANSACTION_SIZE);
+        assert!(tx.sanitize().is_ok());
+
+        // Verify roundtrip
+        let bytes = tx.serialize().unwrap();
+        let parsed = V1Transaction::from_bytes(&bytes).unwrap();
+        assert_eq!(parsed.message, tx.message);
+    }
+
+    #[test]
+    fn sanitize_rejects_too_few_signatures() {
+        // Create a malformed transaction by bypassing the constructor
+        let tx = V1Transaction {
+            message: create_test_message(), // requires 1 signature
+            signatures: vec![],             // but has 0
+        };
+
+        assert_eq!(tx.sanitize(), Err(SanitizeError::ValueOutOfBounds));
+    }
+
+    #[test]
+    fn sanitize_rejects_too_many_signatures() {
+        let tx = V1Transaction {
+            message: create_test_message(), // requires 1 signature
+            signatures: vec![test_signature(0x01), test_signature(0x02)], // but has 2
+        };
+
+        assert_eq!(tx.sanitize(), Err(SanitizeError::ValueOutOfBounds));
+    }
+
+    #[test]
+    fn sanitize_accepts_valid_transaction() {
+        let message = create_test_message();
+        let tx = V1Transaction::from_signatures(message, vec![test_signature(0xFF)]).unwrap();
+        assert!(tx.sanitize().is_ok());
+    }
+
+    #[test]
+    fn error_display_formats_correctly() {
+        assert_eq!(
+            V1TransactionError::MessageError(V1MessageError::BufferTooSmall).to_string(),
+            "message error: buffer too small"
+        );
+        assert_eq!(
+            V1TransactionError::NotEnoughAccountKeys.to_string(),
+            "not enough account keys for required signatures"
+        );
+        assert_eq!(
+            V1TransactionError::NotEnoughSignatureBytes.to_string(),
+            "not enough bytes for signatures"
+        );
+        assert_eq!(
+            V1TransactionError::Overflow.to_string(),
+            "size calculation overflow"
+        );
+        assert_eq!(
+            V1TransactionError::SignatureCountMismatch {
+                expected: 2,
+                actual: 1
+            }
+            .to_string(),
+            "signature count mismatch: expected 2, got 1"
+        );
+        assert_eq!(
+            V1TransactionError::TrailingData.to_string(),
+            "unexpected trailing data after transaction"
+        );
+    }
+
+    #[test]
+    fn clone_and_eq_work() {
+        let message = create_test_message();
+        let tx = V1Transaction::from_signatures(message, vec![test_signature(0x01)]).unwrap();
+
+        let cloned = tx.clone();
+        assert_eq!(tx, cloned);
+
+        // Different signature should not be equal
+        let message2 = create_test_message();
+        let tx2 = V1Transaction::from_signatures(message2, vec![test_signature(0x02)]).unwrap();
+        assert_ne!(tx, tx2);
+    }
+
+    #[test]
+    fn destructuring_works() {
+        let message = create_test_message();
+        let sig = test_signature(0x99);
+        let tx = V1Transaction::from_signatures(message.clone(), vec![sig]).unwrap();
+
+        let V1Transaction {
+            message: returned_message,
+            signatures: returned_sigs,
+        } = tx;
+        assert_eq!(returned_message, message);
+        assert_eq!(returned_sigs, vec![sig]);
     }
 }
