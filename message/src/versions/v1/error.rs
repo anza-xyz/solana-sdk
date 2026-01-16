@@ -13,7 +13,7 @@ pub enum MessageError {
     InstructionAccountsTooLarge,
     /// Instruction data is too large (> 65535 bytes).
     InstructionDataTooLarge,
-    /// Invalid ComputeBudgetConfigMask.
+    /// Invalid TransactionConfigMask.
     InvalidConfigMask,
     /// Instruction account index is out of bounds.
     InvalidInstructionAccountIndex,

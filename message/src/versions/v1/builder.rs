@@ -2,7 +2,7 @@
 
 use {
     super::{
-        ComputeBudgetConfig, ComputeBudgetConfigMask, Message, MessageError, MAX_ADDRESSES,
+        Message, MessageError, TransactionConfig, TransactionConfigMask, MAX_ADDRESSES,
         MAX_INSTRUCTIONS, MAX_SIGNATURES, MAX_TRANSACTION_SIZE,
     },
     crate::{compiled_instruction::CompiledInstruction, MessageHeader},
@@ -14,7 +14,7 @@ use {
 #[derive(Debug, Clone, Default)]
 pub struct MessageBuilder {
     header: MessageHeader,
-    config: ComputeBudgetConfig,
+    config: TransactionConfig,
     lifetime_specifier: Option<Hash>,
     account_keys: Vec<Address>,
     instructions: Vec<CompiledInstruction>,
@@ -50,7 +50,7 @@ impl MessageBuilder {
     }
 
     #[must_use]
-    pub fn config(mut self, config: ComputeBudgetConfig) -> Self {
+    pub fn config(mut self, config: TransactionConfig) -> Self {
         self.config = config;
         self
     }
@@ -131,7 +131,7 @@ impl MessageBuilder {
         }
 
         // Validate config mask (priority fee bits must be both set or both unset)
-        let mask = ComputeBudgetConfigMask::from_config(&self.config);
+        let mask = TransactionConfigMask::from_config(&self.config);
         if mask.has_invalid_priority_fee_bits() {
             return Err(MessageError::InvalidConfigMask);
         }

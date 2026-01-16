@@ -8,7 +8,7 @@
 //! ┌────────────────────────────────────────────────────────┐
 //! │ Version (u8 = 0x81)                                    │
 //! │ LegacyHeader (3 x u8)                                  │
-//! │ ComputeBudgetConfigMask (u32, little-endian)             │
+//! │ TransactionConfigMask (u32, little-endian)             │
 //! │ LifetimeSpecifier [u8; 32] (blockhash)                 │
 //! │ NumInstructions (u8, max 64)                           │
 //! │ NumAddresses (u8, max 64)                              │
@@ -24,7 +24,7 @@
 
 use {
     super::{
-        ComputeBudgetConfig, ComputeBudgetConfigMask, Message, MessageError, FIXED_HEADER_SIZE,
+        Message, MessageError, TransactionConfig, TransactionConfigMask, FIXED_HEADER_SIZE,
         INSTRUCTION_HEADER_SIZE, MAX_ADDRESSES, MAX_INSTRUCTIONS, MAX_SIGNATURES, SIGNATURE_SIZE,
         V1_VERSION_BYTE,
     },
@@ -47,7 +47,7 @@ impl Message {
     /// Calculate the size of this message in bytes.
     pub fn size(&self) -> usize {
         let addresses_size = self.account_keys.len().saturating_mul(size_of::<Address>());
-        let config_size = ComputeBudgetConfigMask::from_config(&self.config).config_values_size();
+        let config_size = TransactionConfigMask::from_config(&self.config).config_values_size();
         let instruction_headers_size = self
             .instructions
             .len()
@@ -91,7 +91,7 @@ impl Message {
 
         let total_size = self.size();
         let mut bytes = Vec::with_capacity(total_size);
-        let config_mask = ComputeBudgetConfigMask::from_config(&self.config);
+        let config_mask = TransactionConfigMask::from_config(&self.config);
 
         // Fixed header
         bytes.push(V1_VERSION_BYTE);
@@ -190,8 +190,8 @@ impl Message {
             return Err(MessageError::TooManySignatures);
         }
 
-        let config_mask = ComputeBudgetConfigMask::new(u32::from_le_bytes(read_at(bytes, offset)?));
-        offset = offset.saturating_add(size_of::<ComputeBudgetConfigMask>());
+        let config_mask = TransactionConfigMask::new(u32::from_le_bytes(read_at(bytes, offset)?));
+        offset = offset.saturating_add(size_of::<TransactionConfigMask>());
 
         if config_mask.has_unknown_bits() || config_mask.has_invalid_priority_fee_bits() {
             return Err(MessageError::InvalidConfigMask);
@@ -237,7 +237,7 @@ impl Message {
             return Err(MessageError::BufferTooSmall);
         }
 
-        let mut config = ComputeBudgetConfig::default();
+        let mut config = TransactionConfig::default();
         if config_mask.has_priority_fee() {
             config.priority_fee = Some(u64::from_le_bytes(read_at(bytes, offset)?));
             offset = offset.saturating_add(size_of::<u64>());
@@ -755,7 +755,7 @@ mod tests {
         bytes.push(1); // num_required_signatures
         bytes.push(0); // num_readonly_signed
         bytes.push(0); // num_readonly_unsigned
-        bytes.extend_from_slice(&ComputeBudgetConfigMask::HEAP_SIZE_BIT.to_le_bytes());
+        bytes.extend_from_slice(&TransactionConfigMask::HEAP_SIZE_BIT.to_le_bytes());
         bytes.extend_from_slice(&[1u8; 32]); // lifetime_specifier
         bytes.push(0); // num_instructions
         bytes.push(1); // num_addresses
@@ -972,10 +972,10 @@ mod tests {
     fn roundtrip_preserves_sparse_config() {
         // Test each config field individually
         let configs = [
-            ComputeBudgetConfig::new().with_priority_fee(1000),
-            ComputeBudgetConfig::new().with_compute_unit_limit(200_000),
-            ComputeBudgetConfig::new().with_loaded_accounts_data_size_limit(1_000_000),
-            ComputeBudgetConfig::new().with_heap_size(65536),
+            TransactionConfig::new().with_priority_fee(1000),
+            TransactionConfig::new().with_compute_unit_limit(200_000),
+            TransactionConfig::new().with_loaded_accounts_data_size_limit(1_000_000),
+            TransactionConfig::new().with_heap_size(65536),
         ];
 
         for config in configs {
@@ -999,13 +999,13 @@ mod tests {
 
         // Test gap combinations (skipping fields)
         let gap_configs = [
-            ComputeBudgetConfig::new()
+            TransactionConfig::new()
                 .with_compute_unit_limit(200_000)
                 .with_heap_size(65536),
-            ComputeBudgetConfig::new()
+            TransactionConfig::new()
                 .with_priority_fee(5000)
                 .with_loaded_accounts_data_size_limit(500_000),
-            ComputeBudgetConfig::new()
+            TransactionConfig::new()
                 .with_priority_fee(1000)
                 .with_heap_size(32768),
         ];

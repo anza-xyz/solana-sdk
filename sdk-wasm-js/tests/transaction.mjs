@@ -10,7 +10,7 @@ import {
 } from "crate";
 solana_program_init();
 
-const MAX_TRANSACTION_SIZE = 4096;
+const MAX_TRANSACTION_SIZE = 1232;
 
 describe("Transaction", function () {
   it("Instruction", () => {

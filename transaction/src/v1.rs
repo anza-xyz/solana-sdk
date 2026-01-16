@@ -82,15 +82,22 @@ impl From<MessageError> for TransactionError {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Transaction {
     /// The V1 message containing instructions and accounts.
-    pub message: Message,
+    message: Message,
     /// Transaction signatures, one per required signer.
     /// Order matches the first `num_required_signatures` accounts in the message.
-    pub signatures: Vec<Signature>,
+    signatures: Vec<Signature>,
 }
 
 impl Transaction {
-    /// Create a V1 transaction from a message and existing signatures.
-    ///
+    pub fn message(&self) -> &Message {
+        &self.message
+    }
+
+    pub fn signatures(&self) -> &[Signature] {
+        &self.signatures
+    }
+
+    /// Create a V1 transaction from a message and pre-existing signatures.
     /// Returns an error if the signature count doesn't match `num_required_signatures`.
     pub fn from_signatures(
         message: Message,
@@ -119,12 +126,11 @@ impl Transaction {
         message: Message,
         keypairs: &T,
     ) -> Result<Self, SignerError> {
+        message
+            .sanitize()
+            .map_err(|e| SignerError::InvalidInput(format!("invalid message: {e}")))?;
+
         let num_required_signatures = message.header.num_required_signatures as usize;
-
-        if message.account_keys.len() < num_required_signatures {
-            return Err(SignerError::InvalidInput("invalid message".to_string()));
-        }
-
         let signer_keys = keypairs.try_pubkeys()?;
         let expected_signer_keys = &message.account_keys[0..num_required_signatures];
 
@@ -170,9 +176,8 @@ impl Transaction {
     /// - Signature count determined by `num_required_signatures` in message header
     pub fn serialize(&self) -> Result<Vec<u8>, TransactionError> {
         let mut out = self.message.to_bytes()?;
-        let signature_bytes = self
-            .signatures
-            .len()
+        let num_signatures = self.message.header.num_required_signatures as usize;
+        let signature_bytes = num_signatures
             .checked_mul(SIGNATURE_BYTES)
             .ok_or(TransactionError::Overflow)?;
         out.reserve(signature_bytes);
@@ -185,20 +190,8 @@ impl Transaction {
     /// Parse a V1 transaction from wire format bytes.
     ///
     /// Expects format: `[message bytes][signatures]`
-    /// Returns an error if there is trailing data after the transaction.
+    /// Returns an error if the input is truncated or has trailing data.
     pub fn from_bytes(bytes: &[u8]) -> Result<Self, TransactionError> {
-        let (tx, consumed) = Self::from_bytes_partial(bytes)?;
-        if consumed != bytes.len() {
-            return Err(TransactionError::TrailingData);
-        }
-        Ok(tx)
-    }
-
-    /// Parse a V1 transaction from wire format, returning bytes consumed.
-    ///
-    /// Useful when transaction bytes are followed by other data.
-    pub fn from_bytes_partial(bytes: &[u8]) -> Result<(Self, usize), TransactionError> {
-        // Parse message first
         let (message, message_len) = Message::from_bytes_partial(bytes)?;
 
         // Calculate expected signature bytes with overflow checks
@@ -213,21 +206,21 @@ impl Transaction {
         if bytes.len() < total_len {
             return Err(TransactionError::NotEnoughSignatureBytes);
         }
+        if bytes.len() > total_len {
+            return Err(TransactionError::TrailingData);
+        }
 
         // Extract signatures (chunks_exact guarantees exactly SIGNATURE_BYTES per chunk)
-        let sig_bytes = &bytes[message_len..total_len];
+        let sig_bytes = &bytes[message_len..];
         let signatures: Vec<Signature> = sig_bytes
             .chunks_exact(SIGNATURE_BYTES)
             .map(|chunk| Signature::from(<[u8; SIGNATURE_BYTES]>::try_from(chunk).unwrap()))
             .collect();
 
-        Ok((
-            Self {
-                message,
-                signatures,
-            },
-            total_len,
-        ))
+        Ok(Self {
+            message,
+            signatures,
+        })
     }
 
     /// Verify all signatures against the message.
@@ -335,7 +328,7 @@ mod tests {
         solana_hash::Hash,
         solana_message::{
             compiled_instruction::CompiledInstruction,
-            v1::{ComputeBudgetConfig, MAX_ADDRESSES, MAX_SIGNATURES, MAX_TRANSACTION_SIZE},
+            v1::{TransactionConfig, MAX_ADDRESSES, MAX_SIGNATURES, MAX_TRANSACTION_SIZE},
             MessageHeader,
         },
     };
@@ -677,22 +670,6 @@ mod tests {
         assert_eq!(parsed.signatures[2], signatures[2]);
     }
 
-    #[test]
-    fn from_bytes_partial_returns_consumed() {
-        let message = create_test_message();
-        let sig = test_signature(0xEE);
-        let tx = Transaction::from_signatures(message, vec![sig]).unwrap();
-
-        let mut bytes = tx.serialize().unwrap();
-        let expected_len = bytes.len();
-        bytes.extend_from_slice(&[0xAA; 100]); // Append extra data
-
-        let (parsed, consumed) = Transaction::from_bytes_partial(&bytes).unwrap();
-        assert_eq!(consumed, expected_len);
-        assert_eq!(parsed.message, tx.message);
-        assert_eq!(parsed.signatures, tx.signatures);
-    }
-
     #[cfg(feature = "verify")]
     #[test]
     fn verify_returns_false_for_invalid_signature() {
@@ -744,7 +721,7 @@ mod tests {
     #[cfg(feature = "verify")]
     #[test]
     fn verify_rejects_not_enough_account_keys() {
-        use solana_message::{v1::ComputeBudgetConfig, MessageHeader};
+        use solana_message::{v1::TransactionConfig, MessageHeader};
 
         // Create a malformed message where header claims more signers than account_keys
         let malformed_message = Message {
@@ -753,7 +730,7 @@ mod tests {
                 num_readonly_signed_accounts: 0,
                 num_readonly_unsigned_accounts: 0,
             },
-            config: ComputeBudgetConfig::default(),
+            config: TransactionConfig::default(),
             lifetime_specifier: Hash::new_unique(),
             account_keys: vec![Address::new_unique()], // But only 1 account
             instructions: vec![],
@@ -960,7 +937,7 @@ mod tests {
                 num_readonly_signed_accounts: 0,
                 num_readonly_unsigned_accounts: 0,
             },
-            config: ComputeBudgetConfig::default(),
+            config: TransactionConfig::default(),
             lifetime_specifier: Hash::new_unique(),
             account_keys: vec![Address::new_unique(), Address::new_unique()],
             instructions: vec![CompiledInstruction {
