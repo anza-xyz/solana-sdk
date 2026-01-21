@@ -82,10 +82,10 @@ impl From<MessageError> for TransactionError {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Transaction {
     /// The V1 message containing instructions and accounts.
-    message: Message,
+    pub message: Message,
     /// Transaction signatures, one per required signer.
     /// Order matches the first `num_required_signatures` accounts in the message.
-    signatures: Vec<Signature>,
+    pub signatures: Vec<Signature>,
 }
 
 impl Transaction {
@@ -95,25 +95,6 @@ impl Transaction {
 
     pub fn signatures(&self) -> &[Signature] {
         &self.signatures
-    }
-
-    /// Create a V1 transaction from a message and pre-existing signatures.
-    /// Returns an error if the signature count doesn't match `num_required_signatures`.
-    pub fn from_signatures(
-        message: Message,
-        signatures: Vec<Signature>,
-    ) -> Result<Self, TransactionError> {
-        let expected = message.header.num_required_signatures as usize;
-        if signatures.len() != expected {
-            return Err(TransactionError::SignatureCountMismatch {
-                expected,
-                actual: signatures.len(),
-            });
-        }
-        Ok(Self {
-            message,
-            signatures,
-        })
     }
 
     /// Sign a V1 message and create a transaction.
@@ -372,32 +353,6 @@ mod tests {
             .unwrap()
     }
 
-    #[test]
-    fn from_signatures_rejects_too_few_signatures() {
-        let message = create_test_message(); // requires 1 signature
-
-        assert_eq!(
-            Transaction::from_signatures(message, vec![]),
-            Err(TransactionError::SignatureCountMismatch {
-                expected: 1,
-                actual: 0
-            })
-        );
-    }
-
-    #[test]
-    fn from_signatures_rejects_too_many_signatures() {
-        let message = create_test_message(); // requires 1 signature
-
-        assert_eq!(
-            Transaction::from_signatures(message, vec![test_signature(0x01), test_signature(0x02)]),
-            Err(TransactionError::SignatureCountMismatch {
-                expected: 1,
-                actual: 2
-            })
-        );
-    }
-
     #[cfg(feature = "bincode")]
     #[test]
     fn try_sign_rejects_too_many_signers() {
@@ -567,7 +522,10 @@ mod tests {
     fn serialize_produces_correct_wire_format() {
         let message = create_test_message();
         let sig = test_signature(0xAA);
-        let tx = Transaction::from_signatures(message.clone(), vec![sig]).unwrap();
+        let tx = Transaction {
+            message: message.clone(),
+            signatures: vec![sig],
+        };
 
         let bytes = tx.serialize().unwrap();
 
@@ -595,7 +553,10 @@ mod tests {
     fn from_bytes_rejects_truncated_signatures() {
         let message = create_test_message();
         let sig = test_signature(0xCC);
-        let tx = Transaction::from_signatures(message, vec![sig]).unwrap();
+        let tx = Transaction {
+            message,
+            signatures: vec![sig],
+        };
 
         let mut bytes = tx.serialize().unwrap();
         bytes.truncate(bytes.len() - 10); // Remove part of signature
@@ -610,7 +571,10 @@ mod tests {
     fn from_bytes_rejects_trailing_data() {
         let message = create_test_message();
         let sig = test_signature(0xDD);
-        let tx = Transaction::from_signatures(message, vec![sig]).unwrap();
+        let tx = Transaction {
+            message,
+            signatures: vec![sig],
+        };
 
         let mut bytes = tx.serialize().unwrap();
         bytes.push(0xFF); // Extra byte
@@ -625,7 +589,10 @@ mod tests {
     fn from_bytes_roundtrip_single_signature() {
         let message = create_test_message();
         let sig = test_signature(0xBB);
-        let tx = Transaction::from_signatures(message, vec![sig]).unwrap();
+        let tx = Transaction {
+            message,
+            signatures: vec![sig],
+        };
 
         let bytes = tx.serialize().unwrap();
         let parsed = Transaction::from_bytes(&bytes).unwrap();
@@ -659,7 +626,10 @@ mod tests {
             test_signature(0x22),
             test_signature(0x33),
         ];
-        let tx = Transaction::from_signatures(message, signatures.clone()).unwrap();
+        let tx = Transaction {
+            message,
+            signatures: signatures.clone(),
+        };
 
         let bytes = tx.serialize().unwrap();
         let parsed = Transaction::from_bytes(&bytes).unwrap();
@@ -675,7 +645,10 @@ mod tests {
     fn verify_returns_false_for_invalid_signature() {
         let message = create_test_message();
         // Transaction with a bogus signature (not signed by the actual key)
-        let tx = Transaction::from_signatures(message, vec![test_signature(0x00)]).unwrap();
+        let tx = Transaction {
+            message,
+            signatures: vec![test_signature(0x00)],
+        };
 
         assert!(!tx.verify().unwrap());
     }
@@ -756,9 +729,10 @@ mod tests {
         let message = create_two_signer_message();
 
         // Both signatures are bogus
-        let tx =
-            Transaction::from_signatures(message, vec![test_signature(0x01), test_signature(0x02)])
-                .unwrap();
+        let tx = Transaction {
+            message,
+            signatures: vec![test_signature(0x01), test_signature(0x02)],
+        };
 
         let results = tx.verify_with_results().unwrap();
         assert_eq!(results.len(), 2);
@@ -771,7 +745,10 @@ mod tests {
     fn conversion_to_versioned_transaction() {
         let message = create_test_message();
         let sig = test_signature(0x77);
-        let tx = Transaction::from_signatures(message.clone(), vec![sig]).unwrap();
+        let tx = Transaction {
+            message: message.clone(),
+            signatures: vec![sig],
+        };
 
         let versioned: VersionedTransaction = tx.into();
 
@@ -851,7 +828,10 @@ mod tests {
     #[test]
     fn serialized_size_matches_serialized_bytes() {
         let message = create_test_message();
-        let tx = Transaction::from_signatures(message, vec![test_signature(0xAA)]).unwrap();
+        let tx = Transaction {
+            message,
+            signatures: vec![test_signature(0xAA)],
+        };
 
         let bytes = tx.serialize().unwrap();
         assert_eq!(tx.serialized_size(), bytes.len());
@@ -876,7 +856,10 @@ mod tests {
             .unwrap();
 
         let signatures: Vec<_> = (0..MAX_SIGNATURES).map(test_signature).collect();
-        let tx = Transaction::from_signatures(message, signatures).unwrap();
+        let tx = Transaction {
+            message,
+            signatures,
+        };
 
         let bytes = tx.serialize().unwrap();
         assert_eq!(tx.serialized_size(), bytes.len());
@@ -910,7 +893,10 @@ mod tests {
             .build()
             .unwrap();
 
-        let tx = Transaction::from_signatures(message.clone(), vec![test_signature(0x01)]).unwrap();
+        let tx = Transaction {
+            message: message.clone(),
+            signatures: vec![test_signature(0x01)],
+        };
 
         // Verify we're at exactly 4096 bytes
         assert_eq!(tx.serialized_size(), MAX_TRANSACTION_SIZE);
@@ -947,7 +933,10 @@ mod tests {
             }],
         };
 
-        let tx = Transaction::from_signatures(message, vec![test_signature(0x01)]).unwrap();
+        let tx = Transaction {
+            message,
+            signatures: vec![test_signature(0x01)],
+        };
 
         assert_eq!(tx.serialized_size(), MAX_TRANSACTION_SIZE + 1);
 
@@ -973,7 +962,10 @@ mod tests {
             .unwrap();
 
         let signatures: Vec<_> = (0..MAX_SIGNATURES).map(test_signature).collect();
-        let tx = Transaction::from_signatures(message, signatures).unwrap();
+        let tx = Transaction {
+            message,
+            signatures,
+        };
 
         // This configuration should fit within 4096 bytes
         // Fixed header: 42 bytes
@@ -1015,7 +1007,10 @@ mod tests {
     #[test]
     fn sanitize_accepts_valid_transaction() {
         let message = create_test_message();
-        let tx = Transaction::from_signatures(message, vec![test_signature(0xFF)]).unwrap();
+        let tx = Transaction {
+            message,
+            signatures: vec![test_signature(0xFF)],
+        };
         assert!(tx.sanitize().is_ok());
     }
 
@@ -1054,14 +1049,20 @@ mod tests {
     #[test]
     fn clone_and_eq_work() {
         let message = create_test_message();
-        let tx = Transaction::from_signatures(message, vec![test_signature(0x01)]).unwrap();
+        let tx = Transaction {
+            message,
+            signatures: vec![test_signature(0x01)],
+        };
 
         let cloned = tx.clone();
         assert_eq!(tx, cloned);
 
         // Different signature should not be equal
         let message2 = create_test_message();
-        let tx2 = Transaction::from_signatures(message2, vec![test_signature(0x02)]).unwrap();
+        let tx2 = Transaction {
+            message: message2,
+            signatures: vec![test_signature(0x02)],
+        };
         assert_ne!(tx, tx2);
     }
 
@@ -1069,7 +1070,10 @@ mod tests {
     fn destructuring_works() {
         let message = create_test_message();
         let sig = test_signature(0x99);
-        let tx = Transaction::from_signatures(message.clone(), vec![sig]).unwrap();
+        let tx = Transaction {
+            message: message.clone(),
+            signatures: vec![sig],
+        };
 
         let Transaction {
             message: returned_message,
