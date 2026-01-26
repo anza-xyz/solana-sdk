@@ -3429,6 +3429,7 @@ dependencies = [
 name = "solana-falcon-signature"
 version = "0.1.0"
 dependencies = [
+ "base64 0.22.1",
  "bytemuck",
  "bytemuck_derive",
  "oqs",

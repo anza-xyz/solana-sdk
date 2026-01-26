@@ -23,6 +23,7 @@ thiserror = { workspace = true }
 oqs = { workspace = true }
 
 [dev-dependencies]
+base64 = { workspace = true }
 rand = { workspace = true }
 
 [lints]
