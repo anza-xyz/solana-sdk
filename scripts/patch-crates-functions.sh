@@ -70,7 +70,6 @@ all_crate_dirs=(
   program-option
   program-pack
   pubkey
-  quic-definitions
   rent
   reward-info
   sanitize
