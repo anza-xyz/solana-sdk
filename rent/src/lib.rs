@@ -176,7 +176,6 @@ impl Rent {
     //
     // Note: Clippy suggests collapsing the `if` statements, but they are kept
     // separate since it is more CU-efficient this way.
-    #[allow(clippy::collapsible_if)]
     #[inline(always)]
     pub fn try_minimum_balance(&self, data_len: usize) -> Option<u64> {
         if data_len as u64 > MAX_PERMITTED_DATA_LENGTH {
