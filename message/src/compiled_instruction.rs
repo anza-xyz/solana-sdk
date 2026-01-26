@@ -55,7 +55,7 @@ impl CompiledInstruction {
         }
     }
 
-    pub fn program_id<'a>(&self, program_ids: &'a [Address]) -> &'a Address {
-        &program_ids[self.program_id_index as usize]
+    pub fn program_id<'a>(&self, tx_accounts: &'a [Address]) -> &'a Address {
+        &tx_accounts[self.program_id_index as usize]
     }
 }
