@@ -27,7 +27,8 @@ members = [
     "epoch-rewards-hasher",
     "epoch-schedule",
     "epoch-stake",
-    "example-mocks",
+    "example-mocks", 
+    "falcon-signature",
     "feature-gate-interface",
     "fee-calculator",
     "fee-structure",
@@ -195,6 +196,7 @@ num-derive = "0.4"
 num-traits = { version = "0.2.18", default-features = false }
 num_enum = "0.7.3"
 openssl = "0.10.72"
+oqs = { version = "0.11", default-features = false, features = ["std", "falcon", "vendored"] }
 pairing = "0.23.0"
 parking_lot = "0.12"
 pbkdf2 = { version = "0.11.0", default-features = false }

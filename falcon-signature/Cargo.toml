@@ -1,0 +1,29 @@
+[package]
+name = "solana-falcon-signature"
+version = "0.1.0"
+authors.workspace = true
+repository.workspace = true
+homepage.workspace = true
+license.workspace = true
+edition.workspace = true
+description = "Falcon-512 post-quantum signature support for Solana SDK"
+
+[features]
+default = ["std"]
+std = []
+
+[dependencies]
+bytemuck = { workspace = true }
+bytemuck_derive = { workspace = true }
+solana-instruction = { workspace = true, features = ["std"] }
+solana-sdk-ids = { workspace = true }
+thiserror = { workspace = true }
+
+[target.'cfg(not(target_os = "solana"))'.dependencies]
+oqs = { workspace = true }
+
+[dev-dependencies]
+rand = { workspace = true }
+
+[lints]
+workspace = true

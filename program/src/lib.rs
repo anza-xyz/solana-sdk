@@ -476,6 +476,7 @@ pub mod compute_units;
 pub mod ed25519_program;
 pub mod entrypoint_deprecated;
 pub mod epoch_schedule;
+pub mod falcon512_program;
 pub use solana_epoch_stake as epoch_stake;
 pub mod hash;
 pub mod incinerator;
