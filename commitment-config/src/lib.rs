@@ -70,7 +70,7 @@ impl FromStr for CommitmentConfig {
     derive(serde_derive::Serialize, serde_derive::Deserialize),
     serde(rename_all = "camelCase")
 )]
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+#[derive(Default, Clone, Copy, Debug, PartialEq, Eq, Hash)]
 /// An attribute of a slot. It describes how finalized a block is at some point in time. For example, a slot
 /// is said to be at the max level immediately after the cluster recognizes the block at that slot as
 /// finalized. When querying the ledger state, use lower levels of commitment to report progress and higher
@@ -89,13 +89,8 @@ pub enum CommitmentLevel {
 
     /// The highest slot having reached max vote lockout, as recognized by a supermajority of the
     /// cluster.
+    #[default]
     Finalized,
-}
-
-impl Default for CommitmentLevel {
-    fn default() -> Self {
-        Self::Finalized
-    }
 }
 
 impl FromStr for CommitmentLevel {

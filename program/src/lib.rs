@@ -675,8 +675,6 @@ pub use solana_example_mocks as example_mocks;
 
 #[cfg(test)]
 mod tests {
-    use super::unchecked_div_by_const;
-
     #[test]
     fn test_unchecked_div_by_const() {
         const D: u64 = 2;
