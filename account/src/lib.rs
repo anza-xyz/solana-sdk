@@ -239,6 +239,24 @@ impl ReadableAccount for Account {
     }
 }
 
+impl ReadableAccount for &Account {
+    fn lamports(&self) -> u64 {
+        self.lamports
+    }
+    fn data(&self) -> &[u8] {
+        &self.data
+    }
+    fn owner(&self) -> &Pubkey {
+        &self.owner
+    }
+    fn executable(&self) -> bool {
+        self.executable
+    }
+    fn rent_epoch(&self) -> Epoch {
+        self.rent_epoch
+    }
+}
+
 impl WritableAccount for Account {
     fn set_lamports(&mut self, lamports: u64) {
         self.lamports = lamports;
@@ -282,6 +300,24 @@ impl WritableAccount for AccountSharedData {
 }
 
 impl ReadableAccount for AccountSharedData {
+    fn lamports(&self) -> u64 {
+        self.lamports
+    }
+    fn data(&self) -> &[u8] {
+        &self.data
+    }
+    fn owner(&self) -> &Pubkey {
+        &self.owner
+    }
+    fn executable(&self) -> bool {
+        self.executable
+    }
+    fn rent_epoch(&self) -> Epoch {
+        self.rent_epoch
+    }
+}
+
+impl ReadableAccount for &AccountSharedData {
     fn lamports(&self) -> u64 {
         self.lamports
     }
