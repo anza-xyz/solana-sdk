@@ -1,3 +1,4 @@
+#![cfg_attr(docsrs, feature(doc_cfg))]
 //! Falcon-512 post-quantum signature support for Solana SDK.
 //!
 //! This crate provides Falcon-512 signature operations using the `oqs` crate
