@@ -27,7 +27,7 @@ members = [
     "epoch-rewards-hasher",
     "epoch-schedule",
     "epoch-stake",
-    "example-mocks", 
+    "example-mocks",
     "falcon-signature",
     "feature-gate-interface",
     "fee-calculator",
