@@ -1,5 +1,4 @@
-use super::*;
-use base64::Engine;
+use {super::*, base64::Engine};
 
 // ============================================================================
 // Pre-computed test vectors (generated once, used for testing without sign())
