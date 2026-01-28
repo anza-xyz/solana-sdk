@@ -421,17 +421,17 @@ dependencies = [
 
 [[package]]
 name = "bindgen"
-version = "0.69.5"
+version = "0.68.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "271383c67ccabffb7381723dea0672a673f292304fcb45c01cc648c7a8d58088"
+checksum = "726e4313eb6ec35d2730258ad4e15b547ee75d6afaa1361a922e78e59b7d8078"
 dependencies = [
  "bitflags 2.9.4",
  "cexpr",
  "clang-sys",
- "itertools 0.12.1",
  "lazy_static",
  "lazycell",
  "log",
+ "peeking_take_while",
  "prettyplease",
  "proc-macro2",
  "quote",
@@ -2261,9 +2261,9 @@ dependencies = [
 
 [[package]]
 name = "oqs"
-version = "0.10.1"
+version = "0.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "828f06d734c93f9ba75f0ae8075a7eb25d71c59705f2a7bf426ed997fe62beb5"
+checksum = "311616b64e55f9dc110286ea7cc5e475216dc332c54291e59a709c32fddb3a14"
 dependencies = [
  "cstr_core",
  "libc",
@@ -2272,9 +2272,9 @@ dependencies = [
 
 [[package]]
 name = "oqs-sys"
-version = "0.10.1+liboqs-0.12.0"
+version = "0.9.1+liboqs-0.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b4084714b15c8545e7dd2e9d1e4a5482547ece7476d07f4b5e96b5babb78c4dd"
+checksum = "afa79adc3c10f8e01d0b134c159254e5843ec3f91c0bd868e57777beb3329e17"
 dependencies = [
  "bindgen",
  "build-deps",
@@ -2339,6 +2339,12 @@ dependencies = [
  "digest",
  "hmac",
 ]
+
+[[package]]
+name = "peeking_take_while"
+version = "0.1.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "19b17cddbe7ec3f8bc800887bab5e717348c95ea2ca0b1bf0837fb964dc67099"
 
 [[package]]
 name = "percent-encoding"
