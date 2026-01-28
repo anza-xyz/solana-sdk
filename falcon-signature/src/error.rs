@@ -1,3 +1,4 @@
+#[cfg(feature = "std")]
 use crate::constants::{
     MAX_SIGNATURE_SIZE, MIN_SIGNATURE_SIZE, PUBKEY_HEADER, PUBKEY_SIZE, SIGNATURE_HEADER,
 };

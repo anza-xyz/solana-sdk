@@ -1,5 +1,5 @@
 #[cfg(not(feature = "std"))]
-use alloc::vec::Vec;
+use alloc::{vec, vec::Vec};
 use {
     crate::{
         constants::{DATA_START, PUBKEY_SIZE, SIGNATURE_OFFSETS_SIZE, SIGNATURE_OFFSETS_START},
