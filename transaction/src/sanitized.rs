@@ -5,7 +5,7 @@ use {
     solana_message::{
         legacy,
         v0::{self, LoadedAddresses},
-        AddressLoader, LegacyMessage, SanitizedMessage, SanitizedVersionedMessage,
+        v1, AddressLoader, LegacyMessage, SanitizedMessage, SanitizedVersionedMessage,
         VersionedMessage,
     },
     solana_signature::Signature,
@@ -76,6 +76,9 @@ impl SanitizedTransaction {
                     loaded_addresses,
                     reserved_account_keys,
                 ))
+            }
+            VersionedMessage::V1(message) => {
+                SanitizedMessage::V1(v1::LoadedMessage::new(message, reserved_account_keys))
             }
         };
 
@@ -209,6 +212,10 @@ impl SanitizedTransaction {
                 signatures,
                 message: VersionedMessage::Legacy(legacy::Message::clone(&legacy_message.message)),
             },
+            SanitizedMessage::V1(v1_message) => VersionedTransaction {
+                signatures,
+                message: VersionedMessage::V1(v1_message.message().clone()),
+            },
         }
     }
 
@@ -249,6 +256,7 @@ impl SanitizedTransaction {
         match &self.message {
             SanitizedMessage::Legacy(_) => LoadedAddresses::default(),
             SanitizedMessage::V0(message) => LoadedAddresses::clone(&message.loaded_addresses),
+            SanitizedMessage::V1(_) => LoadedAddresses::default(),
         }
     }
 
@@ -264,6 +272,10 @@ impl SanitizedTransaction {
         match &self.message {
             SanitizedMessage::Legacy(legacy_message) => legacy_message.message.serialize(),
             SanitizedMessage::V0(loaded_msg) => loaded_msg.message.serialize(),
+            SanitizedMessage::V1(v1_msg) => v1_msg
+                .message()
+                .to_bytes()
+                .expect("sanitized V1 message exceeds serialization limits"),
         }
     }
 
