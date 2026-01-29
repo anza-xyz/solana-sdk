@@ -67,7 +67,7 @@ impl Transaction {
     }
 
     pub fn toBytes(&self) -> Box<[u8]> {
-        bincode::serialize(&self.inner).unwrap().into()
+        wincode::serialize(&self.inner).unwrap().into()
     }
 
     pub fn fromBytes(uint8_array: Uint8Array) -> Result<Self, JsValue> {
@@ -82,7 +82,7 @@ impl Transaction {
 
         let bytes_vec = uint8_array.to_vec();
 
-        bincode::deserialize::<solana_transaction::Transaction>(&bytes_vec)
+        wincode::deserialize::<solana_transaction::Transaction>(&bytes_vec)
             .map(Into::into)
             .map_err(|x| std::string::ToString::to_string(&x).into())
     }
