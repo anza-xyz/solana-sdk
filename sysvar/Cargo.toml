@@ -27,6 +27,7 @@ serde = [
     "solana-epoch-schedule/serde",
     "solana-fee-calculator/serde",
     "solana-last-restart-slot/serde",
+    "solana-pubkey/serde",
     "solana-rent/serde",
     "solana-slot-hashes/serde",
     "solana-slot-history/serde",
