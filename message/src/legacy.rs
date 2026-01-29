@@ -438,7 +438,7 @@ impl Message {
     }
 
     /// Compute the blake3 hash of this transaction's message.
-    #[cfg(all(not(target_os = "solana"), feature = "bincode", feature = "blake3"))]
+    #[cfg(all(not(target_os = "solana"), feature = "wincode", feature = "blake3"))]
     pub fn hash(&self) -> Hash {
         let message_bytes = self.serialize();
         Self::hash_raw_message(&message_bytes)
@@ -459,9 +459,9 @@ impl Message {
         compile_instruction(ix, &self.account_keys)
     }
 
-    #[cfg(feature = "bincode")]
+    #[cfg(feature = "wincode")]
     pub fn serialize(&self) -> Vec<u8> {
-        bincode::serialize(self).unwrap()
+        wincode::serialize(self).unwrap()
     }
 
     pub fn program_id(&self, instruction_index: usize) -> Option<&Address> {

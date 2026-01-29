@@ -1,9 +1,5 @@
 //! Defines a transaction which supports multiple versions of messages.
 
-#[cfg(feature = "bincode")]
-use solana_signer::{signers::Signers, SignerError};
-#[cfg(feature = "wincode")]
-use wincode::{containers, len::ShortU16Len, SchemaRead, SchemaWrite};
 use {
     crate::Transaction,
     solana_message::{inline_nonce::is_advance_nonce_instruction_data, VersionedMessage},
@@ -16,6 +12,11 @@ use {
 use {
     serde_derive::{Deserialize, Serialize},
     solana_short_vec as short_vec,
+};
+#[cfg(feature = "wincode")]
+use {
+    solana_signer::{signers::Signers, SignerError},
+    wincode::{containers, len::ShortU16Len, SchemaRead, SchemaWrite},
 };
 
 pub mod sanitized;
@@ -73,7 +74,7 @@ impl From<Transaction> for VersionedTransaction {
 impl VersionedTransaction {
     /// Signs a versioned message and if successful, returns a signed
     /// transaction.
-    #[cfg(feature = "bincode")]
+    #[cfg(feature = "wincode")]
     pub fn try_new<T: Signers + ?Sized>(
         message: VersionedMessage,
         keypairs: &T,

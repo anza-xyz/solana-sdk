@@ -253,7 +253,7 @@ impl SanitizedTransaction {
     }
 
     /// If the transaction uses a durable nonce, return the pubkey of the nonce account
-    #[cfg(feature = "bincode")]
+    #[cfg(feature = "wincode")]
     pub fn get_durable_nonce(&self) -> Option<&Address> {
         self.message.get_durable_nonce()
     }
