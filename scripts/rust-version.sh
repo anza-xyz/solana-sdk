@@ -38,7 +38,7 @@ fi
 if [[ -n $RUST_NIGHTLY_VERSION ]]; then
   nightly_version="$RUST_NIGHTLY_VERSION"
 else
-  nightly_version=2025-06-29
+  nightly_version=2026-01-22
 fi
 
 export rust_stable="$stable_version"

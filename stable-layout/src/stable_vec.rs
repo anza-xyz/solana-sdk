@@ -191,8 +191,8 @@ mod tests {
 
         let addr_vec = &vec as *const _ as usize;
         let addr_ptr = addr_vec;
-        let addr_cap = addr_vec + 8;
-        let addr_len = addr_vec + 16;
+        let addr_cap = addr_vec.checked_add(8).unwrap();
+        let addr_len = addr_vec.checked_add(16).unwrap();
         assert_eq!(unsafe { *(addr_cap as *const usize) }, 3);
         assert_eq!(unsafe { *(addr_len as *const usize) }, 2);
 

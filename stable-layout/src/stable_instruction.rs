@@ -87,10 +87,10 @@ mod tests {
         let accounts_ptr = instruction_addr as *const StableVec<AccountMeta>;
         assert_eq!(unsafe { &*accounts_ptr }, &accounts);
 
-        let data_ptr = (instruction_addr + 24) as *const StableVec<u8>;
+        let data_ptr = instruction_addr.checked_add(24).unwrap() as *const StableVec<u8>;
         assert_eq!(unsafe { &*data_ptr }, &data);
 
-        let pubkey_ptr = (instruction_addr + 48) as *const Pubkey;
+        let pubkey_ptr = instruction_addr.checked_add(48).unwrap() as *const Pubkey;
         assert_eq!(unsafe { *pubkey_ptr }, program_id);
     }
 }
