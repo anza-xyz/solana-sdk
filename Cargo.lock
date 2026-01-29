@@ -4204,7 +4204,6 @@ dependencies = [
  "solana-frozen-abi",
  "solana-frozen-abi-macro",
  "solana-instruction",
- "solana-message",
  "solana-msg",
  "solana-nonce",
  "solana-program-entrypoint",

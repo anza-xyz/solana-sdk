@@ -49,7 +49,6 @@ borsh = { workspace = true, features = ["derive", "unstable__schema"] }
 solana-account-info = { workspace = true }
 solana-cpi = { path = "../cpi" }
 solana-example-mocks = { path = "../example-mocks" }
-solana-message = { workspace = true }
 solana-nonce = { workspace = true }
 solana-program-entrypoint = { workspace = true }
 solana-program-error = { workspace = true, features = ["borsh"] }

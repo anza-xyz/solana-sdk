@@ -1472,7 +1472,6 @@ pub fn create_nonce_account(
 /// # use solana_example_mocks::solana_account::Account;
 /// use solana_rpc_client::rpc_client::RpcClient;
 /// use solana_address::Address;
-/// use solana_message::Message;
 /// use solana_keypair::Keypair;
 /// use solana_signer::Signer;
 /// use solana_system_interface::instruction;
@@ -1503,15 +1502,13 @@ pub fn create_nonce_account(
 ///
 ///     // The `advance_nonce_account` instruction must be the first issued in
 ///     // the transaction.
-///     let message = Message::new(
+///     let mut tx = Transaction::new_with_payer(
 ///         &[
 ///             instr_advance_nonce_account,
 ///             instr_transfer
 ///         ],
 ///         Some(&payer.pubkey()),
 ///     );
-///
-///     let mut tx = Transaction::new_unsigned(message);
 ///
 ///     // Sign the tx with nonce_account's `blockhash` instead of the
 ///     // network's latest blockhash.
