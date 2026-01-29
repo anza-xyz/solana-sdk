@@ -16,14 +16,7 @@ use {
     solana_instruction_error::LamportsError,
     solana_pubkey::Pubkey,
     solana_sdk_ids::{bpf_loader, bpf_loader_deprecated, bpf_loader_upgradeable, loader_v4},
-    std::{
-        cell::{Ref, RefCell},
-        fmt,
-        mem::MaybeUninit,
-        ptr,
-        rc::Rc,
-        sync::Arc,
-    },
+    std::{cell::RefCell, fmt, mem::MaybeUninit, ops::Deref, ptr, rc::Rc, sync::Arc},
 };
 #[cfg(feature = "bincode")]
 pub mod state_traits;
@@ -237,6 +230,28 @@ pub trait ReadableAccount: Sized {
     }
 }
 
+impl<T> ReadableAccount for T
+where
+    T: Deref,
+    T::Target: ReadableAccount,
+{
+    fn lamports(&self) -> u64 {
+        self.deref().lamports()
+    }
+    fn data(&self) -> &[u8] {
+        self.deref().data()
+    }
+    fn owner(&self) -> &Pubkey {
+        self.deref().owner()
+    }
+    fn executable(&self) -> bool {
+        self.deref().executable()
+    }
+    fn rent_epoch(&self) -> Epoch {
+        self.deref().rent_epoch()
+    }
+}
+
 impl ReadableAccount for Account {
     fn lamports(&self) -> u64 {
         self.lamports
@@ -346,52 +361,6 @@ impl ReadableAccount for AccountSharedData {
     fn to_account_shared_data(&self) -> AccountSharedData {
         // avoid data copy here
         self.clone()
-    }
-}
-
-impl ReadableAccount for Ref<'_, AccountSharedData> {
-    fn lamports(&self) -> u64 {
-        self.lamports
-    }
-    fn data(&self) -> &[u8] {
-        &self.data
-    }
-    fn owner(&self) -> &Pubkey {
-        &self.owner
-    }
-    fn executable(&self) -> bool {
-        self.executable
-    }
-    fn rent_epoch(&self) -> Epoch {
-        self.rent_epoch
-    }
-    fn to_account_shared_data(&self) -> AccountSharedData {
-        AccountSharedData {
-            lamports: self.lamports(),
-            // avoid data copy here
-            data: Arc::clone(&self.data),
-            owner: *self.owner(),
-            executable: self.executable(),
-            rent_epoch: self.rent_epoch(),
-        }
-    }
-}
-
-impl ReadableAccount for Ref<'_, Account> {
-    fn lamports(&self) -> u64 {
-        self.lamports
-    }
-    fn data(&self) -> &[u8] {
-        &self.data
-    }
-    fn owner(&self) -> &Pubkey {
-        &self.owner
-    }
-    fn executable(&self) -> bool {
-        self.executable
-    }
-    fn rent_epoch(&self) -> Epoch {
-        self.rent_epoch
     }
 }
 
