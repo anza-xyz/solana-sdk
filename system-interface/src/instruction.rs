@@ -336,13 +336,16 @@ pub enum SystemInstruction {
 /// The `payer` and `new_account` are signers.
 ///
 /// ```
-/// # use solana_example_mocks::{solana_sdk, solana_rpc_client};
+/// # use solana_example_mocks::solana_keypair;
+/// # use solana_example_mocks::solana_signer;
+/// # use solana_example_mocks::solana_rpc_client;
+/// # use solana_example_mocks::solana_transaction;
 /// use solana_rpc_client::rpc_client::RpcClient;
-/// use solana_sdk::{
-///     signature::{Keypair, Signer},
-///     transaction::Transaction,
-/// };
+/// use solana_address::Address;
+/// use solana_keypair::Keypair;
+/// use solana_signer::Signer;
 /// use solana_system_interface::{instruction, program};
+/// use solana_transaction::Transaction;
 /// use anyhow::Result;
 ///
 /// fn create_account(
@@ -540,14 +543,16 @@ pub fn create_account_with_seed(
 /// The `payer` and `new_account` are signers.
 ///
 /// ```
-/// # use solana_example_mocks::{solana_sdk, solana_rpc_client};
+/// # use solana_example_mocks::solana_keypair;
+/// # use solana_example_mocks::solana_signer;
+/// # use solana_example_mocks::solana_rpc_client;
+/// # use solana_example_mocks::solana_transaction;
 /// use solana_rpc_client::rpc_client::RpcClient;
 /// use solana_address::Address;
-/// use solana_sdk::{
-///     signature::{Keypair, Signer},
-///     transaction::Transaction,
-/// };
+/// use solana_keypair::Keypair;
+/// use solana_signer::Signer;
 /// use solana_system_interface::instruction;
+/// use solana_transaction::Transaction;
 /// use anyhow::Result;
 ///
 /// fn create_account(
@@ -733,14 +738,16 @@ pub fn assign_with_seed(
 /// The `payer` and `new_account` are signers.
 ///
 /// ```
-/// # use solana_example_mocks::{solana_sdk, solana_rpc_client};
+/// # use solana_example_mocks::solana_keypair;
+/// # use solana_example_mocks::solana_signer;
+/// # use solana_example_mocks::solana_rpc_client;
+/// # use solana_example_mocks::solana_transaction;
 /// use solana_rpc_client::rpc_client::RpcClient;
 /// use solana_address::Address;
-/// use solana_sdk::{
-///     signature::{Keypair, Signer},
-///     transaction::Transaction,
-/// };
+/// use solana_keypair::Keypair;
+/// use solana_signer::Signer;
 /// use solana_system_interface::instruction;
+/// use solana_transaction::Transaction;
 /// use anyhow::Result;
 ///
 /// fn create_account(
@@ -932,14 +939,16 @@ pub fn transfer_with_seed(
 /// The `payer` and `new_account` are signers.
 ///
 /// ```
-/// # use solana_example_mocks::{solana_sdk, solana_rpc_client};
+/// # use solana_example_mocks::solana_keypair;
+/// # use solana_example_mocks::solana_signer;
+/// # use solana_example_mocks::solana_rpc_client;
+/// # use solana_example_mocks::solana_transaction;
 /// use solana_rpc_client::rpc_client::RpcClient;
 /// use solana_address::Address;
-/// use solana_sdk::{
-///     signature::{Keypair, Signer},
-///     transaction::Transaction,
-/// };
+/// use solana_keypair::Keypair;
+/// use solana_signer::Signer;
 /// use solana_system_interface::instruction;
+/// use solana_transaction::Transaction;
 /// use anyhow::Result;
 ///
 /// fn create_account(
@@ -1118,14 +1127,16 @@ pub fn allocate_with_seed(
 /// This example performs multiple transfers in a single transaction.
 ///
 /// ```
-/// # use solana_example_mocks::{solana_sdk, solana_rpc_client};
+/// # use solana_example_mocks::solana_keypair;
+/// # use solana_example_mocks::solana_signer;
+/// # use solana_example_mocks::solana_rpc_client;
+/// # use solana_example_mocks::solana_transaction;
 /// use solana_rpc_client::rpc_client::RpcClient;
 /// use solana_address::Address;
-/// use solana_sdk::{
-///     signature::{Keypair, Signer},
-///     transaction::Transaction,
-/// };
+/// use solana_keypair::Keypair;
+/// use solana_signer::Signer;
 /// use solana_system_interface::instruction;
+/// use solana_transaction::Transaction;
 /// use anyhow::Result;
 ///
 /// fn transfer_lamports_to_many(
@@ -1453,18 +1464,19 @@ pub fn create_nonce_account(
 /// Create and sign a transaction with a durable nonce:
 ///
 /// ```
-/// # use solana_example_mocks::solana_sdk;
+/// # use solana_example_mocks::solana_keypair;
+/// # use solana_example_mocks::solana_signer;
 /// # use solana_example_mocks::solana_rpc_client;
 /// # use solana_example_mocks::solana_rpc_client_nonce_utils;
-/// # use solana_sdk::account::Account;
+/// # use solana_example_mocks::solana_transaction;
+/// # use solana_example_mocks::solana_account::Account;
 /// use solana_rpc_client::rpc_client::RpcClient;
 /// use solana_address::Address;
-/// use solana_sdk::{
-///     message::Message,
-///     signature::{Keypair, Signer},
-///     transaction::Transaction,
-/// };
+/// use solana_message::Message;
+/// use solana_keypair::Keypair;
+/// use solana_signer::Signer;
 /// use solana_system_interface::instruction;
+/// use solana_transaction::Transaction;
 /// use std::path::Path;
 /// use anyhow::Result;
 ///
@@ -1506,7 +1518,7 @@ pub fn create_nonce_account(
 ///     # client.set_get_account_response(*nonce_account_address, Account {
 ///     #   lamports: 1,
 ///     #   data: vec![0],
-///     #   owner: solana_sdk::system_program::ID,
+///     #   owner: solana_system_interface::program::ID,
 ///     #   executable: false,
 ///     # });
 ///     let nonce_account = client.get_account(nonce_account_address)?;
@@ -1573,15 +1585,18 @@ pub fn advance_nonce_account(nonce_address: &Address, authorized_address: &Addre
 /// # Examples
 ///
 /// ```
-/// # use solana_example_mocks::solana_sdk;
+/// # use solana_example_mocks::solana_account;
+/// # use solana_example_mocks::solana_keypair;
+/// # use solana_example_mocks::solana_signer;
 /// # use solana_example_mocks::solana_rpc_client;
+/// # use solana_example_mocks::solana_transaction;
+/// # use solana_account::Account;
 /// use solana_rpc_client::rpc_client::RpcClient;
 /// use solana_address::Address;
-/// use solana_sdk::{
-///     signature::{Keypair, Signer},
-///     transaction::Transaction,
-/// };
+/// use solana_keypair::Keypair;
+/// use solana_signer::Signer;
 /// use solana_system_interface::instruction;
+/// use solana_transaction::Transaction;
 /// use anyhow::Result;
 ///
 /// fn submit_withdraw_nonce_account_tx(
@@ -1657,15 +1672,16 @@ pub fn withdraw_nonce_account(
 /// # Examples
 ///
 /// ```
-/// # use solana_example_mocks::solana_sdk;
+/// # use solana_example_mocks::solana_keypair;
+/// # use solana_example_mocks::solana_signer;
 /// # use solana_example_mocks::solana_rpc_client;
+/// # use solana_example_mocks::solana_transaction;
 /// use solana_rpc_client::rpc_client::RpcClient;
 /// use solana_address::Address;
-/// use solana_sdk::{
-///     signature::{Keypair, Signer},
-///     transaction::Transaction,
-/// };
+/// use solana_keypair::Keypair;
+/// use solana_signer::Signer;
 /// use solana_system_interface::instruction;
+/// use solana_transaction::Transaction;
 /// use anyhow::Result;
 ///
 /// fn authorize_nonce_account_tx(

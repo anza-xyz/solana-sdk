@@ -210,7 +210,6 @@ impl Message {
     /// # use solana_example_mocks::{
     /// #     solana_rpc_client,
     /// #     solana_account,
-    /// #     solana_transaction,
     /// #     solana_signer,
     /// #     solana_keypair,
     /// # };
@@ -224,6 +223,25 @@ impl Message {
     /// use solana_address::Address;
     /// use solana_rpc_client::rpc_client::RpcClient;
     /// use solana_signer::Signer;
+    /// # mod solana_transaction {
+    /// #     pub mod versioned {
+    /// #         use solana_example_mocks::{solana_keypair::Keypair, solana_signer::SignerError};
+    /// #         use solana_message::VersionedMessage;
+    /// #         pub struct VersionedTransaction {
+    /// #             pub message: solana_message::VersionedMessage,
+    /// #         }
+    /// #         impl VersionedTransaction {
+    /// #             pub fn try_new(
+    /// #                 message: VersionedMessage,
+    /// #                 _keypairs: &[&Keypair],
+    /// #             ) -> std::result::Result<Self, solana_example_mocks::solana_signer::SignerError> {
+    /// #                 Ok(VersionedTransaction {
+    /// #                     message,
+    /// #                 })
+    /// #             }
+    /// #         }
+    /// #     }
+    /// # }
     /// use solana_transaction::versioned::VersionedTransaction;
     ///
     /// fn create_tx_with_address_table_lookup(

@@ -188,72 +188,36 @@ pub mod solana_transaction {
         serde_derive::Serialize,
         solana_hash::Hash,
         solana_instruction::Instruction,
-        solana_message::Message,
         solana_pubkey::Pubkey,
     };
 
-    pub mod versioned {
-        use {
-            crate::{
-                solana_signature::Signature,
-                solana_signer::{signers::Signers, SignerError},
-            },
-            solana_message::VersionedMessage,
-        };
-        pub struct VersionedTransaction {
-            pub signatures: Vec<Signature>,
-            pub message: VersionedMessage,
-        }
-
-        impl VersionedTransaction {
-            pub fn try_new<T: Signers + ?Sized>(
-                message: VersionedMessage,
-                _keypairs: &T,
-            ) -> std::result::Result<Self, SignerError> {
-                Ok(VersionedTransaction {
-                    signatures: vec![],
-                    message,
-                })
-            }
-        }
-    }
-
     #[derive(Serialize)]
-    pub struct Transaction {
-        pub message: Message,
-    }
+    pub struct Transaction;
 
     impl Transaction {
-        pub fn new<T: Signers + ?Sized>(
+        pub fn new<T: Signers + ?Sized, M>(
             _from_keypairs: &T,
-            _message: Message,
+            _message: M,
             _recent_blockhash: Hash,
-        ) -> Transaction {
-            Transaction {
-                message: Message::new(&[], None),
-            }
+        ) -> Self {
+            Self
         }
 
-        pub fn new_unsigned(_message: Message) -> Self {
-            Transaction {
-                message: Message::new(&[], None),
-            }
+        pub fn new_unsigned<M>(_message: M) -> Self {
+            Self
         }
 
         pub fn new_with_payer(_instructions: &[Instruction], _payer: Option<&Pubkey>) -> Self {
-            Transaction {
-                message: Message::new(&[], None),
-            }
+            Self
         }
 
         pub fn new_signed_with_payer<T: Signers + ?Sized>(
-            instructions: &[Instruction],
-            payer: Option<&Pubkey>,
-            signing_keypairs: &T,
-            recent_blockhash: Hash,
+            _instructions: &[Instruction],
+            _payer: Option<&Pubkey>,
+            _signing_keypairs: &T,
+            _recent_blockhash: Hash,
         ) -> Self {
-            let message = Message::new(instructions, payer);
-            Self::new(signing_keypairs, message, recent_blockhash)
+            Self
         }
 
         pub fn sign<T: Signers + ?Sized>(&mut self, _keypairs: &T, _recent_blockhash: Hash) {}
@@ -279,9 +243,7 @@ pub mod solana_sdk {
             solana_account::{self as account, state_traits as account_utils},
             solana_signer::{self as signer, signers},
         },
-        solana_clock::Clock,
-        solana_hash as hash, solana_instruction as instruction, solana_keccak_hasher as keccak,
-        solana_message as message, solana_nonce as nonce,
+        solana_hash as hash, solana_instruction as instruction, solana_nonce as nonce,
         solana_pubkey::{self as pubkey, Pubkey},
         solana_sdk_ids::{
             system_program,
@@ -297,13 +259,6 @@ pub mod solana_sdk {
     }
 
     pub mod transaction {
-        pub use crate::solana_transaction::{versioned::VersionedTransaction, Transaction};
-    }
-
-    pub mod address_lookup_table {
-        pub use {
-            solana_address_lookup_table_interface::{error, instruction, program, state},
-            solana_message::AddressLookupTableAccount,
-        };
+        pub use crate::solana_transaction::Transaction;
     }
 }

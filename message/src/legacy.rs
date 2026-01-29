@@ -267,7 +267,7 @@ impl Message {
     ///     );
     ///
     ///     let mut tx = Transaction::new_unsigned(message);
-    ///     tx.sign(&[payer], tx.message.recent_blockhash);
+    ///     tx.sign(&[payer], blockhash);
     ///     client.send_and_confirm_transaction(&tx)?;
     ///
     ///     Ok(())
