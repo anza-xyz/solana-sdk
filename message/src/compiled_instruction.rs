@@ -4,7 +4,10 @@ use serde_derive::{Deserialize, Serialize};
 use solana_frozen_abi_macro::AbiExample;
 #[cfg(feature = "wincode")]
 use wincode::{containers, len::ShortU16Len, SchemaRead, SchemaWrite};
-use {solana_address::Address, solana_sanitize::Sanitize};
+use {
+    solana_address::Address,
+    solana_sanitize::{Sanitize, SanitizeError},
+};
 
 /// A compact encoding of an instruction.
 ///
@@ -34,7 +37,14 @@ pub struct CompiledInstruction {
     pub data: Vec<u8>,
 }
 
-impl Sanitize for CompiledInstruction {}
+impl Sanitize for CompiledInstruction {
+    fn sanitize(&self, limit_ix_accounts_simd_406: bool) -> Result<(), SanitizeError> {
+        if limit_ix_accounts_simd_406 && self.accounts.len() > 255 {
+            return Err(SanitizeError::ValueOutOfBounds);
+        }
+        Ok(())
+    }
+}
 
 impl CompiledInstruction {
     #[cfg(feature = "bincode")]

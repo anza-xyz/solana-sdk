@@ -110,8 +110,9 @@ impl SanitizedMessage {
     pub fn try_from_legacy_message(
         message: legacy::Message,
         reserved_account_keys: &HashSet<Address>,
+        limit_ix_accounts_simd_406: bool,
     ) -> Result<Self, SanitizeMessageError> {
-        message.sanitize()?;
+        message.sanitize(limit_ix_accounts_simd_406)?;
         Ok(Self::Legacy(LegacyMessage::new(
             message,
             reserved_account_keys,
@@ -456,6 +457,7 @@ mod tests {
             SanitizedMessage::try_from_legacy_message(
                 legacy_message_with_no_signers,
                 &HashSet::default(),
+                true,
             )
             .err(),
             Some(SanitizeMessageError::IndexOutOfBounds),
@@ -482,6 +484,7 @@ mod tests {
                 ..legacy::Message::default()
             },
             &HashSet::default(),
+            true,
         )
         .unwrap();
 
@@ -529,6 +532,7 @@ mod tests {
                 instructions,
             ),
             &HashSet::default(),
+            true,
         )
         .unwrap();
 
@@ -571,6 +575,7 @@ mod tests {
                 ..legacy::Message::default()
             },
             &HashSet::default(),
+            true,
         )
         .unwrap();
         match legacy_message {
@@ -655,6 +660,7 @@ mod tests {
                 ],
             ),
             &HashSet::new(),
+            true,
         )
         .unwrap();
 
@@ -688,6 +694,7 @@ mod tests {
                 ..legacy::Message::default()
             },
             &HashSet::default(),
+            true,
         )
         .unwrap();
         assert_eq!(legacy_message.static_account_keys(), &keys);

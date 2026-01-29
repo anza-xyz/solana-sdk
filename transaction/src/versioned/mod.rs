@@ -121,8 +121,11 @@ impl VersionedTransaction {
         })
     }
 
-    pub fn sanitize(&self) -> std::result::Result<(), SanitizeError> {
-        self.message.sanitize()?;
+    pub fn sanitize(
+        &self,
+        limit_ix_accounts_simd_406: bool,
+    ) -> std::result::Result<(), SanitizeError> {
+        self.message.sanitize(limit_ix_accounts_simd_406)?;
         self.sanitize_signatures()?;
         Ok(())
     }
