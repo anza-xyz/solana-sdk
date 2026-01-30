@@ -220,6 +220,17 @@ pub trait ReadableAccount: Sized {
     fn owner(&self) -> &Pubkey;
     fn executable(&self) -> bool;
     fn rent_epoch(&self) -> Epoch;
+    #[deprecated(since = "3.2.0")]
+    fn to_account_shared_data(&self) -> AccountSharedData {
+        #[allow(deprecated)]
+        AccountSharedData::create(
+            self.lamports(),
+            self.data().to_vec(),
+            *self.owner(),
+            self.executable(),
+            self.rent_epoch(),
+        )
+    }
 }
 
 impl<T> ReadableAccount for T
@@ -349,6 +360,10 @@ impl ReadableAccount for AccountSharedData {
     }
     fn rent_epoch(&self) -> Epoch {
         self.rent_epoch
+    }
+    fn to_account_shared_data(&self) -> AccountSharedData {
+        // avoid data copy here
+        self.clone()
     }
 }
 
@@ -828,6 +843,18 @@ pub mod tests {
         let key = Pubkey::new_unique();
         let (_account1, mut account2) = make_two_accounts(&key);
         account2.serialize_data(&"hello world").unwrap();
+    }
+
+    #[test]
+    #[allow(deprecated)]
+    fn test_to_account_shared_data() {
+        let key = Pubkey::new_unique();
+        let (account1, account2) = make_two_accounts(&key);
+        assert!(accounts_equal(&account1, &account2));
+        let account3 = account1.to_account_shared_data();
+        let account4 = account2.to_account_shared_data();
+        assert!(accounts_equal(&account1, &account3));
+        assert!(accounts_equal(&account1, &account4));
     }
 
     #[test]
