@@ -109,7 +109,7 @@ impl<'a> LoadedMessage<'a> {
 
     /// Returns true if any account keys are duplicates
     pub fn has_duplicates(&self) -> bool {
-        let mut uniq = HashSet::new();
+        let mut uniq = HashSet::with_capacity(self.account_keys().len());
         self.account_keys().iter().any(|x| !uniq.insert(x))
     }
 

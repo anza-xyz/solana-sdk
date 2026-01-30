@@ -13,7 +13,9 @@ use {
 #[cfg(feature = "wincode")]
 use {
     crate::{
-        legacy::MessageUninitBuilder as LegacyMessageUninitBuilder, MessageHeaderUninitBuilder,
+        legacy::MessageUninitBuilder as LegacyMessageUninitBuilder,
+        v1::{deserialize, serialize_into},
+        MessageHeaderUninitBuilder,
     },
     core::mem::MaybeUninit,
     wincode::{
@@ -33,13 +35,14 @@ use {
 
 mod sanitized;
 pub mod v0;
+pub mod v1;
 
 pub use sanitized::*;
 
 /// Bit mask that indicates whether a serialized message is versioned.
 pub const MESSAGE_VERSION_PREFIX: u8 = 0x80;
 
-/// Either a legacy message or a v0 message.
+/// Either a legacy message, v0 or a v1 message.
 ///
 /// # Serialization
 ///
@@ -49,13 +52,14 @@ pub const MESSAGE_VERSION_PREFIX: u8 = 0x80;
 /// format.
 #[cfg_attr(
     feature = "frozen-abi",
-    frozen_abi(digest = "Hndd1SDxQ5qNZvzHo77dpW6uD5c1DJNVjtg8tE6hc432"),
+    frozen_abi(digest = "3FVVnsLRS9Ue7MwhQPLxod48B1HxvDuX4nt4UhKV4jcs"),
     derive(AbiEnumVisitor, AbiExample)
 )]
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum VersionedMessage {
     Legacy(LegacyMessage),
     V0(v0::Message),
+    V1(v1::Message),
 }
 
 impl VersionedMessage {
@@ -63,20 +67,25 @@ impl VersionedMessage {
         match self {
             Self::Legacy(message) => message.sanitize(),
             Self::V0(message) => message.sanitize(),
+            Self::V1(message) => message.sanitize(),
         }
     }
 
+    #[inline(always)]
     pub fn header(&self) -> &MessageHeader {
         match self {
             Self::Legacy(message) => &message.header,
             Self::V0(message) => &message.header,
+            Self::V1(message) => &message.header,
         }
     }
 
+    #[inline(always)]
     pub fn static_account_keys(&self) -> &[Address] {
         match self {
             Self::Legacy(message) => &message.account_keys,
             Self::V0(message) => &message.account_keys,
+            Self::V1(message) => &message.account_keys,
         }
     }
 
@@ -84,6 +93,7 @@ impl VersionedMessage {
         match self {
             Self::Legacy(_) => None,
             Self::V0(message) => Some(&message.address_table_lookups),
+            Self::V1(_) => None,
         }
     }
 
@@ -105,6 +115,7 @@ impl VersionedMessage {
         match self {
             Self::Legacy(message) => message.is_maybe_writable(index, reserved_account_keys),
             Self::V0(message) => message.is_maybe_writable(index, reserved_account_keys),
+            Self::V1(message) => message.is_maybe_writable(index, reserved_account_keys),
         }
     }
 
@@ -124,6 +135,7 @@ impl VersionedMessage {
         match self {
             Self::Legacy(message) => message.is_key_called_as_program(key_index),
             Self::V0(message) => message.is_key_called_as_program(key_index),
+            Self::V1(message) => message.is_key_called_as_program(key_index),
         }
     }
 
@@ -137,6 +149,7 @@ impl VersionedMessage {
         match self {
             Self::Legacy(message) => &message.recent_blockhash,
             Self::V0(message) => &message.recent_blockhash,
+            Self::V1(message) => &message.lifetime_specifier,
         }
     }
 
@@ -144,21 +157,40 @@ impl VersionedMessage {
         match self {
             Self::Legacy(message) => message.recent_blockhash = recent_blockhash,
             Self::V0(message) => message.recent_blockhash = recent_blockhash,
+            Self::V1(message) => message.lifetime_specifier = recent_blockhash,
         }
     }
 
     /// Program instructions that will be executed in sequence and committed in
     /// one atomic transaction if all succeed.
+    #[inline(always)]
     pub fn instructions(&self) -> &[CompiledInstruction] {
         match self {
             Self::Legacy(message) => &message.instructions,
             Self::V0(message) => &message.instructions,
+            Self::V1(message) => &message.instructions,
         }
     }
 
+    // V1 add +1 for message version prefix
+    #[allow(clippy::arithmetic_side_effects)]
     #[cfg(feature = "bincode")]
     pub fn serialize(&self) -> Vec<u8> {
-        bincode::serialize(self).unwrap()
+        match self {
+            Self::V1(message) => {
+                let total = message.size();
+                let mut buffer: Vec<u8> = Vec::with_capacity(1 + total);
+                // SAFETY: buffer has sufficient capacity for serialization.
+                unsafe {
+                    let ptr = buffer.as_mut_ptr();
+                    ptr.write(MESSAGE_VERSION_PREFIX | 1);
+                    v1::serialize_into(message, ptr.add(1));
+                    buffer.set_len(1 + total);
+                }
+                buffer
+            }
+            _ => bincode::serialize(self).unwrap(),
+        }
     }
 
     #[cfg(all(feature = "bincode", feature = "blake3"))]
@@ -203,6 +235,24 @@ impl serde::Serialize for VersionedMessage {
                 seq.serialize_element(&MESSAGE_VERSION_PREFIX)?;
                 seq.serialize_element(message)?;
                 seq.end()
+            }
+            Self::V1(message) => {
+                if serializer.is_human_readable() {
+                    // JSON: encode as (0x81, { ...message fields... })
+                    // Note that this format does not match the wire format per SIMD-0385.
+                    let mut seq = serializer.serialize_tuple(2)?;
+                    seq.serialize_element(&(MESSAGE_VERSION_PREFIX | 1))?;
+                    seq.serialize_element(message)?;
+                    seq.end()
+                } else {
+                    // Messages in V1 format cannot be binary serialized via bincode
+                    // because the wire format (per SIMD-0385) is incompatible with bincode's
+                    // data model. Use `VersionedMessage::serialize()` to get the correct
+                    // wire bytes.
+                    Err(serde::ser::Error::custom(
+                        "V1 messages cannot be serialized via bincode. Use VersionedMessage::serialize() for wire bytes.",
+                    ))
+                }
             }
         }
     }
@@ -257,7 +307,9 @@ impl<'de> serde::Deserialize<'de> for VersionedMessage {
     where
         D: Deserializer<'de>,
     {
-        struct MessageVisitor;
+        struct MessageVisitor {
+            human_readable: bool,
+        }
 
         impl<'de> Visitor<'de> for MessageVisitor {
             type Value = VersionedMessage;
@@ -316,6 +368,20 @@ impl<'de> serde::Deserialize<'de> for VersionedMessage {
                                     },
                                 )?))
                             }
+                            1 => {
+                                if self.human_readable {
+                                    Ok(VersionedMessage::V1(
+                                        seq.next_element()?
+                                            .ok_or_else(|| de::Error::invalid_length(1, &self))?,
+                                    ))
+                                } else {
+                                    // V1 messages cannot be deserialized via bincode because the wire format (per SIMD-0385)
+                                    // is incompatible. Use `v1::Message::deserialize()` to parse wire-format bytes.
+                                    Err(de::Error::custom(
+                                        "V1 messages cannot be serialized via bincode. Use `v1::Message::deserialize()` to parse wire-format bytes.",
+                                    ))
+                                }
+                            }
                             127 => {
                                 // 0xff is used as the first byte of the off-chain messages
                                 // which corresponds to version 127 of the versioned messages.
@@ -333,7 +399,8 @@ impl<'de> serde::Deserialize<'de> for VersionedMessage {
             }
         }
 
-        deserializer.deserialize_tuple(2, MessageVisitor)
+        let human_readable = deserializer.is_human_readable();
+        deserializer.deserialize_tuple(2, MessageVisitor { human_readable })
     }
 }
 
@@ -341,16 +408,19 @@ impl<'de> serde::Deserialize<'de> for VersionedMessage {
 impl SchemaWrite for VersionedMessage {
     type Src = Self;
 
+    // V0 and V1 add +1 for message version prefix
+    #[allow(clippy::arithmetic_side_effects)]
     #[inline(always)]
     fn size_of(src: &Self::Src) -> WriteResult<usize> {
         match src {
             VersionedMessage::Legacy(message) => LegacyMessage::size_of(message),
-            // +1 for message version prefix
-            #[expect(clippy::arithmetic_side_effects)]
             VersionedMessage::V0(message) => Ok(1 + v0::Message::size_of(message)?),
+            VersionedMessage::V1(message) => Ok(1 + message.size()),
         }
     }
 
+    // V0 and V1 add +1 for message version prefix
+    #[allow(clippy::arithmetic_side_effects)]
     #[inline(always)]
     fn write(writer: &mut impl Writer, src: &Self::Src) -> WriteResult<()> {
         match src {
@@ -358,6 +428,21 @@ impl SchemaWrite for VersionedMessage {
             VersionedMessage::V0(message) => {
                 u8::write(writer, &MESSAGE_VERSION_PREFIX)?;
                 v0::Message::write(writer, message)
+            }
+            VersionedMessage::V1(message) => {
+                let total = message.size();
+                let mut buffer: Vec<u8> = Vec::with_capacity(1 + total);
+                // SAFETY: buffer has sufficient capacity for serialization.
+                unsafe {
+                    let ptr = buffer.as_mut_ptr();
+                    ptr.write(MESSAGE_VERSION_PREFIX | 1);
+                    serialize_into(message, ptr.add(1));
+                    buffer.set_len(1 + total);
+
+                    writer
+                        .write_slice_t(&buffer)
+                        .map_err(wincode::WriteError::Io)
+                }
             }
         }
     }
@@ -382,6 +467,19 @@ impl<'de> SchemaRead<'de> for VersionedMessage {
                 0 => {
                     let msg = v0::Message::get(reader)?;
                     dst.write(VersionedMessage::V0(msg));
+                    Ok(())
+                }
+                1 => {
+                    // -1 for already-read variant byte
+                    let bytes = reader.fill_buf(v1::MAX_TRANSACTION_SIZE - 1)?;
+                    let (message, consumed) =
+                        deserialize(bytes).map_err(|_| invalid_tag_encoding(1))?;
+
+                    // SAFETY: `deserialize` validates that we read `consumed` bytes.
+                    unsafe { reader.consume_unchecked(consumed) };
+
+                    dst.write(VersionedMessage::V1(message));
+
                     Ok(())
                 }
                 _ => Err(invalid_tag_encoding(version as usize)),
@@ -506,5 +604,154 @@ mod tests {
         let string = serde_json::to_string(&message).unwrap();
         let message_from_string: VersionedMessage = serde_json::from_str(&string).unwrap();
         assert_eq!(message, message_from_string);
+    }
+
+    #[test]
+    fn test_v1_message_raw_bytes_roundtrip() {
+        let message = v1::MessageBuilder::new()
+            .required_signatures(1)
+            .lifetime_specifier(Hash::new_unique())
+            .accounts(vec![Address::new_unique(), Address::new_unique()])
+            .priority_fee(1000)
+            .compute_unit_limit(200_000)
+            .instruction(CompiledInstruction {
+                program_id_index: 1,
+                accounts: vec![0],
+                data: vec![1, 2, 3, 4],
+            })
+            .build()
+            .unwrap();
+
+        // Serialize V1 to raw bytes
+        let bytes = v1::serialize(&message);
+
+        // Deserialize from raw bytes
+        let (parsed, _) = v1::deserialize(&bytes).unwrap();
+        assert_eq!(message, parsed);
+
+        // Wrap in VersionedMessage and test `serialize()`
+        let versioned = VersionedMessage::V1(message.clone());
+        let serialized = versioned.serialize();
+        // First byte is version prefix.
+        assert_eq!(serialized[0], MESSAGE_VERSION_PREFIX | 1);
+        assert_eq!(serialized[1..], bytes);
+    }
+
+    #[test]
+    fn test_v1_versioned_message_json_roundtrip() {
+        let msg = v1::MessageBuilder::new()
+            .required_signatures(1)
+            .lifetime_specifier(Hash::new_unique())
+            .accounts(vec![Address::new_unique(), Address::new_unique()])
+            .priority_fee(1000)
+            .compute_unit_limit(200_000)
+            .instruction(CompiledInstruction {
+                program_id_index: 1,
+                accounts: vec![0],
+                data: vec![1, 2, 3, 4],
+            })
+            .build()
+            .unwrap();
+
+        let vm = VersionedMessage::V1(msg);
+        let s = serde_json::to_string(&vm).unwrap();
+        let back: VersionedMessage = serde_json::from_str(&s).unwrap();
+        assert_eq!(vm, back);
+    }
+
+    #[test]
+    fn test_v1_versioned_message_bincode_blocked() {
+        let msg = v1::MessageBuilder::new()
+            .required_signatures(1)
+            .lifetime_specifier(Hash::new_unique())
+            .accounts(vec![Address::new_unique(), Address::new_unique()])
+            .instruction(CompiledInstruction {
+                program_id_index: 1,
+                accounts: vec![0],
+                data: vec![],
+            })
+            .build()
+            .unwrap();
+
+        let vm = VersionedMessage::V1(msg);
+
+        // bincode serialization should fail
+        let result = bincode::serialize(&vm);
+        assert!(result.is_err());
+        assert!(result
+            .unwrap_err()
+            .to_string()
+            .contains("cannot be serialized via bincode"));
+    }
+
+    #[cfg(feature = "wincode")]
+    #[test]
+    fn test_v1_wincode_roundtrip() {
+        let test_messages = [
+            // Minimal message
+            v1::MessageBuilder::new()
+                .required_signatures(1)
+                .lifetime_specifier(Hash::new_unique())
+                .accounts(vec![Address::new_unique(), Address::new_unique()])
+                .instruction(CompiledInstruction {
+                    program_id_index: 1,
+                    accounts: vec![0],
+                    data: vec![],
+                })
+                .build()
+                .unwrap(),
+            // With config
+            v1::MessageBuilder::new()
+                .required_signatures(1)
+                .lifetime_specifier(Hash::new_unique())
+                .accounts(vec![Address::new_unique(), Address::new_unique()])
+                .priority_fee(1000)
+                .compute_unit_limit(200_000)
+                .instruction(CompiledInstruction {
+                    program_id_index: 1,
+                    accounts: vec![0],
+                    data: vec![1, 2, 3, 4],
+                })
+                .build()
+                .unwrap(),
+            // Multiple instructions
+            v1::MessageBuilder::new()
+                .required_signatures(2)
+                .lifetime_specifier(Hash::new_unique())
+                .accounts(vec![
+                    Address::new_unique(),
+                    Address::new_unique(),
+                    Address::new_unique(),
+                ])
+                .heap_size(65536)
+                .instructions(vec![
+                    CompiledInstruction {
+                        program_id_index: 2,
+                        accounts: vec![0, 1],
+                        data: vec![0xAA, 0xBB],
+                    },
+                    CompiledInstruction {
+                        program_id_index: 2,
+                        accounts: vec![1],
+                        data: vec![0xCC],
+                    },
+                ])
+                .build()
+                .unwrap(),
+        ];
+
+        for message in test_messages {
+            let versioned = VersionedMessage::V1(message.clone());
+
+            // Wincode roundtrip
+            let bytes = wincode::serialize(&versioned).expect("Wincode serialize failed");
+            let deserialized: VersionedMessage =
+                wincode::deserialize(&bytes).expect("Wincode deserialize failed");
+
+            match deserialized {
+                VersionedMessage::V1(parsed) => assert_eq!(parsed, message),
+                _ => panic!("Expected V1 message"),
+            }
+        }
     }
 }
