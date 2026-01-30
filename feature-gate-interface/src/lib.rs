@@ -17,8 +17,11 @@ pub mod instruction;
 pub mod state;
 
 #[cfg(feature = "bincode")]
+#[allow(deprecated)]
+pub use crate::instruction::activate;
+#[cfg(feature = "bincode")]
 pub use crate::{
-    instruction::{activate, activate_with_lamports},
+    instruction::activate_with_lamports,
     state::{create_account, from_account, to_account},
 };
 pub use {
