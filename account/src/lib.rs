@@ -204,6 +204,14 @@ pub trait WritableAccount: ReadableAccount {
     fn copy_into_owner_from_slice(&mut self, source: &[u8]);
     fn set_executable(&mut self, executable: bool);
     fn set_rent_epoch(&mut self, epoch: Epoch);
+    #[deprecated(since = "3.3.0")]
+    fn create(
+        lamports: u64,
+        data: Vec<u8>,
+        owner: Pubkey,
+        executable: bool,
+        rent_epoch: Epoch,
+    ) -> Self;
 }
 
 pub trait ReadableAccount: Sized {
@@ -273,6 +281,21 @@ impl WritableAccount for Account {
     fn set_rent_epoch(&mut self, epoch: Epoch) {
         self.rent_epoch = epoch;
     }
+    fn create(
+        lamports: u64,
+        data: Vec<u8>,
+        owner: Pubkey,
+        executable: bool,
+        rent_epoch: Epoch,
+    ) -> Self {
+        Account {
+            lamports,
+            data,
+            owner,
+            executable,
+            rent_epoch,
+        }
+    }
 }
 
 impl WritableAccount for AccountSharedData {
@@ -293,6 +316,21 @@ impl WritableAccount for AccountSharedData {
     }
     fn set_rent_epoch(&mut self, epoch: Epoch) {
         self.rent_epoch = epoch;
+    }
+    fn create(
+        lamports: u64,
+        data: Vec<u8>,
+        owner: Pubkey,
+        executable: bool,
+        rent_epoch: Epoch,
+    ) -> Self {
+        AccountSharedData {
+            lamports,
+            data: Arc::new(data),
+            owner,
+            executable,
+            rent_epoch,
+        }
     }
 }
 
