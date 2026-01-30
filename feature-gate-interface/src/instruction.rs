@@ -11,7 +11,7 @@ use {
 /// Activate a feature
 #[cfg(feature = "bincode")]
 #[deprecated(
-    since = "3.0.1",
+    since = "3.1.0",
     note = "Use `activate_with_lamports` with `rent.minimum_balance(Feature::size_of())` instead"
 )]
 pub fn activate(feature_id: &Pubkey, funding_address: &Pubkey, rent: &Rent) -> Vec<Instruction> {

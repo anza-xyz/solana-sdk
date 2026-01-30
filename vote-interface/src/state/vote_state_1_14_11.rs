@@ -47,7 +47,7 @@ pub struct VoteState1_14_11 {
 
 impl VoteState1_14_11 {
     #[deprecated(
-        since = "5.0.1",
+        since = "5.1.0",
         note = "Use `rent.minimum_balance(VoteState1_14_11::size_of())` directly"
     )]
     pub fn get_rent_exempt_reserve(rent: &Rent) -> u64 {
