@@ -23,13 +23,14 @@ frozen-abi = ["dep:solana-frozen-abi", "dep:solana-frozen-abi-macro", "std"]
 rand = ["dep:rand"]
 serde = ["dep:serde", "dep:serde_derive", "dep:serde-big-array"]
 std = ["alloc", "serde?/std", "wincode?/std"]
-verify = ["dep:ed25519-dalek"]
 wincode = ["dep:wincode"]
+verify = []
 
 [dependencies]
 bytemuck = { workspace = true, optional = true }
 bytemuck_derive = { workspace = true, optional = true }
-ed25519-dalek = { workspace = true, optional = true }
+ed25519-dalek = { workspace = true }
+ed25519-zebra = { workspace = true }
 five8 = { workspace = true }
 rand = { workspace = true, optional = true }
 serde = { workspace = true, optional = true }
@@ -44,7 +45,6 @@ wincode = { workspace = true, optional = true }
 bincode = { workspace = true }
 bs58 = { workspace = true, features = ["std"] }
 curve25519-dalek = { workspace = true }
-ed25519-dalek = { workspace = true }
 serde_derive = { workspace = true }
 serde_json = { workspace = true }
 solana-pubkey = { workspace = true, features = ["std"] }
