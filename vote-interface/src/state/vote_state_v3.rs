@@ -88,6 +88,7 @@ impl VoteStateV3 {
         }
     }
 
+    #[deprecated(since = "5.0.1", note = "Use `rent.minimum_balance(VoteStateV3::size_of())` directly")]
     pub fn get_rent_exempt_reserve(rent: &Rent) -> u64 {
         rent.minimum_balance(VoteStateV3::size_of())
     }
