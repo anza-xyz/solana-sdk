@@ -36,7 +36,11 @@ k256 = { workspace = true }
 anyhow = { workspace = true }
 borsh = { workspace = true }
 rand = "0.8" # k256 still uses rand_core v0.6
-solana-program = { path = "../program" }
+solana-example-mocks = { workspace = true }
+solana-instruction = { workspace = true, features = ["borsh"] }
+solana-keccak-hasher = { workspace = true, features = ["sha3"] }
+solana-program-error = { workspace = true }
+solana-pubkey = { workspace = true }
 
 [target.'cfg(not(target_os = "solana"))'.dev-dependencies]
 k256 = { workspace = true, features = ["ecdsa-core"] }

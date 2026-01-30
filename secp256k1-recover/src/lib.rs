@@ -170,7 +170,7 @@ pub use solana_define_syscall::definitions::sol_secp256k1_recover;
 ///
 /// ```rust
 /// # use k256::elliptic_curve::scalar::IsHigh;
-/// # use solana_program::program_error::ProgramError;
+/// # use solana_program_error::ProgramError;
 /// # let signature_bytes = [
 /// #     0x83, 0x55, 0x81, 0xDF, 0xB1, 0x02, 0xA7, 0xD2,
 /// #     0x2D, 0x33, 0xA4, 0x07, 0xDD, 0x7E, 0xFA, 0x9A,
@@ -261,11 +261,8 @@ pub use solana_define_syscall::definitions::sol_secp256k1_recover;
 ///
 /// ```rust
 /// use k256::elliptic_curve::scalar::IsHigh;
-/// use solana_program::{
-///     entrypoint::ProgramResult,
-///     keccak, msg,
-///     program_error::ProgramError,
-/// };
+/// use solana_keccak_hasher::Hasher;
+/// use solana_program_error::{ProgramError, ProgramResult};
 /// use solana_secp256k1_recover::secp256k1_recover;
 ///
 /// # pub struct DemoSecp256k1RecoverInstruction {
@@ -285,7 +282,7 @@ pub use solana_define_syscall::definitions::sol_secp256k1_recover;
 ///     // This means that the code calling `secp256k1_recover` must perform the hash
 ///     // itself, and not assume that data passed to it has been properly hashed.
 ///     let message_hash = {
-///         let mut hasher = keccak::Hasher::default();
+///         let mut hasher = Hasher::default();
 ///         hasher.hash(&instruction.message);
 ///         hasher.result()
 ///     };
@@ -298,7 +295,6 @@ pub use solana_define_syscall::definitions::sol_secp256k1_recover;
 ///             .map_err(|_| ProgramError::InvalidArgument)?;
 ///
 ///         if bool::from(signature.s().is_high()) {
-///             msg!("signature with high-s value");
 ///             return Err(ProgramError::InvalidArgument);
 ///         }
 ///     }
@@ -324,7 +320,7 @@ pub use solana_define_syscall::definitions::sol_secp256k1_recover;
 /// let public_key = &secret_key.verifying_key().to_encoded_point(false);
 /// let message = b"hello world!";
 /// let message_hash = {
-///     let mut hasher = keccak::Hasher::default();
+///     let mut hasher = Hasher::default();
 ///     hasher.hash(message);
 ///     hasher.result()
 /// };
@@ -341,17 +337,18 @@ pub use solana_define_syscall::definitions::sol_secp256k1_recover;
 /// The RPC client program:
 ///
 /// ```rust
-/// # use solana_program::example_mocks::solana_rpc_client;
-/// # use solana_program::example_mocks::solana_sdk;
+/// # use solana_example_mocks::solana_rpc_client;
+/// # use solana_example_mocks::solana_keypair;
+/// # use solana_example_mocks::solana_signer;
+/// # use solana_example_mocks::solana_transaction;
 /// use anyhow::Result;
 /// use solana_rpc_client::rpc_client::RpcClient;
-/// use solana_sdk::{
-///     instruction::Instruction,
-///     keccak,
-///     pubkey::Pubkey,
-///     signature::{Keypair, Signer},
-///     transaction::Transaction,
-/// };
+/// use solana_instruction::Instruction;
+/// use solana_keccak_hasher::Hasher;
+/// use solana_pubkey::Pubkey;
+/// use solana_keypair::Keypair;
+/// use solana_signer::Signer;
+/// use solana_transaction::Transaction;
 /// # use borsh::{BorshDeserialize, BorshSerialize};
 /// # #[derive(BorshSerialize, BorshDeserialize, Debug)]
 /// # #[borsh(crate = "borsh")]
@@ -369,7 +366,7 @@ pub use solana_define_syscall::definitions::sol_secp256k1_recover;
 /// ) -> Result<()> {
 ///     let message = b"hello world";
 ///     let message_hash = {
-///         let mut hasher = keccak::Hasher::default();
+///         let mut hasher = Hasher::default();
 ///         hasher.hash(message);
 ///         hasher.result()
 ///     };
