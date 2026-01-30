@@ -133,7 +133,7 @@ tag-message = "Publish {{crate_name}} v{{version}}"
 consolidate-commits = false
 
 [workspace.metadata.cli]
-solana = "2.2.11"
+solana = "3.1.8"
 
 [workspace.dependencies]
 ahash = "0.8.11"

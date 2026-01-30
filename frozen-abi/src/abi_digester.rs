@@ -697,7 +697,7 @@ mod tests {
 
         #[serde_as]
         #[derive(serde_derive::Serialize, AbiExample)]
-        #[frozen_abi(digest = "CVqaXh4pWCiUyAuZ6dZPCmbCEtJyNH3e6uwUpJzymT6b")]
+        #[frozen_abi(digest = "8q6BU8QUrApZkpcAanNv7DppqddY9tjDBhJWpGDmYmZu")]
         struct U8ArrayWithGenericAs {
             #[serde_as(as = "[_; 42]")]
             foo: [u8; 42],
@@ -706,7 +706,7 @@ mod tests {
         // This is a minimized testcase based on solana_lattice_hash::lt_hash::LtHash
         #[serde_as]
         #[derive(serde_derive::Serialize, AbiExample)]
-        #[frozen_abi(digest = "A1J57qgtrhpqk6vD4tjV1CHLPagacBKsXJBBUB5mdp5W")]
+        #[frozen_abi(digest = "56yoJWFWSty9jM2R2aqaFGwHgE4ubKxJzmtZRwHotRxP")]
         struct NotU8ArrayWithGenericAs {
             #[serde_as(as = "[_; 42]")]
             bar: [u16; 42],

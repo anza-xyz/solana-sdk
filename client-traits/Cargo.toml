@@ -3,6 +3,7 @@ name = "solana-client-traits"
 description = "Traits for Solana clients"
 documentation = "https://docs.rs/solana-client-traits"
 version = "3.0.0"
+rust-version = "1.85.0"
 authors = { workspace = true }
 repository = { workspace = true }
 homepage = { workspace = true }

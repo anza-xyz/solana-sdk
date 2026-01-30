@@ -20,7 +20,7 @@ use {
 
 #[cfg_attr(
     feature = "frozen-abi",
-    frozen_abi(digest = "2H9WgTh7LgdnpinvEwxzP3HF6SDuKp6qdwFmJk9jHDRP"),
+    frozen_abi(digest = "ALZS4x22Ga8M6KkLVgdEJu3ZQUUSBkFHAkErmSvFLzUM"),
     derive(AbiExample)
 )]
 #[cfg_attr(feature = "serde", cfg_eval::cfg_eval, serde_as)]
