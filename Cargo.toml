@@ -305,7 +305,7 @@ solana-serde = { path = "serde", version = "3.0.0" }
 solana-serde-varint = { path = "serde-varint", version = "3.0.0" }
 solana-serialize-utils = { path = "serialize-utils", version = "3.1.0" }
 solana-sha256-hasher = { path = "sha256-hasher", version = "3.0.0" }
-solana-short-vec = { path = "short-vec", version = "3.0.0", default-features = false }
+solana-short-vec = { path = "short-vec", version = "3.2.0", default-features = false }
 solana-shred-version = { path = "shred-version", version = "3.0.0" }
 solana-signature = { path = "signature", version = "3.0.0", default-features = false }
 solana-signer = { path = "signer", version = "3.0.0" }
