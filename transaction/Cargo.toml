@@ -3,6 +3,7 @@ name = "solana-transaction"
 description = "Solana transaction-types"
 documentation = "https://docs.rs/solana-transaction"
 version = "3.0.2"
+rust-version = "1.85.0"
 authors = { workspace = true }
 repository = { workspace = true }
 homepage = { workspace = true }
