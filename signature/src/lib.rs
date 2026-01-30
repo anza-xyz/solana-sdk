@@ -2,9 +2,8 @@
 #![no_std]
 #![cfg_attr(docsrs, feature(doc_cfg))]
 #![cfg_attr(feature = "frozen-abi", feature(min_specialization))]
-#[cfg(any(test, feature = "verify"))]
-use core::convert::TryInto;
 use core::{
+    convert::TryInto,
     fmt,
     str::{from_utf8_unchecked, FromStr},
 };
@@ -66,9 +65,45 @@ impl Signature {
     }
 }
 
-#[cfg(any(test, feature = "verify"))]
+use ed25519_zebra::{Error as ZebraError, Signature as ZebraSignature, VerificationKey};
+
 impl Signature {
-    pub(self) fn verify_verbose(
+    pub(self) fn verify_zebra_verbose(
+        &self,
+        pubkey_bytes: &[u8],
+        message_bytes: &[u8],
+    ) -> Result<(), ed25519_zebra::Error> {
+        let pubkey_bytes: [u8; 32] = pubkey_bytes
+            .try_into()
+            .map_err(|_| ZebraError::InvalidSliceLength)?;
+        let publickey = VerificationKey::try_from(pubkey_bytes)?;
+        let signature = ZebraSignature::from(&self.0);
+        publickey.verify(&signature, message_bytes)
+    }
+
+    /// default: zebra verification for SIMD-376
+    pub fn verify(&self, pubkey_bytes: &[u8], message_bytes: &[u8]) -> bool {
+        self.verify_zebra_verbose(pubkey_bytes, message_bytes)
+            .is_ok()
+    }
+
+    /// zebra verification for SIMD-376
+    pub fn verify_zebra(&self, pubkey_bytes: &[u8], message_bytes: &[u8]) -> bool {
+        self.verify_zebra_verbose(pubkey_bytes, message_bytes)
+            .is_ok()
+    }
+
+    /// legacy dalek strict verification
+    #[deprecated(
+        since = "3.1.0",
+        note = "Use `verify`/`verify_zebra` (ZIP-215/SIMD-3376) instead of strict dalek verification."
+    )]
+    pub fn verify_strict(&self, pubkey_bytes: &[u8], message_bytes: &[u8]) -> bool {
+        self.verify_strict_verbose(pubkey_bytes, message_bytes)
+            .is_ok()
+    }
+
+    pub(self) fn verify_strict_verbose(
         &self,
         pubkey_bytes: &[u8],
         message_bytes: &[u8],
@@ -76,10 +111,6 @@ impl Signature {
         let publickey = ed25519_dalek::VerifyingKey::try_from(pubkey_bytes)?;
         let signature = self.0.as_slice().try_into()?;
         publickey.verify_strict(message_bytes, &signature)
-    }
-
-    pub fn verify(&self, pubkey_bytes: &[u8], message_bytes: &[u8]) -> bool {
-        self.verify_verbose(pubkey_bytes, message_bytes).is_ok()
     }
 }
 
@@ -184,6 +215,7 @@ impl FromStr for Signature {
 mod tests {
     use {
         super::*,
+        ed25519_dalek::{Signer as _, SigningKey},
         serde_derive::{Deserialize, Serialize},
         solana_pubkey::Pubkey,
     };
@@ -203,10 +235,23 @@ mod tests {
 
         let pubkey = Pubkey::try_from(off_curve_bytes).unwrap();
         let signature = Signature::default();
-        // Unfortunately, ed25519-dalek doesn't surface the internal error types that we'd ideally
-        // `source()` out of the `SignatureError` returned by `verify_strict()`.  So the best we
-        // can do is `is_err()` here.
-        assert!(signature.verify_verbose(pubkey.as_ref(), &[0u8]).is_err());
+        // The verification API is intentionally opaque, so just check for failure.
+        assert!(signature
+            .verify_zebra_verbose(pubkey.as_ref(), &[0u8])
+            .is_err());
+    }
+
+    #[test]
+    #[allow(deprecated)]
+    fn test_verify_zebra_and_strict_accept_valid_signature() {
+        let secret = SigningKey::from_bytes(&[7u8; 32]);
+        let public = secret.verifying_key();
+        let message = b"zebra-verify";
+        let dalek_sig = secret.sign(message);
+        let signature = Signature::from(dalek_sig.to_bytes());
+
+        assert!(signature.verify(public.as_bytes(), message));
+        assert!(signature.verify_strict(public.as_bytes(), message));
     }
 
     #[test]
