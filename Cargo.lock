@@ -3941,7 +3941,6 @@ dependencies = [
 name = "solana-sdk-wasm-js"
 version = "1.0.0"
 dependencies = [
- "bincode",
  "console_error_panic_hook",
  "console_log",
  "getrandom 0.3.4",
@@ -3957,6 +3956,7 @@ dependencies = [
  "solana-signer",
  "solana-transaction",
  "wasm-bindgen",
+ "wincode",
 ]
 
 [[package]]

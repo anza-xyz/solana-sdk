@@ -18,7 +18,6 @@ rustdoc-args = ["--cfg=docsrs"]
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-bincode = { workspace = true }
 solana-address = { workspace = true, features = ["curve25519", "sha2", "std"] }
 solana-hash = { workspace = true }
 solana-instruction = { workspace = true, features = ["std"] }
@@ -27,7 +26,8 @@ solana-message = { workspace = true }
 solana-packet = { workspace = true }
 solana-signature = { workspace = true }
 solana-signer = { workspace = true }
-solana-transaction = { workspace = true, features = ["bincode", "verify"] }
+solana-transaction = { workspace = true, features = ["wincode", "verify"] }
+wincode = { workspace = true }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 console_error_panic_hook = { workspace = true }

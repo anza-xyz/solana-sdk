@@ -323,10 +323,10 @@ impl Message {
         })
     }
 
-    #[cfg(feature = "bincode")]
-    /// Serialize this message with a version #0 prefix using bincode encoding.
+    #[cfg(feature = "wincode")]
+    /// Serialize this message with a version #0 prefix using wincode encoding.
     pub fn serialize(&self) -> Vec<u8> {
-        bincode::serialize(&(crate::MESSAGE_VERSION_PREFIX, self)).unwrap()
+        wincode::serialize(&(crate::MESSAGE_VERSION_PREFIX, self)).unwrap()
     }
 
     /// Returns true if the account at the specified index is called as a program by an instruction

@@ -37,9 +37,13 @@ pub struct CompiledInstruction {
 impl Sanitize for CompiledInstruction {}
 
 impl CompiledInstruction {
-    #[cfg(feature = "bincode")]
-    pub fn new<T: serde::Serialize>(program_ids_index: u8, data: &T, accounts: Vec<u8>) -> Self {
-        let data = bincode::serialize(data).unwrap();
+    #[cfg(feature = "wincode")]
+    pub fn new<T: wincode::SchemaWrite<Src = T>>(
+        program_ids_index: u8,
+        data: &T,
+        accounts: Vec<u8>,
+    ) -> Self {
+        let data = wincode::serialize(data).unwrap();
         Self {
             program_id_index: program_ids_index,
             accounts,
