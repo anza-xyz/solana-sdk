@@ -38,6 +38,7 @@ mod instruction_error_module {
         feature = "serde",
         derive(serde_derive::Serialize, serde_derive::Deserialize)
     )]
+    #[cfg_attr(feature = "wincode", derive(wincode::SchemaWrite, wincode::SchemaRead))]
     #[derive(Debug, PartialEq, Eq, Clone)]
     pub enum InstructionError {
         /// Deprecated! Use CustomError instead!

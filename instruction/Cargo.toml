@@ -22,9 +22,11 @@ frozen-abi = ["dep:solana-frozen-abi", "dep:solana-frozen-abi-macro", "serde", "
 serde = ["dep:serde", "dep:serde_derive", "solana-pubkey/serde"]
 std = ["serde?/std", "borsh?/std"]
 syscalls = ["std"]
+wincode = ["dep:wincode", "wincode/alloc", "solana-pubkey/wincode"]
 
 [dependencies]
 bincode = { workspace = true, optional = true }
+wincode = { workspace = true, optional = true }
 borsh = { workspace = true, optional = true }
 serde = { workspace = true, optional = true }
 serde_derive = { workspace = true, optional = true }

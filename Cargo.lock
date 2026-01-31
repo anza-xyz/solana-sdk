@@ -2923,6 +2923,7 @@ dependencies = [
  "solana-pubkey",
  "solana-sdk-ids",
  "solana-sysvar",
+ "wincode",
 ]
 
 [[package]]
@@ -3450,6 +3451,7 @@ dependencies = [
  "solana-instruction",
  "solana-instruction-error",
  "solana-pubkey",
+ "wincode",
 ]
 
 [[package]]
@@ -3462,6 +3464,7 @@ dependencies = [
  "solana-frozen-abi",
  "solana-frozen-abi-macro",
  "solana-program-error",
+ "wincode",
 ]
 
 [[package]]
@@ -4343,6 +4346,7 @@ dependencies = [
  "solana-frozen-abi-macro",
  "solana-instruction-error",
  "solana-sanitize",
+ "wincode",
 ]
 
 [[package]]
