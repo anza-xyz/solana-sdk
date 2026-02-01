@@ -2,12 +2,12 @@
 #![no_std]
 #![cfg_attr(docsrs, feature(doc_cfg))]
 #![cfg_attr(feature = "frozen-abi", feature(min_specialization))]
+#[cfg(feature = "verify")]
+use core::convert::TryInto;
 use core::{
     fmt,
     str::{from_utf8_unchecked, FromStr},
 };
-#[cfg(feature = "verify")]
-use core::convert::TryInto;
 #[cfg(feature = "alloc")]
 extern crate alloc;
 #[cfg(feature = "std")]
