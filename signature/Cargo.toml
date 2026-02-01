@@ -24,13 +24,13 @@ rand = ["dep:rand"]
 serde = ["dep:serde", "dep:serde_derive", "dep:serde-big-array"]
 std = ["alloc", "serde?/std", "wincode?/std"]
 wincode = ["dep:wincode"]
-verify = []
+verify = ["dep:ed25519-dalek", "dep:ed25519-zebra"]
 
 [dependencies]
 bytemuck = { workspace = true, optional = true }
 bytemuck_derive = { workspace = true, optional = true }
-ed25519-dalek = { workspace = true }
-ed25519-zebra = { workspace = true }
+ed25519-dalek = { workspace = true, optional = true }
+ed25519-zebra = { workspace = true, optional = true }
 five8 = { workspace = true }
 rand = { workspace = true, optional = true }
 serde = { workspace = true, optional = true }
@@ -49,7 +49,7 @@ serde_derive = { workspace = true }
 serde_json = { workspace = true }
 solana-pubkey = { workspace = true, features = ["std"] }
 solana-short-vec = { workspace = true, features = ["serde"] }
-solana-signature = { path = ".", features = ["serde"] }
+solana-signature = { path = ".", features = ["serde", "verify"] }
 
 [lints]
 workspace = true

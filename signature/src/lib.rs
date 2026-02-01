@@ -3,10 +3,11 @@
 #![cfg_attr(docsrs, feature(doc_cfg))]
 #![cfg_attr(feature = "frozen-abi", feature(min_specialization))]
 use core::{
-    convert::TryInto,
     fmt,
     str::{from_utf8_unchecked, FromStr},
 };
+#[cfg(feature = "verify")]
+use core::convert::TryInto;
 #[cfg(feature = "alloc")]
 extern crate alloc;
 #[cfg(feature = "std")]
@@ -65,8 +66,10 @@ impl Signature {
     }
 }
 
+#[cfg(feature = "verify")]
 use ed25519_zebra::{Error as ZebraError, Signature as ZebraSignature, VerificationKey};
 
+#[cfg(feature = "verify")]
 impl Signature {
     pub(self) fn verify_zebra_verbose(
         &self,
@@ -215,11 +218,15 @@ impl FromStr for Signature {
 mod tests {
     use {
         super::*,
-        ed25519_dalek::{Signer as _, SigningKey},
         serde_derive::{Deserialize, Serialize},
+    };
+    #[cfg(feature = "verify")]
+    use {
+        ed25519_dalek::{Signer as _, SigningKey},
         solana_pubkey::Pubkey,
     };
 
+    #[cfg(feature = "verify")]
     #[test]
     fn test_off_curve_pubkey_verify_fails() {
         // Golden point off the ed25519 curve
@@ -241,6 +248,7 @@ mod tests {
             .is_err());
     }
 
+    #[cfg(feature = "verify")]
     #[test]
     #[allow(deprecated)]
     fn test_verify_zebra_and_strict_accept_valid_signature() {
