@@ -4085,15 +4085,6 @@ dependencies = [
 
 [[package]]
 name = "solana-short-vec"
-version = "3.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "79fb1809a32cfcf7d9c47b7070a92fa17cdb620ab5829e9a8a9ff9d138a7a175"
-dependencies = [
- "serde_core",
-]
-
-[[package]]
-name = "solana-short-vec"
 version = "3.2.0"
 dependencies = [
  "assert_matches",
@@ -4103,6 +4094,15 @@ dependencies = [
  "solana-frozen-abi",
  "solana-frozen-abi-macro",
  "solana-short-vec 3.2.0",
+]
+
+[[package]]
+name = "solana-short-vec"
+version = "3.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "de3bd991c2cc415291c86bb0b6b4d53e93d13bb40344e4c5a2884e0e4f5fa93f"
+dependencies = [
+ "serde_core",
 ]
 
 [[package]]
@@ -4997,7 +4997,7 @@ checksum = "17f3b138135dd5aff3f86354f80737426b3ae2283270ab5aa0f8cbc800482650"
 dependencies = [
  "proc-macro2",
  "quote",
- "solana-short-vec 3.1.0",
+ "solana-short-vec 3.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "thiserror 2.0.17",
  "wincode-derive",
 ]
