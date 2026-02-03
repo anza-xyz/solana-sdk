@@ -6,4 +6,4 @@ src_root="$(readlink -f "${here}/..")"
 cd "${src_root}"
 
 export RUSTDOCFLAGS="-D warnings"
-./cargo nightly hack doc --all-features
+./cargo nightly hack doc --all-features --no-deps
