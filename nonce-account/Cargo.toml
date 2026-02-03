@@ -12,11 +12,15 @@ edition = { workspace = true }
 [package.metadata.docs.rs]
 targets = ["x86_64-unknown-linux-gnu"]
 
+[features]
+wincode = ["dep:wincode", "solana-nonce/wincode"]
+
 [dependencies]
 solana-account = { workspace = true, features = ["bincode"] }
 solana-hash = { workspace = true }
 solana-nonce = { workspace = true, features = ["serde"] }
 solana-sdk-ids = { workspace = true }
+wincode = { workspace = true, optional = true }
 
 [dev-dependencies]
 solana-fee-calculator = { workspace = true }

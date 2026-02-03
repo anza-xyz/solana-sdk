@@ -17,6 +17,7 @@ rustdoc-args = ["--cfg=docsrs"]
 [features]
 frozen-abi = ["dep:solana-frozen-abi", "dep:solana-frozen-abi-macro"]
 serde = ["dep:serde", "dep:serde_derive"]
+wincode = ["dep:wincode"]
 
 [dependencies]
 log = { workspace = true }
@@ -24,6 +25,7 @@ serde = { workspace = true, optional = true }
 serde_derive = { workspace = true, optional = true }
 solana-frozen-abi = { workspace = true, optional = true }
 solana-frozen-abi-macro = { workspace = true, optional = true }
+wincode = { workspace = true, optional = true }
 
 [dev-dependencies]
 solana-clock = { workspace = true }

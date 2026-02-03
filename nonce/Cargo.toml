@@ -24,6 +24,12 @@ serde = [
     "solana-hash/serde",
     "solana-pubkey/serde",
 ]
+wincode = [
+    "dep:wincode",
+    "solana-fee-calculator/wincode",
+    "solana-hash/wincode",
+    "solana-pubkey/wincode",
+]
 
 [dependencies]
 serde = { workspace = true, optional = true }
@@ -32,6 +38,7 @@ solana-fee-calculator = { workspace = true }
 solana-hash = { workspace = true, features = ["copy", "decode"] }
 solana-pubkey = { workspace = true, default-features = false }
 solana-sha256-hasher = { workspace = true }
+wincode = { workspace = true, optional = true, features = ["alloc"] }
 
 [dev-dependencies]
 bincode = { workspace = true }

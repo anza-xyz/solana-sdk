@@ -6,6 +6,8 @@
 use log::*;
 #[cfg(feature = "frozen-abi")]
 extern crate std;
+#[cfg(feature = "wincode")]
+use wincode::{SchemaRead, SchemaWrite};
 
 #[repr(C)]
 #[cfg_attr(feature = "frozen-abi", derive(solana_frozen_abi_macro::AbiExample))]
@@ -13,6 +15,7 @@ extern crate std;
     feature = "serde",
     derive(serde_derive::Serialize, serde_derive::Deserialize)
 )]
+#[cfg_attr(feature = "wincode", derive(SchemaWrite, SchemaRead))]
 #[derive(Default, PartialEq, Eq, Clone, Copy, Debug)]
 #[cfg_attr(feature = "serde", serde(rename_all = "camelCase"))]
 pub struct FeeCalculator {

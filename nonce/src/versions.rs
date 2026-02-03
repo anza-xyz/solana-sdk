@@ -1,5 +1,7 @@
 //! State for durable transaction nonces.
 
+#[cfg(feature = "wincode")]
+use wincode::{SchemaRead, SchemaWrite};
 use {
     crate::state::{Data, DurableNonce, State},
     solana_hash::Hash,
@@ -11,6 +13,7 @@ use {
     feature = "serde",
     derive(serde_derive::Deserialize, serde_derive::Serialize)
 )]
+#[cfg_attr(feature = "wincode", derive(SchemaWrite, SchemaRead))]
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum Versions {
     Legacy(Box<State>),

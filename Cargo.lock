@@ -3312,6 +3312,7 @@ dependencies = [
  "solana-frozen-abi",
  "solana-frozen-abi-macro",
  "static_assertions",
+ "wincode",
 ]
 
 [[package]]
@@ -3633,6 +3634,7 @@ dependencies = [
  "solana-nonce",
  "solana-pubkey",
  "solana-sha256-hasher",
+ "wincode",
 ]
 
 [[package]]
@@ -3645,6 +3647,7 @@ dependencies = [
  "solana-nonce",
  "solana-pubkey",
  "solana-sdk-ids",
+ "wincode",
 ]
 
 [[package]]

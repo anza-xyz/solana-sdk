@@ -32,7 +32,11 @@ pub fn verify_nonce_account(
 ) -> Option<Data> {
     (account.owner() == &system_program::id())
         .then(|| {
-            StateMut::<Versions>::state(account)
+            #[cfg(feature = "wincode")]
+            let versions = wincode::deserialize::<Versions>(account.data());
+            #[cfg(not(feature = "wincode"))]
+            let versions = StateMut::<Versions>::state(account);
+            versions
                 .ok()?
                 .verify_recent_blockhash(recent_blockhash)
                 .cloned()

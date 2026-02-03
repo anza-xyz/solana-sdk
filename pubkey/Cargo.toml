@@ -26,6 +26,7 @@ rand = ["dep:rand", "solana-address/rand"]
 serde = ["solana-address/serde"]
 sha2 = ["solana-address/sha2"]
 std = ["solana-address/atomic", "solana-address/std"]
+wincode = ["solana-address/wincode"]
 alloc = ["solana-address/alloc"]
 
 [dependencies]
