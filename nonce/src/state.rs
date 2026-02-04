@@ -9,6 +9,7 @@ use {
 
 const DURABLE_NONCE_HASH_PREFIX: &[u8] = "DURABLE_NONCE".as_bytes();
 
+#[repr(transparent)]
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[cfg_attr(feature = "wincode", derive(SchemaWrite, SchemaRead))]
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
@@ -17,6 +18,7 @@ pub struct DurableNonce(Hash);
 /// Initialized data of a durable transaction nonce account.
 ///
 /// This is stored within [`State`] for initialized nonce accounts.
+#[repr(C)]
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[cfg_attr(feature = "wincode", derive(SchemaWrite, SchemaRead))]
 #[derive(Debug, Default, PartialEq, Eq, Clone)]
