@@ -36,10 +36,10 @@ serde = [
 ]
 verify = ["blake3", "solana-signature/verify"]
 wincode = [
+    "dep:solana-signer",
     "dep:wincode",
     "solana-message/wincode",
     "solana-signature/wincode",
-    "solana-signer",
 ]
 
 [dependencies]

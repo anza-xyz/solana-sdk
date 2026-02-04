@@ -17,7 +17,7 @@ rustdoc-args = ["--cfg=docsrs"]
 
 [features]
 blake3 = ["dep:blake3"]
-dev-context-only-utils = ["blake3"]
+dev-context-only-utils = ["blake3", "wincode"]
 frozen-abi = [
     "dep:solana-frozen-abi",
     "dep:solana-frozen-abi-macro",
@@ -25,7 +25,6 @@ frozen-abi = [
     "solana-hash/frozen-abi",
     "serde",
     "solana-short-vec/frozen-abi",
-    "wincode",
 ]
 serde = [
     "dep:serde",
