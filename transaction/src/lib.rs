@@ -110,6 +110,8 @@
 //! # Ok::<(), anyhow::Error>(())
 //! ```
 
+#[cfg(feature = "wincode")]
+use wincode::{containers, len::ShortU16Len, SchemaRead, SchemaWrite};
 #[cfg(feature = "serde")]
 use {
     serde_derive::{Deserialize, Serialize},
@@ -180,6 +182,7 @@ const NONCED_TX_MARKER_IX_INDEX: u8 = 0;
     solana_frozen_abi_macro::frozen_abi(digest = "ADDDuk3dAZJ5hDxue8v4btH7nhEyngxUpXaC7A4k8gyQ")
 )]
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
+#[cfg_attr(feature = "wincode", derive(SchemaWrite, SchemaRead))]
 #[derive(Debug, PartialEq, Default, Eq, Clone)]
 pub struct Transaction {
     /// A set of signatures of a serialized [`Message`], signed by the first
@@ -192,6 +195,7 @@ pub struct Transaction {
     /// [`num_required_signatures`]: https://docs.rs/solana-message/latest/solana_message/struct.MessageHeader.html#structfield.num_required_signatures
     // NOTE: Serialization-related changes must be paired with the direct read at sigverify.
     #[cfg_attr(feature = "serde", serde(with = "short_vec"))]
+    #[cfg_attr(feature = "wincode", wincode(with = "containers::Vec<_, ShortU16Len>"))]
     pub signatures: Vec<Signature>,
 
     /// The message to sign.
