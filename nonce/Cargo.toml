@@ -42,5 +42,5 @@ wincode = { workspace = true, optional = true, features = ["alloc"] }
 
 [dev-dependencies]
 bincode = { workspace = true }
-solana-nonce = { path = ".", features = ["dev-context-only-utils"] }
+solana-nonce = { path = ".", features = ["dev-context-only-utils", "wincode"] }
 solana-pubkey = { workspace = true, features = ["std"], default-features = false }
