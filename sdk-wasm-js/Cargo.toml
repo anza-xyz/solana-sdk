@@ -27,7 +27,7 @@ solana-message = { workspace = true }
 solana-packet = { workspace = true }
 solana-signature = { workspace = true }
 solana-signer = { workspace = true }
-solana-transaction = { workspace = true, features = ["wincode", "verify"] }
+solana-transaction = { workspace = true, features = ["verify", "wincode"] }
 wincode = { workspace = true }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
