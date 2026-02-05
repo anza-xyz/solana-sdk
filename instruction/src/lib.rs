@@ -90,6 +90,7 @@ pub mod syscalls;
     feature = "serde",
     derive(serde_derive::Serialize, serde_derive::Deserialize)
 )]
+#[cfg_attr(feature = "wincode", derive(wincode::SchemaRead, wincode::SchemaWrite))]
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Instruction {
     /// Pubkey of the program that executes this instruction.
@@ -205,6 +206,57 @@ impl Instruction {
         accounts: Vec<AccountMeta>,
     ) -> Self {
         let data = bincode::serialize(data).unwrap();
+        Self {
+            program_id,
+            accounts,
+            data,
+        }
+    }
+
+    #[cfg(feature = "wincode")]
+    /// Create a new instruction from a value, encoded with [`wincode`].
+    ///
+    /// [`wincode`]: https://docs.rs/wincode/latest/wincode/
+    ///
+    /// `program_id` is the address of the program that will execute the instruction.
+    /// `accounts` contains a description of all accounts that may be accessed by the program.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use solana_pubkey::Pubkey;
+    /// # use solana_instruction::{AccountMeta, Instruction};
+    /// # use serde::{Serialize, Deserialize};
+    /// #
+    /// #[derive(Serialize, Deserialize)]
+    /// pub struct MyInstruction {
+    ///     pub lamports: u64,
+    /// }
+    ///
+    /// pub fn create_instruction(
+    ///     program_id: &Pubkey,
+    ///     from: &Pubkey,
+    ///     to: &Pubkey,
+    ///     lamports: u64,
+    /// ) -> Instruction {
+    ///     let instr = MyInstruction { lamports };
+    ///
+    ///     Instruction::new_with_wincode(
+    ///         *program_id,
+    ///         &instr,
+    ///         vec![
+    ///             AccountMeta::new(*from, true),
+    ///             AccountMeta::new(*to, false),
+    ///         ],
+    ///    )
+    /// }
+    /// ```
+    pub fn new_with_wincode<T: wincode::SchemaWrite<Src = T>>(
+        program_id: Pubkey,
+        data: &T,
+        accounts: Vec<AccountMeta>,
+    ) -> Self {
+        let data = wincode::serialize(data).unwrap();
         Self {
             program_id,
             accounts,

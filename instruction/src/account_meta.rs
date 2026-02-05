@@ -21,6 +21,7 @@ use solana_pubkey::Pubkey;
     feature = "serde",
     derive(serde_derive::Serialize, serde_derive::Deserialize)
 )]
+#[cfg_attr(feature = "wincode", derive(wincode::SchemaRead, wincode::SchemaWrite))]
 #[derive(Debug, Default, PartialEq, Eq, Clone)]
 pub struct AccountMeta {
     /// An account's public key.
