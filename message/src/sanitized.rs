@@ -3,6 +3,7 @@ use {
         compiled_instruction::CompiledInstruction,
         legacy,
         v0::{self, LoadedAddresses},
+        v1::CachedMessage,
         AccountKeys, AddressLoader, MessageHeader, SanitizedVersionedMessage, VersionedMessage,
     },
     solana_address::Address,
@@ -79,6 +80,8 @@ pub enum SanitizedMessage {
     Legacy(LegacyMessage<'static>),
     /// Sanitized version #0 message with dynamically loaded addresses
     V0(v0::LoadedMessage<'static>),
+    /// Sanitized version #1 message (4KB transactions, no address lookup tables)
+    V1(CachedMessage<'static>),
 }
 
 impl SanitizedMessage {
@@ -103,6 +106,9 @@ impl SanitizedMessage {
                     reserved_account_keys,
                 ))
             }
+            VersionedMessage::V1(message) => {
+                SanitizedMessage::V1(CachedMessage::new(message, reserved_account_keys))
+            }
         })
     }
 
@@ -123,6 +129,7 @@ impl SanitizedMessage {
         match self {
             SanitizedMessage::Legacy(message) => message.has_duplicates(),
             SanitizedMessage::V0(message) => message.has_duplicates(),
+            SanitizedMessage::V1(message) => message.has_duplicates(),
         }
     }
 
@@ -132,6 +139,7 @@ impl SanitizedMessage {
         match self {
             Self::Legacy(legacy_message) => &legacy_message.message.header,
             Self::V0(loaded_msg) => &loaded_msg.message.header,
+            Self::V1(cached_msg) => &cached_msg.message.header,
         }
     }
 
@@ -156,6 +164,7 @@ impl SanitizedMessage {
         match self {
             Self::Legacy(legacy_message) => &legacy_message.message.recent_blockhash,
             Self::V0(loaded_msg) => &loaded_msg.message.recent_blockhash,
+            Self::V1(cached_msg) => &cached_msg.message.lifetime_specifier,
         }
     }
 
@@ -165,6 +174,7 @@ impl SanitizedMessage {
         match self {
             Self::Legacy(legacy_message) => &legacy_message.message.instructions,
             Self::V0(loaded_msg) => &loaded_msg.message.instructions,
+            Self::V1(cached_msg) => &cached_msg.message.instructions,
         }
     }
 
@@ -188,6 +198,7 @@ impl SanitizedMessage {
         match self {
             Self::Legacy(legacy_message) => &legacy_message.message.account_keys,
             Self::V0(loaded_msg) => &loaded_msg.message.account_keys,
+            Self::V1(cached_msg) => &cached_msg.message.account_keys,
         }
     }
 
@@ -196,14 +207,16 @@ impl SanitizedMessage {
         match self {
             Self::Legacy(message) => message.account_keys(),
             Self::V0(message) => message.account_keys(),
+            Self::V1(message) => message.account_keys(),
         }
     }
 
     /// Returns the list of account keys used for account lookup tables.
     pub fn message_address_table_lookups(&self) -> &[v0::MessageAddressTableLookup] {
         match self {
-            Self::Legacy(_message) => &[],
             Self::V0(message) => &message.message.address_table_lookups,
+            // Legacy and V1 messages do not have address table lookups.
+            _ => &[],
         }
     }
 
@@ -225,6 +238,7 @@ impl SanitizedMessage {
         match self {
             Self::Legacy(message) => message.is_key_called_as_program(key_index),
             Self::V0(message) => message.is_key_called_as_program(key_index),
+            Self::V1(message) => message.is_key_called_as_program(key_index),
         }
     }
 
@@ -234,6 +248,7 @@ impl SanitizedMessage {
         match self {
             Self::Legacy(message) => message.is_writable(index),
             Self::V0(message) => message.is_writable(index),
+            Self::V1(message) => message.is_writable(index),
         }
     }
 
@@ -294,6 +309,7 @@ impl SanitizedMessage {
         match self {
             Self::Legacy(message) => message.is_upgradeable_loader_present(),
             Self::V0(message) => message.is_upgradeable_loader_present(),
+            Self::V1(message) => message.is_upgradeable_loader_present(),
         }
     }
 

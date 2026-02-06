@@ -76,7 +76,7 @@ solana-nonce = { workspace = true }
 solana-packet = { workspace = true }
 solana-presigner = { workspace = true }
 solana-pubkey = { workspace = true, features = ["rand"] }
-solana-sha256-hasher = { workspace = true }
+solana-sha256-hasher = { workspace = true, features = ["sha2"] }
 solana-system-interface = { workspace = true, features = ["bincode"] }
 solana-transaction = { path = ".", features = [
     "dev-context-only-utils",
@@ -84,3 +84,4 @@ solana-transaction = { path = ".", features = [
 ] }
 solana-vote-interface = { workspace = true, features = ["bincode"] }
 static_assertions = { workspace = true }
+test-case = { workspace = true }

@@ -3589,6 +3589,7 @@ dependencies = [
  "borsh",
  "itertools 0.12.1",
  "lazy_static",
+ "proptest",
  "serde",
  "serde_derive",
  "serde_json",
@@ -4333,6 +4334,7 @@ dependencies = [
  "solana-transaction-error",
  "solana-vote-interface",
  "static_assertions",
+ "test-case",
  "wincode",
 ]
 

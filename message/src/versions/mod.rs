@@ -13,7 +13,9 @@ use {
 #[cfg(feature = "wincode")]
 use {
     crate::{
-        legacy::MessageUninitBuilder as LegacyMessageUninitBuilder, MessageHeaderUninitBuilder,
+        legacy::MessageUninitBuilder as LegacyMessageUninitBuilder,
+        v1::{deserialize, serialize_into},
+        MessageHeaderUninitBuilder,
     },
     core::mem::MaybeUninit,
     wincode::{
@@ -33,13 +35,14 @@ use {
 
 mod sanitized;
 pub mod v0;
+pub mod v1;
 
 pub use sanitized::*;
 
 /// Bit mask that indicates whether a serialized message is versioned.
 pub const MESSAGE_VERSION_PREFIX: u8 = 0x80;
 
-/// Either a legacy message or a v0 message.
+/// Either a legacy message, v0 or a v1 message.
 ///
 /// # Serialization
 ///
@@ -49,13 +52,14 @@ pub const MESSAGE_VERSION_PREFIX: u8 = 0x80;
 /// format.
 #[cfg_attr(
     feature = "frozen-abi",
-    frozen_abi(digest = "Hndd1SDxQ5qNZvzHo77dpW6uD5c1DJNVjtg8tE6hc432"),
+    frozen_abi(digest = "6CoVPUxkUvDrAvAkfyVXwVDHCSf77aufm7DEZy5mBVeX"),
     derive(AbiEnumVisitor, AbiExample)
 )]
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum VersionedMessage {
     Legacy(LegacyMessage),
     V0(v0::Message),
+    V1(v1::Message),
 }
 
 impl VersionedMessage {
@@ -63,6 +67,7 @@ impl VersionedMessage {
         match self {
             Self::Legacy(message) => message.sanitize(),
             Self::V0(message) => message.sanitize(),
+            Self::V1(message) => message.sanitize(),
         }
     }
 
@@ -70,6 +75,7 @@ impl VersionedMessage {
         match self {
             Self::Legacy(message) => &message.header,
             Self::V0(message) => &message.header,
+            Self::V1(message) => &message.header,
         }
     }
 
@@ -77,6 +83,7 @@ impl VersionedMessage {
         match self {
             Self::Legacy(message) => &message.account_keys,
             Self::V0(message) => &message.account_keys,
+            Self::V1(message) => &message.account_keys,
         }
     }
 
@@ -84,6 +91,7 @@ impl VersionedMessage {
         match self {
             Self::Legacy(_) => None,
             Self::V0(message) => Some(&message.address_table_lookups),
+            Self::V1(_) => None,
         }
     }
 
@@ -105,6 +113,7 @@ impl VersionedMessage {
         match self {
             Self::Legacy(message) => message.is_maybe_writable(index, reserved_account_keys),
             Self::V0(message) => message.is_maybe_writable(index, reserved_account_keys),
+            Self::V1(message) => message.is_maybe_writable(index, reserved_account_keys),
         }
     }
 
@@ -124,6 +133,7 @@ impl VersionedMessage {
         match self {
             Self::Legacy(message) => message.is_key_called_as_program(key_index),
             Self::V0(message) => message.is_key_called_as_program(key_index),
+            Self::V1(message) => message.is_key_called_as_program(key_index),
         }
     }
 
@@ -137,6 +147,7 @@ impl VersionedMessage {
         match self {
             Self::Legacy(message) => &message.recent_blockhash,
             Self::V0(message) => &message.recent_blockhash,
+            Self::V1(message) => &message.lifetime_specifier,
         }
     }
 
@@ -144,15 +155,18 @@ impl VersionedMessage {
         match self {
             Self::Legacy(message) => message.recent_blockhash = recent_blockhash,
             Self::V0(message) => message.recent_blockhash = recent_blockhash,
+            Self::V1(message) => message.lifetime_specifier = recent_blockhash,
         }
     }
 
     /// Program instructions that will be executed in sequence and committed in
     /// one atomic transaction if all succeed.
+    #[inline(always)]
     pub fn instructions(&self) -> &[CompiledInstruction] {
         match self {
             Self::Legacy(message) => &message.instructions,
             Self::V0(message) => &message.instructions,
+            Self::V1(message) => &message.instructions,
         }
     }
 
@@ -201,6 +215,14 @@ impl serde::Serialize for VersionedMessage {
             Self::V0(message) => {
                 let mut seq = serializer.serialize_tuple(2)?;
                 seq.serialize_element(&MESSAGE_VERSION_PREFIX)?;
+                seq.serialize_element(message)?;
+                seq.end()
+            }
+            Self::V1(message) => {
+                // Note that this format does not match the wire format per SIMD-0385.
+
+                let mut seq = serializer.serialize_tuple(2)?;
+                seq.serialize_element(&crate::v1::V1_PREFIX)?;
                 seq.serialize_element(message)?;
                 seq.end()
             }
@@ -316,6 +338,14 @@ impl<'de> serde::Deserialize<'de> for VersionedMessage {
                                     },
                                 )?))
                             }
+                            1 => {
+                                Ok(VersionedMessage::V1(seq.next_element()?.ok_or_else(
+                                    || {
+                                        // will never happen since tuple length is always 2
+                                        de::Error::invalid_length(1, &self)
+                                    },
+                                )?))
+                            }
                             127 => {
                                 // 0xff is used as the first byte of the off-chain messages
                                 // which corresponds to version 127 of the versioned messages.
@@ -341,16 +371,19 @@ impl<'de> serde::Deserialize<'de> for VersionedMessage {
 impl SchemaWrite for VersionedMessage {
     type Src = Self;
 
+    // V0 and V1 add +1 for message version prefix
+    #[allow(clippy::arithmetic_side_effects)]
     #[inline(always)]
     fn size_of(src: &Self::Src) -> WriteResult<usize> {
         match src {
             VersionedMessage::Legacy(message) => LegacyMessage::size_of(message),
-            // +1 for message version prefix
-            #[expect(clippy::arithmetic_side_effects)]
             VersionedMessage::V0(message) => Ok(1 + v0::Message::size_of(message)?),
+            VersionedMessage::V1(message) => Ok(1 + message.size()),
         }
     }
 
+    // V0 and V1 add +1 for message version prefix
+    #[allow(clippy::arithmetic_side_effects)]
     #[inline(always)]
     fn write(writer: &mut impl Writer, src: &Self::Src) -> WriteResult<()> {
         match src {
@@ -358,6 +391,21 @@ impl SchemaWrite for VersionedMessage {
             VersionedMessage::V0(message) => {
                 u8::write(writer, &MESSAGE_VERSION_PREFIX)?;
                 v0::Message::write(writer, message)
+            }
+            VersionedMessage::V1(message) => {
+                let total = message.size();
+                let mut buffer: Vec<u8> = Vec::with_capacity(1 + total);
+                // SAFETY: buffer has sufficient capacity for serialization.
+                unsafe {
+                    let ptr = buffer.as_mut_ptr();
+                    ptr.write(crate::v1::V1_PREFIX);
+                    serialize_into(message, ptr.add(1));
+                    buffer.set_len(1 + total);
+
+                    writer
+                        .write_slice_t(&buffer)
+                        .map_err(wincode::WriteError::Io)
+                }
             }
         }
     }
@@ -382,6 +430,19 @@ impl<'de> SchemaRead<'de> for VersionedMessage {
                 0 => {
                     let msg = v0::Message::get(reader)?;
                     dst.write(VersionedMessage::V0(msg));
+                    Ok(())
+                }
+                1 => {
+                    // -1 for already-read variant byte
+                    let bytes = reader.fill_buf(v1::MAX_TRANSACTION_SIZE - 1)?;
+                    let (message, consumed) =
+                        deserialize(bytes).map_err(|_| invalid_tag_encoding(1))?;
+
+                    // SAFETY: `deserialize` validates that we read `consumed` bytes.
+                    unsafe { reader.consume_unchecked(consumed) };
+
+                    dst.write(VersionedMessage::V1(message));
+
                     Ok(())
                 }
                 _ => Err(invalid_tag_encoding(version as usize)),
@@ -418,9 +479,30 @@ impl<'de> SchemaRead<'de> for VersionedMessage {
 mod tests {
     use {
         super::*,
-        crate::v0::MessageAddressTableLookup,
+        crate::{v0::MessageAddressTableLookup, v1::V1_PREFIX},
+        proptest::{
+            collection::vec,
+            option::of,
+            prelude::{any, Just},
+            prop_compose, proptest,
+            strategy::Strategy,
+        },
         solana_instruction::{AccountMeta, Instruction},
     };
+
+    #[derive(Clone, Debug)]
+    struct TestMessageData {
+        required_signatures: u8,
+        lifetime: [u8; 32],
+        accounts: Vec<[u8; 32]>,
+        priority_fee: Option<u64>,
+        compute_unit_limit: Option<u32>,
+        loaded_accounts_data_size_limit: Option<u32>,
+        heap_size: Option<u32>,
+        program_id_index: u8,
+        instr_accounts: Vec<u8>,
+        data: Vec<u8>,
+    }
 
     #[test]
     fn test_legacy_message_serialization() {
@@ -506,5 +588,201 @@ mod tests {
         let string = serde_json::to_string(&message).unwrap();
         let message_from_string: VersionedMessage = serde_json::from_str(&string).unwrap();
         assert_eq!(message, message_from_string);
+    }
+
+    prop_compose! {
+        fn generate_message_data()
+            (
+                // Generate between 12 and 64 accounts since we need at least the
+                // amount of `required_signatures`.
+                accounts in vec(any::<[u8; 32]>(), 12..=64),
+                lifetime in any::<[u8; 32]>(),
+                priority_fee in of(any::<u64>()),
+                compute_unit_limit in of(0..=1_400_000u32),
+                loaded_accounts_data_size_limit in of(0..=20_480u32),
+                heap_size in of((0..=32u32).prop_map(|n| n.saturating_mul(1024))),
+                required_signatures in 1..=12u8,
+            )
+            (
+                // The `program_id_index` cannot be 0 (payer).
+                program_id_index in 1u8..accounts.len() as u8,
+                // we need to have at least `required_signatures` accounts.
+                instr_accounts in vec(
+                    0u8..accounts.len() as u8,
+                    (required_signatures as usize)..=accounts.len(),
+                ),
+                // Keep instruction data relatively small to avoid hitting the maximum
+                // transaction size when combined with the accounts.
+                data in vec(any::<u8>(), 0..=2048),
+                accounts in Just(accounts),
+                lifetime in Just(lifetime),
+                priority_fee in Just(priority_fee),
+                compute_unit_limit in Just(compute_unit_limit),
+                loaded_accounts_data_size_limit in Just(loaded_accounts_data_size_limit),
+                heap_size in Just(heap_size),
+                required_signatures in Just(required_signatures),
+            ) -> TestMessageData
+        {
+            TestMessageData {
+                required_signatures,
+                lifetime,
+                accounts,
+                priority_fee,
+                compute_unit_limit,
+                loaded_accounts_data_size_limit,
+                heap_size,
+                program_id_index,
+                instr_accounts,
+                data,
+            }
+        }
+    }
+
+    proptest! {
+        #[test]
+        fn test_v1_message_raw_bytes_roundtrip(test_data in generate_message_data()) {
+            let accounts: Vec<Address> = test_data.accounts.into_iter()
+                .map(Address::new_from_array).collect();
+            let lifetime = Hash::new_from_array(test_data.lifetime);
+
+            let mut builder = v1::MessageBuilder::new()
+                .required_signatures(test_data.required_signatures)
+                .lifetime_specifier(lifetime)
+                .accounts(accounts)
+                .instruction(CompiledInstruction {
+                    program_id_index: test_data.program_id_index,
+                    accounts: test_data.instr_accounts,
+                    data: test_data.data,
+                });
+
+            // config values.
+            if let Some(priority_fee) = test_data.priority_fee {
+                builder = builder.priority_fee(priority_fee);
+            }
+            if let Some(compute_unit_limit) = test_data.compute_unit_limit {
+                builder = builder.compute_unit_limit(compute_unit_limit);
+            }
+            if let Some(loaded_accounts_data_size_limit) = test_data.loaded_accounts_data_size_limit {
+                builder = builder.loaded_accounts_data_size_limit(loaded_accounts_data_size_limit);
+            }
+            if let Some(heap_size) = test_data.heap_size {
+                builder = builder.heap_size(heap_size);
+            }
+
+            let message = builder.build().unwrap();
+
+            // Serialize V1 to raw bytes.
+            let bytes = v1::serialize(&message);
+            // Deserialize from raw bytes.
+            let (parsed, _) = v1::deserialize(&bytes).unwrap();
+
+            // Messages should match.
+            assert_eq!(message, parsed);
+
+            // Wrap in VersionedMessage and test `serialize()`.
+            let versioned = VersionedMessage::V1(message);
+            let serialized = versioned.serialize();
+
+            // Assert that everything worked:
+            // - serialized message is not empty.
+            // - first byte is the version prefix with the correct version.
+            // - remaining bytes match the original serialized message.
+            assert!(!serialized.is_empty());
+            assert_eq!(serialized[0], V1_PREFIX);
+            assert_eq!(&serialized[1..], bytes.as_slice());
+        }
+    }
+
+    #[test]
+    fn test_v1_versioned_message_json_roundtrip() {
+        let msg = v1::MessageBuilder::new()
+            .required_signatures(1)
+            .lifetime_specifier(Hash::new_unique())
+            .accounts(vec![Address::new_unique(), Address::new_unique()])
+            .priority_fee(1000)
+            .compute_unit_limit(200_000)
+            .instruction(CompiledInstruction {
+                program_id_index: 1,
+                accounts: vec![0],
+                data: vec![1, 2, 3, 4],
+            })
+            .build()
+            .unwrap();
+
+        let vm = VersionedMessage::V1(msg);
+        let s = serde_json::to_string(&vm).unwrap();
+        let back: VersionedMessage = serde_json::from_str(&s).unwrap();
+        assert_eq!(vm, back);
+    }
+
+    #[cfg(feature = "wincode")]
+    #[test]
+    fn test_v1_wincode_roundtrip() {
+        let test_messages = [
+            // Minimal message
+            v1::MessageBuilder::new()
+                .required_signatures(1)
+                .lifetime_specifier(Hash::new_unique())
+                .accounts(vec![Address::new_unique(), Address::new_unique()])
+                .instruction(CompiledInstruction {
+                    program_id_index: 1,
+                    accounts: vec![0],
+                    data: vec![],
+                })
+                .build()
+                .unwrap(),
+            // With config
+            v1::MessageBuilder::new()
+                .required_signatures(1)
+                .lifetime_specifier(Hash::new_unique())
+                .accounts(vec![Address::new_unique(), Address::new_unique()])
+                .priority_fee(1000)
+                .compute_unit_limit(200_000)
+                .instruction(CompiledInstruction {
+                    program_id_index: 1,
+                    accounts: vec![0],
+                    data: vec![1, 2, 3, 4],
+                })
+                .build()
+                .unwrap(),
+            // Multiple instructions
+            v1::MessageBuilder::new()
+                .required_signatures(2)
+                .lifetime_specifier(Hash::new_unique())
+                .accounts(vec![
+                    Address::new_unique(),
+                    Address::new_unique(),
+                    Address::new_unique(),
+                ])
+                .heap_size(65536)
+                .instructions(vec![
+                    CompiledInstruction {
+                        program_id_index: 2,
+                        accounts: vec![0, 1],
+                        data: vec![0xAA, 0xBB],
+                    },
+                    CompiledInstruction {
+                        program_id_index: 2,
+                        accounts: vec![1],
+                        data: vec![0xCC],
+                    },
+                ])
+                .build()
+                .unwrap(),
+        ];
+
+        for message in test_messages {
+            let versioned = VersionedMessage::V1(message.clone());
+
+            // Wincode roundtrip
+            let bytes = wincode::serialize(&versioned).expect("Wincode serialize failed");
+            let deserialized: VersionedMessage =
+                wincode::deserialize(&bytes).expect("Wincode deserialize failed");
+
+            match deserialized {
+                VersionedMessage::V1(parsed) => assert_eq!(parsed, message),
+                _ => panic!("Expected V1 message"),
+            }
+        }
     }
 }

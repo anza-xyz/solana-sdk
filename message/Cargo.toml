@@ -62,6 +62,7 @@ bincode = { workspace = true }
 bitflags = { workspace = true }
 borsh = { workspace = true }
 itertools = { workspace = true }
+proptest = { workspace = true }
 serde_json = { workspace = true }
 solana-address-lookup-table-interface = { workspace = true, features = [
     "bincode",
