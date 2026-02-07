@@ -117,12 +117,10 @@ mod test {
     #[test]
     #[cfg(feature = "wincode")]
     fn test_nonce_state_size_wincode() {
-        use wincode::SchemaWrite;
-
         let data = Versions::new(State::Initialized(Data::default()));
         assert_eq!(
-            <Versions as SchemaWrite>::size_of(&data).unwrap(),
-            State::size()
+            State::size() as u64,
+            wincode::serialized_size(&data).unwrap(),
         );
     }
 }

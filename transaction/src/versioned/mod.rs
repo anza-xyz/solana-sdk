@@ -16,7 +16,7 @@ use {
 #[cfg(feature = "wincode")]
 use {
     solana_signer::{signers::Signers, SignerError},
-    wincode::{containers, len::ShortU16Len, SchemaRead, SchemaWrite},
+    wincode::{containers, len::ShortU16, SchemaRead, SchemaWrite},
 };
 
 pub mod sanitized;
@@ -56,7 +56,7 @@ impl TransactionVersion {
 pub struct VersionedTransaction {
     /// List of signatures
     #[cfg_attr(feature = "serde", serde(with = "short_vec"))]
-    #[cfg_attr(feature = "wincode", wincode(with = "containers::Vec<_, ShortU16Len>"))]
+    #[cfg_attr(feature = "wincode", wincode(with = "containers::Vec<_, ShortU16>"))]
     pub signatures: Vec<Signature>,
     /// Message to sign.
     pub message: VersionedMessage,
