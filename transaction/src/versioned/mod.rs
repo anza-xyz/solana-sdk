@@ -18,9 +18,10 @@ use {
     solana_message::MESSAGE_VERSION_PREFIX,
     solana_signer::{signers::Signers, SignerError},
     wincode::{
+        config::Config,
         containers,
         io::{Reader, Writer},
-        len::ShortU16Len,
+        len::ShortU16,
         ReadError, ReadResult, SchemaRead, SchemaWrite, WriteResult,
     },
 };
@@ -236,7 +237,7 @@ impl VersionedTransaction {
 }
 
 #[cfg(feature = "wincode")]
-impl SchemaWrite for VersionedTransaction {
+unsafe impl<C: Config> SchemaWrite<C> for VersionedTransaction {
     type Src = Self;
 
     #[allow(clippy::arithmetic_side_effects)]
@@ -245,32 +246,33 @@ impl SchemaWrite for VersionedTransaction {
         match src.message {
             VersionedMessage::Legacy(_) | VersionedMessage::V0(_) => {
                 Ok(
-                    <containers::Vec<Signature, ShortU16Len> as SchemaWrite>::size_of(
+                    <containers::Vec<Signature, ShortU16> as SchemaWrite<C>>::size_of(
                         &src.signatures,
-                    )? + <VersionedMessage as SchemaWrite>::size_of(&src.message)?,
+                    )? + <VersionedMessage as SchemaWrite<C>>::size_of(&src.message)?,
                 )
             }
             VersionedMessage::V1(_) => Ok(
                 // V1 transasction signatures are written as a fixed length array
                 // without a length prefix.
-                VersionedMessage::size_of(&src.message)? + src.signatures.len() * SIGNATURE_SIZE,
+                <VersionedMessage as SchemaWrite<C>>::size_of(&src.message)?
+                    + src.signatures.len() * SIGNATURE_SIZE,
             ),
         }
     }
 
     #[inline]
-    fn write(writer: &mut impl Writer, src: &Self::Src) -> WriteResult<()> {
+    fn write(mut writer: impl Writer, src: &Self::Src) -> WriteResult<()> {
         match src.message {
             VersionedMessage::Legacy(_) | VersionedMessage::V0(_) => {
                 // `signatures` are written with `ShortU16Len` length prefix.
-                <containers::Vec<Signature, ShortU16Len> as SchemaWrite>::write(
-                    writer,
+                <containers::Vec<Signature, ShortU16> as SchemaWrite<C>>::write(
+                    &mut writer,
                     &src.signatures,
                 )?;
-                <VersionedMessage as SchemaWrite>::write(writer, &src.message)
+                <VersionedMessage as SchemaWrite<C>>::write(writer, &src.message)
             }
             VersionedMessage::V1(_) => {
-                VersionedMessage::write(writer, &src.message)?;
+                <VersionedMessage as SchemaWrite<C>>::write(&mut writer, &src.message)?;
                 unsafe {
                     writer
                         .write_slice_t(&src.signatures)
@@ -282,11 +284,11 @@ impl SchemaWrite for VersionedTransaction {
 }
 
 #[cfg(feature = "wincode")]
-impl<'de> SchemaRead<'de> for VersionedTransaction {
+unsafe impl<'de, C: Config> SchemaRead<'de, C> for VersionedTransaction {
     type Dst = Self;
 
     #[inline]
-    fn read(reader: &mut impl Reader<'de>, dst: &mut MaybeUninit<Self::Dst>) -> ReadResult<()> {
+    fn read(mut reader: impl Reader<'de>, dst: &mut MaybeUninit<Self::Dst>) -> ReadResult<()> {
         // Peek the discriminator to decide how to read the transaction data.
         //
         // - For `Legacy` and `V0` messages, the first byte is part of the `short_vec` length
@@ -304,17 +306,21 @@ impl<'de> SchemaRead<'de> for VersionedTransaction {
 
             let dst_ptr = dst.as_mut_ptr();
 
-            <containers::Vec<Signature, ShortU16Len> as SchemaRead<'de>>::read(reader, unsafe {
-                &mut *(addr_of_mut!((*dst_ptr).signatures)).cast::<MaybeUninit<Vec<Signature>>>()
-            })?;
+            <containers::Vec<Signature, ShortU16> as SchemaRead<'de, C>>::read(
+                &mut reader,
+                unsafe {
+                    &mut *(addr_of_mut!((*dst_ptr).signatures))
+                        .cast::<MaybeUninit<Vec<Signature>>>()
+                },
+            )?;
 
-            <VersionedMessage as SchemaRead<'de>>::read(reader, unsafe {
+            <VersionedMessage as SchemaRead<'de, C>>::read(reader, unsafe {
                 &mut *(addr_of_mut!((*dst_ptr).message)).cast::<MaybeUninit<_>>()
             })?;
         } else if *discriminator == V1_PREFIX {
             // V1 transaction
 
-            let message = VersionedMessage::get(reader)?;
+            let message = <VersionedMessage as SchemaRead<'de, C>>::get(&mut reader)?;
 
             let expected_signatures_len = message.header().num_required_signatures as usize;
 

@@ -3,7 +3,7 @@ use serde_derive::{Deserialize, Serialize};
 #[cfg(feature = "frozen-abi")]
 use solana_frozen_abi_macro::AbiExample;
 #[cfg(feature = "wincode")]
-use wincode::{containers, len::ShortU16Len, SchemaRead, SchemaWrite};
+use wincode::{containers, len::ShortU16, SchemaRead, SchemaWrite};
 use {solana_address::Address, solana_sanitize::Sanitize};
 
 /// A compact encoding of an instruction.
@@ -26,11 +26,11 @@ pub struct CompiledInstruction {
     pub program_id_index: u8,
     /// Ordered indices into the transaction keys array indicating which accounts to pass to the program.
     #[cfg_attr(feature = "serde", serde(with = "solana_short_vec"))]
-    #[cfg_attr(feature = "wincode", wincode(with = "containers::Vec<_, ShortU16Len>"))]
+    #[cfg_attr(feature = "wincode", wincode(with = "containers::Vec<_, ShortU16>"))]
     pub accounts: Vec<u8>,
     /// The program input data.
     #[cfg_attr(feature = "serde", serde(with = "solana_short_vec"))]
-    #[cfg_attr(feature = "wincode", wincode(with = "containers::Vec<_, ShortU16Len>"))]
+    #[cfg_attr(feature = "wincode", wincode(with = "containers::Vec<_, ShortU16>"))]
     pub data: Vec<u8>,
 }
 
@@ -38,7 +38,7 @@ impl Sanitize for CompiledInstruction {}
 
 impl CompiledInstruction {
     #[cfg(feature = "wincode")]
-    pub fn new<T: wincode::SchemaWrite<Src = T>>(
+    pub fn new<T: wincode::Serialize<Src = T>>(
         program_ids_index: u8,
         data: &T,
         accounts: Vec<u8>,

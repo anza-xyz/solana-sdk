@@ -43,6 +43,7 @@ use solana_frozen_abi_macro::AbiExample;
 use {
     crate::v1::MAX_TRANSACTION_SIZE,
     wincode::{
+        config::ConfigCore,
         error::invalid_tag_encoding,
         io::{Reader, Writer},
         ReadResult, SchemaRead, SchemaWrite, WriteResult,
@@ -511,7 +512,7 @@ impl Sanitize for Message {
 }
 
 #[cfg(feature = "wincode")]
-impl SchemaWrite for Message {
+unsafe impl<C: ConfigCore> SchemaWrite<C> for Message {
     type Src = Self;
 
     #[allow(clippy::arithmetic_side_effects)]
@@ -522,7 +523,7 @@ impl SchemaWrite for Message {
 
     // V0 and V1 add +1 for message version prefix
     #[inline(always)]
-    fn write(writer: &mut impl Writer, src: &Self::Src) -> WriteResult<()> {
+    fn write(mut writer: impl Writer, src: &Self::Src) -> WriteResult<()> {
         // SAFETY: Serializing a slice of `[u8]`.
         unsafe {
             writer
@@ -533,10 +534,10 @@ impl SchemaWrite for Message {
 }
 
 #[cfg(feature = "wincode")]
-impl<'de> SchemaRead<'de> for Message {
+unsafe impl<'de, C: ConfigCore> SchemaRead<'de, C> for Message {
     type Dst = Self;
 
-    fn read(reader: &mut impl Reader<'de>, dst: &mut MaybeUninit<Self::Dst>) -> ReadResult<()> {
+    fn read(mut reader: impl Reader<'de>, dst: &mut MaybeUninit<Self::Dst>) -> ReadResult<()> {
         let bytes = reader.fill_buf(MAX_TRANSACTION_SIZE)?;
         let (message, consumed) = deserialize(bytes).map_err(|_| invalid_tag_encoding(1))?;
 

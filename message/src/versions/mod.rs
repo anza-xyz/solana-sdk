@@ -19,6 +19,7 @@ use {
     },
     core::mem::MaybeUninit,
     wincode::{
+        config::Config,
         io::{Reader, Writer},
         ReadResult, SchemaRead, SchemaWrite, WriteResult,
     },
@@ -368,7 +369,7 @@ impl<'de> serde::Deserialize<'de> for VersionedMessage {
 }
 
 #[cfg(feature = "wincode")]
-impl SchemaWrite for VersionedMessage {
+unsafe impl<C: Config> SchemaWrite<C> for VersionedMessage {
     type Src = Self;
 
     // V0 and V1 add +1 for message version prefix
@@ -376,8 +377,12 @@ impl SchemaWrite for VersionedMessage {
     #[inline(always)]
     fn size_of(src: &Self::Src) -> WriteResult<usize> {
         match src {
-            VersionedMessage::Legacy(message) => LegacyMessage::size_of(message),
-            VersionedMessage::V0(message) => Ok(1 + v0::Message::size_of(message)?),
+            VersionedMessage::Legacy(message) => {
+                <LegacyMessage as SchemaWrite<C>>::size_of(message)
+            }
+            VersionedMessage::V0(message) => {
+                Ok(1 + <v0::Message as SchemaWrite<C>>::size_of(message)?)
+            }
             VersionedMessage::V1(message) => Ok(1 + message.size()),
         }
     }
@@ -385,12 +390,14 @@ impl SchemaWrite for VersionedMessage {
     // V0 and V1 add +1 for message version prefix
     #[allow(clippy::arithmetic_side_effects)]
     #[inline(always)]
-    fn write(writer: &mut impl Writer, src: &Self::Src) -> WriteResult<()> {
+    fn write(mut writer: impl Writer, src: &Self::Src) -> WriteResult<()> {
         match src {
-            VersionedMessage::Legacy(message) => LegacyMessage::write(writer, message),
+            VersionedMessage::Legacy(message) => {
+                <LegacyMessage as SchemaWrite<C>>::write(writer, message)
+            }
             VersionedMessage::V0(message) => {
-                u8::write(writer, &MESSAGE_VERSION_PREFIX)?;
-                v0::Message::write(writer, message)
+                <u8 as SchemaWrite<C>>::write(&mut writer, &MESSAGE_VERSION_PREFIX)?;
+                <v0::Message as SchemaWrite<C>>::write(writer, message)
             }
             VersionedMessage::V1(message) => {
                 let total = message.size();
@@ -412,15 +419,15 @@ impl SchemaWrite for VersionedMessage {
 }
 
 #[cfg(feature = "wincode")]
-impl<'de> SchemaRead<'de> for VersionedMessage {
+unsafe impl<'de, C: Config> SchemaRead<'de, C> for VersionedMessage {
     type Dst = Self;
 
-    fn read(reader: &mut impl Reader<'de>, dst: &mut MaybeUninit<Self::Dst>) -> ReadResult<()> {
+    fn read(mut reader: impl Reader<'de>, dst: &mut MaybeUninit<Self::Dst>) -> ReadResult<()> {
         // If the first bit is set, the remaining 7 bits will be used to determine
         // which message version is serialized starting from version `0`. If the first
         // is bit is not set, all bytes are used to encode the legacy `Message`
         // format.
-        let variant = u8::get(reader)?;
+        let variant = <u8 as SchemaRead<C>>::get(&mut reader)?;
 
         if variant & MESSAGE_VERSION_PREFIX != 0 {
             use wincode::error::invalid_tag_encoding;
@@ -428,7 +435,7 @@ impl<'de> SchemaRead<'de> for VersionedMessage {
             let version = variant & !MESSAGE_VERSION_PREFIX;
             return match version {
                 0 => {
-                    let msg = v0::Message::get(reader)?;
+                    let msg = <v0::Message as SchemaRead<C>>::get(reader)?;
                     dst.write(VersionedMessage::V0(msg));
                     Ok(())
                 }
@@ -450,21 +457,21 @@ impl<'de> SchemaRead<'de> for VersionedMessage {
         }
 
         let mut msg = MaybeUninit::<LegacyMessage>::uninit();
-        let mut msg_builder = LegacyMessageUninitBuilder::from_maybe_uninit_mut(&mut msg);
+        let mut msg_builder = LegacyMessageUninitBuilder::<C>::from_maybe_uninit_mut(&mut msg);
         // We've already read the variant byte which, in the legacy case, represents
         // the `num_required_signatures` field.
         // As such, we need to write the remaining fields into the message manually,
         // as calling `LegacyMessage::read` will miss the first field.
         let mut header_builder =
-            MessageHeaderUninitBuilder::from_maybe_uninit_mut(msg_builder.uninit_header_mut());
+            MessageHeaderUninitBuilder::<C>::from_maybe_uninit_mut(msg_builder.uninit_header_mut());
         header_builder.write_num_required_signatures(variant);
-        header_builder.read_num_readonly_signed_accounts(reader)?;
-        header_builder.read_num_readonly_unsigned_accounts(reader)?;
+        header_builder.read_num_readonly_signed_accounts(&mut reader)?;
+        header_builder.read_num_readonly_unsigned_accounts(&mut reader)?;
         header_builder.finish();
         unsafe { msg_builder.assume_init_header() };
 
-        msg_builder.read_account_keys(reader)?;
-        msg_builder.read_recent_blockhash(reader)?;
+        msg_builder.read_account_keys(&mut reader)?;
+        msg_builder.read_recent_blockhash(&mut reader)?;
         msg_builder.read_instructions(reader)?;
         msg_builder.finish();
 
