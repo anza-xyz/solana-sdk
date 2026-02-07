@@ -127,7 +127,7 @@ pub use {
 pub use {
     solana_hash::Hash,
     solana_signer::{signers::Signers, SignerError},
-    wincode::{containers, len::ShortU16Len, SchemaRead, SchemaWrite},
+    wincode::{containers, len::ShortU16, SchemaRead, SchemaWrite},
 };
 use {
     solana_message::inline_nonce::is_advance_nonce_instruction_data,
@@ -194,7 +194,7 @@ pub struct Transaction {
     /// [`num_required_signatures`]: https://docs.rs/solana-message/latest/solana_message/struct.MessageHeader.html#structfield.num_required_signatures
     // NOTE: Serialization-related changes must be paired with the direct read at sigverify.
     #[cfg_attr(feature = "serde", serde(with = "short_vec"))]
-    #[cfg_attr(feature = "wincode", wincode(with = "containers::Vec<_, ShortU16Len>"))]
+    #[cfg_attr(feature = "wincode", wincode(with = "containers::Vec<_, ShortU16>"))]
     pub signatures: Vec<Signature>,
 
     /// The message to sign.
