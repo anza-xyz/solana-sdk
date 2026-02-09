@@ -198,31 +198,22 @@ pub fn bytes_are_curve_point<T: AsRef<[u8]>>(bytes: T) -> bool {
 
     #[cfg(any(target_os = "solana", target_arch = "bpf"))]
     {
-        #[cfg(feature = "syscalls")]
-        {
-            // ID for the Ed25519 as defined in `solana-curve25519::CURVE25519_EDWARDS`.
-            const CURVE25519_EDWARDS: u64 = 0;
+        // ID for the Ed25519 as defined in `solana-curve25519::CURVE25519_EDWARDS`.
+        const CURVE25519_EDWARDS: u64 = 0;
 
-            // The syscall return `0` when the point is valid – i.e., on the curve;
-            // otherwise it returns `1`
-            //
-            // SAFETY: The syscall validates the input.
-            let result = unsafe {
-                syscalls::sol_curve_validate_point(
-                    CURVE25519_EDWARDS,
-                    bytes.as_ref() as *const _ as *const u8,
-                    core::ptr::null_mut(),
-                )
-            };
+        // The syscall return `0` when the point is valid – i.e., on the curve;
+        // otherwise it returns `1`
+        //
+        // SAFETY: The syscall validates the input.
+        let result = unsafe {
+            syscalls::sol_curve_validate_point(
+                CURVE25519_EDWARDS,
+                bytes.as_ref() as *const _ as *const u8,
+                core::ptr::null_mut(),
+            )
+        };
 
-            result == 0
-        }
-
-        #[cfg(not(feature = "syscalls"))]
-        {
-            core::hint::black_box(bytes);
-            panic!("bytes_are_curve_point is only available with the `syscalls` feature enabled on this crate")
-        }
+        result == 0
     }
 }
 
