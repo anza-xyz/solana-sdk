@@ -68,23 +68,18 @@ pub const UPDATED_HASHES_PER_SECOND_6: u64 = 10_000_000;
 static_assertions::const_assert_eq!(DEFAULT_HASHES_PER_TICK, 62_500);
 pub const DEFAULT_HASHES_PER_TICK: u64 = DEFAULT_HASHES_PER_SECOND / DEFAULT_TICKS_PER_SECOND;
 
-#[cfg(test)]
 #[deprecated(since = "2.2.2", note = "Use 'DEFAULT_HASHES_PER_TICK' instead")]
 pub const UPDATED_HASHES_PER_TICK2: u64 = DEFAULT_HASHES_PER_SECOND / DEFAULT_TICKS_PER_SECOND;
 
-#[cfg(test)]
 #[deprecated(since = "2.2.2", note = "Use 'DEFAULT_HASHES_PER_TICK' instead")]
 pub const UPDATED_HASHES_PER_TICK3: u64 = DEFAULT_HASHES_PER_SECOND / DEFAULT_TICKS_PER_SECOND;
 
-#[cfg(test)]
 #[deprecated(since = "2.2.2", note = "Use 'DEFAULT_HASHES_PER_TICK' instead")]
 pub const UPDATED_HASHES_PER_TICK4: u64 = DEFAULT_HASHES_PER_SECOND / DEFAULT_TICKS_PER_SECOND;
 
-#[cfg(test)]
 #[deprecated(since = "2.2.2", note = "Use 'DEFAULT_HASHES_PER_TICK' instead")]
 pub const UPDATED_HASHES_PER_TICK5: u64 = DEFAULT_HASHES_PER_SECOND / DEFAULT_TICKS_PER_SECOND;
 
-#[cfg(test)]
 #[deprecated(since = "2.2.2", note = "Use 'DEFAULT_HASHES_PER_TICK' instead")]
 pub const UPDATED_HASHES_PER_TICK6: u64 = DEFAULT_HASHES_PER_SECOND / DEFAULT_TICKS_PER_SECOND;
 
