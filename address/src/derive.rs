@@ -90,6 +90,8 @@ impl Address {
     /// the address without incurring the cost of the `create_program_address` syscall.
     ///
     /// This function is a compile-time constant version of [`Address::derive_address`].
+    /// It has worse performance than `derive_address`, so only use this function in
+    /// `const` contexts, where all parameters are known at compile-time.
     pub const fn derive_address_const<const N: usize>(
         seeds: &[&[u8]; N],
         bump: Option<u8>,
