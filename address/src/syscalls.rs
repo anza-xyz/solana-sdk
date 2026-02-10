@@ -295,7 +295,6 @@ impl Address {
     // will use syscalls which bring no dependencies; otherwise, this should
     // be opt-in so users don't need the curve25519 dependency.
     #[cfg(any(target_os = "solana", target_arch = "bpf", feature = "curve25519"))]
-    #[allow(clippy::same_item_push)]
     #[inline(always)]
     pub fn try_find_program_address(
         seeds: &[&[u8]],
@@ -305,18 +304,28 @@ impl Address {
         // not supported
         #[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
         {
-            let mut bump_seed = [u8::MAX];
-            for _ in 0..u8::MAX {
-                {
-                    let mut seeds_with_bump = seeds.to_vec();
-                    seeds_with_bump.push(&bump_seed);
-                    match Self::create_program_address(&seeds_with_bump, program_id) {
-                        Ok(address) => return Some((address, bump_seed[0])),
-                        Err(AddressError::InvalidSeeds) => (),
-                        _ => break,
+            let idx = seeds.len();
+            let mut bump_storage = [0u8; 1];
+            let mut seeds_with_bump: alloc::vec::Vec<&[u8]> =
+                alloc::vec::Vec::with_capacity(idx + 1);
+            seeds_with_bump.extend_from_slice(seeds);
+            for bump in (0..=u8::MAX).rev() {
+                bump_storage[0] = bump;
+                // SAFETY: bump_storage is stack-allocated and outlives the vector.
+                // from_raw_parts breaks the borrow chain so the compiler won't track
+                // aliasing with bump_storage, but we ensure correctness by truncating
+                // before each mutation.
+                let bump_slice = unsafe { core::slice::from_raw_parts(bump_storage.as_ptr(), 1) };
+                seeds_with_bump.push(bump_slice);
+
+                match Self::create_program_address(&seeds_with_bump, program_id) {
+                    Ok(address) => return Some((address, bump)),
+                    Err(AddressError::InvalidSeeds) => {
+                        seeds_with_bump.truncate(idx);
+                        continue;
                     }
+                    _ => return None,
                 }
-                bump_seed[0] -= 1;
             }
             None
         }
