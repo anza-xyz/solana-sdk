@@ -1,6 +1,8 @@
 use {
     crate::{Address, MAX_SEEDS, PDA_MARKER},
-    core::mem::MaybeUninit,
+    core::{mem::MaybeUninit, slice::from_raw_parts},
+    sha2_const_stable::Sha256,
+    solana_sha256_hasher::hashv,
 };
 
 impl Address {
@@ -38,8 +40,7 @@ impl Address {
             assert!(N < MAX_SEEDS, "number of seeds must be less than MAX_SEEDS");
         }
 
-        const UNINIT: MaybeUninit<&[u8]> = MaybeUninit::<&[u8]>::uninit();
-        let mut data = [UNINIT; MAX_SEEDS + 2];
+        let mut data = [const { MaybeUninit::<&[u8]>::uninit() }; MAX_SEEDS + 2];
         let mut i = 0;
 
         while i < N {
@@ -62,9 +63,7 @@ impl Address {
             data.get_unchecked_mut(i + 1).write(PDA_MARKER.as_ref());
         }
 
-        let hash = solana_sha256_hasher::hashv(unsafe {
-            core::slice::from_raw_parts(data.as_ptr() as *const &[u8], i + 2)
-        });
+        let hash = hashv(unsafe { from_raw_parts(data.as_ptr() as *const &[u8], i + 2) });
         Address::from(hash.to_bytes())
     }
 
@@ -100,7 +99,7 @@ impl Address {
             assert!(N < MAX_SEEDS, "number of seeds must be less than MAX_SEEDS");
         }
 
-        let mut hasher = sha2_const_stable::Sha256::new();
+        let mut hasher = Sha256::new();
         let mut i = 0;
 
         while i < seeds.len() {
@@ -133,11 +132,21 @@ mod tests {
     fn test_derive_address() {
         let program_id = Address::new_from_array([1u8; 32]);
         let seeds: &[&[u8]; 2] = &[b"seed1", b"seed2"];
-        let bump = Some(255u8);
+        let (address, bump) = Address::find_program_address(seeds, &program_id);
 
-        let derived_address = Address::derive_address(seeds, bump, &program_id);
-        let derived_address_const = Address::derive_address_const(seeds, bump, &program_id);
+        let derived_address = Address::derive_address(seeds, Some(bump), &program_id);
+        let derived_address_const = Address::derive_address_const(seeds, Some(bump), &program_id);
 
-        assert_eq!(derived_address, derived_address_const);
+        assert_eq!(address, derived_address);
+        assert_eq!(address, derived_address_const);
+
+        let extended_seeds: &[&[u8]; 3] = &[b"seed1", b"seed2", &[bump]];
+
+        let derived_address = Address::derive_address(extended_seeds, None, &program_id);
+        let derived_address_const =
+            Address::derive_address_const(extended_seeds, None, &program_id);
+
+        assert_eq!(address, derived_address);
+        assert_eq!(address, derived_address_const);
     }
 }
