@@ -211,6 +211,7 @@ jobs:
     permissions:
       contents: write
       id-token: write
+      attestations: write
     steps:
       - name: Git Checkout
         uses: actions/checkout@v4
@@ -259,6 +260,12 @@ jobs:
           fi
 
           ./scripts/publish-rust.sh "${{ inputs.package_path }}" $LEVEL "${{ inputs.dependent_version }}" $OPTIONS
+
+      - name: Generate SLSA provenance
+        if: github.event.inputs.dry_run != 'true'
+        uses: actions/attest-build-provenance@v3
+        with:
+          subject-path: target/package/*.crate
 
       - name: Generate a changelog
         if: github.event.inputs.create_release == 'true'
