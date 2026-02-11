@@ -10,10 +10,7 @@ use {
 };
 #[cfg(feature = "wincode")]
 use {
-    core::{
-        mem::MaybeUninit,
-        ptr::{addr_of_mut, copy_nonoverlapping},
-    },
+    core::{mem::MaybeUninit, ptr::copy_nonoverlapping},
     solana_message::v1::SIGNATURE_SIZE,
     solana_message::MESSAGE_VERSION_PREFIX,
     solana_signer::{signers::Signers, SignerError},
@@ -22,7 +19,7 @@ use {
         containers,
         io::{Reader, Writer},
         len::ShortU16,
-        ReadError, ReadResult, SchemaRead, SchemaWrite, WriteResult,
+        ReadError, ReadResult, SchemaRead, SchemaWrite, UninitBuilder, WriteResult,
     },
 };
 #[cfg(feature = "serde")]
@@ -63,10 +60,15 @@ impl TransactionVersion {
 /// An atomic transaction
 #[cfg_attr(feature = "frozen-abi", derive(solana_frozen_abi_macro::AbiExample))]
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
+#[cfg_attr(feature = "wincode", derive(UninitBuilder))]
 #[derive(Debug, PartialEq, Default, Eq, Clone)]
 pub struct VersionedTransaction {
     /// List of signatures
     #[cfg_attr(feature = "serde", serde(with = "short_vec"))]
+    #[cfg_attr(
+        feature = "wincode",
+        wincode(with = "containers::Vec<Signature, ShortU16>")
+    )]
     pub signatures: Vec<Signature>,
     /// Message to sign.
     pub message: VersionedMessage,
@@ -300,39 +302,34 @@ unsafe impl<'de, C: Config> SchemaRead<'de, C> for VersionedTransaction {
 
         use solana_message::v1::V1_PREFIX;
         let discriminator = reader.peek()?;
+        let mut builder = VersionedTransactionUninitBuilder::<C>::from_maybe_uninit_mut(dst);
 
         if discriminator & MESSAGE_VERSION_PREFIX == 0 {
             // Legacy or V0 transaction
 
-            let dst_ptr = dst.as_mut_ptr();
-
-            <containers::Vec<Signature, ShortU16> as SchemaRead<'de, C>>::read(
-                &mut reader,
-                unsafe {
-                    &mut *(addr_of_mut!((*dst_ptr).signatures))
-                        .cast::<MaybeUninit<Vec<Signature>>>()
-                },
-            )?;
-
-            <VersionedMessage as SchemaRead<'de, C>>::read(reader, unsafe {
-                &mut *(addr_of_mut!((*dst_ptr).message)).cast::<MaybeUninit<_>>()
-            })?;
+            builder.read_signatures(&mut reader)?;
+            builder.read_message(reader)?;
 
             // SAFETY: The transaction is fully initialized at this point since
             // both `signatures` and `message` have been read.
-            let transaction = unsafe { dst.assume_init_ref() };
+            let message = unsafe { builder.uninit_message_mut().assume_init_ref() };
 
             // validate that we got either a legacy or V0 message
             if !matches!(
-                transaction.message,
+                message,
                 VersionedMessage::Legacy(_) | VersionedMessage::V0(_)
             ) {
                 return Err(ReadError::Custom("invalid message version"));
             }
+
+            builder.finish();
         } else if *discriminator == V1_PREFIX {
             // V1 transaction
 
-            let message = <VersionedMessage as SchemaRead<'de, C>>::get(&mut reader)?;
+            builder.read_message(&mut reader)?;
+
+            // SAFETY: message is initialized by the above read.
+            let message = unsafe { builder.uninit_message_mut().assume_init_ref() };
 
             // validate that we got a V1 message
             if !matches!(message, VersionedMessage::V1(_)) {
@@ -361,10 +358,8 @@ unsafe impl<'de, C: Config> SchemaRead<'de, C> for VersionedTransaction {
                 reader.consume_unchecked(bytes_to_read);
             }
 
-            dst.write(Self {
-                message,
-                signatures,
-            });
+            builder.write_signatures(signatures);
+            builder.finish();
         } else {
             return Err(ReadError::Custom("invalid transaction discriminator"));
         }

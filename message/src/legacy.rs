@@ -16,7 +16,7 @@ use serde_derive::{Deserialize, Serialize};
 #[cfg(feature = "frozen-abi")]
 use solana_frozen_abi_macro::{frozen_abi, AbiExample};
 #[cfg(feature = "wincode")]
-use wincode::{containers, len::ShortU16, SchemaRead, SchemaWrite};
+use wincode::{containers, len::ShortU16, SchemaRead, SchemaWrite, UninitBuilder};
 use {
     crate::{
         compiled_instruction::CompiledInstruction, compiled_keys::CompiledKeys,
@@ -75,11 +75,7 @@ fn compile_instructions(ixs: &[Instruction], keys: &[Address]) -> Vec<CompiledIn
     derive(Deserialize, Serialize),
     serde(rename_all = "camelCase")
 )]
-#[cfg_attr(
-    feature = "wincode",
-    derive(SchemaWrite, SchemaRead),
-    wincode(struct_extensions)
-)]
+#[cfg_attr(feature = "wincode", derive(SchemaWrite, SchemaRead, UninitBuilder))]
 #[derive(Default, Debug, PartialEq, Eq, Clone)]
 pub struct Message {
     /// The message header, identifying signed and read-only `account_keys`.

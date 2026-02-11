@@ -4118,9 +4118,6 @@ name = "solana-short-vec"
 version = "3.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "de3bd991c2cc415291c86bb0b6b4d53e93d13bb40344e4c5a2884e0e4f5fa93f"
-dependencies = [
- "serde_core",
-]
 
 [[package]]
 name = "solana-shred-version"
@@ -5009,9 +5006,9 @@ dependencies = [
 
 [[package]]
 name = "wincode"
-version = "0.4.1"
+version = "0.4.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cd358c35ea3fbf8590e8b9d9e7fe6450701c520c8b58c320aea0b8b75f8d9866"
+checksum = "6d1068d2b3145b56f47cd84e5eb99d3371bf03605bb4ee1b1efb519ff23d92f7"
 dependencies = [
  "pastey",
  "proc-macro2",
@@ -5023,9 +5020,9 @@ dependencies = [
 
 [[package]]
 name = "wincode-derive"
-version = "0.4.0"
+version = "0.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6505f603ab2302ff300837c3c96e5b1c6e4b65a66b756e3eb07376c935ff1907"
+checksum = "0cfae870aaafeb47dd6eed6b48a945c3da75cc03ae6cbddc651bc3808526eadf"
 dependencies = [
  "darling 0.21.3",
  "proc-macro2",
