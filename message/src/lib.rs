@@ -49,7 +49,7 @@ use serde_derive::{Deserialize, Serialize};
 #[cfg(feature = "frozen-abi")]
 use solana_frozen_abi_macro::AbiExample;
 #[cfg(feature = "wincode")]
-use wincode::{SchemaRead, SchemaWrite};
+use wincode::{SchemaRead, SchemaWrite, UninitBuilder};
 use {solana_sdk_ids::bpf_loader_upgradeable, std::collections::HashSet};
 
 #[cfg(not(target_os = "solana"))]
@@ -116,11 +116,7 @@ pub const MESSAGE_HEADER_LENGTH: usize = 3;
     derive(Deserialize, Serialize),
     serde(rename_all = "camelCase")
 )]
-#[cfg_attr(
-    feature = "wincode",
-    derive(SchemaWrite, SchemaRead),
-    wincode(struct_extensions)
-)]
+#[cfg_attr(feature = "wincode", derive(SchemaWrite, SchemaRead, UninitBuilder))]
 #[derive(Default, Debug, PartialEq, Eq, Clone, Copy)]
 pub struct MessageHeader {
     /// The number of signatures required for this message to be considered
