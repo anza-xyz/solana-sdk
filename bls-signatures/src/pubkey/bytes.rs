@@ -1,5 +1,7 @@
 #[cfg(feature = "bytemuck")]
 use bytemuck::{Pod, PodInOption, Zeroable, ZeroableInOption};
+#[cfg(feature = "serde")]
+use wincode::{SchemaRead, SchemaWrite};
 use {
     base64::{prelude::BASE64_STANDARD, Engine},
     core::fmt,
