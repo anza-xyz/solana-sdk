@@ -213,6 +213,20 @@ jobs:
       id-token: write
       attestations: write
     steps:
+      - uses: actions/create-github-app-token@v2
+        id: app-token
+        with:
+          app-id: ${{ vars.APP_ID }}
+          private-key: ${{ secrets.PRIVATE_KEY }}
+
+      - name: Set git config
+        run: |
+          git config --global user.email "github-actions@github.com"
+          git config --global user.name "github-actions"
+          git config --global url."https://x-access-token:${GITHUB_TOKEN}@github.com/".insteadOf https://github.com/
+        env:
+          GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
+
       - name: Git Checkout
         uses: actions/checkout@v4
         with:
@@ -230,11 +244,6 @@ jobs:
         uses: taiki-e/install-action@v2
         with:
           tool: cargo-release
-
-      - name: Set Git Author
-        run: |
-          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git config --global user.name "github-actions[bot]"
 
       - name: Rebase (in case any changes landed after)
         run: git pull --rebase origin
@@ -283,3 +292,4 @@ jobs:
         with:
           tag: ${{ steps.publish.outputs.new_git_tag }}
           bodyFile: TEMP_CHANGELOG.md
+          token: ${{ steps.app-token.outputs.token }}
