@@ -26,6 +26,7 @@ parallel = ["dep:rayon"]
 serde = ["dep:cfg_eval", "dep:serde", "dep:serde_with"]
 solana-signer-derive = ["dep:solana-signer", "dep:solana-signature", "dep:subtle"]
 std = ["dep:serde_json"]
+wincode = ["dep:wincode"]
 
 [dependencies]
 base64 = { workspace = true }
@@ -42,6 +43,7 @@ solana-frozen-abi-macro = { workspace = true, optional = true, features = [
     "frozen-abi",
 ] }
 thiserror = { workspace = true }
+wincode = { workspace = true, optional = true }
 
 [target.'cfg(not(target_os = "solana"))'.dependencies]
 blst = { workspace = true }
