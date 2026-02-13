@@ -241,7 +241,7 @@ impl Instruction {
     /// ) -> Instruction {
     ///     let instr = MyInstruction { lamports };
     ///
-    ///     Instruction::new_with_wincode::<DefaultConfig>(
+    ///     Instruction::new_with_wincode(
     ///         *program_id,
     ///         &instr,
     ///         vec![
@@ -251,7 +251,7 @@ impl Instruction {
     ///    )
     /// }
     /// ```
-    pub fn new_with_wincode<C: wincode::config::ConfigCore, T: wincode::SchemaWrite<C, Src = T>>(
+    pub fn new_with_wincode<T: wincode::SchemaWrite<wincode::config::DefaultConfig, Src = T>>(
         program_id: Pubkey,
         data: &T,
         accounts: Vec<AccountMeta>,
