@@ -226,7 +226,7 @@ impl Instruction {
     /// ```
     /// # use solana_pubkey::Pubkey;
     /// # use solana_instruction::{AccountMeta, Instruction};
-    /// # use wincode::{SchemaRead, SchemaWrite};
+    /// # use wincode::{SchemaRead, SchemaWrite, config::DefaultConfig};
     /// #
     /// #[derive(SchemaRead, SchemaWrite)]
     /// pub struct MyInstruction {
@@ -241,7 +241,7 @@ impl Instruction {
     /// ) -> Instruction {
     ///     let instr = MyInstruction { lamports };
     ///
-    ///     Instruction::new_with_wincode(
+    ///     Instruction::new_with_wincode::<DefaultConfig>(
     ///         *program_id,
     ///         &instr,
     ///         vec![
@@ -251,7 +251,7 @@ impl Instruction {
     ///    )
     /// }
     /// ```
-    pub fn new_with_wincode<T: wincode::SchemaWrite<Src = T>>(
+    pub fn new_with_wincode<C: wincode::config::ConfigCore, T: wincode::SchemaWrite<C, Src = T>>(
         program_id: Pubkey,
         data: &T,
         accounts: Vec<AccountMeta>,
