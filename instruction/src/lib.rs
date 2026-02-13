@@ -251,7 +251,7 @@ impl Instruction {
     ///    )
     /// }
     /// ```
-    pub fn new_with_wincode<T: wincode::SchemaWrite<wincode::config::DefaultConfig, Src = T>>(
+    pub fn new_with_wincode<T: wincode::Serialize<Src = T>>(
         program_id: Pubkey,
         data: &T,
         accounts: Vec<AccountMeta>,
