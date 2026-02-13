@@ -226,9 +226,9 @@ impl Instruction {
     /// ```
     /// # use solana_pubkey::Pubkey;
     /// # use solana_instruction::{AccountMeta, Instruction};
-    /// # use serde::{Serialize, Deserialize};
+    /// # use wincode::{SchemaRead, SchemaWrite};
     /// #
-    /// #[derive(Serialize, Deserialize)]
+    /// #[derive(SchemaRead, SchemaWrite)]
     /// pub struct MyInstruction {
     ///     pub lamports: u64,
     /// }

@@ -26,7 +26,6 @@ wincode = ["dep:wincode", "wincode/alloc", "solana-pubkey/wincode"]
 
 [dependencies]
 bincode = { workspace = true, optional = true }
-wincode = { workspace = true, optional = true }
 borsh = { workspace = true, optional = true }
 serde = { workspace = true, optional = true }
 serde_derive = { workspace = true, optional = true }
@@ -34,6 +33,7 @@ solana-frozen-abi = { workspace = true, optional = true }
 solana-frozen-abi-macro = { workspace = true, optional = true }
 solana-instruction-error = { workspace = true, features = ["num-traits"] }
 solana-pubkey = { workspace = true, default-features = false }
+wincode = { workspace = true, optional = true }
 
 [target.'cfg(target_os = "solana")'.dependencies]
 solana-define-syscall = { workspace = true }

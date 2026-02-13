@@ -44,7 +44,7 @@ solana-instruction-error = { workspace = true }
 solana-pubkey = { workspace = true }
 solana-sdk-ids = { workspace = true }
 solana-sysvar = { workspace = true, features = ["bincode"], optional = true }
-wincode = { workspace = true, optional= true }
+wincode = { workspace = true, optional = true }
 
 [dev-dependencies]
 solana-account = { path = ".", features = ["dev-context-only-utils"] }
