@@ -22,7 +22,7 @@ frozen-abi = ["dep:solana-frozen-abi", "dep:solana-frozen-abi-macro", "serde", "
 serde = ["dep:serde", "dep:serde_derive", "solana-pubkey/serde"]
 std = ["serde?/std", "borsh?/std"]
 syscalls = ["std"]
-wincode = ["dep:wincode", "wincode/alloc", "solana-pubkey/wincode"]
+wincode = ["dep:wincode", "solana-pubkey/wincode"]
 
 [dependencies]
 bincode = { workspace = true, optional = true }
@@ -33,7 +33,7 @@ solana-frozen-abi = { workspace = true, optional = true }
 solana-frozen-abi-macro = { workspace = true, optional = true }
 solana-instruction-error = { workspace = true, features = ["num-traits"] }
 solana-pubkey = { workspace = true, default-features = false }
-wincode = { workspace = true, optional = true }
+wincode = { workspace = true, features = ["alloc"], optional = true }
 
 [target.'cfg(target_os = "solana")'.dependencies]
 solana-define-syscall = { workspace = true }
