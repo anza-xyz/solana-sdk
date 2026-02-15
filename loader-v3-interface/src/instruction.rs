@@ -97,10 +97,16 @@ pub enum UpgradeableLoaderInstruction {
     /// A program can be updated as long as the program's authority has not been
     /// set to `None`.
     ///
-    /// The Buffer account must contain sufficient lamports to fund the
-    /// ProgramData account to be rent-exempt, any additional lamports left over
-    /// will be transferred to the spill account, leaving the Buffer account
-    /// balance at zero.
+    /// After the `set_program_data_to_elf_length` feature is activated, the
+    /// ProgramData account is automatically resized to match the length of the
+    /// ELF being deployed:
+    ///
+    /// - If shrinking, surplus lamports are refunded to the spill account.
+    /// - If growing, the required rent must be pre-credited to the ProgramData
+    ///   account or the upgrade fails with `InsufficientFunds`.
+    ///
+    /// Buffer accounts are not debited or credited during upgrade. The 10 KiB
+    /// CPI account growth limit applies.
     ///
     /// # Account references
     ///   0. `[writable]` The ProgramData account.
