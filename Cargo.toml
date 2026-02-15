@@ -171,6 +171,7 @@ derivation-path = { version = "0.2.0", default-features = false }
 digest = "0.10.7"
 ed25519-dalek = "2.1.1"
 ed25519-dalek-bip32 = "0.3.0"
+ed25519-zebra = "4.0.3"
 ff = "0.13.1"
 five8 = "1.0.0"
 five8_const = "1.0.0"
