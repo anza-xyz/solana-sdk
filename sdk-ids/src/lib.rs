@@ -29,6 +29,13 @@ pub mod ed25519_program {
     solana_address::declare_id!("Ed25519SigVerify111111111111111111111111111");
 }
 
+/// Falcon-512 signature verification program (post-quantum).
+///
+/// Program ID is provisional and may change when SIMD proposal is finalized.
+pub mod falcon512_program {
+    solana_address::declare_id!("Fa1con512SigVerify11111111111111111111111111");
+}
+
 pub mod feature {
     solana_address::declare_id!("Feature111111111111111111111111111111111111");
 }

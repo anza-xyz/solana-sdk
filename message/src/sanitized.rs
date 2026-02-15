@@ -10,7 +10,7 @@ use {
     solana_hash::Hash,
     solana_instruction::{BorrowedAccountMeta, BorrowedInstruction},
     solana_sanitize::Sanitize,
-    solana_sdk_ids::{ed25519_program, secp256k1_program, secp256r1_program},
+    solana_sdk_ids::{ed25519_program, falcon512_program, secp256k1_program, secp256r1_program},
     solana_transaction_error::SanitizeMessageError,
     std::{borrow::Cow, collections::HashSet, convert::TryFrom},
 };
@@ -396,6 +396,13 @@ impl SanitizedMessage {
                             .num_secp256r1_instruction_signatures
                             .saturating_add(u64::from(*num_verifies));
                 }
+            } else if falcon512_program::check_id(program_id) {
+                if let Some(num_verifies) = instruction.data.first() {
+                    transaction_signature_details.num_falcon512_instruction_signatures =
+                        transaction_signature_details
+                            .num_falcon512_instruction_signatures
+                            .saturating_add(u64::from(*num_verifies));
+                }
             }
         }
 
@@ -411,6 +418,7 @@ pub struct TransactionSignatureDetails {
     num_secp256k1_instruction_signatures: u64,
     num_ed25519_instruction_signatures: u64,
     num_secp256r1_instruction_signatures: u64,
+    num_falcon512_instruction_signatures: u64,
 }
 
 impl TransactionSignatureDetails {
@@ -419,12 +427,14 @@ impl TransactionSignatureDetails {
         num_secp256k1_instruction_signatures: u64,
         num_ed25519_instruction_signatures: u64,
         num_secp256r1_instruction_signatures: u64,
+        num_falcon512_instruction_signatures: u64,
     ) -> Self {
         Self {
             num_transaction_signatures,
             num_secp256k1_instruction_signatures,
             num_ed25519_instruction_signatures,
             num_secp256r1_instruction_signatures,
+            num_falcon512_instruction_signatures,
         }
     }
 
@@ -434,6 +444,7 @@ impl TransactionSignatureDetails {
             .saturating_add(self.num_secp256k1_instruction_signatures)
             .saturating_add(self.num_ed25519_instruction_signatures)
             .saturating_add(self.num_secp256r1_instruction_signatures)
+            .saturating_add(self.num_falcon512_instruction_signatures)
     }
 
     /// return the number of transaction signatures
@@ -454,6 +465,11 @@ impl TransactionSignatureDetails {
     /// return the number of secp256r1 instruction signatures
     pub fn num_secp256r1_instruction_signatures(&self) -> u64 {
         self.num_secp256r1_instruction_signatures
+    }
+
+    /// return the number of falcon512 instruction signatures
+    pub fn num_falcon512_instruction_signatures(&self) -> u64 {
+        self.num_falcon512_instruction_signatures
     }
 }
 
@@ -681,6 +697,56 @@ mod tests {
         assert_eq!(2, signature_details.num_secp256k1_instruction_signatures);
         // expect 5 ed25519 instruction signatures from mock_ed25519_instr
         assert_eq!(5, signature_details.num_ed25519_instruction_signatures);
+    }
+
+    #[test]
+    fn test_get_signature_details_falcon512() {
+        let key0 = Address::new_unique();
+        let key1 = Address::new_unique();
+        let loader_key = Address::new_unique();
+
+        let loader_instr = CompiledInstruction::new(2, &(), vec![0, 1]);
+        // Mock falcon512 instruction with 3 signatures (first byte is num_signatures)
+        let mock_falcon512_instr = CompiledInstruction::new(3, &[3u8; 10], vec![]);
+
+        let message = SanitizedMessage::try_from_legacy_message(
+            legacy::Message::new_with_compiled_instructions(
+                2,
+                1,
+                2,
+                vec![key0, key1, loader_key, falcon512_program::id()],
+                Hash::default(),
+                vec![
+                    loader_instr,
+                    mock_falcon512_instr.clone(),
+                    mock_falcon512_instr,
+                ],
+            ),
+            &HashSet::new(),
+        )
+        .unwrap();
+
+        let signature_details = message.get_signature_details();
+        // expect 2 required transaction signatures
+        assert_eq!(2, signature_details.num_transaction_signatures());
+        // expect 6 falcon512 instruction signatures (3 from each mock_falcon512_instr)
+        assert_eq!(6, signature_details.num_falcon512_instruction_signatures());
+        // expect 0 for other precompile signatures
+        assert_eq!(0, signature_details.num_ed25519_instruction_signatures());
+        assert_eq!(0, signature_details.num_secp256k1_instruction_signatures());
+        assert_eq!(0, signature_details.num_secp256r1_instruction_signatures());
+        // total should include all signatures
+        assert_eq!(8, signature_details.total_signatures());
+    }
+
+    #[test]
+    fn test_falcon512_check_id() {
+        // check_id returns true for falcon512 program ID
+        assert!(falcon512_program::check_id(&falcon512_program::id()));
+        // check_id returns false for other program IDs
+        assert!(!falcon512_program::check_id(&ed25519_program::id()));
+        assert!(!falcon512_program::check_id(&secp256k1_program::id()));
+        assert!(!falcon512_program::check_id(&Address::new_unique()));
     }
 
     #[test]
