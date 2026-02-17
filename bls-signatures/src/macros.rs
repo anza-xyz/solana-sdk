@@ -464,3 +464,82 @@ macro_rules! impl_add_to_accumulator {
         }
     };
 }
+
+macro_rules! impl_unchecked_conversions {
+    (
+        $unchecked_type:ident,     // e.g. SignatureAffineUnchecked
+        $validated_type:ident,     // e.g. SignatureAffine
+        $projective_type:ident,    // e.g. SignatureProjective
+        $compressed_type:ident,    // e.g. SignatureCompressed
+        $uncompressed_type:ident,  // e.g. Signature
+        $internal_type:ty          // e.g. G2Affine
+    ) => {
+        // Conversion from Compressed Bytes (Unchecked)
+        #[cfg(not(target_os = "solana"))]
+        impl TryFrom<$compressed_type> for $unchecked_type {
+            type Error = crate::error::BlsError;
+            fn try_from(bytes: $compressed_type) -> Result<Self, Self::Error> {
+                let point = Option::from(<$internal_type>::from_compressed_unchecked(&bytes.0))
+                    .ok_or(crate::error::BlsError::PointConversion)?;
+                Ok(Self(point))
+            }
+        }
+
+        #[cfg(not(target_os = "solana"))]
+        impl TryFrom<&$compressed_type> for $unchecked_type {
+            type Error = crate::error::BlsError;
+            fn try_from(bytes: &$compressed_type) -> Result<Self, Self::Error> {
+                Self::try_from(*bytes)
+            }
+        }
+
+        // Conversion from Uncompressed Bytes (Unchecked)
+        #[cfg(not(target_os = "solana"))]
+        impl TryFrom<$uncompressed_type> for $unchecked_type {
+            type Error = crate::error::BlsError;
+            fn try_from(bytes: $uncompressed_type) -> Result<Self, Self::Error> {
+                let point = Option::from(<$internal_type>::from_uncompressed_unchecked(&bytes.0))
+                    .ok_or(crate::error::BlsError::PointConversion)?;
+                Ok(Self(point))
+            }
+        }
+
+        #[cfg(not(target_os = "solana"))]
+        impl TryFrom<&$uncompressed_type> for $unchecked_type {
+            type Error = crate::error::BlsError;
+            fn try_from(bytes: &$uncompressed_type) -> Result<Self, Self::Error> {
+                Self::try_from(*bytes)
+            }
+        }
+
+        // Conversion from Validated Affine (Always safe)
+        #[cfg(not(target_os = "solana"))]
+        impl From<$validated_type> for $unchecked_type {
+            fn from(item: $validated_type) -> Self {
+                Self(item.0)
+            }
+        }
+
+        #[cfg(not(target_os = "solana"))]
+        impl From<&$validated_type> for $unchecked_type {
+            fn from(item: &$validated_type) -> Self {
+                Self(item.0)
+            }
+        }
+
+        // Conversion from Projective
+        #[cfg(not(target_os = "solana"))]
+        impl From<$projective_type> for $unchecked_type {
+            fn from(item: $projective_type) -> Self {
+                Self(<$internal_type>::from(item.0))
+            }
+        }
+
+        #[cfg(not(target_os = "solana"))]
+        impl From<&$projective_type> for $unchecked_type {
+            fn from(item: &$projective_type) -> Self {
+                Self(<$internal_type>::from(item.0))
+            }
+        }
+    };
+}

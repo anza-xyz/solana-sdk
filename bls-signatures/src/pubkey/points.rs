@@ -12,7 +12,7 @@ use {
         secret_key::SecretKey,
         signature::{AsSignatureAffine, SignatureAffine},
     },
-    blstrs::{Bls12, G1Affine, G1Projective, G2Prepared, Gt},
+    blstrs::{Bls12, G1Affine, G1Projective, G2Affine, G2Prepared, Gt, Scalar},
     group::Group,
     pairing::{MillerLoopResult, MultiMillerLoop},
 };
@@ -78,6 +78,36 @@ impl PubkeyProjective {
             return Err(BlsError::EmptyAggregation);
         }
         Ok(aggregate)
+    }
+
+    #[allow(clippy::arithmetic_side_effects)]
+    pub fn aggregate_with_scalars<'a, P: AddToPubkeyProjective + ?Sized + 'a>(
+        pubkeys: impl ExactSizeIterator<Item = &'a P>,
+        scalars: impl ExactSizeIterator<Item = &'a Scalar>,
+    ) -> Result<PubkeyProjective, BlsError> {
+        if pubkeys.len() != scalars.len() {
+            return Err(BlsError::InputLengthMismatch);
+        }
+
+        if pubkeys.len() == 0 {
+            return Err(BlsError::EmptyAggregation);
+        }
+
+        let mut points = alloc::vec::Vec::with_capacity(pubkeys.len());
+        let mut scalar_values = alloc::vec::Vec::with_capacity(scalars.len());
+
+        for (pubkey, scalar) in pubkeys.zip(scalars) {
+            let mut point = PubkeyProjective::identity();
+            pubkey.add_to_accumulator(&mut point)?;
+
+            points.push(point.0);
+            scalar_values.push(*scalar);
+        }
+
+        Ok(PubkeyProjective(G1Projective::multi_exp(
+            &points,
+            &scalar_values,
+        )))
     }
 
     /// Aggregate a list of public keys into an existing aggregate
@@ -294,4 +324,48 @@ impl_add_to_accumulator!(
     PubkeyProjective,
     PubkeyCompressed,
     convert
+);
+
+/// A BLS public key in an affine point representation that is guaranteed to
+/// be a point on the curve, but it is *not* guaranteed to be in the prime-order
+/// subgroup G1.
+///
+/// This type allows for efficient "unchecked" deserialization. It is designed
+/// to be used with aggregation functions where the expensive subgroup check
+/// can be performed on the aggregate instead of each individual public key.
+#[cfg(not(target_os = "solana"))]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[repr(transparent)]
+pub struct PubkeyAffineUnchecked(pub(crate) G1Affine);
+
+#[cfg(not(target_os = "solana"))]
+impl PubkeyAffineUnchecked {
+    /// Performs the subgroup check (coset check) on this point.
+    ///
+    /// This verifies that the point is on the curve and in the correct q-order
+    /// subgroup G1. Returns a validated `PubkeyAffine` on success.
+    pub fn verify_subgroup(&self) -> Result<PubkeyAffine, BlsError> {
+        if bool::from(self.0.is_torsion_free()) {
+            Ok(PubkeyAffine(self.0))
+        } else {
+            Err(BlsError::VerificationFailed)
+        }
+    }
+}
+
+impl_unchecked_conversions!(
+    PubkeyAffineUnchecked,
+    PubkeyAffine,
+    PubkeyProjective,
+    PubkeyCompressed,
+    Pubkey,
+    G1Affine
+);
+
+#[cfg(not(target_os = "solana"))]
+impl_add_to_accumulator!(
+    AddToPubkeyProjective,
+    PubkeyProjective,
+    PubkeyAffineUnchecked,
+    affine
 );

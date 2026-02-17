@@ -9,7 +9,7 @@ pub use bytes::{
 #[cfg(not(target_os = "solana"))]
 pub use points::{
     AddToSignatureProjective, AsSignatureAffine, AsSignatureProjective, SignatureAffine,
-    SignatureProjective, VerifiableSignature,
+    SignatureAffineUnchecked, SignatureProjective, VerifiableSignature,
 };
 
 #[cfg(test)]
@@ -499,5 +499,34 @@ mod tests {
             expected, optimized,
             "Mixed addition did not match projective addition for signatures"
         );
+    }
+
+    #[test]
+    fn test_signature_unchecked_sanity() {
+        let keypair = Keypair::new();
+        let message = b"unchecked_sanity_test";
+        let sig_proj = keypair.sign(message);
+
+        let sig_compressed: SignatureCompressed = sig_proj.into();
+        let sig_uncompressed: Signature = sig_proj.into();
+
+        let unchecked_comp = SignatureAffineUnchecked::try_from(&sig_compressed)
+            .expect("Should parse valid compressed bytes");
+
+        let checked_comp = unchecked_comp
+            .verify_subgroup()
+            .expect("Valid signature should pass subgroup check");
+        assert_eq!(SignatureAffine::from(sig_proj), checked_comp);
+
+        let unchecked_uncomp = SignatureAffineUnchecked::try_from(&sig_uncompressed)
+            .expect("Should parse valid uncompressed bytes");
+        let checked_uncomp = unchecked_uncomp
+            .verify_subgroup()
+            .expect("Valid signature should pass subgroup check");
+        assert_eq!(checked_comp, checked_uncomp);
+
+        let mut acc = SignatureProjective::identity();
+        unchecked_comp.add_to_accumulator(&mut acc).unwrap();
+        assert_eq!(acc, sig_proj);
     }
 }
