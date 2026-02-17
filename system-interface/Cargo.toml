@@ -31,6 +31,7 @@ frozen-abi = [
 ]
 serde = ["dep:serde", "dep:serde_derive", "serde/alloc", "solana-address/serde"]
 std = []
+wincode = ["dep:wincode", "alloc", "solana-address/wincode", "solana-instruction/wincode"]
 
 [dependencies]
 num-traits = { workspace = true }
@@ -42,6 +43,7 @@ solana-frozen-abi-macro = { workspace = true, features = ["frozen-abi"], optiona
 solana-instruction = { workspace = true, features = ["bincode", "std"], optional = true }
 solana-msg = { workspace = true }
 solana-program-error = { workspace = true }
+wincode = { workspace = true, optional = true }
 
 [dev-dependencies]
 anyhow = { workspace = true }
