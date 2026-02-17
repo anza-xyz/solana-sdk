@@ -12,7 +12,7 @@ use {
         secret_key::SecretKey,
         signature::{AsSignatureAffine, SignatureAffine},
     },
-    blstrs::{Bls12, G1Affine, G1Projective, G2Affine, G2Prepared, Gt, Scalar},
+    blstrs::{Bls12, G1Affine, G1Projective, G2Prepared, Gt, Scalar},
     group::Group,
     pairing::{MillerLoopResult, MultiMillerLoop},
 };
