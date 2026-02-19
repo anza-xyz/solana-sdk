@@ -32,6 +32,9 @@ impl SecretKey {
 
     /// Derive a `BlsSecretKey` from a seed (input key material)
     pub fn derive(ikm: &[u8]) -> Result<Self, BlsError> {
+        if ikm.len() < 32 {
+            return Err(BlsError::KeyDerivation);
+        }
         let mut scalar = blst_scalar::default();
         unsafe {
             blst_keygen(
