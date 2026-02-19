@@ -16,7 +16,7 @@ pub use points::{
 /// Domain separation tag used when hashing public keys to G2 in the proof of
 /// possession signing and verification functions. See the
 /// [standard](https://datatracker.ietf.org/doc/html/draft-irtf-cfrg-bls-signature-05#section-4.2.3).
-pub const POP_DST: &[u8] = b"BLS_SIG_BLS12381G2_XMD:SHA-256_SSWU_RO_POP_";
+pub const POP_DST: &[u8] = b"BLS_POP_BLS12381G2_XMD:SHA-256_SSWU_RO_POP_";
 
 #[cfg(test)]
 mod tests {
