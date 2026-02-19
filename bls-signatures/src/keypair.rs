@@ -160,7 +160,7 @@ mod tests {
 
     #[test]
     fn test_keygen_derive() {
-        let ikm = b"test_ikm";
+        let ikm = b"test_ikm_that_is_at_least_32_bytes_long";
         let secret = SecretKey::derive(ikm).unwrap();
         let public: PubkeyAffine = PubkeyProjective::from_secret(&secret).into();
         let keypair = Keypair::derive(ikm).unwrap();
@@ -190,5 +190,23 @@ mod tests {
             .unwrap();
         let read_keypair = Keypair::read_json_file(&temp_keypair_file).unwrap();
         assert_eq!(original_keypair, read_keypair);
+    }
+
+    #[test]
+    fn test_keygen_derive_short_ikm() {
+        let short_ikm = b"test_ikm"; // 8 bytes
+        assert_eq!(
+            SecretKey::derive(short_ikm).unwrap_err(),
+            BlsError::KeyDerivation
+        );
+        assert_eq!(
+            Keypair::derive(short_ikm).unwrap_err(),
+            BlsError::KeyDerivation
+        );
+        let exactly_31_bytes = b"0123456789012345678901234567890";
+        assert_eq!(
+            SecretKey::derive(exactly_31_bytes).unwrap_err(),
+            BlsError::KeyDerivation
+        );
     }
 }
