@@ -94,7 +94,11 @@ impl TryFrom<&[u8]> for SecretKey {
         }
         // unwrap safe due to the length check above
         let scalar: Option<Scalar> = Scalar::from_bytes_le(bytes.try_into().unwrap()).into();
-        scalar.ok_or(BlsError::FieldDecode).map(Self)
+        let scalar = scalar.ok_or(BlsError::FieldDecode)?;
+        if bool::from(scalar.is_zero()) {
+            return Err(BlsError::FieldDecode);
+        }
+        Ok(Self(scalar))
     }
 }
 

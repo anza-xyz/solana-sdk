@@ -16,7 +16,7 @@ use {
         signature::bytes::{Signature, SignatureCompressed},
     },
     blstrs::{Bls12, G2Affine, G2Prepared, G2Projective, Gt},
-    group::Group,
+    group::{prime::PrimeCurveAffine, Group},
     pairing::{MillerLoopResult, MultiMillerLoop},
 };
 #[cfg(all(feature = "parallel", not(target_os = "solana")))]
@@ -142,6 +142,9 @@ impl SignatureProjective {
         let public_keys_len = public_keys.len();
         for pubkey in public_keys {
             let g1_affine = pubkey.try_as_affine()?;
+            if bool::from(g1_affine.0.is_identity()) {
+                return Err(BlsError::VerificationFailed);
+            }
             pubkeys_affine.push(g1_affine.0);
         }
 
@@ -284,6 +287,9 @@ impl SignatureProjective {
                         .par_iter()
                         .map(|pk| {
                             let affine = pk.try_as_affine()?;
+                            if bool::from(&affine.0.is_identity()) {
+                                return Err(BlsError::VerificationFailed);
+                            }
                             Ok::<G1Affine, BlsError>(affine.0)
                         })
                         .collect()

@@ -184,4 +184,33 @@ mod tests {
         let result = pubkey_bytes.verify_proof_of_possession(&bad_pop_bytes, None);
         assert!(result.is_err());
     }
+
+    #[test]
+    fn test_identity_pop_behavior() {
+        use blstrs::G2Projective;
+        use group::Group;
+
+        let keypair = Keypair::new();
+
+        // Deserializing an identity PoP should succeed
+        let id_pop_proj = ProofOfPossessionProjective(G2Projective::identity());
+        let id_pop_compressed: ProofOfPossessionCompressed = (&id_pop_proj).into();
+        let id_pop_recovered: Result<ProofOfPossessionProjective, _> =
+            ProofOfPossessionProjective::try_from(&id_pop_compressed);
+        assert!(
+            id_pop_recovered.is_ok(),
+            "Identity PoPs must be allowed to deserialize"
+        );
+        assert_eq!(id_pop_proj, id_pop_recovered.unwrap());
+
+        // PoP Verification with an identity Pubkey must fail
+        let id_pubkey_proj = PubkeyProjective::identity();
+        let valid_pop = keypair.proof_of_possession(None);
+
+        let verify_result = id_pubkey_proj.verify_proof_of_possession(&valid_pop, None);
+        assert!(
+            verify_result.is_err(),
+            "PoP Verification with identity public key must fail"
+        );
+    }
 }

@@ -22,8 +22,8 @@ mod tests {
             error::BlsError,
             keypair::Keypair,
             pubkey::{
-                AsPubkeyProjective, Pubkey, PubkeyAffine, PubkeyCompressed, PubkeyProjective,
-                VerifiablePubkey,
+                AsPubkeyAffine, AsPubkeyProjective, Pubkey, PubkeyAffine, PubkeyCompressed,
+                PubkeyProjective, VerifiablePubkey,
             },
         },
         core::{iter::empty, str::FromStr},
@@ -499,5 +499,91 @@ mod tests {
             expected, optimized,
             "Mixed addition did not match projective addition for signatures"
         );
+    }
+
+    #[test]
+    fn test_identity_points_behavior() {
+        let keypair = Keypair::new();
+        let test_message = b"identity test message";
+
+        // Deserializing an identity Signature should succeed
+        let id_sig_proj = SignatureProjective::identity();
+        let id_sig_compressed: SignatureCompressed = (&id_sig_proj).into();
+        let id_sig_recovered: Result<SignatureProjective, _> =
+            SignatureProjective::try_from(&id_sig_compressed);
+        assert!(
+            id_sig_recovered.is_ok(),
+            "Identity signatures must be allowed to deserialize"
+        );
+        assert_eq!(id_sig_proj, id_sig_recovered.unwrap());
+
+        // Verifying with an identity Pubkey must fail
+        let id_pubkey_proj = PubkeyProjective::identity();
+        let valid_sig = keypair.sign(test_message);
+
+        let verify_result = id_pubkey_proj.verify_signature(&valid_sig, test_message);
+        assert!(
+            verify_result.is_err(),
+            "Verification with identity public key must fail"
+        );
+
+        // Aggregate public keys evaluating to identity must fail
+        assert!(id_pubkey_proj
+            .verify_signature(&id_sig_proj, test_message)
+            .is_err());
+
+        // Batch verification with an identity public key must fail
+        let pubkey_affine: PubkeyAffine = keypair.public;
+        let id_pubkey_affine: PubkeyAffine = id_pubkey_proj.try_as_affine().unwrap();
+
+        let dyn_pubkeys: std::vec::Vec<&dyn AsPubkeyProjective> =
+            std::vec![&pubkey_affine, &id_pubkey_affine];
+        let dyn_signatures: std::vec::Vec<&dyn AsSignatureProjective> =
+            std::vec![&valid_sig, &valid_sig];
+
+        assert!(
+            SignatureProjective::verify_aggregate(
+                dyn_pubkeys.into_iter(),
+                dyn_signatures.into_iter(),
+                test_message
+            )
+            .is_err(),
+            "Aggregate verification containing an identity public key must fail"
+        );
+
+        let pubkeys = [pubkey_affine, id_pubkey_affine];
+        let signatures = [Signature::from(&valid_sig), Signature::from(&valid_sig)];
+        let messages: std::vec::Vec<&[u8]> = std::vec![b"msg1", b"msg2"];
+
+        assert!(
+            SignatureProjective::verify_distinct(
+                pubkeys.iter(),
+                signatures.iter(),
+                messages.into_iter()
+            )
+            .is_err(),
+            "Batch distinct verification containing an identity public key must fail"
+        );
+    }
+
+    #[test]
+    fn test_aggregate_pubkeys_sum_to_identity() {
+        let keypair = Keypair::new();
+        let message = b"hello";
+
+        // An honest key and its exact opposite (negation)
+        let pk1 = PubkeyProjective::from(&keypair.public);
+        let mut pk2 = pk1;
+        pk2.0 = -pk2.0;
+
+        let id_sig = SignatureProjective::identity();
+
+        // Verify aggregate should definitively fail because the aggregated pubkey evaluates to identity
+        assert!(SignatureProjective::verify_aggregate(
+            [&pk1, &pk2].into_iter(),
+            [&id_sig].into_iter(),
+            message
+        )
+        .is_err());
     }
 }

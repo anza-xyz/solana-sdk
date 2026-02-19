@@ -21,5 +21,6 @@ impl_bls_conversions!(
     AsSignatureProjective,
     AsSignatureAffine,
     BLS_SIGNATURE_COMPRESSED_SIZE,
-    BLS_SIGNATURE_AFFINE_SIZE
+    BLS_SIGNATURE_AFFINE_SIZE,
+    false
 );

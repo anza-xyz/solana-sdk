@@ -13,7 +13,7 @@ use {
         signature::{AsSignatureAffine, SignatureAffine},
     },
     blstrs::{Bls12, G1Affine, G1Projective, G2Prepared, Gt},
-    group::Group,
+    group::{prime::PrimeCurveAffine, Group},
     pairing::{MillerLoopResult, MultiMillerLoop},
 };
 
@@ -52,6 +52,10 @@ impl PubkeyProjective {
     }
 
     /// Aggregate a list of public keys into an existing aggregate
+    ///
+    /// Warning: This function performs mathematical point addition. It does not
+    /// perform public key validation (such as identity point checks) or Proof of
+    /// Possession (PoP) verification.
     #[allow(clippy::arithmetic_side_effects)]
     pub fn aggregate_with<'a, P: AddToPubkeyProjective + ?Sized + 'a>(
         &mut self,
@@ -64,6 +68,10 @@ impl PubkeyProjective {
     }
 
     /// Aggregate a list of public keys
+    ///
+    /// Warning: This function performs mathematical point addition. It does not
+    /// perform public key validation (such as identity point checks) or Proof of
+    /// Possession (PoP) verification.
     #[allow(clippy::arithmetic_side_effects)]
     pub fn aggregate<'a, P: AddToPubkeyProjective + ?Sized + 'a>(
         pubkeys: impl Iterator<Item = &'a P>,
@@ -81,6 +89,10 @@ impl PubkeyProjective {
     }
 
     /// Aggregate a list of public keys into an existing aggregate
+    ///
+    /// Warning: This function performs mathematical point addition. It does not
+    /// perform public key validation (such as identity point checks) or Proof of
+    /// Possession (PoP) verification.
     #[allow(clippy::arithmetic_side_effects)]
     #[cfg(feature = "parallel")]
     pub fn par_aggregate_with<'a, P: AddToPubkeyProjective + Sync + 'a>(
@@ -93,6 +105,10 @@ impl PubkeyProjective {
     }
 
     /// Aggregate a list of public keys
+    ///
+    /// Warning: This function performs mathematical point addition. It does not
+    /// perform public key validation (such as identity point checks) or Proof of
+    /// Possession (PoP) verification.
     #[allow(clippy::arithmetic_side_effects)]
     #[cfg(feature = "parallel")]
     pub fn par_aggregate<'a, P: AddToPubkeyProjective + Sync + 'a>(
@@ -200,6 +216,10 @@ impl PubkeyAffine {
         signature: &SignatureAffine,
         hashed_message: &HashedMessage,
     ) -> bool {
+        if bool::from(self.0.is_identity()) {
+            return false;
+        }
+
         // The verification equation is e(pubkey, H(m)) = e(g1, signature).
         // This can be rewritten as e(pubkey, H(m)) * e(-g1, signature) = 1, which
         // allows for a more efficient verification using a multi-miller loop.
@@ -227,6 +247,10 @@ impl PubkeyAffine {
         proof: &ProofOfPossessionAffine,
         hashed_payload: &HashedPoPPayload,
     ) -> bool {
+        if bool::from(self.0.is_identity()) {
+            return false;
+        }
+
         // The verification equation is e(pubkey, H(pubkey)) == e(g1, proof).
         // This is rewritten to e(pubkey, H(pubkey)) * e(-g1, proof) = 1 for batching.
         let hashed_pubkey = hashed_payload.0;

@@ -37,7 +37,8 @@ macro_rules! impl_bls_conversions {
         $as_projective_trait:ident, // e.g. AsPubkeyProjective
         $as_affine_trait:ident,     // e.g. AsPubkeyAffine
         $compressed_size:ident,     // e.g. BLS_PUBLIC_KEY_COMPRESSED_SIZE
-        $uncompressed_size:ident    // e.g. BLS_PUBLIC_KEY_AFFINE_SIZE
+        $uncompressed_size:ident,    // e.g. BLS_PUBLIC_KEY_AFFINE_SIZE
+        $reject_identity:expr // e.g. true for public keys, false for signatures
     ) => {
         // Math Conversions (Projective <-> Affine)
         impl From<&$projective> for $affine {
@@ -122,6 +123,11 @@ macro_rules! impl_bls_conversions {
                 let maybe_point: Option<$blstrs_affine> =
                     <$blstrs_affine>::from_uncompressed(&bytes.0).into();
                 let point = maybe_point.ok_or(crate::error::BlsError::PointConversion)?;
+                if $reject_identity
+                    && bool::from(group::prime::PrimeCurveAffine::is_identity(&point))
+                {
+                    return Err(crate::error::BlsError::PointConversion);
+                }
                 Ok(Self(point))
             }
         }
@@ -139,6 +145,11 @@ macro_rules! impl_bls_conversions {
                 let maybe_point: Option<$blstrs_affine> =
                     <$blstrs_affine>::from_compressed(&bytes.0).into();
                 let point = maybe_point.ok_or(crate::error::BlsError::PointConversion)?;
+                if $reject_identity
+                    && bool::from(group::prime::PrimeCurveAffine::is_identity(&point))
+                {
+                    return Err(crate::error::BlsError::PointConversion);
+                }
                 Ok(Self(point))
             }
         }
