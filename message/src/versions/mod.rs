@@ -391,11 +391,14 @@ impl<'de> serde::Deserialize<'de> for VersionedMessage {
                 Legacy { message: LegacyMessage },
                 #[serde(rename = "0")]
                 V0 { message: v0::Message },
+                #[serde(rename = "1")]
+                V1 { message: v1::Message },
             }
 
             match HR::deserialize(deserializer)? {
                 HR::Legacy { message } => Ok(VersionedMessage::Legacy(message)),
                 HR::V0 { message } => Ok(VersionedMessage::V0(message)),
+                HR::V1 { message } => Ok(VersionedMessage::V1(message)),
             }
         } else {
             deserializer.deserialize_tuple(2, MessageVisitor)
@@ -521,7 +524,10 @@ unsafe impl<'de, C: Config> SchemaRead<'de, C> for VersionedMessage {
 mod tests {
     use {
         super::*,
-        crate::{v0::MessageAddressTableLookup, v1::V1_PREFIX},
+        crate::{
+            v0::MessageAddressTableLookup,
+            v1::{TransactionConfig, V1_PREFIX},
+        },
         proptest::{
             collection::vec,
             option::of,
@@ -558,6 +564,12 @@ mod tests {
         let message_string = serde_json::to_string(&message).unwrap();
         let string = serde_json::to_string(&VersionedMessage::V0(message)).unwrap();
         let expected_string = format!(r#"{{"version":"0","message":{message_string}}}"#);
+        assert_eq!(string, expected_string);
+
+        let message = v1::Message::default();
+        let message_string = serde_json::to_string(&message).unwrap();
+        let string = serde_json::to_string(&VersionedMessage::V1(message)).unwrap();
+        let expected_string = format!(r#"{{"version":"1","message":{message_string}}}"#);
         assert_eq!(string, expected_string);
     }
 
@@ -615,7 +627,7 @@ mod tests {
     }
 
     #[test]
-    fn test_versioned_message_serialization() {
+    fn test_v0_message_serialization() {
         let message = v0::Message {
             header: MessageHeader {
                 num_required_signatures: 1,
@@ -660,6 +672,55 @@ mod tests {
         {
             let string = serde_json::to_string(&message).unwrap();
             let message_from_string: v0::Message = serde_json::from_str(&string).unwrap();
+            assert_eq!(message, message_from_string);
+
+            let wrapped_string = serde_json::to_string(&wrapped_message).unwrap();
+            let wrapped_message_from_string: VersionedMessage =
+                serde_json::from_str(&wrapped_string).unwrap();
+            assert_eq!(wrapped_message, wrapped_message_from_string);
+        }
+    }
+
+    #[test]
+    fn test_v1_message_serialization() {
+        let message = v1::Message {
+            header: MessageHeader {
+                num_required_signatures: 1,
+                num_readonly_signed_accounts: 0,
+                num_readonly_unsigned_accounts: 0,
+            },
+            config: TransactionConfig {
+                priority_fee: Some(1000),
+                compute_unit_limit: Some(200_000),
+                loaded_accounts_data_size_limit: Some(10_000),
+                heap_size: Some(65536),
+            },
+            lifetime_specifier: Hash::new_unique(),
+            account_keys: vec![Address::new_unique()],
+            instructions: vec![CompiledInstruction {
+                program_id_index: 1,
+                accounts: vec![0, 2, 3, 4],
+                data: vec![],
+            }],
+        };
+        let wrapped_message = VersionedMessage::V1(message.clone());
+
+        // bincode
+        {
+            let bytes = bincode::serialize(&message).unwrap();
+            let message_from_bytes: v1::Message = bincode::deserialize(&bytes).unwrap();
+            assert_eq!(message, message_from_bytes);
+
+            let wrapped_bytes = bincode::serialize(&wrapped_message).unwrap();
+            let wrapped_message_from_bytes: VersionedMessage =
+                bincode::deserialize(&wrapped_bytes).unwrap();
+            assert_eq!(wrapped_message, wrapped_message_from_bytes);
+        }
+
+        // serde_json
+        {
+            let string = serde_json::to_string(&message).unwrap();
+            let message_from_string: v1::Message = serde_json::from_str(&string).unwrap();
             assert_eq!(message, message_from_string);
 
             let wrapped_string = serde_json::to_string(&wrapped_message).unwrap();
