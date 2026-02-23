@@ -4,8 +4,12 @@ use borsh::{BorshDeserialize, BorshSchema, BorshSerialize};
 use bytemuck_derive::{Pod, Zeroable};
 #[cfg(feature = "serde-traits")]
 use serde::{Deserialize, Serialize};
+#[cfg(feature = "wincode")]
+use wincode::{SchemaRead, SchemaWrite};
 
 /// The standard `bool` is not a `Pod`, define a replacement that is
+#[cfg_attr(feature = "wincode", derive(SchemaRead, SchemaWrite))]
+#[cfg_attr(feature = "wincode", wincode(assert_zero_copy))]
 #[cfg_attr(feature = "serde-traits", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "serde-traits", serde(from = "bool", into = "bool"))]
 #[derive(Clone, Copy, Debug, Default, PartialEq, Pod, Zeroable)]
@@ -68,6 +72,8 @@ macro_rules! impl_int_conversion {
 }
 
 /// `u16` type that can be used in `Pod`s
+#[cfg_attr(feature = "wincode", derive(SchemaRead, SchemaWrite))]
+#[cfg_attr(feature = "wincode", wincode(assert_zero_copy))]
 #[cfg_attr(feature = "serde-traits", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "serde-traits", serde(from = "u16", into = "u16"))]
 #[derive(Clone, Copy, Debug, Default, PartialEq, Pod, Zeroable)]
@@ -76,6 +82,8 @@ pub struct PodU16(pub [u8; 2]);
 impl_int_conversion!(PodU16, u16);
 
 /// `i16` type that can be used in Pods
+#[cfg_attr(feature = "wincode", derive(SchemaRead, SchemaWrite))]
+#[cfg_attr(feature = "wincode", wincode(assert_zero_copy))]
 #[cfg_attr(feature = "serde-traits", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "serde-traits", serde(from = "i16", into = "i16"))]
 #[derive(Clone, Copy, Debug, Default, PartialEq, Pod, Zeroable)]
@@ -84,6 +92,8 @@ pub struct PodI16(pub [u8; 2]);
 impl_int_conversion!(PodI16, i16);
 
 /// `u32` type that can be used in `Pod`s
+#[cfg_attr(feature = "wincode", derive(SchemaRead, SchemaWrite))]
+#[cfg_attr(feature = "wincode", wincode(assert_zero_copy))]
 #[cfg_attr(
     feature = "borsh",
     derive(BorshDeserialize, BorshSerialize, BorshSchema)
@@ -96,6 +106,8 @@ pub struct PodU32(pub [u8; 4]);
 impl_int_conversion!(PodU32, u32);
 
 /// `u64` type that can be used in Pods
+#[cfg_attr(feature = "wincode", derive(SchemaRead, SchemaWrite))]
+#[cfg_attr(feature = "wincode", wincode(assert_zero_copy))]
 #[cfg_attr(
     feature = "borsh",
     derive(BorshDeserialize, BorshSerialize, BorshSchema)
@@ -108,6 +120,8 @@ pub struct PodU64(pub [u8; 8]);
 impl_int_conversion!(PodU64, u64);
 
 /// `i64` type that can be used in Pods
+#[cfg_attr(feature = "wincode", derive(SchemaRead, SchemaWrite))]
+#[cfg_attr(feature = "wincode", wincode(assert_zero_copy))]
 #[cfg_attr(feature = "serde-traits", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "serde-traits", serde(from = "i64", into = "i64"))]
 #[derive(Clone, Copy, Debug, Default, PartialEq, Pod, Zeroable)]
@@ -116,6 +130,8 @@ pub struct PodI64([u8; 8]);
 impl_int_conversion!(PodI64, i64);
 
 /// `u128` type that can be used in Pods
+#[cfg_attr(feature = "wincode", derive(SchemaRead, SchemaWrite))]
+#[cfg_attr(feature = "wincode", wincode(assert_zero_copy))]
 #[cfg_attr(
     feature = "borsh",
     derive(BorshDeserialize, BorshSerialize, BorshSchema)
@@ -265,5 +281,31 @@ mod tests {
 
         let deserialized = serde_json::from_str::<PodU128>(&serialized).unwrap();
         assert_eq!(pod_u128, deserialized);
+    }
+
+    #[cfg(feature = "wincode")]
+    mod wincode_tests {
+        use {super::*, test_case::test_case};
+
+        #[test_case(PodBool::from_bool(true))]
+        #[test_case(PodBool::from_bool(false))]
+        #[test_case(PodU16::from_primitive(u16::MAX))]
+        #[test_case(PodI16::from_primitive(i16::MIN))]
+        #[test_case(PodU32::from_primitive(u32::MAX))]
+        #[test_case(PodU64::from_primitive(u64::MAX))]
+        #[test_case(PodI64::from_primitive(i64::MIN))]
+        #[test_case(PodU128::from_primitive(u128::MAX))]
+        fn wincode_roundtrip<
+            T: PartialEq
+                + std::fmt::Debug
+                + for<'de> wincode::SchemaRead<'de, wincode::config::DefaultConfig, Dst = T>
+                + wincode::SchemaWrite<wincode::config::DefaultConfig, Src = T>,
+        >(
+            pod: T,
+        ) {
+            let bytes = wincode::serialize(&pod).unwrap();
+            let deserialized: T = wincode::deserialize(&bytes).unwrap();
+            assert_eq!(pod, deserialized);
+        }
     }
 }
