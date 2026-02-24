@@ -4,7 +4,7 @@ use {bytemuck::Pod, solana_program_error::ProgramError};
 
 /// On-chain size of a `Pod` type
 pub const fn pod_get_packed_len<T: Pod>() -> usize {
-    std::mem::size_of::<T>()
+    core::mem::size_of::<T>()
 }
 
 /// Convert a `Pod` into a slice of bytes (zero copy)

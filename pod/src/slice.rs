@@ -95,7 +95,7 @@ mod tests {
         test_pubkey: [u8; 32],
     }
 
-    const LENGTH_SIZE: usize = std::mem::size_of::<PodU32>();
+    const LENGTH_SIZE: usize = core::mem::size_of::<PodU32>();
 
     #[test]
     fn test_pod_slice() {
@@ -128,7 +128,7 @@ mod tests {
     fn test_pod_slice_buffer_too_large() {
         // Length is 1. We pass one test struct with 6 trailing bytes to
         // trigger BufferTooLarge.
-        let data_len = LENGTH_SIZE + std::mem::size_of::<TestStruct>() + 6;
+        let data_len = LENGTH_SIZE + core::mem::size_of::<TestStruct>() + 6;
         let mut pod_slice_bytes = vec![1; data_len];
         pod_slice_bytes[0..4].copy_from_slice(&[1, 0, 0, 0]);
         let err = PodSlice::<TestStruct>::unpack(&pod_slice_bytes)

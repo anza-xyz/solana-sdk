@@ -1,8 +1,8 @@
 use {
     crate::{list::ListView, pod_length::PodLength},
     bytemuck::Pod,
+    core::ops::Deref,
     solana_program_error::ProgramError,
-    std::ops::Deref,
 };
 
 /// A trait to abstract the shared, read-only behavior

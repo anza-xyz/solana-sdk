@@ -3,7 +3,7 @@
 use {
     crate::{list::list_trait::List, pod_length::PodLength, primitives::PodU32},
     bytemuck::Pod,
-    std::ops::Deref,
+    core::ops::Deref,
 };
 
 #[derive(Debug)]
@@ -41,7 +41,7 @@ mod tests {
             primitives::{PodU32, PodU64},
         },
         bytemuck_derive::{Pod as DerivePod, Zeroable},
-        std::mem::size_of,
+        core::mem::size_of,
     };
 
     #[repr(C, align(16))]

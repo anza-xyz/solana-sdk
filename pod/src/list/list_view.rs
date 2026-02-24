@@ -11,12 +11,12 @@ use {
         primitives::PodU32,
     },
     bytemuck::Pod,
-    solana_program_error::ProgramError,
-    std::{
+    core::{
         marker::PhantomData,
         mem::{align_of, size_of},
         ops::Range,
     },
+    solana_program_error::ProgramError,
 };
 
 /// An API for interpreting a raw buffer (`&[u8]`) as a variable-length collection of Pod elements.
