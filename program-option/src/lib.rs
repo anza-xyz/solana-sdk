@@ -4,8 +4,9 @@
 //! This implementation mostly matches `std::option` except iterators since the iteration
 //! trait requires returning `std::option::Option`
 #![cfg_attr(docsrs, feature(doc_cfg))]
+#![no_std]
 
-use std::{
+use core::{
     convert, mem,
     ops::{Deref, DerefMut},
 };
