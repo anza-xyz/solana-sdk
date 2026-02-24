@@ -431,6 +431,21 @@ impl<
     }
 }
 
+#[cfg(not(target_os = "solana"))]
+impl<K, V, S, P> AbiExample for imbl::GenericHashMap<K, V, S, P>
+where
+    K: Clone + Eq + std::hash::Hash + AbiExample,
+    V: Clone + AbiExample,
+    S: Clone + std::hash::BuildHasher + Default,
+    P: imbl::shared_ptr::SharedPointerKind,
+{
+    fn example() -> Self {
+        let mut map = Self::default();
+        map.insert(K::example(), V::example());
+        map
+    }
+}
+
 impl<T: std::cmp::Ord + AbiExample, S: AbiExample> AbiExample for BTreeMap<T, S> {
     fn example() -> Self {
         println!("AbiExample for (BTreeMap<T, S>): {}", type_name::<Self>());
