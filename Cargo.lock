@@ -3525,6 +3525,7 @@ dependencies = [
  "ed25519-dalek",
  "ed25519-dalek-bip32",
  "five8",
+ "five8_core",
  "rand 0.9.2",
  "serde_json",
  "solana-address",

@@ -26,6 +26,7 @@ seed-derivable = [
 ed25519-dalek = { workspace = true, features = ["rand_core"] }
 ed25519-dalek-bip32 = { workspace = true, optional = true }
 five8 = { workspace = true }
+five8_core = { workspace = true } # needed to force five8 to use the newest version with `core::error::Error` support
 rand = { workspace = true }
 solana-address = { workspace = true, features = ["decode"] }
 solana-derivation-path = { workspace = true, optional = true }
