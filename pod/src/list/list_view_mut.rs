@@ -5,8 +5,8 @@ use {
         error::PodSliceError, list::list_trait::List, pod_length::PodLength, primitives::PodU32,
     },
     bytemuck::Pod,
+    core::ops::{Deref, DerefMut},
     solana_program_error::ProgramError,
-    std::ops::{Deref, DerefMut},
 };
 
 #[derive(Debug)]

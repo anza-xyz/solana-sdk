@@ -1,7 +1,7 @@
 //! Error types
 use {
+    core::num::TryFromIntError,
     solana_program_error::{ProgramError, ToStr},
-    std::num::TryFromIntError,
 };
 
 /// Errors that may be returned by the spl-pod library.

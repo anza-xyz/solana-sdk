@@ -297,7 +297,7 @@ mod tests {
         #[test_case(PodU128::from_primitive(u128::MAX))]
         fn wincode_roundtrip<
             T: PartialEq
-                + std::fmt::Debug
+                + core::fmt::Debug
                 + for<'de> wincode::SchemaRead<'de, wincode::config::DefaultConfig, Dst = T>
                 + wincode::SchemaWrite<wincode::config::DefaultConfig, Src = T>,
         >(

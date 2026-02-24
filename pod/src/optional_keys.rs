@@ -10,9 +10,9 @@ use {
 };
 #[cfg(feature = "serde-traits")]
 use {
+    core::{convert::TryFrom, fmt, str::FromStr},
     serde::de::{Error, Unexpected, Visitor},
     serde::{Deserialize, Deserializer, Serialize, Serializer},
-    std::{convert::TryFrom, fmt, str::FromStr},
 };
 
 /// A Pubkey that encodes `None` as all `0`, meant to be usable as a `Pod` type,
@@ -293,7 +293,7 @@ mod tests {
     // `solana-zk-sdk` 2.1.
     fn elgamal_pubkey_from_bytes(bytes: &[u8]) -> PodElGamalPubkey {
         let string = BASE64_STANDARD.encode(bytes);
-        std::str::FromStr::from_str(&string).unwrap()
+        core::str::FromStr::from_str(&string).unwrap()
     }
 
     #[test]
