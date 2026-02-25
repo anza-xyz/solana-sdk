@@ -7,7 +7,7 @@ use {
     solana_program_error::ProgramError,
     solana_program_option::COption,
 };
-#[cfg(feature = "serde-traits")]
+#[cfg(feature = "serde")]
 use {
     core::{convert::TryFrom, fmt, str::FromStr},
     serde::de::{Error, Unexpected, Visitor},
@@ -72,7 +72,7 @@ impl From<OptionalNonZeroPubkey> for COption<Address> {
     }
 }
 
-#[cfg(feature = "serde-traits")]
+#[cfg(feature = "serde")]
 impl Serialize for OptionalNonZeroPubkey {
     fn serialize<S>(&self, s: S) -> Result<S::Ok, S::Error>
     where
@@ -86,11 +86,11 @@ impl Serialize for OptionalNonZeroPubkey {
     }
 }
 
-#[cfg(feature = "serde-traits")]
+#[cfg(feature = "serde")]
 /// Visitor for deserializing `OptionalNonZeroPubkey`
 struct OptionalNonZeroPubkeyVisitor;
 
-#[cfg(feature = "serde-traits")]
+#[cfg(feature = "serde")]
 impl Visitor<'_> for OptionalNonZeroPubkeyVisitor {
     type Value = OptionalNonZeroPubkey;
 
@@ -117,7 +117,7 @@ impl Visitor<'_> for OptionalNonZeroPubkeyVisitor {
     }
 }
 
-#[cfg(feature = "serde-traits")]
+#[cfg(feature = "serde")]
 impl<'de> Deserialize<'de> for OptionalNonZeroPubkey {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
@@ -159,7 +159,7 @@ mod tests {
         );
     }
 
-    #[cfg(feature = "serde-traits")]
+    #[cfg(feature = "serde")]
     #[test]
     fn test_pod_non_zero_option_serde_some() {
         let optional_non_zero_pubkey_some =
@@ -175,7 +175,7 @@ mod tests {
         assert_eq!(optional_non_zero_pubkey_some, deserialized_some);
     }
 
-    #[cfg(feature = "serde-traits")]
+    #[cfg(feature = "serde")]
     #[test]
     fn test_pod_non_zero_option_serde_none() {
         let optional_non_zero_pubkey_none =
