@@ -8,7 +8,7 @@ license = "Apache-2.0"
 edition = "2021"
 
 [features]
-serde-traits = ["dep:serde", "solana-address/decode"]
+serde = ["dep:serde", "solana-address/decode"]
 borsh = ["dep:borsh", "solana-address/borsh"]
 wincode = ["dep:wincode"]
 

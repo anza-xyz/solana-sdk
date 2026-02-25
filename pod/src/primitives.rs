@@ -2,7 +2,7 @@
 #[cfg(feature = "borsh")]
 use borsh::{BorshDeserialize, BorshSchema, BorshSerialize};
 use bytemuck_derive::{Pod, Zeroable};
-#[cfg(feature = "serde-traits")]
+#[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 #[cfg(feature = "wincode")]
 use wincode::{SchemaRead, SchemaWrite};
@@ -10,8 +10,8 @@ use wincode::{SchemaRead, SchemaWrite};
 /// The standard `bool` is not a `Pod`, define a replacement that is
 #[cfg_attr(feature = "wincode", derive(SchemaRead, SchemaWrite))]
 #[cfg_attr(feature = "wincode", wincode(assert_zero_copy))]
-#[cfg_attr(feature = "serde-traits", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "serde-traits", serde(from = "bool", into = "bool"))]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "serde", serde(from = "bool", into = "bool"))]
 #[derive(Clone, Copy, Debug, Default, PartialEq, Pod, Zeroable)]
 #[repr(transparent)]
 pub struct PodBool(pub u8);
@@ -74,8 +74,8 @@ macro_rules! impl_int_conversion {
 /// `u16` type that can be used in `Pod`s
 #[cfg_attr(feature = "wincode", derive(SchemaRead, SchemaWrite))]
 #[cfg_attr(feature = "wincode", wincode(assert_zero_copy))]
-#[cfg_attr(feature = "serde-traits", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "serde-traits", serde(from = "u16", into = "u16"))]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "serde", serde(from = "u16", into = "u16"))]
 #[derive(Clone, Copy, Debug, Default, PartialEq, Pod, Zeroable)]
 #[repr(transparent)]
 pub struct PodU16(pub [u8; 2]);
@@ -84,8 +84,8 @@ impl_int_conversion!(PodU16, u16);
 /// `i16` type that can be used in Pods
 #[cfg_attr(feature = "wincode", derive(SchemaRead, SchemaWrite))]
 #[cfg_attr(feature = "wincode", wincode(assert_zero_copy))]
-#[cfg_attr(feature = "serde-traits", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "serde-traits", serde(from = "i16", into = "i16"))]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "serde", serde(from = "i16", into = "i16"))]
 #[derive(Clone, Copy, Debug, Default, PartialEq, Pod, Zeroable)]
 #[repr(transparent)]
 pub struct PodI16(pub [u8; 2]);
@@ -98,8 +98,8 @@ impl_int_conversion!(PodI16, i16);
     feature = "borsh",
     derive(BorshDeserialize, BorshSerialize, BorshSchema)
 )]
-#[cfg_attr(feature = "serde-traits", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "serde-traits", serde(from = "u32", into = "u32"))]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "serde", serde(from = "u32", into = "u32"))]
 #[derive(Clone, Copy, Debug, Default, PartialEq, Pod, Zeroable)]
 #[repr(transparent)]
 pub struct PodU32(pub [u8; 4]);
@@ -112,8 +112,8 @@ impl_int_conversion!(PodU32, u32);
     feature = "borsh",
     derive(BorshDeserialize, BorshSerialize, BorshSchema)
 )]
-#[cfg_attr(feature = "serde-traits", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "serde-traits", serde(from = "u64", into = "u64"))]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "serde", serde(from = "u64", into = "u64"))]
 #[derive(Clone, Copy, Debug, Default, PartialEq, Pod, Zeroable)]
 #[repr(transparent)]
 pub struct PodU64(pub [u8; 8]);
@@ -122,8 +122,8 @@ impl_int_conversion!(PodU64, u64);
 /// `i64` type that can be used in Pods
 #[cfg_attr(feature = "wincode", derive(SchemaRead, SchemaWrite))]
 #[cfg_attr(feature = "wincode", wincode(assert_zero_copy))]
-#[cfg_attr(feature = "serde-traits", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "serde-traits", serde(from = "i64", into = "i64"))]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "serde", serde(from = "i64", into = "i64"))]
 #[derive(Clone, Copy, Debug, Default, PartialEq, Pod, Zeroable)]
 #[repr(transparent)]
 pub struct PodI64([u8; 8]);
@@ -136,8 +136,8 @@ impl_int_conversion!(PodI64, i64);
     feature = "borsh",
     derive(BorshDeserialize, BorshSerialize, BorshSchema)
 )]
-#[cfg_attr(feature = "serde-traits", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "serde-traits", serde(from = "u128", into = "u128"))]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "serde", serde(from = "u128", into = "u128"))]
 #[derive(Clone, Copy, Debug, Default, PartialEq, Pod, Zeroable)]
 #[repr(transparent)]
 pub struct PodU128(pub [u8; 16]);
@@ -157,7 +157,7 @@ mod tests {
         }
     }
 
-    #[cfg(feature = "serde-traits")]
+    #[cfg(feature = "serde")]
     #[test]
     fn test_pod_bool_serde() {
         let pod_false: PodBool = false.into();
@@ -180,7 +180,7 @@ mod tests {
         assert_eq!(1u16, u16::from(*pod_from_bytes::<PodU16>(&[1, 0]).unwrap()));
     }
 
-    #[cfg(feature = "serde-traits")]
+    #[cfg(feature = "serde")]
     #[test]
     fn test_pod_u16_serde() {
         let pod_u16: PodU16 = u16::MAX.into();
@@ -201,7 +201,7 @@ mod tests {
         );
     }
 
-    #[cfg(feature = "serde-traits")]
+    #[cfg(feature = "serde")]
     #[test]
     fn test_pod_i16_serde() {
         let pod_i16: PodI16 = i16::MAX.into();
@@ -224,7 +224,7 @@ mod tests {
         );
     }
 
-    #[cfg(feature = "serde-traits")]
+    #[cfg(feature = "serde")]
     #[test]
     fn test_pod_u64_serde() {
         let pod_u64: PodU64 = u64::MAX.into();
@@ -247,7 +247,7 @@ mod tests {
         );
     }
 
-    #[cfg(feature = "serde-traits")]
+    #[cfg(feature = "serde")]
     #[test]
     fn test_pod_i64_serde() {
         let pod_i64: PodI64 = i64::MAX.into();
@@ -271,7 +271,7 @@ mod tests {
         );
     }
 
-    #[cfg(feature = "serde-traits")]
+    #[cfg(feature = "serde")]
     #[test]
     fn test_pod_u128_serde() {
         let pod_u128: PodU128 = u128::MAX.into();
