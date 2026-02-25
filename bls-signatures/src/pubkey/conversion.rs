@@ -20,5 +20,6 @@ impl_bls_conversions!(
     AsPubkeyProjective,
     AsPubkeyAffine,
     BLS_PUBLIC_KEY_COMPRESSED_SIZE,
-    BLS_PUBLIC_KEY_AFFINE_SIZE
+    BLS_PUBLIC_KEY_AFFINE_SIZE,
+    true
 );

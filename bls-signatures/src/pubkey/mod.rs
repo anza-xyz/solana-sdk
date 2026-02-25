@@ -308,4 +308,22 @@ mod tests {
             "Mixed addition did not match projective addition for pubkeys"
         );
     }
+
+    #[test]
+    fn test_identity_pubkey_deserialization_fails() {
+        let id_pk_proj = PubkeyProjective::identity();
+
+        // Assert compressed byte conversion fails
+        let id_pk_compressed: PubkeyCompressed = (&id_pk_proj).into();
+        let recovered = PubkeyProjective::try_from(&id_pk_compressed);
+        assert_eq!(recovered.unwrap_err(), BlsError::PointConversion);
+
+        // Assert uncompressed byte conversion fails
+        let id_pk_uncompressed: Pubkey = (&id_pk_proj).into();
+        let recovered_uncompressed = PubkeyProjective::try_from(&id_pk_uncompressed);
+        assert_eq!(
+            recovered_uncompressed.unwrap_err(),
+            BlsError::PointConversion
+        );
+    }
 }
