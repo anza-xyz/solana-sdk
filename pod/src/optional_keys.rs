@@ -1,11 +1,11 @@
-//! Optional pubkeys that can be used a `Pod`s
+//! Optional addresses that can be used a `Pod`s
 #[cfg(feature = "borsh")]
 use borsh::{BorshDeserialize, BorshSchema, BorshSerialize};
 use {
     bytemuck_derive::{Pod, Zeroable},
+    solana_address::Address,
     solana_program_error::ProgramError,
     solana_program_option::COption,
-    solana_pubkey::Pubkey,
     solana_zk_sdk::encryption::pod::elgamal::PodElGamalPubkey,
 };
 #[cfg(feature = "serde-traits")]
@@ -23,14 +23,14 @@ use {
 )]
 #[derive(Clone, Copy, Debug, Default, PartialEq, Pod, Zeroable)]
 #[repr(transparent)]
-pub struct OptionalNonZeroPubkey(pub Pubkey);
-impl TryFrom<Option<Pubkey>> for OptionalNonZeroPubkey {
+pub struct OptionalNonZeroPubkey(pub Address);
+impl TryFrom<Option<Address>> for OptionalNonZeroPubkey {
     type Error = ProgramError;
-    fn try_from(p: Option<Pubkey>) -> Result<Self, Self::Error> {
+    fn try_from(p: Option<Address>) -> Result<Self, Self::Error> {
         match p {
-            None => Ok(Self(Pubkey::default())),
+            None => Ok(Self(Address::default())),
             Some(pubkey) => {
-                if pubkey == Pubkey::default() {
+                if pubkey == Address::default() {
                     Err(ProgramError::InvalidArgument)
                 } else {
                     Ok(Self(pubkey))
@@ -39,13 +39,13 @@ impl TryFrom<Option<Pubkey>> for OptionalNonZeroPubkey {
         }
     }
 }
-impl TryFrom<COption<Pubkey>> for OptionalNonZeroPubkey {
+impl TryFrom<COption<Address>> for OptionalNonZeroPubkey {
     type Error = ProgramError;
-    fn try_from(p: COption<Pubkey>) -> Result<Self, Self::Error> {
+    fn try_from(p: COption<Address>) -> Result<Self, Self::Error> {
         match p {
-            COption::None => Ok(Self(Pubkey::default())),
+            COption::None => Ok(Self(Address::default())),
             COption::Some(pubkey) => {
-                if pubkey == Pubkey::default() {
+                if pubkey == Address::default() {
                     Err(ProgramError::InvalidArgument)
                 } else {
                     Ok(Self(pubkey))
@@ -54,18 +54,18 @@ impl TryFrom<COption<Pubkey>> for OptionalNonZeroPubkey {
         }
     }
 }
-impl From<OptionalNonZeroPubkey> for Option<Pubkey> {
+impl From<OptionalNonZeroPubkey> for Option<Address> {
     fn from(p: OptionalNonZeroPubkey) -> Self {
-        if p.0 == Pubkey::default() {
+        if p.0 == Address::default() {
             None
         } else {
             Some(p.0)
         }
     }
 }
-impl From<OptionalNonZeroPubkey> for COption<Pubkey> {
+impl From<OptionalNonZeroPubkey> for COption<Address> {
     fn from(p: OptionalNonZeroPubkey) -> Self {
-        if p.0 == Pubkey::default() {
+        if p.0 == Address::default() {
             COption::None
         } else {
             COption::Some(p.0)
@@ -79,7 +79,7 @@ impl Serialize for OptionalNonZeroPubkey {
     where
         S: Serializer,
     {
-        if self.0 == Pubkey::default() {
+        if self.0 == Address::default() {
             s.serialize_none()
         } else {
             s.serialize_some(&self.0.to_string())
@@ -103,7 +103,7 @@ impl Visitor<'_> for OptionalNonZeroPubkeyVisitor {
     where
         E: Error,
     {
-        let pkey = Pubkey::from_str(v)
+        let pkey = Address::from_str(v)
             .map_err(|_| Error::invalid_value(Unexpected::Str(v), &"value string"))?;
 
         OptionalNonZeroPubkey::try_from(Some(pkey))
@@ -222,21 +222,21 @@ mod tests {
         super::*,
         crate::bytemuck::pod_from_bytes,
         base64::{prelude::BASE64_STANDARD, Engine},
-        solana_pubkey::PUBKEY_BYTES,
+        solana_address::ADDRESS_BYTES,
     };
 
     #[test]
     fn test_pod_non_zero_option() {
         assert_eq!(
-            Some(Pubkey::new_from_array([1; PUBKEY_BYTES])),
-            Option::<Pubkey>::from(
-                *pod_from_bytes::<OptionalNonZeroPubkey>(&[1; PUBKEY_BYTES]).unwrap()
+            Some(Address::new_from_array([1; ADDRESS_BYTES])),
+            Option::<Address>::from(
+                *pod_from_bytes::<OptionalNonZeroPubkey>(&[1; ADDRESS_BYTES]).unwrap()
             )
         );
         assert_eq!(
             None,
-            Option::<Pubkey>::from(
-                *pod_from_bytes::<OptionalNonZeroPubkey>(&[0; PUBKEY_BYTES]).unwrap()
+            Option::<Address>::from(
+                *pod_from_bytes::<OptionalNonZeroPubkey>(&[0; ADDRESS_BYTES]).unwrap()
             )
         );
         assert_eq!(
@@ -257,7 +257,7 @@ mod tests {
     #[test]
     fn test_pod_non_zero_option_serde_some() {
         let optional_non_zero_pubkey_some =
-            OptionalNonZeroPubkey(Pubkey::new_from_array([1; PUBKEY_BYTES]));
+            OptionalNonZeroPubkey(Address::new_from_array([1; ADDRESS_BYTES]));
         let serialized_some = serde_json::to_string(&optional_non_zero_pubkey_some).unwrap();
         assert_eq!(
             &serialized_some,
@@ -273,7 +273,7 @@ mod tests {
     #[test]
     fn test_pod_non_zero_option_serde_none() {
         let optional_non_zero_pubkey_none =
-            OptionalNonZeroPubkey(Pubkey::new_from_array([0; PUBKEY_BYTES]));
+            OptionalNonZeroPubkey(Address::new_from_array([0; ADDRESS_BYTES]));
         let serialized_none = serde_json::to_string(&optional_non_zero_pubkey_none).unwrap();
         assert_eq!(&serialized_none, "null");
 

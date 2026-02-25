@@ -8,9 +8,9 @@
 
 use {
     bytemuck::{Pod, Zeroable},
+    solana_address::{Address, ADDRESS_BYTES},
     solana_program_error::ProgramError,
     solana_program_option::COption,
-    solana_pubkey::{Pubkey, PUBKEY_BYTES},
 };
 
 /// Trait for types that can be `None`.
@@ -121,34 +121,34 @@ impl<T: Nullable> TryFrom<COption<T>> for PodOption<T> {
     }
 }
 
-/// Implementation of `Nullable` for `Pubkey`.
-impl Nullable for Pubkey {
-    const NONE: Self = Pubkey::new_from_array([0u8; PUBKEY_BYTES]);
+/// Implementation of `Nullable` for `Address`.
+impl Nullable for Address {
+    const NONE: Self = Address::new_from_array([0u8; ADDRESS_BYTES]);
 }
 
 #[cfg(test)]
 mod tests {
     use {super::*, crate::bytemuck::pod_slice_from_bytes};
-    const ID: Pubkey = Pubkey::from_str_const("TestSysvar111111111111111111111111111111111");
+    const ID: Address = Address::from_str_const("TestSysvar111111111111111111111111111111111");
 
     #[test]
-    fn test_pod_option_pubkey() {
-        let some_pubkey = PodOption::from(ID);
-        assert_eq!(some_pubkey.get(), Some(ID));
+    fn test_pod_option_address() {
+        let some_address = PodOption::from(ID);
+        assert_eq!(some_address.get(), Some(ID));
 
-        let none_pubkey = PodOption::from(Pubkey::default());
-        assert_eq!(none_pubkey.get(), None);
+        let none_address = PodOption::from(Address::default());
+        assert_eq!(none_address.get(), None);
 
         let mut data = Vec::with_capacity(64);
         data.extend_from_slice(ID.as_ref());
         data.extend_from_slice(&[0u8; 32]);
 
-        let values = pod_slice_from_bytes::<PodOption<Pubkey>>(&data).unwrap();
+        let values = pod_slice_from_bytes::<PodOption<Address>>(&data).unwrap();
         assert_eq!(values[0], PodOption::from(ID));
-        assert_eq!(values[1], PodOption::from(Pubkey::default()));
+        assert_eq!(values[1], PodOption::from(Address::default()));
 
         let option_pubkey = Some(ID);
-        let pod_option_pubkey: PodOption<Pubkey> = option_pubkey.try_into().unwrap();
+        let pod_option_pubkey: PodOption<Address> = option_pubkey.try_into().unwrap();
         assert_eq!(pod_option_pubkey, PodOption::from(ID));
         assert_eq!(
             pod_option_pubkey,
@@ -156,7 +156,7 @@ mod tests {
         );
 
         let coption_pubkey = COption::Some(ID);
-        let pod_option_pubkey: PodOption<Pubkey> = coption_pubkey.try_into().unwrap();
+        let pod_option_pubkey: PodOption<Address> = coption_pubkey.try_into().unwrap();
         assert_eq!(pod_option_pubkey, PodOption::from(ID));
         assert_eq!(
             pod_option_pubkey,
@@ -172,17 +172,17 @@ mod tests {
         let none_pubkey = None;
         assert_eq!(
             PodOption::try_from(none_pubkey).unwrap(),
-            PodOption::from(Pubkey::NONE)
+            PodOption::from(Address::NONE)
         );
 
-        let invalid_option = Some(Pubkey::NONE);
+        let invalid_option = Some(Address::NONE);
         let err = PodOption::try_from(invalid_option).unwrap_err();
         assert_eq!(err, ProgramError::InvalidArgument);
     }
 
     #[test]
     fn test_default() {
-        let def = PodOption::<Pubkey>::default();
+        let def = PodOption::<Address>::default();
         assert_eq!(def, None.try_into().unwrap());
     }
 }
