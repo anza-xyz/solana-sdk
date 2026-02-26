@@ -3856,7 +3856,7 @@ dependencies = [
 
 [[package]]
 name = "solana-program-option"
-version = "3.0.0"
+version = "3.0.1"
 
 [[package]]
 name = "solana-program-pack"
