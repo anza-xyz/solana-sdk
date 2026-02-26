@@ -261,7 +261,7 @@ mod tests {
     };
 
     #[test]
-    fn test_vote_state_v4_size_of() {
+    fn test_size_of() {
         let vote_state = VoteStateV4::get_max_sized_vote_state();
         let vote_state = VoteStateVersions::new_v4(vote_state);
         let size = serialized_size(&vote_state).unwrap();
@@ -277,7 +277,7 @@ mod tests {
     }
 
     #[test]
-    fn test_vote_serialize_v4() {
+    fn test_vote_serialize() {
         // Use two different pubkeys to demonstrate that v4 ignores the
         // `vote_pubkey` parameter.
         let vote_pubkey_for_deserialize = Pubkey::new_unique();
@@ -301,7 +301,7 @@ mod tests {
     }
 
     #[test]
-    fn test_vote_deserialize_into_v4() {
+    fn test_vote_deserialize_into() {
         let vote_pubkey = Pubkey::new_unique();
 
         // base case
@@ -337,7 +337,7 @@ mod tests {
     }
 
     #[test]
-    fn test_vote_deserialize_into_error_v4() {
+    fn test_vote_deserialize_into_error() {
         let vote_pubkey = Pubkey::new_unique();
 
         let target_vote_state = VoteStateV4::new_rand_for_tests(Pubkey::new_unique(), 42);
@@ -353,7 +353,7 @@ mod tests {
     }
 
     #[test]
-    fn test_vote_deserialize_into_uninit_v4() {
+    fn test_vote_deserialize_into_uninit() {
         let vote_pubkey = Pubkey::new_unique();
 
         // base case
@@ -396,7 +396,7 @@ mod tests {
     }
 
     #[test]
-    fn test_vote_deserialize_into_uninit_nopanic_v4() {
+    fn test_vote_deserialize_into_uninit_nopanic() {
         let vote_pubkey = Pubkey::new_unique();
 
         // base case
@@ -439,7 +439,7 @@ mod tests {
     }
 
     #[test]
-    fn test_vote_deserialize_into_uninit_ill_sized_v4() {
+    fn test_vote_deserialize_into_uninit_ill_sized() {
         let vote_pubkey = Pubkey::new_unique();
 
         // provide 4x the minimum struct size in bytes to ensure we typically touch every field
@@ -484,7 +484,7 @@ mod tests {
     }
 
     #[test]
-    fn test_vote_state_v4_bls_pubkey_compressed() {
+    fn test_bls_pubkey_compressed() {
         let vote_pubkey = Pubkey::new_unique();
 
         let run_test = |start, expected| {
