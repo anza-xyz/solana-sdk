@@ -170,13 +170,10 @@ impl Rent {
     ///
     /// # Returns
     ///
-    /// The minimum balance in lamports for rent exemption.
-    ///
-    /// # Errors
-    ///
-    /// Returns `ProgramError::InvalidArgument` if `data_len` exceeds the maximum
-    /// permitted data length or if the `lamports_per_byte` is too large based on
-    /// the `exemption_threshold`, which would cause an overflow.
+    /// * `Some(u64)` - The minimum balance in lamports for rent exemption, if all checks pass.
+    /// * `None` - If `data_len` exceeds the maximum permitted data length, or if the
+    ///   `lamports_per_byte` is too large based on the `exemption_threshold`, which
+    ///   would cause an overflow.
     #[inline(always)]
     pub fn try_minimum_balance(&self, data_len: usize) -> Option<u64> {
         if data_len as u64 > MAX_PERMITTED_DATA_LENGTH {
