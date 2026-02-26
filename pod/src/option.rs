@@ -6,8 +6,9 @@
 //! [`Option<NonZeroU64>`](https://doc.rust-lang.org/std/num/type.NonZeroU64.html)
 //! and provide the same memory layout optimization.
 
+#[cfg(feature = "bytemuck")]
+use bytemuck::{Pod, Zeroable};
 use {
-    bytemuck::{Pod, Zeroable},
     solana_address::{Address, ADDRESS_BYTES},
     solana_program_error::ProgramError,
     solana_program_option::COption,
@@ -17,7 +18,7 @@ use {
 ///
 /// This trait is used to indicate that a type can be `None` according to a
 /// specific value.
-pub trait Nullable: PartialEq + Pod + Sized {
+pub trait Nullable: PartialEq + Sized {
     /// Value that represents `None` for the type.
     const NONE: Self;
 
@@ -77,19 +78,39 @@ impl<T: Nullable> PodOption<T> {
             Some(&mut self.0)
         }
     }
+
+    /// Maps a `PodOption<T>` to an `Option<T>` by copying the contents of the option.
+    #[inline]
+    pub fn copied(&self) -> Option<T>
+    where
+        T: Copy,
+    {
+        self.as_ref().copied()
+    }
+
+    /// Maps a `PodOption<T>` to an `Option<T>` by cloning the contents of the option.
+    #[inline]
+    pub fn cloned(&self) -> Option<T>
+    where
+        T: Clone,
+    {
+        self.as_ref().cloned()
+    }
 }
 
 /// ## Safety
 ///
 /// `PodOption` is a transparent wrapper around a `Pod` type `T` with identical
 /// data representation.
-unsafe impl<T: Nullable> Pod for PodOption<T> {}
+#[cfg(feature = "bytemuck")]
+unsafe impl<T: Nullable + Pod> Pod for PodOption<T> {}
 
 /// ## Safety
 ///
 /// `PodOption` is a transparent wrapper around a `Pod` type `T` with identical
 /// data representation.
-unsafe impl<T: Nullable> Zeroable for PodOption<T> {}
+#[cfg(feature = "bytemuck")]
+unsafe impl<T: Nullable + Zeroable> Zeroable for PodOption<T> {}
 
 impl<T: Nullable> From<T> for PodOption<T> {
     fn from(value: T) -> Self {
@@ -128,9 +149,12 @@ impl Nullable for Address {
 
 #[cfg(test)]
 mod tests {
-    use {super::*, crate::bytemuck::pod_slice_from_bytes};
+    use super::*;
+    #[cfg(feature = "bytemuck")]
+    use crate::bytemuck::pod_slice_from_bytes;
     const ID: Address = Address::from_str_const("TestSysvar111111111111111111111111111111111");
 
+    #[cfg(feature = "bytemuck")]
     #[test]
     fn test_pod_option_address() {
         let some_address = PodOption::from(ID);
@@ -184,5 +208,30 @@ mod tests {
     fn test_default() {
         let def = PodOption::<Address>::default();
         assert_eq!(def, None.try_into().unwrap());
+    }
+
+    #[test]
+    fn test_copied() {
+        let some_address = PodOption::from(ID);
+        assert_eq!(some_address.copied(), Some(ID));
+
+        let none_address = PodOption::from(Address::NONE);
+        assert_eq!(none_address.copied(), None);
+    }
+
+    #[derive(Clone, Debug, PartialEq)]
+    struct TestNonCopyNullable([u8; 4]);
+
+    impl Nullable for TestNonCopyNullable {
+        const NONE: Self = Self([0u8; 4]);
+    }
+
+    #[test]
+    fn test_cloned_with_non_copy_nullable() {
+        let some = PodOption::from(TestNonCopyNullable([1, 2, 3, 4]));
+        assert_eq!(some.cloned(), Some(TestNonCopyNullable([1, 2, 3, 4])));
+
+        let none = PodOption::from(TestNonCopyNullable::NONE);
+        assert_eq!(none.cloned(), None);
     }
 }
