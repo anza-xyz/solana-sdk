@@ -127,7 +127,7 @@ pub(super) fn deserialize_vote_state_into_v3(
     vote_state: *mut VoteStateV3,
     has_latency: bool,
 ) -> Result<(), InstructionError> {
-    // General safety note: we must use add_or_mut! to access the `vote_state` fields as the value
+    // General safety note: we must use addr_of_mut! to access the `vote_state` fields as the value
     // is assumed to be _uninitialized_, so creating references to the state or any of its inner
     // fields is UB.
 
