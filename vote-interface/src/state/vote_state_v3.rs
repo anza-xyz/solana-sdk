@@ -219,7 +219,7 @@ impl VoteStateV3 {
 mod tests {
     use {
         super::{
-            super::{VoteStateVersions, MAX_LOCKOUT_HISTORY},
+            super::{VoteState1_14_11, VoteStateVersions, MAX_LOCKOUT_HISTORY},
             *,
         },
         arbitrary::Unstructured,
@@ -296,6 +296,27 @@ mod tests {
     }
 
     #[test]
+    fn test_vote_deserialize_into_trailing_data() {
+        let target_vote_state = VoteStateV3::new_rand_for_tests(Pubkey::new_unique(), 42);
+        let vote_state_buf =
+            bincode::serialize(&VoteStateVersions::new_v3(target_vote_state.clone())).unwrap();
+
+        // Trailing garbage data is ignored.
+        let mut buf_with_garbage = vote_state_buf.clone();
+        buf_with_garbage.extend_from_slice(&[0xDE, 0xAD, 0xBE, 0xEF]);
+        let mut test_vote_state = VoteStateV3::default();
+        VoteStateV3::deserialize_into(&buf_with_garbage, &mut test_vote_state).unwrap();
+        assert_eq!(target_vote_state, test_vote_state);
+
+        // Trailing zeroes are ignored.
+        let mut buf_with_zeroes = vote_state_buf;
+        buf_with_zeroes.extend_from_slice(&[0u8; 64]);
+        let mut test_vote_state = VoteStateV3::default();
+        VoteStateV3::deserialize_into(&buf_with_zeroes, &mut test_vote_state).unwrap();
+        assert_eq!(target_vote_state, test_vote_state);
+    }
+
+    #[test]
     fn test_vote_deserialize_into_error() {
         let target_vote_state = VoteStateV3::new_rand_for_tests(Pubkey::new_unique(), 42);
         let mut vote_state_buf =
@@ -306,6 +327,38 @@ mod tests {
         let mut test_vote_state = VoteStateV3::default();
         VoteStateV3::deserialize_into(&vote_state_buf, &mut test_vote_state).unwrap_err();
         assert_eq!(test_vote_state, VoteStateV3::default());
+    }
+
+    #[test]
+    fn test_vote_deserialize_into_error_with_pre_state() {
+        // Start with a fully-populated state with heap allocations.
+        let mut vote_state = VoteStateV3::new_rand_for_tests(Pubkey::new_unique(), 42);
+        vote_state.epoch_credits = vec![(0, 100, 0), (1, 200, 100), (2, 300, 200)];
+
+        // Deserialize truncated buffer — triggers error + DropGuard.
+        let mut buf =
+            bincode::serialize(&VoteStateVersions::new_v3(VoteStateV3::default())).unwrap();
+        buf.truncate(buf.len() - 1);
+
+        VoteStateV3::deserialize_into(&buf, &mut vote_state).unwrap_err();
+        // DropGuard should have reset to default despite pre-existing heap data.
+        assert_eq!(vote_state, VoteStateV3::default());
+    }
+
+    #[test]
+    fn test_deserialize_into_uninit_no_reset_on_error() {
+        // Contrast with `test_vote_deserialize_into_error` which verifies
+        // that `deserialize_into` resets to `T::default()` via DropGuard.
+        // `deserialize_into_uninit` does NOT reset — the MaybeUninit may
+        // remain partially written and must not be assumed initialized.
+        let target = VoteStateV3::new_rand_for_tests(Pubkey::new_unique(), 42);
+        let mut buf = bincode::serialize(&VoteStateVersions::new_v3(target)).unwrap();
+        buf.truncate(buf.len() - 1);
+
+        let mut test_vote_state = MaybeUninit::uninit();
+        let err = VoteStateV3::deserialize_into_uninit(&buf, &mut test_vote_state);
+        assert_eq!(err, Err(InstructionError::InvalidAccountData));
+        // test_vote_state is NOT guaranteed initialized — must not assume_init.
     }
 
     #[test]
@@ -342,6 +395,29 @@ mod tests {
                 assert_eq!(target_vote_state, test_vote_state);
             }
         }
+    }
+
+    #[test]
+    fn test_vote_deserialize_into_uninit_trailing_data() {
+        let target_vote_state = VoteStateV3::new_rand_for_tests(Pubkey::new_unique(), 42);
+        let vote_state_buf =
+            bincode::serialize(&VoteStateVersions::new_v3(target_vote_state.clone())).unwrap();
+
+        // Trailing garbage data is ignored.
+        let mut buf_with_garbage = vote_state_buf.clone();
+        buf_with_garbage.extend_from_slice(&[0xDE, 0xAD, 0xBE, 0xEF]);
+        let mut test_vote_state = MaybeUninit::uninit();
+        VoteStateV3::deserialize_into_uninit(&buf_with_garbage, &mut test_vote_state).unwrap();
+        let test_vote_state = unsafe { test_vote_state.assume_init() };
+        assert_eq!(target_vote_state, test_vote_state);
+
+        // Trailing zeroes are ignored.
+        let mut buf_with_zeroes = vote_state_buf;
+        buf_with_zeroes.extend_from_slice(&[0u8; 64]);
+        let mut test_vote_state = MaybeUninit::uninit();
+        VoteStateV3::deserialize_into_uninit(&buf_with_zeroes, &mut test_vote_state).unwrap();
+        let test_vote_state = unsafe { test_vote_state.assume_init() };
+        assert_eq!(target_vote_state, test_vote_state);
     }
 
     #[test]
@@ -432,5 +508,122 @@ mod tests {
                 assert_eq!(test_vote_state, bincode_res.unwrap());
             }
         }
+    }
+
+    #[test]
+    fn test_deserialize_invalid_variant_tags() {
+        let mut buf = vec![0u8; VoteStateV3::size_of()];
+
+        // Tag 0 (V0_23_5 — rejected).
+        let mut vs = VoteStateV3::default();
+        assert_eq!(
+            VoteStateV3::deserialize_into(&buf, &mut vs),
+            Err(InstructionError::InvalidAccountData)
+        );
+
+        // Tag 3 (V4 — rejected by V3 deserializer).
+        buf[..4].copy_from_slice(&3u32.to_le_bytes());
+        assert_eq!(
+            VoteStateV3::deserialize_into(&buf, &mut vs),
+            Err(InstructionError::InvalidAccountData)
+        );
+
+        // Tag 4 (unknown).
+        buf[..4].copy_from_slice(&4u32.to_le_bytes());
+        assert_eq!(
+            VoteStateV3::deserialize_into(&buf, &mut vs),
+            Err(InstructionError::InvalidAccountData)
+        );
+
+        // Tag u32::MAX.
+        buf[..4].copy_from_slice(&u32::MAX.to_le_bytes());
+        assert_eq!(
+            VoteStateV3::deserialize_into(&buf, &mut vs),
+            Err(InstructionError::InvalidAccountData)
+        );
+    }
+
+    #[test]
+    fn test_invalid_option_bool_discriminants() {
+        let mut vote_state = VoteStateV3::default();
+        vote_state.root_slot = Some(42);
+        let valid_buf = bincode::serialize(&VoteStateVersions::new_v3(vote_state)).unwrap();
+
+        // root_slot Option discriminant.
+        // tag(4) + node_pubkey(32) + authorized_withdrawer(32) + commission(1) +
+        // votes_count(8)
+        let root_slot_offset = 4 + 32 + 32 + 1 + 8;
+        assert_eq!(valid_buf[root_slot_offset], 1); // Some
+
+        {
+            let mut buf = valid_buf.clone();
+            buf[root_slot_offset] = 2;
+            let mut vs = VoteStateV3::default();
+            assert_eq!(
+                VoteStateV3::deserialize_into(&buf, &mut vs),
+                Err(InstructionError::InvalidAccountData)
+            );
+        }
+
+        // CircBuf is_empty bool discriminant.
+        // discriminant(1) + value(8) + auth_voters_count(8) +
+        // prior_buf(32*48) + prior_idx(8)
+        let is_empty_offset = root_slot_offset + 1 + 8 + 8 + 32 * 48 + 8;
+        assert_eq!(valid_buf[is_empty_offset], 1); // true
+
+        {
+            let mut buf = valid_buf.clone();
+            buf[is_empty_offset] = 2;
+            let mut vs = VoteStateV3::default();
+            assert_eq!(
+                VoteStateV3::deserialize_into(&buf, &mut vs),
+                Err(InstructionError::InvalidAccountData)
+            );
+        }
+    }
+
+    #[test]
+    fn test_has_latency() {
+        // V1_14_11 → V3: all latencies should be 0.
+        let mut v1_state = VoteState1_14_11::default();
+        v1_state.votes.push_back(Lockout::new(100));
+        v1_state.votes.push_back(Lockout::new(200));
+        let buf = bincode::serialize(&VoteStateVersions::V1_14_11(Box::new(v1_state))).unwrap();
+        let deserialized = VoteStateV3::deserialize(&buf).unwrap();
+        assert_eq!(deserialized.votes.len(), 2);
+        for vote in &deserialized.votes {
+            assert_eq!(vote.latency, 0);
+        }
+
+        // V3 with non-zero latency: preserved.
+        let mut v3_state = VoteStateV3::default();
+        v3_state.votes.push_back(LandedVote {
+            latency: 42,
+            lockout: Lockout::new(100),
+        });
+        v3_state.votes.push_back(LandedVote {
+            latency: 7,
+            lockout: Lockout::new(200),
+        });
+        let buf = bincode::serialize(&VoteStateVersions::new_v3(v3_state)).unwrap();
+        let deserialized = VoteStateV3::deserialize(&buf).unwrap();
+        assert_eq!(deserialized.votes[0].latency, 42);
+        assert_eq!(deserialized.votes[1].latency, 7);
+    }
+
+    #[test]
+    fn test_empty_collections_round_trip() {
+        // Populated scalar fields, all collections empty.
+        let vote_state = VoteStateV3 {
+            node_pubkey: Pubkey::new_unique(),
+            authorized_withdrawer: Pubkey::new_unique(),
+            commission: 50,
+            root_slot: Some(100),
+            ..VoteStateV3::default()
+        };
+        let versioned = VoteStateVersions::new_v3(vote_state.clone());
+        let buf = bincode::serialize(&versioned).unwrap();
+        let deserialized = VoteStateV3::deserialize(&buf).unwrap();
+        assert_eq!(vote_state, deserialized);
     }
 }
