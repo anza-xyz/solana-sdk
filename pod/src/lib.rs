@@ -1,5 +1,6 @@
 //! Crate containing `Pod` types and `bytemuck` utilities used in SPL
 
+#[cfg(feature = "bytemuck")]
 pub mod bytemuck;
 pub mod option;
 pub mod optional_keys;

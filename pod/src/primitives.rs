@@ -1,6 +1,7 @@
 //! primitive types that can be used in `Pod`s
 #[cfg(feature = "borsh")]
 use borsh::{BorshDeserialize, BorshSchema, BorshSerialize};
+#[cfg(feature = "bytemuck")]
 use bytemuck_derive::{Pod, Zeroable};
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
@@ -12,7 +13,8 @@ use wincode::{SchemaRead, SchemaWrite};
 #[cfg_attr(feature = "wincode", wincode(assert_zero_copy))]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "serde", serde(from = "bool", into = "bool"))]
-#[derive(Clone, Copy, Debug, Default, PartialEq, Pod, Zeroable)]
+#[cfg_attr(feature = "bytemuck", derive(Pod, Zeroable))]
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
 #[repr(transparent)]
 pub struct PodBool(pub u8);
 impl PodBool {
@@ -76,7 +78,8 @@ macro_rules! impl_int_conversion {
 #[cfg_attr(feature = "wincode", wincode(assert_zero_copy))]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "serde", serde(from = "u16", into = "u16"))]
-#[derive(Clone, Copy, Debug, Default, PartialEq, Pod, Zeroable)]
+#[cfg_attr(feature = "bytemuck", derive(Pod, Zeroable))]
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
 #[repr(transparent)]
 pub struct PodU16(pub [u8; 2]);
 impl_int_conversion!(PodU16, u16);
@@ -86,7 +89,8 @@ impl_int_conversion!(PodU16, u16);
 #[cfg_attr(feature = "wincode", wincode(assert_zero_copy))]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "serde", serde(from = "i16", into = "i16"))]
-#[derive(Clone, Copy, Debug, Default, PartialEq, Pod, Zeroable)]
+#[cfg_attr(feature = "bytemuck", derive(Pod, Zeroable))]
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
 #[repr(transparent)]
 pub struct PodI16(pub [u8; 2]);
 impl_int_conversion!(PodI16, i16);
@@ -100,7 +104,8 @@ impl_int_conversion!(PodI16, i16);
 )]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "serde", serde(from = "u32", into = "u32"))]
-#[derive(Clone, Copy, Debug, Default, PartialEq, Pod, Zeroable)]
+#[cfg_attr(feature = "bytemuck", derive(Pod, Zeroable))]
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
 #[repr(transparent)]
 pub struct PodU32(pub [u8; 4]);
 impl_int_conversion!(PodU32, u32);
@@ -114,7 +119,8 @@ impl_int_conversion!(PodU32, u32);
 )]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "serde", serde(from = "u64", into = "u64"))]
-#[derive(Clone, Copy, Debug, Default, PartialEq, Pod, Zeroable)]
+#[cfg_attr(feature = "bytemuck", derive(Pod, Zeroable))]
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
 #[repr(transparent)]
 pub struct PodU64(pub [u8; 8]);
 impl_int_conversion!(PodU64, u64);
@@ -124,7 +130,8 @@ impl_int_conversion!(PodU64, u64);
 #[cfg_attr(feature = "wincode", wincode(assert_zero_copy))]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "serde", serde(from = "i64", into = "i64"))]
-#[derive(Clone, Copy, Debug, Default, PartialEq, Pod, Zeroable)]
+#[cfg_attr(feature = "bytemuck", derive(Pod, Zeroable))]
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
 #[repr(transparent)]
 pub struct PodI64([u8; 8]);
 impl_int_conversion!(PodI64, i64);
@@ -138,7 +145,8 @@ impl_int_conversion!(PodI64, i64);
 )]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "serde", serde(from = "u128", into = "u128"))]
-#[derive(Clone, Copy, Debug, Default, PartialEq, Pod, Zeroable)]
+#[cfg_attr(feature = "bytemuck", derive(Pod, Zeroable))]
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
 #[repr(transparent)]
 pub struct PodU128(pub [u8; 16]);
 impl_int_conversion!(PodU128, u128);
@@ -172,8 +180,11 @@ impl_usize_conversion!(PodU128, u128);
 
 #[cfg(test)]
 mod tests {
-    use {super::*, crate::bytemuck::pod_from_bytes};
+    use super::*;
+    #[cfg(feature = "bytemuck")]
+    use crate::bytemuck::pod_from_bytes;
 
+    #[cfg(feature = "bytemuck")]
     #[test]
     fn test_pod_bool() {
         assert!(pod_from_bytes::<PodBool>(&[]).is_err());
@@ -201,6 +212,7 @@ mod tests {
         assert_eq!(pod_true, deserialized_true);
     }
 
+    #[cfg(feature = "bytemuck")]
     #[test]
     fn test_pod_u16() {
         assert!(pod_from_bytes::<PodU16>(&[]).is_err());
@@ -219,6 +231,7 @@ mod tests {
         assert_eq!(pod_u16, deserialized);
     }
 
+    #[cfg(feature = "bytemuck")]
     #[test]
     fn test_pod_i16() {
         assert!(pod_from_bytes::<PodI16>(&[]).is_err());
@@ -242,6 +255,7 @@ mod tests {
         assert_eq!(pod_i16, deserialized);
     }
 
+    #[cfg(feature = "bytemuck")]
     #[test]
     fn test_pod_u64() {
         assert!(pod_from_bytes::<PodU64>(&[]).is_err());
@@ -263,6 +277,7 @@ mod tests {
         assert_eq!(pod_u64, deserialized);
     }
 
+    #[cfg(feature = "bytemuck")]
     #[test]
     fn test_pod_i64() {
         assert!(pod_from_bytes::<PodI64>(&[]).is_err());
@@ -286,6 +301,7 @@ mod tests {
         assert_eq!(pod_i64, deserialized);
     }
 
+    #[cfg(feature = "bytemuck")]
     #[test]
     fn test_pod_u128() {
         assert!(pod_from_bytes::<PodU128>(&[]).is_err());

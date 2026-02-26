@@ -1,18 +1,15 @@
 //! Optional addresses that can be used a `Pod`s
 #[cfg(feature = "borsh")]
 use borsh::{BorshDeserialize, BorshSchema, BorshSerialize};
-use {
-    bytemuck_derive::{Pod, Zeroable},
-    solana_address::Address,
-    solana_program_error::ProgramError,
-    solana_program_option::COption,
-};
+#[cfg(feature = "bytemuck")]
+use bytemuck_derive::{Pod, Zeroable};
 #[cfg(feature = "serde")]
 use {
     core::{convert::TryFrom, fmt, str::FromStr},
     serde::de::{Error, Unexpected, Visitor},
     serde::{Deserialize, Deserializer, Serialize, Serializer},
 };
+use {solana_address::Address, solana_program_error::ProgramError, solana_program_option::COption};
 
 /// A Pubkey that encodes `None` as all `0`, meant to be usable as a `Pod` type,
 /// similar to all `NonZero*` number types from the `bytemuck` library.
@@ -20,7 +17,8 @@ use {
     feature = "borsh",
     derive(BorshDeserialize, BorshSerialize, BorshSchema)
 )]
-#[derive(Clone, Copy, Debug, Default, PartialEq, Pod, Zeroable)]
+#[cfg_attr(feature = "bytemuck", derive(Pod, Zeroable))]
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
 #[repr(transparent)]
 pub struct OptionalNonZeroPubkey(pub Address);
 impl TryFrom<Option<Address>> for OptionalNonZeroPubkey {
@@ -129,8 +127,11 @@ impl<'de> Deserialize<'de> for OptionalNonZeroPubkey {
 
 #[cfg(test)]
 mod tests {
-    use {super::*, crate::bytemuck::pod_from_bytes, solana_address::ADDRESS_BYTES};
+    #[cfg(feature = "bytemuck")]
+    use crate::bytemuck::pod_from_bytes;
+    use {super::*, solana_address::ADDRESS_BYTES};
 
+    #[cfg(feature = "bytemuck")]
     #[test]
     fn test_pod_non_zero_option() {
         assert_eq!(
