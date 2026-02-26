@@ -201,10 +201,216 @@ impl Arbitrary<'_> for VoteStateVersions {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use {
+        super::*,
+        crate::state::{VoteInit, BLS_PUBLIC_KEY_COMPRESSED_SIZE, DEFAULT_PRIOR_VOTERS_OFFSET},
+        rand::Rng,
+        solana_clock::Clock,
+        solana_instruction::error::InstructionError,
+    };
 
     #[test]
-    fn test_vote_state_versions_deserialize() {
+    fn test_v3_default_vote_state_is_uninitialized() {
+        // The default `VoteStateV3` is stored to de-initialize a zero-balance vote account,
+        // so must remain such that `VoteStateVersions::is_uninitialized()` returns true
+        // when called on a `VoteStateVersions` that stores it
+        assert!(VoteStateVersions::new_v3(VoteStateV3::default()).is_uninitialized());
+    }
+
+    #[test]
+    fn test_v4_default_vote_state_is_always_initialized() {
+        // Per SIMD-0185, V4 is always initialized.
+        assert!(!VoteStateVersions::new_v4(VoteStateV4::default()).is_uninitialized());
+    }
+
+    #[test]
+    fn test_is_correct_size_and_initialized_v3() {
+        // Check all zeroes
+        let mut vote_account_data = vec![0; VoteStateV3::size_of()];
+        assert!(!VoteStateVersions::is_correct_size_and_initialized(
+            &vote_account_data
+        ));
+
+        // Check default VoteStateV3
+        let default_account_state = VoteStateVersions::new_v3(VoteStateV3::default());
+        VoteStateV3::serialize(&default_account_state, &mut vote_account_data).unwrap();
+        assert!(!VoteStateVersions::is_correct_size_and_initialized(
+            &vote_account_data
+        ));
+
+        // Check non-zero data shorter than offset index used
+        let short_data = vec![1; DEFAULT_PRIOR_VOTERS_OFFSET];
+        assert!(!VoteStateVersions::is_correct_size_and_initialized(
+            &short_data
+        ));
+
+        // Check non-zero large account
+        let mut large_vote_data = vec![1; 2 * VoteStateV3::size_of()];
+        let default_account_state = VoteStateVersions::new_v3(VoteStateV3::default());
+        VoteStateV3::serialize(&default_account_state, &mut large_vote_data).unwrap();
+        assert!(!VoteStateVersions::is_correct_size_and_initialized(
+            &vote_account_data
+        ));
+
+        // Check populated VoteStateV3
+        let vote_state = VoteStateV3::new(
+            &VoteInit {
+                node_pubkey: Pubkey::new_unique(),
+                authorized_voter: Pubkey::new_unique(),
+                authorized_withdrawer: Pubkey::new_unique(),
+                commission: 0,
+            },
+            &Clock::default(),
+        );
+        let account_state = VoteStateVersions::new_v3(vote_state.clone());
+        VoteStateV3::serialize(&account_state, &mut vote_account_data).unwrap();
+        assert!(VoteStateVersions::is_correct_size_and_initialized(
+            &vote_account_data
+        ));
+
+        // Check old VoteStateV3 that hasn't been upgraded to newest version yet
+        let old_vote_state = VoteState1_14_11::from(vote_state);
+        let account_state = VoteStateVersions::V1_14_11(Box::new(old_vote_state));
+        let mut vote_account_data = vec![0; VoteState1_14_11::size_of()];
+        VoteStateV3::serialize(&account_state, &mut vote_account_data).unwrap();
+        assert!(VoteStateVersions::is_correct_size_and_initialized(
+            &vote_account_data
+        ));
+    }
+
+    #[test]
+    fn test_is_correct_size_and_initialized_v4() {
+        // All zeros at V4 size — false (discriminant is 0, not 3).
+        let zeros = vec![0u8; VoteStateV4::size_of()];
+        assert!(!VoteStateVersions::is_correct_size_and_initialized(&zeros));
+
+        // Valid serialized V4 — true.
+        let versioned = VoteStateVersions::new_v4(VoteStateV4::default());
+        let mut buf = vec![0u8; VoteStateV4::size_of()];
+        VoteStateV4::serialize(&versioned, &mut buf).unwrap();
+        assert!(VoteStateVersions::is_correct_size_and_initialized(&buf));
+
+        // Populated V4 — true.
+        let vote_state = VoteStateV4::new_with_defaults(
+            &Pubkey::new_unique(),
+            &VoteInit {
+                node_pubkey: Pubkey::new_unique(),
+                authorized_voter: Pubkey::new_unique(),
+                authorized_withdrawer: Pubkey::new_unique(),
+                commission: 50,
+            },
+            &Clock::default(),
+        );
+        let versioned = VoteStateVersions::new_v4(vote_state);
+        let mut buf = vec![0u8; VoteStateV4::size_of()];
+        VoteStateV4::serialize(&versioned, &mut buf).unwrap();
+        assert!(VoteStateVersions::is_correct_size_and_initialized(&buf));
+
+        // Wrong length — false.
+        assert!(!VoteStateVersions::is_correct_size_and_initialized(
+            &buf[..buf.len() - 1]
+        ));
+        let mut extended = buf.clone();
+        extended.push(0);
+        assert!(!VoteStateVersions::is_correct_size_and_initialized(
+            &extended
+        ));
+    }
+
+    #[test]
+    fn test_vote_state_version_conversion_bls_pubkey() {
+        let vote_pubkey = Pubkey::new_unique();
+
+        // All versions before v4 should result in `None` for BLS pubkey.
+        let v1_14_11_state = VoteState1_14_11::default();
+        let v1_14_11_versioned = VoteStateVersions::V1_14_11(Box::new(v1_14_11_state));
+
+        let v3_state = VoteStateV3::default();
+        let v3_versioned = VoteStateVersions::V3(Box::new(v3_state));
+
+        for versioned in [v1_14_11_versioned, v3_versioned] {
+            let converted = versioned.try_convert_to_v4(&vote_pubkey).unwrap();
+            assert_eq!(converted.bls_pubkey_compressed, None);
+        }
+
+        // v4 to v4 conversion should preserve the BLS pubkey.
+        let test_bls_key = [128u8; BLS_PUBLIC_KEY_COMPRESSED_SIZE];
+        let v4_state = VoteStateV4 {
+            bls_pubkey_compressed: Some(test_bls_key),
+            ..VoteStateV4::default()
+        };
+        let v4_versioned = VoteStateVersions::V4(Box::new(v4_state));
+        let converted = v4_versioned.try_convert_to_v4(&vote_pubkey).unwrap();
+        assert_eq!(converted.bls_pubkey_compressed, Some(test_bls_key));
+    }
+
+    #[test]
+    fn test_versions_deserialize_invalid_variant_tags() {
+        let mut buf = vec![0u8; VoteStateV3::size_of()];
+
+        // Tag 0 (V0_23_5 — explicitly rejected).
+        assert_eq!(
+            VoteStateVersions::deserialize(&buf),
+            Err(InstructionError::InvalidAccountData)
+        );
+
+        // Tag 4 (unknown).
+        buf[..4].copy_from_slice(&4u32.to_le_bytes());
+        assert_eq!(
+            VoteStateVersions::deserialize(&buf),
+            Err(InstructionError::InvalidAccountData)
+        );
+
+        // Tag u32::MAX.
+        buf[..4].copy_from_slice(&u32::MAX.to_le_bytes());
+        assert_eq!(
+            VoteStateVersions::deserialize(&buf),
+            Err(InstructionError::InvalidAccountData)
+        );
+    }
+
+    #[test]
+    fn test_versions_deserialize_error_paths() {
+        // Empty input.
+        assert_eq!(
+            VoteStateVersions::deserialize(&[]),
+            Err(InstructionError::InvalidAccountData)
+        );
+
+        // Too short for variant tag.
+        assert_eq!(
+            VoteStateVersions::deserialize(&[1, 0, 0]),
+            Err(InstructionError::InvalidAccountData)
+        );
+
+        // Valid tag, truncated body.
+        let vote_state = VoteStateV3::new(
+            &VoteInit {
+                node_pubkey: Pubkey::new_unique(),
+                authorized_voter: Pubkey::new_unique(),
+                authorized_withdrawer: Pubkey::new_unique(),
+                commission: 50,
+            },
+            &Clock::default(),
+        );
+        let mut buf = bincode::serialize(&VoteStateVersions::new_v3(vote_state)).unwrap();
+        buf.truncate(buf.len() / 2);
+        assert_eq!(
+            VoteStateVersions::deserialize(&buf),
+            Err(InstructionError::InvalidAccountData)
+        );
+
+        // Random bytes — must not panic.
+        let mut rng = rand::rng();
+        for _ in 0..100 {
+            let len = rng.random_range(0u64..512);
+            let random_data: Vec<u8> = (0..len).map(|_| rng.random::<u8>()).collect();
+            let _ = VoteStateVersions::deserialize(&random_data);
+        }
+    }
+
+    #[test]
+    fn test_versions_deserialize_default() {
         let ser_deser = |original: VoteStateVersions| {
             let serialized = bincode::serialize(&original).unwrap();
             VoteStateVersions::deserialize(&serialized)
@@ -227,5 +433,71 @@ mod tests {
             ser_deser(v4.clone()),
             Ok(v4), // <-- Matches original
         );
+    }
+
+    #[test]
+    fn test_versions_deserialize_non_default() {
+        let vote_init = VoteInit {
+            node_pubkey: Pubkey::new_unique(),
+            authorized_voter: Pubkey::new_unique(),
+            authorized_withdrawer: Pubkey::new_unique(),
+            commission: 50,
+        };
+
+        let ser_deser = |original: VoteStateVersions| {
+            let serialized = bincode::serialize(&original).unwrap();
+            let deserialized = VoteStateVersions::deserialize(&serialized).unwrap();
+            assert_eq!(original, deserialized);
+        };
+
+        // Populated V1_14_11 round-trip.
+        let vote_state = VoteState1_14_11::from(VoteStateV3::new(&vote_init, &Clock::default()));
+        ser_deser(VoteStateVersions::V1_14_11(Box::new(vote_state)));
+
+        // Populated V3 round-trip.
+        let vote_state = VoteStateV3::new(&vote_init, &Clock::default());
+        ser_deser(VoteStateVersions::new_v3(vote_state));
+
+        // Populated V4 round-trip.
+        let vote_state =
+            VoteStateV4::new_with_defaults(&Pubkey::new_unique(), &vote_init, &Clock::default());
+        ser_deser(VoteStateVersions::new_v4(vote_state));
+    }
+
+    #[test]
+    fn test_versions_deserialize_arbitrary() {
+        let struct_bytes_x4 = std::mem::size_of::<VoteStateV4>() * 4;
+        for _ in 0..1000 {
+            let raw_data: Vec<u8> = (0..struct_bytes_x4).map(|_| rand::random::<u8>()).collect();
+            let mut unstructured = Unstructured::new(&raw_data);
+            let original = VoteStateVersions::arbitrary(&mut unstructured).unwrap();
+            let serialized = bincode::serialize(&original).unwrap();
+            let deserialized = VoteStateVersions::deserialize(&serialized).unwrap();
+            assert_eq!(original, deserialized);
+        }
+    }
+
+    #[test]
+    fn test_collection_count_exceeding_max() {
+        // Deserialization reads unbounded Vec/VecDeque lengths from the input,
+        // so it must handle counts that exceed the compile-time capacity hints
+        // (MAX_LOCKOUT_HISTORY, MAX_EPOCH_CREDITS_HISTORY) without panicking.
+
+        let mut vote_state = VoteStateV3::default();
+        // 100 votes > MAX_LOCKOUT_HISTORY (31).
+        for i in 0..100u64 {
+            vote_state.votes.push_back(LandedVote {
+                latency: 0,
+                lockout: Lockout::new(i),
+            });
+        }
+        // 100 epoch credits > MAX_EPOCH_CREDITS_HISTORY (64).
+        for i in 0..100u64 {
+            vote_state.epoch_credits.push((i, i * 10, i * 5));
+        }
+        let versioned = VoteStateVersions::new_v3(vote_state);
+        let serialized = bincode::serialize(&versioned).unwrap();
+        let deserialized = VoteStateVersions::deserialize(&serialized).unwrap();
+        assert_eq!(versioned, deserialized);
     }
 }

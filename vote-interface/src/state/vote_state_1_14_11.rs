@@ -94,7 +94,7 @@ impl From<VoteStateV3> for VoteState1_14_11 {
 
 #[cfg(test)]
 mod tests {
-    use {super::*, core::mem::MaybeUninit};
+    use {super::*, arbitrary::Unstructured, core::mem::MaybeUninit};
 
     #[test]
     fn test_vote_deserialize_1_14_11() {
