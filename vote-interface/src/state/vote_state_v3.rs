@@ -115,8 +115,7 @@ impl VoteStateV3 {
 
     /// Deserializes the input `VoteStateVersions` buffer directly into the provided `VoteStateV3`.
     ///
-    /// In a SBPF context, V0_23_5 is not supported, but in non-SBPF, all versions are supported for
-    /// compatibility with `bincode::deserialize`.
+    /// V0_23_5 is not supported. Supported versions: V1_14_11, V3.
     ///
     /// On success, `vote_state` reflects the state of the input data. On failure, `vote_state` is
     /// reset to `VoteStateV3::default()`.
@@ -132,8 +131,7 @@ impl VoteStateV3 {
     /// Deserializes the input `VoteStateVersions` buffer directly into the provided
     /// `MaybeUninit<VoteStateV3>`.
     ///
-    /// In a SBPF context, V0_23_5 is not supported, but in non-SBPF, all versions are supported for
-    /// compatibility with `bincode::deserialize`.
+    /// V0_23_5 is not supported. Supported versions: V1_14_11, V3.
     ///
     /// On success, `vote_state` is fully initialized and can be converted to
     /// `VoteStateV3` using
