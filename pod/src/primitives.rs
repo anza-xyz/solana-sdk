@@ -143,6 +143,33 @@ impl_int_conversion!(PodI64, i64);
 pub struct PodU128(pub [u8; 16]);
 impl_int_conversion!(PodU128, u128);
 
+/// Implements the `TryFrom<usize>` and `From<T> for usize` conversions for a Pod integer type
+macro_rules! impl_usize_conversion {
+    ($PodType:ty, $PrimitiveType:ty) => {
+        impl TryFrom<usize> for $PodType {
+            type Error = core::num::TryFromIntError;
+
+            fn try_from(val: usize) -> Result<Self, Self::Error> {
+                let primitive_val = <$PrimitiveType>::try_from(val)?;
+                Ok(primitive_val.into())
+            }
+        }
+
+        impl From<$PodType> for usize {
+            fn from(pod_val: $PodType) -> Self {
+                let primitive_val = <$PrimitiveType>::from(pod_val);
+                Self::try_from(primitive_val)
+                    .expect("value out of range for usize on this platform")
+            }
+        }
+    };
+}
+
+impl_usize_conversion!(PodU16, u16);
+impl_usize_conversion!(PodU32, u32);
+impl_usize_conversion!(PodU64, u64);
+impl_usize_conversion!(PodU128, u128);
+
 #[cfg(test)]
 mod tests {
     use {super::*, crate::bytemuck::pod_from_bytes};
@@ -282,6 +309,31 @@ mod tests {
         let deserialized = serde_json::from_str::<PodU128>(&serialized).unwrap();
         assert_eq!(pod_u128, deserialized);
     }
+
+    macro_rules! test_usize_roundtrip {
+        ($test_name:ident, $PodType:ty, $max:expr) => {
+            #[test]
+            fn $test_name() {
+                // zero
+                let pod = <$PodType>::try_from(0usize).unwrap();
+                assert_eq!(usize::from(pod), 0);
+
+                // mid-range
+                let pod = <$PodType>::try_from(42usize).unwrap();
+                assert_eq!(usize::from(pod), 42);
+
+                // max
+                let max = $max as usize;
+                let pod = <$PodType>::try_from(max).unwrap();
+                assert_eq!(usize::from(pod), max);
+            }
+        };
+    }
+
+    test_usize_roundtrip!(test_usize_roundtrip_u16, PodU16, u16::MAX);
+    test_usize_roundtrip!(test_usize_roundtrip_u32, PodU32, u32::MAX);
+    test_usize_roundtrip!(test_usize_roundtrip_u64, PodU64, u64::MAX);
+    test_usize_roundtrip!(test_usize_roundtrip_u128, PodU128, u128::MAX);
 
     #[cfg(feature = "wincode")]
     mod wincode_tests {
