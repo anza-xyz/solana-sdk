@@ -126,7 +126,7 @@ impl Keypair {
 
     pub fn write_json<W: Write>(&self, writer: &mut W) -> Result<String, Box<dyn error::Error>> {
         let json = serde_json::to_string(&Into::<[u8; BLS_KEYPAIR_SIZE]>::into(self).as_slice())?;
-        writer.write_all(&json.clone().into_bytes())?;
+        writer.write_all(json.as_bytes())?;
         Ok(json)
     }
 
