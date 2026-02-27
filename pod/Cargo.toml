@@ -9,19 +9,21 @@ edition = "2021"
 
 [features]
 bytemuck = ["dep:bytemuck", "dep:bytemuck_derive", "solana-address/bytemuck"]
-serde = ["dep:serde", "solana-address/decode"]
+serde = ["dep:serde", "dep:serde_derive", "solana-address/decode"]
 borsh = ["dep:borsh", "solana-address/borsh"]
-wincode = ["dep:wincode"]
+wincode = ["dep:wincode", "dep:wincode-derive"]
 
 [dependencies]
-borsh = { version = "1.5.7", features = ["derive", "unstable__schema"], optional = true }
+borsh = { version = "1.5.7", default-features = false, features = ["derive", "unstable__schema"], optional = true }
 bytemuck = { version = "1.23.2", optional = true }
 bytemuck_derive = { version = "1.10.1", optional = true }
-serde = { version = "1.0.228", optional = true, features = ["derive"] }
+serde = { version = "1.0.228", default-features = false, optional = true, features = ["alloc"] }
+serde_derive = { version = "1.0.228", optional = true }
 solana-address = { version = "2.2.0", features = ["copy"] }
 solana-program-error = "3.0.0"
 solana-program-option = "3.0.0"
-wincode = { version = "0.4.4", features = ["derive"], optional = true }
+wincode = { version = "0.4.4", default-features = false, optional = true }
+wincode-derive = { version = "0.4.2", optional = true }
 
 [dev-dependencies]
 base64 = { version = "0.22.1" }

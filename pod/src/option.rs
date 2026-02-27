@@ -149,9 +149,9 @@ impl Nullable for Address {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     #[cfg(feature = "bytemuck")]
     use crate::bytemuck::pod_slice_from_bytes;
+    use {super::*, alloc::vec::Vec};
     const ID: Address = Address::from_str_const("TestSysvar111111111111111111111111111111111");
 
     #[cfg(feature = "bytemuck")]
