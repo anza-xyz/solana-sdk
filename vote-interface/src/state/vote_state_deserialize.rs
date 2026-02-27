@@ -425,7 +425,7 @@ fn read_last_timestamp<T: AsRef<[u8]>>(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use {super::*, crate::state::CircBuf};
 
     const PRIOR_VOTERS_SIZE: usize = MAX_ITEMS * core::mem::size_of::<(Pubkey, Epoch, Epoch)>() +
         core::mem::size_of::<u64>() /* idx */ +
@@ -486,5 +486,84 @@ mod tests {
         // Should fail because cursor position > bytes length.
         let result = skip_prior_voters(&mut cursor);
         assert_eq!(result, Err(InstructionError::InvalidAccountData));
+    }
+
+    /// Build a serialized prior_voters buffer with identifiable entries.
+    #[allow(clippy::arithmetic_side_effects)]
+    fn build_prior_voters_buffer(num_entries: usize) -> Vec<u8> {
+        let mut buffer = Vec::new();
+        for i in 0..num_entries {
+            // Pubkey with first byte set to i+1 (non-zero, distinguishable from default).
+            let mut pubkey_bytes = [0u8; 32];
+            pubkey_bytes[0] = (i as u8).wrapping_add(1);
+            buffer.extend_from_slice(&pubkey_bytes);
+            // from_epoch = i + 1
+            buffer.extend_from_slice(&(i as u64 + 1).to_le_bytes());
+            // until_epoch = (i + 1) * 100
+            buffer.extend_from_slice(&((i as u64 + 1) * 100).to_le_bytes());
+        }
+        buffer
+    }
+
+    /// Expected entry tuple for index `i` as written by `build_prior_voters_buffer`.
+    #[allow(clippy::arithmetic_side_effects)]
+    fn expected_entry(i: usize) -> (Pubkey, Epoch, Epoch) {
+        let mut pubkey_bytes = [0u8; 32];
+        pubkey_bytes[0] = (i as u8).wrapping_add(1);
+        (
+            Pubkey::new_from_array(pubkey_bytes),
+            i as u64 + 1,
+            (i as u64 + 1) * 100,
+        )
+    }
+
+    #[test]
+    fn test_read_prior_voters_into() {
+        // Full buffer: 32 entries + idx + is_empty.
+        let mut buffer = build_prior_voters_buffer(MAX_ITEMS);
+        buffer.extend_from_slice(&5u64.to_le_bytes()); // idx = 5
+        buffer.push(0); // is_empty = false
+        assert_eq!(buffer.len(), PRIOR_VOTERS_SIZE);
+
+        let mut cursor = Cursor::new(&buffer[..]);
+        let mut prior_voters = CircBuf::<(Pubkey, Epoch, Epoch)>::default();
+
+        let result = read_prior_voters_into(&mut cursor, &mut prior_voters as *mut _);
+        assert!(result.is_ok());
+
+        for i in 0..MAX_ITEMS {
+            assert_eq!(prior_voters.buf()[i], expected_entry(i));
+        }
+
+        // last() returns the entry at idx=5.
+        assert_eq!(prior_voters.last(), Some(&expected_entry(5)));
+    }
+
+    #[test]
+    fn test_read_prior_voters_into_partial_failure() {
+        // Write only 5 complete entries, then a partial 6th (truncated pubkey).
+        let entries_written = 5;
+        let mut buffer = build_prior_voters_buffer(entries_written);
+        buffer.extend_from_slice(&[0xFF; 16]); // partial pubkey
+
+        let mut cursor = Cursor::new(&buffer[..]);
+        let mut prior_voters = CircBuf::<(Pubkey, Epoch, Epoch)>::default();
+
+        // Should fail: buffer is truncated mid-entry.
+        let result = read_prior_voters_into(&mut cursor, &mut prior_voters as *mut _);
+        assert_eq!(result, Err(InstructionError::InvalidAccountData));
+
+        // The first 5 entries were written via raw pointers before the error.
+        for i in 0..entries_written {
+            assert_eq!(prior_voters.buf()[i], expected_entry(i));
+        }
+
+        // Remaining entries are still default (untouched by the loop).
+        for i in entries_written..MAX_ITEMS {
+            assert_eq!(prior_voters.buf()[i], (Pubkey::default(), 0u64, 0u64));
+        }
+
+        // idx/is_empty were never reached — still at CircBuf::default() values.
+        assert_eq!(prior_voters.last(), None);
     }
 }
