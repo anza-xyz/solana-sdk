@@ -1,4 +1,6 @@
 //! Optional addresses that can be used a `Pod`s
+#[cfg(any(feature = "borsh", feature = "serde"))]
+use alloc::string::ToString;
 #[cfg(feature = "borsh")]
 use borsh::{BorshDeserialize, BorshSchema, BorshSerialize};
 #[cfg(feature = "bytemuck")]
