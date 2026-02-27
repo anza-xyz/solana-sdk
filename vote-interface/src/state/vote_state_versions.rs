@@ -201,7 +201,101 @@ impl Arbitrary<'_> for VoteStateVersions {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use {
+        super::*,
+        crate::state::{VoteInit, BLS_PUBLIC_KEY_COMPRESSED_SIZE, DEFAULT_PRIOR_VOTERS_OFFSET},
+        solana_clock::Clock,
+    };
+
+    #[test]
+    fn test_default_vote_state_is_uninitialized() {
+        // The default `VoteStateV3` is stored to de-initialize a zero-balance vote account,
+        // so must remain such that `VoteStateVersions::is_uninitialized()` returns true
+        // when called on a `VoteStateVersions` that stores it
+        assert!(VoteStateVersions::new_v3(VoteStateV3::default()).is_uninitialized());
+    }
+
+    #[test]
+    fn test_is_correct_size_and_initialized() {
+        // Check all zeroes
+        let mut vote_account_data = vec![0; VoteStateV3::size_of()];
+        assert!(!VoteStateVersions::is_correct_size_and_initialized(
+            &vote_account_data
+        ));
+
+        // Check default VoteStateV3
+        let default_account_state = VoteStateVersions::new_v3(VoteStateV3::default());
+        VoteStateV3::serialize(&default_account_state, &mut vote_account_data).unwrap();
+        assert!(!VoteStateVersions::is_correct_size_and_initialized(
+            &vote_account_data
+        ));
+
+        // Check non-zero data shorter than offset index used
+        let short_data = vec![1; DEFAULT_PRIOR_VOTERS_OFFSET];
+        assert!(!VoteStateVersions::is_correct_size_and_initialized(
+            &short_data
+        ));
+
+        // Check non-zero large account
+        let mut large_vote_data = vec![1; 2 * VoteStateV3::size_of()];
+        let default_account_state = VoteStateVersions::new_v3(VoteStateV3::default());
+        VoteStateV3::serialize(&default_account_state, &mut large_vote_data).unwrap();
+        assert!(!VoteStateVersions::is_correct_size_and_initialized(
+            &vote_account_data
+        ));
+
+        // Check populated VoteStateV3
+        let vote_state = VoteStateV3::new(
+            &VoteInit {
+                node_pubkey: Pubkey::new_unique(),
+                authorized_voter: Pubkey::new_unique(),
+                authorized_withdrawer: Pubkey::new_unique(),
+                commission: 0,
+            },
+            &Clock::default(),
+        );
+        let account_state = VoteStateVersions::new_v3(vote_state.clone());
+        VoteStateV3::serialize(&account_state, &mut vote_account_data).unwrap();
+        assert!(VoteStateVersions::is_correct_size_and_initialized(
+            &vote_account_data
+        ));
+
+        // Check old VoteStateV3 that hasn't been upgraded to newest version yet
+        let old_vote_state = VoteState1_14_11::from(vote_state);
+        let account_state = VoteStateVersions::V1_14_11(Box::new(old_vote_state));
+        let mut vote_account_data = vec![0; VoteState1_14_11::size_of()];
+        VoteStateV3::serialize(&account_state, &mut vote_account_data).unwrap();
+        assert!(VoteStateVersions::is_correct_size_and_initialized(
+            &vote_account_data
+        ));
+    }
+
+    #[test]
+    fn test_vote_state_version_conversion_bls_pubkey() {
+        let vote_pubkey = Pubkey::new_unique();
+
+        // All versions before v4 should result in `None` for BLS pubkey.
+        let v1_14_11_state = VoteState1_14_11::default();
+        let v1_14_11_versioned = VoteStateVersions::V1_14_11(Box::new(v1_14_11_state));
+
+        let v3_state = VoteStateV3::default();
+        let v3_versioned = VoteStateVersions::V3(Box::new(v3_state));
+
+        for versioned in [v1_14_11_versioned, v3_versioned] {
+            let converted = versioned.try_convert_to_v4(&vote_pubkey).unwrap();
+            assert_eq!(converted.bls_pubkey_compressed, None);
+        }
+
+        // v4 to v4 conversion should preserve the BLS pubkey.
+        let test_bls_key = [128u8; BLS_PUBLIC_KEY_COMPRESSED_SIZE];
+        let v4_state = VoteStateV4 {
+            bls_pubkey_compressed: Some(test_bls_key),
+            ..VoteStateV4::default()
+        };
+        let v4_versioned = VoteStateVersions::V4(Box::new(v4_state));
+        let converted = v4_versioned.try_convert_to_v4(&vote_pubkey).unwrap();
+        assert_eq!(converted.bls_pubkey_compressed, Some(test_bls_key));
+    }
 
     #[test]
     fn test_vote_state_versions_deserialize() {
