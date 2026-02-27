@@ -230,7 +230,7 @@ mod tests {
     };
 
     #[test]
-    fn test_vote_state_v3_size_of() {
+    fn test_size_of() {
         let vote_state = VoteStateV3::get_max_sized_vote_state();
         let vote_state = VoteStateVersions::new_v3(vote_state);
         let size = serialized_size(&vote_state).unwrap();
@@ -246,7 +246,7 @@ mod tests {
     }
 
     #[test]
-    fn test_vote_serialize_v3() {
+    fn test_vote_serialize() {
         let mut buffer: Vec<u8> = vec![0; VoteStateV3::size_of()];
         let mut vote_state = VoteStateV3::default();
         vote_state
@@ -263,7 +263,7 @@ mod tests {
     }
 
     #[test]
-    fn test_vote_deserialize_into_v3() {
+    fn test_vote_deserialize_into() {
         // base case
         let target_vote_state = VoteStateV3::default();
         let vote_state_buf =
@@ -296,7 +296,7 @@ mod tests {
     }
 
     #[test]
-    fn test_vote_deserialize_into_error_v3() {
+    fn test_vote_deserialize_into_error() {
         let target_vote_state = VoteStateV3::new_rand_for_tests(Pubkey::new_unique(), 42);
         let mut vote_state_buf =
             bincode::serialize(&VoteStateVersions::new_v3(target_vote_state.clone())).unwrap();
@@ -309,7 +309,7 @@ mod tests {
     }
 
     #[test]
-    fn test_vote_deserialize_into_uninit_v3() {
+    fn test_vote_deserialize_into_uninit() {
         // base case
         let target_vote_state = VoteStateV3::default();
         let vote_state_buf =
@@ -345,7 +345,7 @@ mod tests {
     }
 
     #[test]
-    fn test_vote_deserialize_into_uninit_nopanic_v3() {
+    fn test_vote_deserialize_into_uninit_nopanic() {
         // base case
         let mut test_vote_state = MaybeUninit::uninit();
         let e = VoteStateV3::deserialize_into_uninit(&[], &mut test_vote_state).unwrap_err();
@@ -387,7 +387,7 @@ mod tests {
     }
 
     #[test]
-    fn test_vote_deserialize_into_uninit_ill_sized_v3() {
+    fn test_vote_deserialize_into_uninit_ill_sized() {
         // provide 4x the minimum struct size in bytes to ensure we typically touch every field
         let struct_bytes_x4 = std::mem::size_of::<VoteStateV3>() * 4;
         for _ in 0..1000 {
