@@ -250,7 +250,10 @@ impl VoteStateV4 {
 mod tests {
     use {
         super::{
-            super::{VoteStateVersions, BLS_PUBLIC_KEY_COMPRESSED_SIZE, MAX_LOCKOUT_HISTORY},
+            super::{
+                CircBuf, Lockout, VoteState1_14_11, VoteStateV3, VoteStateVersions,
+                BLS_PUBLIC_KEY_COMPRESSED_SIZE, MAX_LOCKOUT_HISTORY,
+            },
             *,
         },
         arbitrary::Unstructured,
@@ -258,6 +261,7 @@ mod tests {
         core::mem::MaybeUninit,
         rand::Rng,
         solana_instruction::error::InstructionError,
+        test_case::test_matrix,
     };
 
     #[test]
@@ -274,6 +278,32 @@ mod tests {
         let minimum_balance = rent.minimum_balance(VoteStateV4::size_of());
         // golden, may need updating when vote_state grows
         assert!(minimum_balance as f64 / 10f64.powf(9.0) < 0.04)
+    }
+
+    #[test]
+    fn test_new_with_defaults() {
+        let vote_pubkey = Pubkey::new_unique();
+        let vote_init = VoteInit {
+            node_pubkey: Pubkey::new_unique(),
+            authorized_voter: Pubkey::new_unique(),
+            authorized_withdrawer: Pubkey::new_unique(),
+            commission: 50,
+        };
+        let clock = Clock {
+            epoch: 7,
+            ..Clock::default()
+        };
+        let v4 = VoteStateV4::new_with_defaults(&vote_pubkey, &vote_init, &clock);
+
+        assert_eq!(v4.node_pubkey, vote_init.node_pubkey);
+        assert_eq!(v4.authorized_withdrawer, vote_init.authorized_withdrawer);
+        assert_eq!(v4.inflation_rewards_commission_bps, 5000);
+        assert_eq!(v4.inflation_rewards_collector, vote_pubkey);
+        assert_eq!(v4.block_revenue_collector, vote_init.node_pubkey);
+        assert_eq!(v4.block_revenue_commission_bps, 10_000);
+        assert_eq!(v4.pending_delegator_rewards, 0);
+        assert_eq!(v4.bls_pubkey_compressed, None);
+        assert!(!v4.authorized_voters.is_empty());
     }
 
     #[test]
@@ -337,6 +367,58 @@ mod tests {
     }
 
     #[test]
+    fn test_deserialize_into_reuse_across_success_and_failure() {
+        let vote_pubkey = Pubkey::new_unique();
+        let mut vote_state = VoteStateV4::default();
+
+        // 1. Valid V4 data.
+        let v4_a = VoteStateV4::new_rand_for_tests(Pubkey::new_unique(), 100);
+        let buf_a = bincode::serialize(&VoteStateVersions::new_v4(v4_a.clone())).unwrap();
+        VoteStateV4::deserialize_into(&buf_a, &mut vote_state, &vote_pubkey).unwrap();
+        assert_eq!(vote_state, v4_a);
+
+        // 2. Different valid V4 data.
+        let v4_b = VoteStateV4::new_rand_for_tests(Pubkey::new_unique(), 200);
+        let buf_b = bincode::serialize(&VoteStateVersions::new_v4(v4_b.clone())).unwrap();
+        VoteStateV4::deserialize_into(&buf_b, &mut vote_state, &vote_pubkey).unwrap();
+        assert_eq!(vote_state, v4_b);
+
+        // 3. Invalid data — resets to default.
+        let mut bad_buf = buf_b.clone();
+        bad_buf.truncate(bad_buf.len() - 1);
+        VoteStateV4::deserialize_into(&bad_buf, &mut vote_state, &vote_pubkey).unwrap_err();
+        assert_eq!(vote_state, VoteStateV4::default());
+
+        // 4. Valid again after error.
+        VoteStateV4::deserialize_into(&buf_a, &mut vote_state, &vote_pubkey).unwrap();
+        assert_eq!(vote_state, v4_a);
+    }
+
+    #[test]
+    fn test_vote_deserialize_into_trailing_data() {
+        let vote_pubkey = Pubkey::new_unique();
+        let target_vote_state = VoteStateV4::new_rand_for_tests(Pubkey::new_unique(), 42);
+        let vote_state_buf =
+            bincode::serialize(&VoteStateVersions::new_v4(target_vote_state.clone())).unwrap();
+
+        // Trailing garbage data is ignored.
+        let mut buf_with_garbage = vote_state_buf.clone();
+        buf_with_garbage.extend_from_slice(&[0xDE, 0xAD, 0xBE, 0xEF]);
+        let mut test_vote_state = VoteStateV4::default();
+        VoteStateV4::deserialize_into(&buf_with_garbage, &mut test_vote_state, &vote_pubkey)
+            .unwrap();
+        assert_eq!(target_vote_state, test_vote_state);
+
+        // Trailing zeroes are ignored.
+        let mut buf_with_zeroes = vote_state_buf;
+        buf_with_zeroes.extend_from_slice(&[0u8; 64]);
+        let mut test_vote_state = VoteStateV4::default();
+        VoteStateV4::deserialize_into(&buf_with_zeroes, &mut test_vote_state, &vote_pubkey)
+            .unwrap();
+        assert_eq!(target_vote_state, test_vote_state);
+    }
+
+    #[test]
     fn test_vote_deserialize_into_error() {
         let vote_pubkey = Pubkey::new_unique();
 
@@ -350,6 +432,41 @@ mod tests {
         VoteStateV4::deserialize_into(&vote_state_buf, &mut test_vote_state, &vote_pubkey)
             .unwrap_err();
         assert_eq!(test_vote_state, VoteStateV4::default());
+    }
+
+    #[test]
+    fn test_vote_deserialize_into_error_with_pre_state() {
+        let vote_pubkey = Pubkey::new_unique();
+
+        // Start with a fully-populated state with heap allocations.
+        let mut vote_state = VoteStateV4::new_rand_for_tests(Pubkey::new_unique(), 42);
+        vote_state.epoch_credits = vec![(0, 100, 0), (1, 200, 100), (2, 300, 200)];
+
+        // Deserialize truncated buffer — triggers error + DropGuard.
+        let mut buf =
+            bincode::serialize(&VoteStateVersions::new_v4(VoteStateV4::default())).unwrap();
+        buf.truncate(buf.len() - 1);
+
+        VoteStateV4::deserialize_into(&buf, &mut vote_state, &vote_pubkey).unwrap_err();
+        // DropGuard should have reset to default despite pre-existing heap data.
+        assert_eq!(vote_state, VoteStateV4::default());
+    }
+
+    #[test]
+    fn test_deserialize_into_uninit_no_reset_on_error() {
+        // Contrast with `test_vote_deserialize_into_error` which verifies
+        // that `deserialize_into` resets to `T::default()` via DropGuard.
+        // `deserialize_into_uninit` does NOT reset — the MaybeUninit may
+        // remain partially written and must not be assumed initialized.
+        let vote_pubkey = Pubkey::new_unique();
+        let target = VoteStateV4::new_rand_for_tests(Pubkey::new_unique(), 42);
+        let mut buf = bincode::serialize(&VoteStateVersions::new_v4(target)).unwrap();
+        buf.truncate(buf.len() - 1);
+
+        let mut test_vote_state = MaybeUninit::uninit();
+        let err = VoteStateV4::deserialize_into_uninit(&buf, &mut test_vote_state, &vote_pubkey);
+        assert_eq!(err, Err(InstructionError::InvalidAccountData));
+        // test_vote_state is NOT guaranteed initialized — must not assume_init.
     }
 
     #[test]
@@ -393,6 +510,32 @@ mod tests {
 
             assert_eq!(target_vote_state, test_vote_state);
         }
+    }
+
+    #[test]
+    fn test_vote_deserialize_into_uninit_trailing_data() {
+        let vote_pubkey = Pubkey::new_unique();
+        let target_vote_state = VoteStateV4::new_rand_for_tests(Pubkey::new_unique(), 42);
+        let vote_state_buf =
+            bincode::serialize(&VoteStateVersions::new_v4(target_vote_state.clone())).unwrap();
+
+        // Trailing garbage data is ignored.
+        let mut buf_with_garbage = vote_state_buf.clone();
+        buf_with_garbage.extend_from_slice(&[0xDE, 0xAD, 0xBE, 0xEF]);
+        let mut test_vote_state = MaybeUninit::uninit();
+        VoteStateV4::deserialize_into_uninit(&buf_with_garbage, &mut test_vote_state, &vote_pubkey)
+            .unwrap();
+        let test_vote_state = unsafe { test_vote_state.assume_init() };
+        assert_eq!(target_vote_state, test_vote_state);
+
+        // Trailing zeroes are ignored.
+        let mut buf_with_zeroes = vote_state_buf;
+        buf_with_zeroes.extend_from_slice(&[0u8; 64]);
+        let mut test_vote_state = MaybeUninit::uninit();
+        VoteStateV4::deserialize_into_uninit(&buf_with_zeroes, &mut test_vote_state, &vote_pubkey)
+            .unwrap();
+        let test_vote_state = unsafe { test_vote_state.assume_init() };
+        assert_eq!(target_vote_state, test_vote_state);
     }
 
     #[test]
@@ -507,5 +650,173 @@ mod tests {
         };
         assert_eq!(vote_state_some.bls_pubkey_compressed, Some(test_bls_key));
         run_test(vote_state_some, Some(test_bls_key));
+    }
+
+    #[test]
+    fn test_deserialize_invalid_variant_tags() {
+        let vote_pubkey = Pubkey::new_unique();
+        let mut buf = vec![0u8; VoteStateV4::size_of()];
+
+        // Tag 0 (V0_23_5 — rejected).
+        let mut vs = VoteStateV4::default();
+        assert_eq!(
+            VoteStateV4::deserialize_into(&buf, &mut vs, &vote_pubkey),
+            Err(InstructionError::InvalidAccountData)
+        );
+
+        // Tag 4 (unknown).
+        buf[..4].copy_from_slice(&4u32.to_le_bytes());
+        assert_eq!(
+            VoteStateV4::deserialize_into(&buf, &mut vs, &vote_pubkey),
+            Err(InstructionError::InvalidAccountData)
+        );
+
+        // Tag u32::MAX.
+        buf[..4].copy_from_slice(&u32::MAX.to_le_bytes());
+        assert_eq!(
+            VoteStateV4::deserialize_into(&buf, &mut vs, &vote_pubkey),
+            Err(InstructionError::InvalidAccountData)
+        );
+    }
+
+    #[test]
+    fn test_invalid_option_discriminants() {
+        let vote_pubkey = Pubkey::new_unique();
+        let vote_state = VoteStateV4 {
+            root_slot: Some(42),
+            ..VoteStateV4::default()
+        };
+        let valid_buf = bincode::serialize(&VoteStateVersions::new_v4(vote_state)).unwrap();
+
+        // bls_pubkey_compressed Option discriminant.
+        // tag(4) + node_pubkey(32) + authorized_withdrawer(32) +
+        // inflation_rewards_collector(32) + block_revenue_collector(32) +
+        // commission_bps(2) + block_revenue_bps(2) + pending_rewards(8)
+        let bls_offset = 4 + 32 + 32 + 32 + 32 + 2 + 2 + 8;
+        assert_eq!(valid_buf[bls_offset], 0); // None
+
+        {
+            let mut buf = valid_buf.clone();
+            buf[bls_offset] = 2;
+            let mut vs = VoteStateV4::default();
+            assert_eq!(
+                VoteStateV4::deserialize_into(&buf, &mut vs, &vote_pubkey),
+                Err(InstructionError::InvalidAccountData)
+            );
+        }
+
+        // root_slot Option discriminant.
+        // bls(1 for None) + votes_count(8)
+        let root_slot_offset = bls_offset + 1 + 8;
+        assert_eq!(valid_buf[root_slot_offset], 1); // Some
+
+        {
+            let mut buf = valid_buf.clone();
+            buf[root_slot_offset] = 2;
+            let mut vs = VoteStateV4::default();
+            assert_eq!(
+                VoteStateV4::deserialize_into(&buf, &mut vs, &vote_pubkey),
+                Err(InstructionError::InvalidAccountData)
+            );
+        }
+    }
+
+    #[allow(clippy::arithmetic_side_effects)]
+    #[test_matrix(
+        [0u8, 50, 100, 255],
+        [0usize, 1, 2]
+    )]
+    fn test_deserialize_prior_versions_simd_0185(commission: u8, prior_voters_count: usize) {
+        let vote_pubkey = Pubkey::new_unique();
+        let node_pubkey = Pubkey::new_unique();
+        let root_slot = Some(42);
+        let epoch_credits = vec![(0, 100, 0), (1, 200, 100)];
+        let last_timestamp = BlockTimestamp {
+            slot: 999,
+            timestamp: 12345,
+        };
+        let mut prior_voters = CircBuf::default();
+        for i in 0..prior_voters_count {
+            prior_voters.append((Pubkey::new_unique(), i as u64 * 5, (i as u64 + 1) * 5));
+        }
+
+        // SIMD-0185 specifies the following defaults when converting older
+        // vote state versions to V4:
+        //
+        //   inflation_rewards_collector:      vote_pubkey
+        //   block_revenue_collector:          old_vote_state.node_pubkey
+        //   inflation_rewards_commission_bps: 100 * (old_vote_state.commission as u16)
+        //   block_revenue_commission_bps:     10_000 (100%)
+        //   pending_delegator_rewards:        0
+        //   bls_pubkey_compressed:            None
+        let assert_simd_0185_defaults = |v4: &VoteStateV4| {
+            assert_eq!(
+                v4.inflation_rewards_commission_bps,
+                u16::from(commission) * 100
+            );
+            assert_eq!(v4.block_revenue_commission_bps, 10_000);
+            assert_eq!(v4.inflation_rewards_collector, vote_pubkey);
+            assert_eq!(v4.block_revenue_collector, node_pubkey);
+            assert_eq!(v4.pending_delegator_rewards, 0);
+            assert_eq!(v4.bls_pubkey_compressed, None);
+
+            // Assert fields after `prior_voters` survived `skip_prior_voters`.
+            assert_eq!(v4.epoch_credits, epoch_credits);
+            assert_eq!(v4.last_timestamp, last_timestamp);
+        };
+
+        // V1_14_11 → V4
+        let v1_state = VoteState1_14_11 {
+            node_pubkey,
+            commission,
+            root_slot,
+            epoch_credits: epoch_credits.clone(),
+            last_timestamp: last_timestamp.clone(),
+            prior_voters: prior_voters.clone(),
+            ..VoteState1_14_11::default()
+        };
+        let buf = bincode::serialize(&VoteStateVersions::V1_14_11(Box::new(v1_state))).unwrap();
+        let v4 = VoteStateV4::deserialize(&buf, &vote_pubkey).unwrap();
+        assert_simd_0185_defaults(&v4);
+
+        // V3 → V4
+        let v3_state = VoteStateV3 {
+            node_pubkey,
+            commission,
+            root_slot,
+            epoch_credits: epoch_credits.clone(),
+            last_timestamp: last_timestamp.clone(),
+            prior_voters: prior_voters.clone(),
+            ..VoteStateV3::default()
+        };
+        let buf = bincode::serialize(&VoteStateVersions::new_v3(v3_state)).unwrap();
+        let v4 = VoteStateV4::deserialize(&buf, &vote_pubkey).unwrap();
+        assert_simd_0185_defaults(&v4);
+    }
+
+    #[test]
+    fn test_has_latency() {
+        let vote_pubkey = Pubkey::new_unique();
+
+        // V1_14_11 → V4: all latencies should be 0.
+        let mut v1_state = VoteState1_14_11::default();
+        v1_state.votes.push_back(Lockout::new(100));
+        v1_state.votes.push_back(Lockout::new(200));
+        let buf = bincode::serialize(&VoteStateVersions::V1_14_11(Box::new(v1_state))).unwrap();
+        let deserialized = VoteStateV4::deserialize(&buf, &vote_pubkey).unwrap();
+        assert_eq!(deserialized.votes.len(), 2);
+        for vote in &deserialized.votes {
+            assert_eq!(vote.latency, 0);
+        }
+
+        // V4 with non-zero latency: preserved.
+        let mut v4_state = VoteStateV4::default();
+        v4_state.votes.push_back(LandedVote {
+            latency: 42,
+            lockout: Lockout::new(100),
+        });
+        let buf = bincode::serialize(&VoteStateVersions::new_v4(v4_state)).unwrap();
+        let deserialized = VoteStateV4::deserialize(&buf, &vote_pubkey).unwrap();
+        assert_eq!(deserialized.votes[0].latency, 42);
     }
 }

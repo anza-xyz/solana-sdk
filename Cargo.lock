@@ -4406,6 +4406,7 @@ dependencies = [
  "solana-short-vec 3.2.0",
  "solana-system-interface",
  "solana-vote-interface",
+ "test-case",
 ]
 
 [[package]]
