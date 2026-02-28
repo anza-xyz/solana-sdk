@@ -251,7 +251,7 @@ mod tests {
     use {
         super::{
             super::{
-                Lockout, VoteState1_14_11, VoteStateV3, VoteStateVersions,
+                CircBuf, Lockout, VoteState1_14_11, VoteStateV3, VoteStateVersions,
                 BLS_PUBLIC_KEY_COMPRESSED_SIZE, MAX_LOCKOUT_HISTORY,
             },
             *,
@@ -735,7 +735,7 @@ mod tests {
             slot: 999,
             timestamp: 12345,
         };
-        let mut prior_voters = super::super::CircBuf::default();
+        let mut prior_voters = CircBuf::default();
         for i in 0..prior_voters_count {
             prior_voters.append((Pubkey::new_unique(), i as u64 * 5, (i as u64 + 1) * 5));
         }
