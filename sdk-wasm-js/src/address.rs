@@ -121,7 +121,7 @@ impl Address {
     }
 
     /// Derive an Address from anothern Address, string seed, and a program id
-    pub fn createWithSeed(base: &Self, seed: &str, owner: &Self) -> Result<Self, JsValue> {
+    pub fn createWithSeed(base: &Self, seed: &[u8], owner: &Self) -> Result<Self, JsValue> {
         solana_address::Address::create_with_seed(&base.inner, seed, &owner.inner)
             .map(Into::into)
             .map_err(display_to_jsvalue)
