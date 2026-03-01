@@ -487,6 +487,15 @@ impl AccountView {
     }
 }
 
+/// Allow `AccountView` to be used as a reference to itself
+/// for convenience.
+impl AsRef<AccountView> for AccountView {
+    #[inline(always)]
+    fn as_ref(&self) -> &AccountView {
+        self
+    }
+}
+
 /// Reference to account data with checked borrow rules.
 #[derive(Debug)]
 pub struct Ref<'a, T: ?Sized> {
