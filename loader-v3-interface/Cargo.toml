@@ -37,6 +37,7 @@ solana-system-interface = { workspace = true, features = ["bincode"], optional =
 
 [dev-dependencies]
 bincode = { workspace = true }
+solana-bincode = { workspace = true }
 solana-loader-v3-interface = { path = ".", features = ["dev-context-only-utils"] }
 
 [lints]
