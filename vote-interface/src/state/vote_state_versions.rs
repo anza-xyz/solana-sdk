@@ -351,7 +351,7 @@ mod tests {
         // Tag 0 (V0_23_5 — explicitly rejected).
         assert_eq!(
             VoteStateVersions::deserialize(&buf),
-            Err(InstructionError::InvalidAccountData)
+            Err(InstructionError::UninitializedAccount)
         );
 
         // Tag 4 (unknown).
