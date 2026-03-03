@@ -10,6 +10,8 @@
 use bytemuck::{Pod, Zeroable};
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
+#[cfg(feature = "wincode")]
+use wincode_derive::{SchemaRead, SchemaWrite};
 #[cfg(feature = "borsh")]
 use {
     alloc::format,
@@ -50,6 +52,7 @@ pub trait Nullable: PartialEq + Sized {
     feature = "borsh",
     derive(BorshDeserialize, BorshSerialize, BorshSchema)
 )]
+#[cfg_attr(feature = "wincode", derive(SchemaRead, SchemaWrite))]
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub struct PodOption<T: Nullable>(T);
 
@@ -323,6 +326,36 @@ mod tests {
                 none
             );
             assert!(borsh::from_slice::<PodOption<Address>>(&[]).is_err());
+        }
+    }
+
+    #[cfg(feature = "wincode")]
+    mod wincode_tests {
+        use super::*;
+
+        #[test]
+        fn test_wincode_pod_option_roundtrip_and_size() {
+            let some = PodOption::from(9u64);
+            let none = PodOption::from(0u64);
+
+            let some_bytes = wincode::serialize(&some).unwrap();
+            let none_bytes = wincode::serialize(&none).unwrap();
+
+            assert_eq!(some_bytes.len(), core::mem::size_of::<u64>());
+            assert_eq!(none_bytes.len(), core::mem::size_of::<u64>());
+            assert_eq!(some_bytes.as_slice(), &9u64.to_le_bytes());
+            assert_eq!(none_bytes.as_slice(), &0u64.to_le_bytes());
+
+            let some_roundtrip: PodOption<u64> = wincode::deserialize(&some_bytes).unwrap();
+            let none_roundtrip: PodOption<u64> = wincode::deserialize(&none_bytes).unwrap();
+            assert_eq!(some_roundtrip, some);
+            assert_eq!(none_roundtrip, none);
+        }
+
+        #[test]
+        fn test_wincode_pod_option_rejects_truncated_input() {
+            assert!(wincode::deserialize::<PodOption<u64>>(&[]).is_err());
+            assert!(wincode::deserialize::<PodOption<u64>>(&[0; 7]).is_err());
         }
     }
 
