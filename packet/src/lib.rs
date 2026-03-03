@@ -283,6 +283,7 @@ impl Meta {
         self.flags.set(PacketFlags::DISCARD, discard);
     }
 
+    #[deprecated(since = "4.2.0", note = "Not in use anymore")]
     #[inline]
     pub fn set_track_performance(&mut self, is_performance_track: bool) {
         self.flags
@@ -309,6 +310,7 @@ impl Meta {
         self.flags.contains(PacketFlags::SIMPLE_VOTE_TX)
     }
 
+    #[deprecated(since = "4.2.0", note = "Not in use anymore")]
     #[inline]
     pub fn is_perf_track_packet(&self) -> bool {
         self.flags.contains(PacketFlags::PERF_TRACK_PACKET)
