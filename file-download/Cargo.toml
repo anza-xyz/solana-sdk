@@ -16,4 +16,4 @@ targets = ["x86_64-unknown-linux-gnu"]
 console = { workspace = true }
 indicatif = { workspace = true }
 log = { workspace = true }
-reqwest = { workspace = true, features = ["blocking", "brotli", "deflate", "gzip", "rustls-tls", "json"] }
+reqwest = { workspace = true, features = ["blocking", "brotli", "deflate", "gzip", "rustls", "json"] }

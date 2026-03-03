@@ -207,7 +207,7 @@ rand = "0.9.2"
 rand_chacha = "0.9.0"
 rayon = "1.10.0"
 regex = "1.11"
-reqwest = { version = "0.11.27", default-features = false }
+reqwest = { version = "0.13.2", default-features = false }
 serde = { version = "1.0.226", default-features = false } # must match the serde_derive version, see https://github.com/serde-rs/serde/issues/2584#issuecomment-1685252251
 serde-big-array = "0.5.1"
 serde_bytes = "0.11.15"
