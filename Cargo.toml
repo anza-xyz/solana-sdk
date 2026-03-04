@@ -52,6 +52,7 @@ members = [
     "native-token",
     "nonce",
     "nonce-account",
+    "nullable",
     "offchain-message",
     "package-metadata",
     "package-metadata-macro",
@@ -104,6 +105,7 @@ members = [
     "transaction-error",
     "validator-exit",
     "vote-interface",
+    "zero-copy",
 ]
 
 resolver = "2"
@@ -274,6 +276,7 @@ solana-msg = { path = "msg", version = "3.0.0", default-features = false }
 solana-native-token = { path = "native-token", version = "3.0.0" }
 solana-nonce = { path = "nonce", version = "3.1.0" }
 solana-nonce-account = { path = "nonce-account", version = "4.0.0" }
+solana-nullable = { path = "nullable", version = "0.1.0", default-features = false }
 solana-offchain-message = { path = "offchain-message", version = "3.0.0" }
 solana-package-metadata = { path = "package-metadata", version = "3.0.0" }
 solana-package-metadata-macro = { path = "package-metadata-macro", version = "3.0.0" }
@@ -325,6 +328,7 @@ solana-transaction = { path = "transaction", version = "4.0.0" }
 solana-transaction-error = { path = "transaction-error", version = "3.1.0" }
 solana-validator-exit = { path = "validator-exit", version = "3.0.0" }
 solana-vote-interface = { path = "vote-interface", version = "5.0.0" }
+solana-zero-copy = { path = "zero-copy", version = "0.1.0", default-features = false }
 static_assertions = "1.1.0"
 strum = "0.24"
 strum_macros = "0.24"

@@ -379,6 +379,14 @@ pub fn address_eq(a1: &Address, a2: &Address) -> bool {
     }
 }
 
+/// Implementation of `Nullable` for `Address`.
+///
+/// The zero address (`[0u8; 32]`) is the `None` value.
+#[cfg(feature = "nullable")]
+impl solana_nullable::Nullable for Address {
+    const NONE: Self = Address::new_from_array([0u8; ADDRESS_BYTES]);
+}
+
 #[cfg(feature = "decode")]
 /// Convenience macro to define a static `Address` value.
 ///

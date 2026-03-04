@@ -55,6 +55,7 @@ all_crate_dirs=(
   native-token
   nonce
   nonce-account
+  nullable
   offchain-message
   package-metadata
   package-metadata-macro
@@ -101,6 +102,7 @@ all_crate_dirs=(
   transaction-error
   validator-exit
   vote-interface
+  zero-copy
 )
 
 update_solana_sdk_dependencies() {
