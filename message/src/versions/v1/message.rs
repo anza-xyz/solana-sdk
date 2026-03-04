@@ -41,11 +41,10 @@ use serde_derive::{Deserialize, Serialize};
 use solana_frozen_abi_macro::AbiExample;
 #[cfg(feature = "wincode")]
 use {
-    crate::v1::MAX_TRANSACTION_SIZE,
-    core::slice::from_raw_parts,
+    crate::v1::{InstructionHeader, FIXED_HEADER_SIZE},
+    core::{mem::MaybeUninit, ptr::copy_nonoverlapping, slice::from_raw_parts},
     wincode::{
-        config::ConfigCore,
-        error::invalid_tag_encoding,
+        config::{Config, ConfigCore},
         io::{Reader, Writer},
         ReadResult, SchemaRead, SchemaWrite, WriteResult,
     },
@@ -55,17 +54,17 @@ use {
         compiled_instruction::CompiledInstruction,
         compiled_keys::CompiledKeys,
         v1::{
-            InstructionHeader, MessageError, TransactionConfig, TransactionConfigMask,
-            FIXED_HEADER_SIZE, MAX_ADDRESSES, MAX_INSTRUCTIONS, MAX_SIGNATURES,
+            MessageError, TransactionConfig, TransactionConfigMask, MAX_ADDRESSES,
+            MAX_INSTRUCTIONS, MAX_SIGNATURES,
         },
         AccountKeys, CompileError, MessageHeader,
     },
-    core::{mem::size_of, ptr::copy_nonoverlapping},
+    core::mem::size_of,
     solana_address::Address,
     solana_hash::Hash,
     solana_instruction::Instruction,
     solana_sanitize::{Sanitize, SanitizeError},
-    std::{collections::HashSet, mem::MaybeUninit},
+    std::collections::HashSet,
 };
 
 /// A V1 transaction message (SIMD-0385) supporting 4KB transactions with inline compute budget.
@@ -516,7 +515,6 @@ impl Sanitize for Message {
 unsafe impl<C: ConfigCore> SchemaWrite<C> for Message {
     type Src = Self;
 
-    #[allow(clippy::arithmetic_side_effects)]
     #[inline(always)]
     fn size_of(src: &Self::Src) -> WriteResult<usize> {
         Ok(src.size())
@@ -575,23 +573,6 @@ unsafe impl<C: ConfigCore> SchemaWrite<C> for Message {
     }
 }
 
-#[cfg(feature = "wincode")]
-unsafe impl<'de, C: ConfigCore> SchemaRead<'de, C> for Message {
-    type Dst = Self;
-
-    fn read(mut reader: impl Reader<'de>, dst: &mut MaybeUninit<Self::Dst>) -> ReadResult<()> {
-        let bytes = reader.fill_buf(MAX_TRANSACTION_SIZE)?;
-        let (message, consumed) = deserialize(bytes).map_err(|_| invalid_tag_encoding(1))?;
-
-        // SAFETY: `deserialize` validates that we read `consumed` bytes.
-        unsafe { reader.consume_unchecked(consumed) };
-
-        dst.write(message);
-
-        Ok(())
-    }
-}
-
 /// Serialize the message.
 #[cfg(feature = "wincode")]
 #[inline]
@@ -599,191 +580,116 @@ pub fn serialize(message: &Message) -> Vec<u8> {
     wincode::serialize(message).unwrap()
 }
 
-/// Deserialize the message from the provided input buffer, returning the message and
-/// the number of bytes read.
-#[allow(clippy::arithmetic_side_effects)]
-pub fn deserialize(input: &[u8]) -> Result<(Message, usize), MessageError> {
-    if input.len() < FIXED_HEADER_SIZE {
-        return Err(MessageError::BufferTooSmall);
-    }
+#[cfg(feature = "wincode")]
+unsafe impl<'de, C: Config> SchemaRead<'de, C> for Message {
+    type Dst = Message;
 
-    let mut input_ptr = input.as_ptr();
-
-    // SAFETY: input length has been checked against `FIXED_HEADER_SIZE`.
-    let header = unsafe {
-        let mut header = MaybeUninit::<MessageHeader>::uninit();
-        let dst = header.as_mut_ptr() as *mut u8;
-
-        // num_required_signatures
-        dst.write(input_ptr.read());
-        // num_readonly_signed_accounts
-        dst.add(1).write(input_ptr.add(1).read());
-        // num_readonly_unsigned_accounts
-        dst.add(2).write(input_ptr.add(2).read());
-
-        // Advance input pointer past header.
-        input_ptr = input_ptr.add(3);
-
-        header.assume_init()
-    };
-
-    // config mask
-    //
-    // SAFETY: input length has been checked against `FIXED_HEADER_SIZE`.
-    let config_mask = unsafe {
-        let mask = TransactionConfigMask(u32::from_le_bytes(*(input_ptr as *const [u8; 4])));
-        input_ptr = input_ptr.add(4);
-
-        mask
-    };
-
-    // lifetime specifier
-    //
-    // SAFETY: input length has been checked against `FIXED_HEADER_SIZE`.
-    let lifetime_specifier = unsafe {
-        let specifier = Hash::new_from_array(*(input_ptr as *const [u8; 32]));
-        input_ptr = input_ptr.add(32);
-
-        specifier
-    };
-
-    // counts
-    //
-    // SAFETY: input length has been checked against `FIXED_HEADER_SIZE`.
-    let num_instructions = unsafe {
-        let num_instructions = input_ptr.read() as usize;
-        input_ptr = input_ptr.add(1);
-
-        num_instructions
-    };
-    // SAFETY: input length has been checked against `FIXED_HEADER_SIZE`.
-    let num_addresses = unsafe {
-        let num_addresses = input_ptr.read() as usize;
-        input_ptr = input_ptr.add(1);
-
-        num_addresses
-    };
-
-    // Track the offset for input. This is the value returned to indicate
-    // how many bytes were read.
-    let mut offset = FIXED_HEADER_SIZE + num_addresses * size_of::<Address>();
-
-    // addresses
-
-    if input.len() < offset {
-        return Err(MessageError::BufferTooSmall);
-    }
-
-    let mut account_keys = Vec::with_capacity(num_addresses);
-    // SAFETY: input length has been checked against the required size
-    // for the addresses.
-    unsafe {
-        let dst = account_keys.as_mut_ptr();
-        copy_nonoverlapping(input_ptr as *const Address, dst, num_addresses);
-        account_keys.set_len(num_addresses);
-        input_ptr = input_ptr.add(num_addresses * size_of::<Address>());
-    }
-
-    // config values
-    offset += config_mask.size_of_config();
-
-    if input.len() < offset {
-        return Err(MessageError::BufferTooSmall);
-    }
-
-    let mut config = TransactionConfig::empty();
-
-    if config_mask.has_priority_fee() {
-        // SAFETY: input length has been checked against the required size
-        // for the config.
-        let value = unsafe { u64::from_le_bytes(*(input_ptr as *const [u8; 8])) };
-        config = config.with_priority_fee(value);
-        input_ptr = unsafe { input_ptr.add(size_of::<u64>()) };
-    }
-
-    if config_mask.has_compute_unit_limit() {
-        // SAFETY: input length has been checked against the required size
-        // for the config.
-        let value = unsafe { u32::from_le_bytes(*(input_ptr as *const [u8; 4])) };
-        config = config.with_compute_unit_limit(value);
-        input_ptr = unsafe { input_ptr.add(size_of::<u32>()) };
-    }
-
-    if config_mask.has_loaded_accounts_data_size() {
-        // SAFETY: input length has been checked against the required size
-        // for the config.
-        let value = unsafe { u32::from_le_bytes(*(input_ptr as *const [u8; 4])) };
-        config = config.with_loaded_accounts_data_size_limit(value);
-        input_ptr = unsafe { input_ptr.add(size_of::<u32>()) };
-    }
-
-    if config_mask.has_heap_size() {
-        // SAFETY: input length has been checked against the required size
-        // for the config.
-        let value = unsafe { u32::from_le_bytes(*(input_ptr as *const [u8; 4])) };
-        config = config.with_heap_size(value);
-        input_ptr = unsafe { input_ptr.add(size_of::<u32>()) };
-    }
-
-    // instruction headers
-
-    offset += num_instructions * size_of::<InstructionHeader>();
-
-    if input.len() < offset {
-        return Err(MessageError::BufferTooSmall);
-    }
-
-    // SAFETY: input length has been checked against the required size
-    // for the instruction headers.
-    let instruction_headers: &[InstructionHeader] = unsafe {
-        core::slice::from_raw_parts(input_ptr as *const InstructionHeader, num_instructions)
-    };
-
-    input_ptr = unsafe { input_ptr.add(num_instructions * size_of::<InstructionHeader>()) };
-
-    // instruction payloads
-
-    let mut instructions = Vec::with_capacity(num_instructions);
-
-    for header in instruction_headers {
-        let program_id_index = header.0;
-        let num_accounts = header.1 as usize;
-        let data_len = u16::from_le_bytes(header.2) as usize;
-
-        offset += num_accounts + data_len;
-
-        if input.len() < offset {
-            return Err(MessageError::BufferTooSmall);
-        }
-
-        // SAFETY: input length has been checked against the required size
-        // for the instruction payload.
-        let accounts = unsafe { core::slice::from_raw_parts(input_ptr, num_accounts).to_vec() };
-
-        let data = unsafe {
-            input_ptr = input_ptr.add(num_accounts);
-            core::slice::from_raw_parts(input_ptr, data_len).to_vec()
+    #[expect(clippy::arithmetic_side_effects)]
+    fn read(mut reader: impl Reader<'de>, dst: &mut MaybeUninit<Self::Dst>) -> ReadResult<()> {
+        let (header, lifetime_specifier, config_mask, num_instructions, num_addresses) = {
+            // SAFETY: the following reads consume exactly `FIXED_HEADER_SIZE` bytes.
+            // - MessageHeader (3 bytes)
+            // - TransactionConfigMask (4 bytes)
+            // - Hash (32 bytes)
+            // - num_instructions (1 byte)
+            // - num_addresses (1 byte)
+            let mut reader = unsafe { reader.as_trusted_for(FIXED_HEADER_SIZE)? };
+            let header = <MessageHeader as SchemaRead<C>>::get(reader.by_ref())?;
+            let config_mask = TransactionConfigMask(u32::from_le_bytes(reader.take_array()?));
+            let lifetime_specifier = <Hash as SchemaRead<C>>::get(reader.by_ref())?;
+            let num_instructions = reader.take_byte()? as usize;
+            let num_addresses = reader.take_byte()? as usize;
+            (
+                header,
+                lifetime_specifier,
+                config_mask,
+                num_instructions,
+                num_addresses,
+            )
         };
 
-        input_ptr = unsafe { input_ptr.add(data_len) };
+        let account_keys_bytes = reader.take_scoped(num_addresses * size_of::<Address>())?;
+        let mut account_keys = Vec::with_capacity(num_addresses);
+        // SAFETY:
+        // - `take_scoped(num_addresses * size_of::<Address>())` returns
+        //   exactly the requested number of bytes, or errors.
+        // - `Address` is `#[repr(transparent)]` over `[u8; 32]`, so it has alignment 1
+        //   and any 32-byte sequence is a valid in-memory representation.
+        // - `num_addresses * size_of::<Address>()` is exactly the number of bytes
+        //   needed to fill `num_addresses` elements into the `account_keys` vector.
+        // - `account_keys` was allocated with capacity for `num_addresses` elements.
+        unsafe {
+            copy_nonoverlapping(
+                account_keys_bytes.as_ptr().cast::<Address>(),
+                account_keys.as_mut_ptr(),
+                num_addresses,
+            );
+            account_keys.set_len(num_addresses);
+        }
 
-        instructions.push(CompiledInstruction {
-            program_id_index,
-            accounts,
-            data,
-        });
-    }
+        let mut config = TransactionConfig::empty();
+        if config_mask.has_priority_fee() {
+            config.priority_fee = Some(u64::from_le_bytes(reader.take_array()?));
+        }
+        if config_mask.has_compute_unit_limit() {
+            config.compute_unit_limit = Some(u32::from_le_bytes(reader.take_array()?));
+        }
+        if config_mask.has_loaded_accounts_data_size() {
+            config.loaded_accounts_data_size_limit = Some(u32::from_le_bytes(reader.take_array()?));
+        }
+        if config_mask.has_heap_size() {
+            config.heap_size = Some(u32::from_le_bytes(reader.take_array()?));
+        }
 
-    Ok((
-        Message {
+        // SAFETY:
+        // - `take_borrowed(num_instructions * size_of::<InstructionHeader>())` returns
+        //   exactly the requested number of bytes, or errors.
+        // - `take_borrowed` returns a stable borrow from the backing buffer, so the
+        //   resulting slice remains valid across subsequent reader operations.
+        // - `InstructionHeader` has alignment 1 and is encoded exactly as
+        //   4 bytes `(u8, u8, [u8; 2])`.
+        let instruction_headers = unsafe {
+            from_raw_parts(
+                reader
+                    .take_borrowed(num_instructions * size_of::<InstructionHeader>())?
+                    .as_ptr() as *const InstructionHeader,
+                num_instructions,
+            )
+        };
+        let mut instructions = Vec::with_capacity(num_instructions);
+        for header in instruction_headers {
+            let program_id_index = header.0;
+            let num_accounts = header.1 as usize;
+            let data_len = u16::from_le_bytes(header.2) as usize;
+
+            let accounts = reader.take_scoped(num_accounts)?.to_vec();
+            let data = reader.take_scoped(data_len)?.to_vec();
+
+            instructions.push(CompiledInstruction {
+                program_id_index,
+                accounts,
+                data,
+            });
+        }
+
+        dst.write(Message {
             header,
-            config,
             lifetime_specifier,
+            config,
             account_keys,
             instructions,
-        },
-        offset,
-    ))
+        });
+
+        Ok(())
+    }
+}
+
+/// Deserialize the message from the provided input buffer, returning the message and
+/// the number of bytes read.
+#[cfg(feature = "wincode")]
+#[inline]
+pub fn deserialize(input: &[u8]) -> wincode::ReadResult<Message> {
+    wincode::deserialize(input)
 }
 
 #[cfg(test)]
@@ -1397,7 +1303,7 @@ mod tests {
             .unwrap();
 
         let serialized = serialize(&message);
-        let (deserialized, _) = deserialize(&serialized).unwrap();
+        let deserialized = deserialize(&serialized).unwrap();
         assert_eq!(message.config, deserialized.config);
     }
 }

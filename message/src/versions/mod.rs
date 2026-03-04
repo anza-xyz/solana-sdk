@@ -1,15 +1,5 @@
 #[cfg(feature = "frozen-abi")]
 use solana_frozen_abi_macro::{frozen_abi, AbiEnumVisitor, AbiExample};
-#[cfg(feature = "wincode")]
-use {
-    crate::v1::deserialize,
-    core::mem::MaybeUninit,
-    wincode::{
-        config::Config,
-        io::{Reader, Writer},
-        ReadResult, SchemaRead, SchemaWrite, WriteResult,
-    },
-};
 use {
     crate::{
         compiled_instruction::CompiledInstruction, legacy::Message as LegacyMessage,
@@ -19,6 +9,15 @@ use {
     solana_hash::Hash,
     solana_sanitize::{Sanitize, SanitizeError},
     std::collections::HashSet,
+};
+#[cfg(feature = "wincode")]
+use {
+    core::mem::MaybeUninit,
+    wincode::{
+        config::Config,
+        io::{Reader, Writer},
+        ReadResult, SchemaRead, SchemaWrite, WriteResult,
+    },
 };
 #[cfg(feature = "serde")]
 use {
@@ -412,7 +411,7 @@ unsafe impl<'de, C: Config> SchemaRead<'de, C> for VersionedMessage {
         // which message version is serialized starting from version `0`. If the first
         // is bit is not set, all bytes are used to encode the legacy `Message`
         // format.
-        let variant = *reader.peek()?;
+        let variant = reader.peek_byte()?;
 
         if variant & MESSAGE_VERSION_PREFIX != 0 {
             // Safety: at least 1 byte can be consumed, since it was peeked
@@ -427,14 +426,7 @@ unsafe impl<'de, C: Config> SchemaRead<'de, C> for VersionedMessage {
                     Ok(())
                 }
                 1 => {
-                    // -1 for already-read variant byte
-                    let bytes = reader.fill_buf(v1::MAX_TRANSACTION_SIZE - 1)?;
-                    let (message, consumed) =
-                        deserialize(bytes).map_err(|_| invalid_tag_encoding(1))?;
-
-                    // SAFETY: `deserialize` validates that we read `consumed` bytes.
-                    unsafe { reader.consume_unchecked(consumed) };
-
+                    let message = <v1::Message as SchemaRead<C>>::get(reader)?;
                     dst.write(VersionedMessage::V1(message));
 
                     Ok(())
@@ -648,10 +640,11 @@ mod tests {
             // Serialize V1 to raw bytes.
             let bytes = v1::serialize(&message);
             // Deserialize from raw bytes.
-            let (parsed, _) = v1::deserialize(&bytes).unwrap();
+            let parsed = v1::deserialize(&bytes).unwrap();
 
             // Messages should match.
             assert_eq!(message, parsed);
+            assert_eq!(message, wincode::deserialize(&bytes).unwrap());
 
             // Wrap in VersionedMessage and test `serialize()`.
             let versioned = VersionedMessage::V1(message);

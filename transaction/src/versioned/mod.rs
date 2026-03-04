@@ -301,7 +301,7 @@ unsafe impl<'de, C: Config> SchemaRead<'de, C> for VersionedTransaction {
         //   `> 128` and the top bit is always `1`.
 
         use solana_message::v1::V1_PREFIX;
-        let discriminator = reader.peek()?;
+        let discriminator = reader.peek_byte()?;
         let mut builder = VersionedTransactionUninitBuilder::<C>::from_maybe_uninit_mut(dst);
 
         if discriminator & MESSAGE_VERSION_PREFIX == 0 {
@@ -323,7 +323,7 @@ unsafe impl<'de, C: Config> SchemaRead<'de, C> for VersionedTransaction {
             }
 
             builder.finish();
-        } else if *discriminator == V1_PREFIX {
+        } else if discriminator == V1_PREFIX {
             // V1 transaction
 
             builder.read_message(&mut reader)?;
@@ -339,7 +339,7 @@ unsafe impl<'de, C: Config> SchemaRead<'de, C> for VersionedTransaction {
             let expected_signatures_len = message.header().num_required_signatures as usize;
 
             let bytes_to_read = expected_signatures_len.saturating_mul(SIGNATURE_SIZE);
-            let bytes = reader.fill_exact(bytes_to_read)?;
+            let bytes = reader.take_scoped(bytes_to_read)?;
             let mut signatures = Vec::with_capacity(expected_signatures_len);
 
             // SAFETY: signatures vector is allocated with enough capacity to hold
@@ -353,9 +353,6 @@ unsafe impl<'de, C: Config> SchemaRead<'de, C> for VersionedTransaction {
                     expected_signatures_len,
                 );
                 signatures.set_len(expected_signatures_len);
-                // Advance the reader by the number of bytes we just consumed
-                // for the signatures.
-                reader.consume_unchecked(bytes_to_read);
             }
 
             builder.write_signatures(signatures);
