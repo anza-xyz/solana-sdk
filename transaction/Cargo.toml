@@ -58,10 +58,7 @@ solana-short-vec = { workspace = true, optional = true }
 solana-signature = { workspace = true }
 solana-signer = { workspace = true, optional = true }
 solana-transaction-error = { workspace = true }
-wincode = { workspace = true, optional = true, features = [
-    "solana-short-vec",
-    "alloc",
-] }
+wincode = { workspace = true, optional = true, features = ["solana-short-vec", "alloc"] }
 
 [dev-dependencies]
 anyhow = { workspace = true }
@@ -78,10 +75,7 @@ solana-presigner = { workspace = true }
 solana-pubkey = { workspace = true, features = ["rand"] }
 solana-sha256-hasher = { workspace = true, features = ["sha2"] }
 solana-system-interface = { workspace = true, features = ["bincode"] }
-solana-transaction = { path = ".", features = [
-    "dev-context-only-utils",
-    "wincode",
-] }
+solana-transaction = { path = ".", features = ["dev-context-only-utils", "wincode"] }
 solana-vote-interface = { workspace = true, features = ["bincode"] }
 static_assertions = { workspace = true }
 test-case = { workspace = true }

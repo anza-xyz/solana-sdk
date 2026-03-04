@@ -46,9 +46,7 @@ solana-slot-hashes = { workspace = true }
 solana-pubkey = { workspace = true, features = ["curve25519"] }
 
 [dev-dependencies]
-solana-address-lookup-table-interface = { path = ".", features = [
-    "dev-context-only-utils",
-] }
+solana-address-lookup-table-interface = { path = ".", features = ["dev-context-only-utils"] }
 solana-hash = { workspace = true, features = ["atomic"] }
 solana-pubkey = { workspace = true, features = ["std"] }
 

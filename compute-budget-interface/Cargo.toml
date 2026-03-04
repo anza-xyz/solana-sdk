@@ -24,12 +24,8 @@ serde = ["dep:serde", "dep:serde_derive"]
 borsh = { workspace = true, optional = true }
 serde = { workspace = true, optional = true }
 serde_derive = { workspace = true, optional = true }
-solana-frozen-abi = { workspace = true, features = [
-    "frozen-abi",
-], optional = true }
-solana-frozen-abi-macro = { workspace = true, features = [
-    "frozen-abi",
-], optional = true }
+solana-frozen-abi = { workspace = true, features = ["frozen-abi"], optional = true }
+solana-frozen-abi-macro = { workspace = true, features = ["frozen-abi"], optional = true }
 solana-instruction = { workspace = true, features = ["std"] }
 solana-sdk-ids = { workspace = true }
 

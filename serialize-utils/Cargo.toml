@@ -22,7 +22,4 @@ bincode = { workspace = true }
 borsh = { workspace = true }
 rand = { workspace = true }
 serde = { workspace = true }
-solana-pubkey = { workspace = true, default-features = false, features = [
-    "borsh",
-    "serde",
-] }
+solana-pubkey = { workspace = true, default-features = false, features = ["borsh", "serde"] }

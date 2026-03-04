@@ -18,6 +18,4 @@ targets = ["x86_64-unknown-linux-gnu"]
 unstable-static-syscalls = []
 
 [lints.rust]
-unexpected_cfgs = { level = "warn", check-cfg = [
-  'cfg(target_feature, values("static-syscalls"))',
-] }
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(target_feature, values("static-syscalls"))'] }

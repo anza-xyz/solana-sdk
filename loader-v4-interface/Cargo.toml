@@ -24,12 +24,8 @@ serde = ["dep:serde", "dep:serde_bytes", "dep:serde_derive", "solana-pubkey/serd
 serde = { workspace = true, optional = true }
 serde_bytes = { workspace = true, optional = true }
 serde_derive = { workspace = true, optional = true }
-solana-frozen-abi = { workspace = true, features = [
-    "frozen-abi",
-], optional = true }
-solana-frozen-abi-macro = { workspace = true, features = [
-    "frozen-abi",
-], optional = true }
+solana-frozen-abi = { workspace = true, features = ["frozen-abi"], optional = true }
+solana-frozen-abi-macro = { workspace = true, features = ["frozen-abi"], optional = true }
 solana-instruction = { workspace = true, features = ["std"] }
 solana-pubkey = { workspace = true }
 solana-sdk-ids = { workspace = true }

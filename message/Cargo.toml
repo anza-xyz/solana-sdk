@@ -51,10 +51,7 @@ solana-sanitize = { workspace = true }
 solana-sdk-ids = { workspace = true }
 solana-short-vec = { workspace = true, optional = true }
 solana-transaction-error = { workspace = true }
-wincode = { workspace = true, optional = true, features = [
-    "std",
-    "solana-short-vec",
-] }
+wincode = { workspace = true, optional = true, features = ["std", "solana-short-vec"] }
 
 [dev-dependencies]
 anyhow = { workspace = true }
@@ -64,10 +61,7 @@ borsh = { workspace = true }
 itertools = { workspace = true }
 proptest = { workspace = true }
 serde_json = { workspace = true }
-solana-address-lookup-table-interface = { workspace = true, features = [
-    "bincode",
-    "bytemuck",
-] }
+solana-address-lookup-table-interface = { workspace = true, features = ["bincode", "bytemuck"] }
 solana-example-mocks = { path = "../example-mocks" }
 solana-hash = { workspace = true, features = ["atomic"] }
 solana-instruction = { workspace = true, features = ["borsh"] }

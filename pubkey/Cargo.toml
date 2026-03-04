@@ -31,13 +31,7 @@ wincode = ["solana-address/wincode"]
 
 [dependencies]
 rand = { workspace = true, optional = true }
-solana-address = { workspace = true, features = [
-    "copy",
-    "decode",
-    "error",
-    "sanitize",
-    "syscalls",
-] }
+solana-address = { workspace = true, features = ["copy", "decode", "error", "sanitize", "syscalls"] }
 
 [lints]
 workspace = true

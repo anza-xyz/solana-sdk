@@ -73,18 +73,7 @@ solana-sha256-hasher = { workspace = true, features = ["sha2"], optional = true 
 [dev-dependencies]
 anyhow = { workspace = true }
 solana-account-info = { path = "../account-info" }
-solana-address = { path = ".", features = [
-    "atomic",
-    "borsh",
-    "curve25519",
-    "decode",
-    "dev-context-only-utils",
-    "error",
-    "sanitize",
-    "sha2",
-    "std",
-    "syscalls",
-] }
+solana-address = { path = ".", features = ["atomic", "borsh", "curve25519", "decode", "dev-context-only-utils", "error", "sanitize", "sha2", "std", "syscalls"] }
 solana-cpi = { path = "../cpi" }
 solana-example-mocks = { path = "../example-mocks" }
 solana-hash = { workspace = true }

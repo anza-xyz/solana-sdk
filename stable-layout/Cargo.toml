@@ -15,9 +15,7 @@ all-features = true
 rustdoc-args = ["--cfg=docsrs"]
 
 [dependencies]
-solana-instruction = { workspace = true, default-features = false, features = [
-    "std",
-] }
+solana-instruction = { workspace = true, default-features = false, features = ["std"] }
 solana-pubkey = { workspace = true, default-features = false }
 
 [dev-dependencies]
