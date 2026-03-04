@@ -1,0 +1,37 @@
+[package]
+name = "solana-pod"
+description = "Solana Plain Old Data (Pod) zero-copy types and traits"
+version = "0.1.0"
+authors = { workspace = true }
+repository = { workspace = true }
+homepage = { workspace = true }
+license = { workspace = true }
+edition = { workspace = true }
+
+[package.metadata.docs.rs]
+targets = ["x86_64-unknown-linux-gnu"]
+all-features = true
+rustdoc-args = ["--cfg=docsrs"]
+
+[features]
+bytemuck = ["dep:bytemuck", "dep:bytemuck_derive"]
+borsh = ["dep:borsh"]
+serde = ["dep:serde", "dep:serde_derive"]
+wincode = ["dep:wincode"]
+
+[dependencies]
+borsh = { workspace = true, optional = true }
+bytemuck = { workspace = true, optional = true }
+bytemuck_derive = { workspace = true, optional = true }
+serde = { workspace = true, optional = true }
+serde_derive = { workspace = true, optional = true }
+wincode = { workspace = true, optional = true }
+
+[dev-dependencies]
+serde_json = { workspace = true }
+solana-pod = { path = ".", features = ["bytemuck", "borsh", "serde", "wincode"] }
+test-case = { workspace = true }
+wincode = { workspace = true, features = ["alloc"] }
+
+[lints]
+workspace = true

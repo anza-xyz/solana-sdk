@@ -11,3 +11,12 @@ edition = { workspace = true }
 
 [package.metadata.docs.rs]
 targets = ["x86_64-unknown-linux-gnu"]
+
+[features]
+pod = ["dep:solana-pod"]
+
+[dependencies]
+solana-pod = { workspace = true, optional = true }
+
+[dev-dependencies]
+solana-program-option = { path = ".", features = ["pod"] }

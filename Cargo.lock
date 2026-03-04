@@ -3269,6 +3269,7 @@ dependencies = [
  "solana-frozen-abi-macro",
  "solana-hash",
  "solana-instruction",
+ "solana-pod",
  "solana-program-error",
  "solana-sanitize",
  "solana-sha256-hasher",
@@ -4008,6 +4009,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "solana-pod"
+version = "0.1.0"
+dependencies = [
+ "borsh",
+ "bytemuck",
+ "bytemuck_derive",
+ "serde",
+ "serde_derive",
+ "serde_json",
+ "solana-pod",
+ "test-case",
+ "wincode",
+]
+
+[[package]]
 name = "solana-poh-config"
 version = "3.0.0"
 dependencies = [
@@ -4144,6 +4160,10 @@ dependencies = [
 [[package]]
 name = "solana-program-option"
 version = "3.0.1"
+dependencies = [
+ "solana-pod",
+ "solana-program-option",
+]
 
 [[package]]
 name = "solana-program-pack"
