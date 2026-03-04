@@ -10,6 +10,8 @@ use core::{
     convert, mem,
     ops::{Deref, DerefMut},
 };
+#[cfg(feature = "pod")]
+use solana_pod::{Nullable, PodOption, PodOptionError};
 
 /// A C representation of Rust's `std::option::Option`
 #[repr(C)]
@@ -963,6 +965,29 @@ impl<T> From<COption<T>> for Option<T> {
     }
 }
 
+#[cfg(feature = "pod")]
+impl<T: Nullable> TryFrom<COption<T>> for PodOption<T> {
+    type Error = PodOptionError;
+
+    fn try_from(value: COption<T>) -> Result<Self, Self::Error> {
+        match value {
+            COption::Some(value) if value.is_none() => Err(PodOptionError::NoneValueInSome),
+            COption::Some(value) => Ok(PodOption::from(value)),
+            COption::None => Ok(PodOption::from(T::NONE)),
+        }
+    }
+}
+
+#[cfg(feature = "pod")]
+impl<T: Nullable> From<PodOption<T>> for COption<T> {
+    fn from(value: PodOption<T>) -> Self {
+        match value.get() {
+            Some(value) => COption::Some(value),
+            None => COption::None,
+        }
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
@@ -980,5 +1005,57 @@ mod test {
         assert_eq!(c_option, COption::None);
         let expected = c_option.into();
         assert_eq!(option, expected);
+    }
+
+    #[cfg(feature = "pod")]
+    mod pod_tests {
+        use {super::*, solana_pod::PodOptionError};
+
+        #[derive(Clone, Copy, Debug, PartialEq)]
+        struct TestVal(u32);
+
+        impl Nullable for TestVal {
+            const NONE: Self = TestVal(0);
+        }
+
+        #[test]
+        fn test_pod_option_try_from_coption_some() {
+            let some = COption::Some(TestVal(42));
+            assert_eq!(
+                PodOption::try_from(some).unwrap(),
+                PodOption::from(TestVal(42)),
+            );
+        }
+
+        #[test]
+        fn test_pod_option_try_from_coption_none() {
+            let none: COption<TestVal> = COption::None;
+            assert_eq!(
+                PodOption::try_from(none).unwrap(),
+                PodOption::from(TestVal::NONE),
+            );
+        }
+
+        #[test]
+        fn test_pod_option_try_from_coption_rejects_none_value() {
+            let invalid = COption::Some(TestVal(0));
+            assert_eq!(
+                PodOption::try_from(invalid).unwrap_err(),
+                PodOptionError::NoneValueInSome,
+            );
+        }
+
+        #[test]
+        fn test_pod_option_coption_roundtrip() {
+            let some = COption::Some(TestVal(42));
+            let pod: PodOption<TestVal> = PodOption::try_from(some).unwrap();
+            let coption: COption<TestVal> = pod.into();
+            assert_eq!(coption, COption::Some(TestVal(42)));
+
+            let none: COption<TestVal> = COption::None;
+            let pod: PodOption<TestVal> = PodOption::try_from(none).unwrap();
+            let coption: COption<TestVal> = pod.into();
+            assert_eq!(coption, COption::None);
+        }
     }
 }

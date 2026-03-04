@@ -1,17 +1,18 @@
-//! primitive types that can be used in `Pod`s
+//! Primitive types that can be used in `Pod`s.
+
 #[cfg(feature = "bytemuck")]
 use bytemuck_derive::{Pod, Zeroable};
 #[cfg(feature = "serde")]
 use serde_derive::{Deserialize, Serialize};
 #[cfg(feature = "wincode")]
-use wincode_derive::{SchemaRead, SchemaWrite};
+use wincode::{SchemaRead, SchemaWrite};
 #[cfg(feature = "borsh")]
 use {
     alloc::string::ToString,
     borsh::{BorshDeserialize, BorshSchema, BorshSerialize},
 };
 
-/// The standard `bool` is not a `Pod`, define a replacement that is
+/// The standard `bool` is not a `Pod`, define a replacement that is.
 #[cfg_attr(feature = "wincode", derive(SchemaRead, SchemaWrite))]
 #[cfg_attr(feature = "wincode", wincode(assert_zero_copy))]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
@@ -76,7 +77,7 @@ macro_rules! impl_int_conversion {
     };
 }
 
-/// `u16` type that can be used in `Pod`s
+/// `u16` type that can be used in `Pod`s.
 #[cfg_attr(feature = "wincode", derive(SchemaRead, SchemaWrite))]
 #[cfg_attr(feature = "wincode", wincode(assert_zero_copy))]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
@@ -87,7 +88,7 @@ macro_rules! impl_int_conversion {
 pub struct PodU16(pub [u8; 2]);
 impl_int_conversion!(PodU16, u16);
 
-/// `i16` type that can be used in Pods
+/// `i16` type that can be used in `Pod`s.
 #[cfg_attr(feature = "wincode", derive(SchemaRead, SchemaWrite))]
 #[cfg_attr(feature = "wincode", wincode(assert_zero_copy))]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
@@ -98,7 +99,7 @@ impl_int_conversion!(PodU16, u16);
 pub struct PodI16(pub [u8; 2]);
 impl_int_conversion!(PodI16, i16);
 
-/// `u32` type that can be used in `Pod`s
+/// `u32` type that can be used in `Pod`s.
 #[cfg_attr(feature = "wincode", derive(SchemaRead, SchemaWrite))]
 #[cfg_attr(feature = "wincode", wincode(assert_zero_copy))]
 #[cfg_attr(
@@ -113,7 +114,7 @@ impl_int_conversion!(PodI16, i16);
 pub struct PodU32(pub [u8; 4]);
 impl_int_conversion!(PodU32, u32);
 
-/// `u64` type that can be used in Pods
+/// `u64` type that can be used in `Pod`s.
 #[cfg_attr(feature = "wincode", derive(SchemaRead, SchemaWrite))]
 #[cfg_attr(feature = "wincode", wincode(assert_zero_copy))]
 #[cfg_attr(
@@ -128,7 +129,7 @@ impl_int_conversion!(PodU32, u32);
 pub struct PodU64(pub [u8; 8]);
 impl_int_conversion!(PodU64, u64);
 
-/// `i64` type that can be used in Pods
+/// `i64` type that can be used in `Pod`s.
 #[cfg_attr(feature = "wincode", derive(SchemaRead, SchemaWrite))]
 #[cfg_attr(feature = "wincode", wincode(assert_zero_copy))]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
@@ -139,7 +140,7 @@ impl_int_conversion!(PodU64, u64);
 pub struct PodI64([u8; 8]);
 impl_int_conversion!(PodI64, i64);
 
-/// `u128` type that can be used in Pods
+/// `u128` type that can be used in `Pod`s.
 #[cfg_attr(feature = "wincode", derive(SchemaRead, SchemaWrite))]
 #[cfg_attr(feature = "wincode", wincode(assert_zero_copy))]
 #[cfg_attr(
@@ -154,7 +155,7 @@ impl_int_conversion!(PodI64, i64);
 pub struct PodU128(pub [u8; 16]);
 impl_int_conversion!(PodU128, u128);
 
-/// Implements the `TryFrom<usize>` and `From<T> for usize` conversions for a Pod integer type
+/// Implements the `TryFrom<usize>` and `From<T> for usize` conversions for a Pod integer type.
 macro_rules! impl_usize_conversion {
     ($PodType:ty, $PrimitiveType:ty) => {
         impl TryFrom<usize> for $PodType {
@@ -184,17 +185,15 @@ impl_usize_conversion!(PodU128, u128);
 #[cfg(test)]
 mod tests {
     use super::*;
-    #[cfg(feature = "bytemuck")]
-    use crate::bytemuck::pod_from_bytes;
 
     #[cfg(feature = "bytemuck")]
     #[test]
     fn test_pod_bool() {
-        assert!(pod_from_bytes::<PodBool>(&[]).is_err());
-        assert!(pod_from_bytes::<PodBool>(&[0, 0]).is_err());
+        assert!(bytemuck::try_from_bytes::<PodBool>(&[]).is_err());
+        assert!(bytemuck::try_from_bytes::<PodBool>(&[0, 0]).is_err());
 
         for i in 0..=u8::MAX {
-            assert_eq!(i != 0, bool::from(pod_from_bytes::<PodBool>(&[i]).unwrap()));
+            assert_eq!(i != 0, bool::from(*bytemuck::from_bytes::<PodBool>(&[i])));
         }
     }
 
@@ -218,8 +217,8 @@ mod tests {
     #[cfg(feature = "bytemuck")]
     #[test]
     fn test_pod_u16() {
-        assert!(pod_from_bytes::<PodU16>(&[]).is_err());
-        assert_eq!(1u16, u16::from(*pod_from_bytes::<PodU16>(&[1, 0]).unwrap()));
+        assert!(bytemuck::try_from_bytes::<PodU16>(&[]).is_err());
+        assert_eq!(1u16, u16::from(*bytemuck::from_bytes::<PodU16>(&[1, 0])));
     }
 
     #[cfg(feature = "serde")]
@@ -237,10 +236,10 @@ mod tests {
     #[cfg(feature = "bytemuck")]
     #[test]
     fn test_pod_i16() {
-        assert!(pod_from_bytes::<PodI16>(&[]).is_err());
+        assert!(bytemuck::try_from_bytes::<PodI16>(&[]).is_err());
         assert_eq!(
             -1i16,
-            i16::from(*pod_from_bytes::<PodI16>(&[255, 255]).unwrap())
+            i16::from(*bytemuck::from_bytes::<PodI16>(&[255, 255]))
         );
     }
 
@@ -258,10 +257,10 @@ mod tests {
     #[cfg(feature = "bytemuck")]
     #[test]
     fn test_pod_u64() {
-        assert!(pod_from_bytes::<PodU64>(&[]).is_err());
+        assert!(bytemuck::try_from_bytes::<PodU64>(&[]).is_err());
         assert_eq!(
             1u64,
-            u64::from(*pod_from_bytes::<PodU64>(&[1, 0, 0, 0, 0, 0, 0, 0]).unwrap())
+            u64::from(*bytemuck::from_bytes::<PodU64>(&[1, 0, 0, 0, 0, 0, 0, 0]))
         );
     }
 
@@ -280,12 +279,12 @@ mod tests {
     #[cfg(feature = "bytemuck")]
     #[test]
     fn test_pod_i64() {
-        assert!(pod_from_bytes::<PodI64>(&[]).is_err());
+        assert!(bytemuck::try_from_bytes::<PodI64>(&[]).is_err());
         assert_eq!(
             -1i64,
-            i64::from(
-                *pod_from_bytes::<PodI64>(&[255, 255, 255, 255, 255, 255, 255, 255]).unwrap()
-            )
+            i64::from(*bytemuck::from_bytes::<PodI64>(&[
+                255, 255, 255, 255, 255, 255, 255, 255
+            ]))
         );
     }
 
@@ -304,13 +303,12 @@ mod tests {
     #[cfg(feature = "bytemuck")]
     #[test]
     fn test_pod_u128() {
-        assert!(pod_from_bytes::<PodU128>(&[]).is_err());
+        assert!(bytemuck::try_from_bytes::<PodU128>(&[]).is_err());
         assert_eq!(
             1u128,
-            u128::from(
-                *pod_from_bytes::<PodU128>(&[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
-                    .unwrap()
-            )
+            u128::from(*bytemuck::from_bytes::<PodU128>(&[
+                1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+            ]))
         );
     }
 

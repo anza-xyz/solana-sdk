@@ -59,6 +59,7 @@ all_crate_dirs=(
   package-metadata
   package-metadata-macro
   packet
+  pod
   poh-config
   poseidon
   precompile-error

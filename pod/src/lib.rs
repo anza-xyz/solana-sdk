@@ -1,15 +1,19 @@
+//! Solana Plain Old Data (Pod) zero-copy types and traits.
+//!
+//! This crate provides zero-copy primitives for use in Solana programs:
+//!
+//! - [`Nullable`] trait and [`PodOption<T>`] — a space-efficient option type
+//!   that reserves a value to represent `None` instead of using a tag byte.
+//! - Pod-safe integer wrappers ([`PodBool`], [`PodU16`], [`PodU64`], etc.)
+//!   that avoid alignment issues in zero-copy structures.
+
 #![no_std]
+#![cfg_attr(docsrs, feature(doc_cfg))]
 
-//! Crate containing `Pod` types and `bytemuck` utilities used in SPL
-
-#[cfg(any(feature = "borsh", feature = "serde", test))]
+#[cfg(feature = "borsh")]
 extern crate alloc;
 
-#[cfg(feature = "bytemuck")]
-pub mod bytemuck;
-pub mod option;
-pub mod primitives;
+mod option;
+mod primitives;
 
-// Export current sdk types for downstream users building with a different sdk
-// version
-pub use {solana_address, solana_program_error, solana_program_option};
+pub use {option::*, primitives::*};
