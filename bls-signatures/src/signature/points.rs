@@ -61,7 +61,10 @@ impl SignatureProjective {
         for (key, pubkey, prepared_hash) in entries {
             if grouped_keys.last().is_some_and(|last| *last == key) {
                 let idx = grouped_pubkeys.len().saturating_sub(1);
-                grouped_pubkeys[idx] += pubkey;
+                #[allow(clippy::arithmetic_side_effects)]
+                {
+                    grouped_pubkeys[idx] += pubkey;
+                }
             } else {
                 grouped_keys.push(key);
                 grouped_pubkeys.push(pubkey);
@@ -360,6 +363,7 @@ impl SignatureProjective {
         #[cfg(feature = "std")]
         let neg_g1_generator = &*NEG_G1_GENERATOR_AFFINE;
         #[cfg(not(feature = "std"))]
+        #[allow(clippy::arithmetic_side_effects)]
         let neg_g1_generator_val: G1Affine = (-G1Projective::generator()).into();
         #[cfg(not(feature = "std"))]
         let neg_g1_generator = &neg_g1_generator_val;
@@ -663,6 +667,7 @@ impl SignatureProjective {
         #[cfg(feature = "std")]
         let neg_g1_generator = &*NEG_G1_GENERATOR_AFFINE;
         #[cfg(not(feature = "std"))]
+        #[allow(clippy::arithmetic_side_effects)]
         let neg_g1_generator_val: G1Affine = (-G1Projective::generator()).into();
         #[cfg(not(feature = "std"))]
         let neg_g1_generator = &neg_g1_generator_val;

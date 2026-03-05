@@ -279,6 +279,7 @@ impl PubkeyAffine {
         #[cfg(feature = "std")]
         let neg_g1_generator = &NEG_G1_GENERATOR_AFFINE;
         #[cfg(not(feature = "std"))]
+        #[allow(clippy::arithmetic_side_effects)]
         let neg_g1_generator_val: G1Affine = (-G1Projective::generator()).into();
         #[cfg(not(feature = "std"))]
         let neg_g1_generator = &neg_g1_generator_val;
@@ -310,6 +311,7 @@ impl PubkeyAffine {
         #[cfg(feature = "std")]
         let neg_g1_generator = &NEG_G1_GENERATOR_AFFINE;
         #[cfg(not(feature = "std"))]
+        #[allow(clippy::arithmetic_side_effects)]
         let neg_g1_generator_val: G1Affine = (-G1Projective::generator()).into();
         #[cfg(not(feature = "std"))]
         let neg_g1_generator = &neg_g1_generator_val;
