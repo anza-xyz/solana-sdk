@@ -20,6 +20,7 @@ mod tests {
         super::*,
         crate::{
             error::BlsError,
+            hash::{HashedMessage, PreparedHashedMessage},
             keypair::Keypair,
             pubkey::{
                 AsPubkeyAffine, AsPubkeyProjective, Pubkey, PubkeyAffine, PubkeyCompressed,
@@ -100,6 +101,27 @@ mod tests {
         assert!(pubkey_compressed
             .verify_signature(&signature_compressed, test_message)
             .is_ok());
+    }
+
+    #[test]
+    fn test_signature_verification_prepared_hashed_message() {
+        let keypair = Keypair::new();
+        let message = b"test message";
+        let wrong_message = b"wrong message";
+        let signature = keypair.sign(message);
+
+        let hashed_message = HashedMessage::new(message);
+        let prepared_hashed_message = PreparedHashedMessage::from_hashed_message(&hashed_message);
+        let wrong_prepared_hashed_message = PreparedHashedMessage::new(wrong_message);
+
+        assert!(keypair
+            .public
+            .verify_signature_prepared(&signature, &prepared_hashed_message)
+            .is_ok());
+        assert!(keypair
+            .public
+            .verify_signature_prepared(&signature, &wrong_prepared_hashed_message)
+            .is_err());
     }
 
     #[test]

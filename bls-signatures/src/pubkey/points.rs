@@ -6,7 +6,7 @@ use std::sync::LazyLock;
 use {
     crate::{
         error::BlsError,
-        hash::{HashedMessage, HashedPoPPayload},
+        hash::{HashedMessage, HashedPoPPayload, PreparedHashedMessage},
         proof_of_possession::{AsProofOfPossessionAffine, ProofOfPossessionAffine},
         pubkey::bytes::{Pubkey, PubkeyCompressed},
         secret_key::SecretKey,
@@ -191,10 +191,21 @@ pub trait VerifiablePubkey: AsPubkeyAffine {
         signature: &S,
         hashed_message: &HashedMessage,
     ) -> Result<(), BlsError> {
+        let prepared_hashed_message = PreparedHashedMessage::from_hashed_message(hashed_message);
+        self.verify_signature_prepared(signature, &prepared_hashed_message)
+    }
+
+    /// Uses this public key to verify any convertible signature type using a
+    /// pre-hashed and pairing-prepared message.
+    fn verify_signature_prepared<S: AsSignatureAffine>(
+        &self,
+        signature: &S,
+        prepared_hashed_message: &PreparedHashedMessage,
+    ) -> Result<(), BlsError> {
         let pubkey_affine = self.try_as_affine()?;
         let signature_affine = signature.try_as_affine()?;
         pubkey_affine
-            ._verify_signature(&signature_affine, hashed_message)
+            ._verify_signature_prepared(&signature_affine, &prepared_hashed_message.0)
             .then_some(())
             .ok_or(BlsError::VerificationFailed)
     }
@@ -246,6 +257,15 @@ impl PubkeyAffine {
         signature: &SignatureAffine,
         hashed_message: &HashedMessage,
     ) -> bool {
+        let hashed_message_prepared = G2Prepared::from(hashed_message.0);
+        self._verify_signature_prepared(signature, &hashed_message_prepared)
+    }
+
+    pub(crate) fn _verify_signature_prepared(
+        &self,
+        signature: &SignatureAffine,
+        hashed_message_prepared: &G2Prepared,
+    ) -> bool {
         if bool::from(self.0.is_identity()) {
             return false;
         }
@@ -253,7 +273,6 @@ impl PubkeyAffine {
         // The verification equation is e(pubkey, H(m)) = e(g1, signature).
         // This can be rewritten as e(pubkey, H(m)) * e(-g1, signature) = 1, which
         // allows for a more efficient verification using a multi-miller loop.
-        let hashed_message_prepared = G2Prepared::from(hashed_message.0);
         let signature_prepared = G2Prepared::from(signature.0);
 
         // use the static valud if `std` is available, otherwise compute it
@@ -265,7 +284,7 @@ impl PubkeyAffine {
         let neg_g1_generator = &neg_g1_generator_val;
 
         let miller_loop_result = Bls12::multi_miller_loop(&[
-            (&self.0, &hashed_message_prepared),
+            (&self.0, hashed_message_prepared),
             (neg_g1_generator, &signature_prepared),
         ]);
         miller_loop_result.final_exponentiation() == Gt::identity()

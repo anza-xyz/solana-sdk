@@ -1,6 +1,6 @@
 use {
     crate::proof_of_possession::POP_DST,
-    blstrs::{G2Affine, G2Projective},
+    blstrs::{G2Affine, G2Prepared, G2Projective},
 };
 
 /// Domain separation tag used for hashing messages to curve points to prevent
@@ -29,6 +29,23 @@ impl HashedMessage {
     pub fn new(message: &[u8]) -> Self {
         let point = G2Projective::hash_to_curve(message, HASH_TO_POINT_DST, &[]);
         Self(point.into())
+    }
+}
+
+/// A pre-hashed and prepared message (G2 prepared point) for optimized verification.
+/// This type is useful when the same message is verified repeatedly against many signatures.
+#[derive(Clone, Debug)]
+pub struct PreparedHashedMessage(pub(crate) G2Prepared);
+
+impl PreparedHashedMessage {
+    /// Hash a message to a curve point (G2), then prepare it for pairing verification.
+    pub fn new(message: &[u8]) -> Self {
+        Self::from_hashed_message(&HashedMessage::new(message))
+    }
+
+    /// Convert an existing `HashedMessage` into a pairing-prepared representation.
+    pub fn from_hashed_message(hashed_message: &HashedMessage) -> Self {
+        Self(G2Prepared::from(hashed_message.0))
     }
 }
 
