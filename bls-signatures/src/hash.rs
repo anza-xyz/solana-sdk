@@ -35,7 +35,10 @@ impl HashedMessage {
 /// A pre-hashed and prepared message (G2 prepared point) for optimized verification.
 /// This type is useful when the same message is verified repeatedly against many signatures.
 #[derive(Clone, Debug)]
-pub struct PreparedHashedMessage(pub(crate) G2Prepared);
+pub struct PreparedHashedMessage {
+    pub(crate) hashed_message: HashedMessage,
+    pub(crate) prepared: G2Prepared,
+}
 
 impl PreparedHashedMessage {
     /// Hash a message to a curve point (G2), then prepare it for pairing verification.
@@ -45,7 +48,10 @@ impl PreparedHashedMessage {
 
     /// Convert an existing `HashedMessage` into a pairing-prepared representation.
     pub fn from_hashed_message(hashed_message: &HashedMessage) -> Self {
-        Self(G2Prepared::from(hashed_message.0))
+        Self {
+            hashed_message: *hashed_message,
+            prepared: G2Prepared::from(hashed_message.0),
+        }
     }
 }
 

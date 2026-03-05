@@ -205,7 +205,7 @@ pub trait VerifiablePubkey: AsPubkeyAffine {
         let pubkey_affine = self.try_as_affine()?;
         let signature_affine = signature.try_as_affine()?;
         pubkey_affine
-            ._verify_signature_prepared(&signature_affine, &prepared_hashed_message.0)
+            ._verify_signature_prepared(&signature_affine, &prepared_hashed_message.prepared)
             .then_some(())
             .ok_or(BlsError::VerificationFailed)
     }

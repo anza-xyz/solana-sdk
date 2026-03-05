@@ -1,21 +1,14 @@
 #[cfg(all(not(target_os = "solana"), feature = "std"))]
 use crate::pubkey::points::NEG_G1_GENERATOR_AFFINE;
-#[cfg(all(
-    not(target_os = "solana"),
-    any(feature = "parallel", not(feature = "std"))
-))]
-use blstrs::G1Affine;
-#[cfg(not(feature = "std"))]
-use blstrs::G1Projective;
 #[cfg(not(target_os = "solana"))]
 use {
     crate::{
         error::BlsError,
-        hash::HashedMessage,
+        hash::{HashedMessage, PreparedHashedMessage},
         pubkey::{AddToPubkeyProjective, AsPubkeyAffine, PubkeyProjective, VerifiablePubkey},
         signature::bytes::{Signature, SignatureCompressed},
     },
-    blstrs::{Bls12, G2Affine, G2Prepared, G2Projective, Gt, Scalar},
+    blstrs::{Bls12, G1Affine, G1Projective, G2Affine, G2Prepared, G2Projective, Gt, Scalar},
     group::{prime::PrimeCurveAffine, Group},
     pairing::{MillerLoopResult, MultiMillerLoop},
 };
@@ -123,10 +116,39 @@ impl SignatureProjective {
         signatures: impl Iterator<Item = &'a S>,
         message: &[u8],
     ) -> Result<(), BlsError> {
+        let hashed_message = HashedMessage::new(message);
+        Self::verify_aggregate_pre_hashed(public_keys, signatures, &hashed_message)
+    }
+
+    /// Verify a list of signatures against a pre-hashed message and a list of
+    /// public keys.
+    pub fn verify_aggregate_pre_hashed<
+        'a,
+        P: AddToPubkeyProjective + ?Sized + 'a,
+        S: AddToSignatureProjective + ?Sized + 'a,
+    >(
+        public_keys: impl Iterator<Item = &'a P>,
+        signatures: impl Iterator<Item = &'a S>,
+        hashed_message: &HashedMessage,
+    ) -> Result<(), BlsError> {
+        let prepared_hashed_message = PreparedHashedMessage::from_hashed_message(hashed_message);
+        Self::verify_aggregate_prepared(public_keys, signatures, &prepared_hashed_message)
+    }
+
+    /// Verify a list of signatures against a pre-hashed and prepared message and
+    /// a list of public keys.
+    pub fn verify_aggregate_prepared<
+        'a,
+        P: AddToPubkeyProjective + ?Sized + 'a,
+        S: AddToSignatureProjective + ?Sized + 'a,
+    >(
+        public_keys: impl Iterator<Item = &'a P>,
+        signatures: impl Iterator<Item = &'a S>,
+        prepared_hashed_message: &PreparedHashedMessage,
+    ) -> Result<(), BlsError> {
         let aggregate_pubkey = PubkeyProjective::aggregate(public_keys)?;
         let aggregate_signature = SignatureProjective::aggregate(signatures)?;
-
-        aggregate_pubkey.verify_signature(&aggregate_signature, message)
+        aggregate_pubkey.verify_signature_prepared(&aggregate_signature, prepared_hashed_message)
     }
 
     /// Verifies an aggregated signature over a set of distinct messages and
@@ -147,7 +169,59 @@ impl SignatureProjective {
             return Err(BlsError::EmptyAggregation);
         }
         let aggregate_signature = SignatureProjective::aggregate(signatures)?;
-        Self::verify_distinct_aggregated(public_keys, &aggregate_signature, messages)
+        let hashed_messages: alloc::vec::Vec<_> = messages.map(HashedMessage::new).collect();
+        Self::verify_distinct_aggregated_pre_hashed(
+            public_keys,
+            &aggregate_signature,
+            hashed_messages.iter(),
+        )
+    }
+
+    /// Verifies an aggregated signature over a set of distinct pre-hashed
+    /// messages and public keys.
+    pub fn verify_distinct_pre_hashed<'a, 'b, P, S>(
+        public_keys: impl ExactSizeIterator<Item = &'a P>,
+        signatures: impl ExactSizeIterator<Item = &'a S>,
+        hashed_messages: impl ExactSizeIterator<Item = &'b HashedMessage>,
+    ) -> Result<(), BlsError>
+    where
+        P: AsPubkeyAffine + 'a + ?Sized,
+        S: AddToSignatureProjective + 'a + ?Sized,
+    {
+        if public_keys.len() != hashed_messages.len() || public_keys.len() != signatures.len() {
+            return Err(BlsError::InputLengthMismatch);
+        }
+        if public_keys.len() == 0 {
+            return Err(BlsError::EmptyAggregation);
+        }
+        let aggregate_signature = SignatureProjective::aggregate(signatures)?;
+        Self::verify_distinct_aggregated_pre_hashed(public_keys, &aggregate_signature, hashed_messages)
+    }
+
+    /// Verifies an aggregated signature over a set of distinct pre-hashed and
+    /// prepared messages and public keys.
+    pub fn verify_distinct_prepared<'a, 'b, P, S>(
+        public_keys: impl ExactSizeIterator<Item = &'a P>,
+        signatures: impl ExactSizeIterator<Item = &'a S>,
+        prepared_hashed_messages: impl ExactSizeIterator<Item = &'b PreparedHashedMessage>,
+    ) -> Result<(), BlsError>
+    where
+        P: AsPubkeyAffine + 'a + ?Sized,
+        S: AddToSignatureProjective + 'a + ?Sized,
+    {
+        if public_keys.len() != prepared_hashed_messages.len() || public_keys.len() != signatures.len()
+        {
+            return Err(BlsError::InputLengthMismatch);
+        }
+        if public_keys.len() == 0 {
+            return Err(BlsError::EmptyAggregation);
+        }
+        let aggregate_signature = SignatureProjective::aggregate(signatures)?;
+        Self::verify_distinct_aggregated_prepared(
+            public_keys,
+            &aggregate_signature,
+            prepared_hashed_messages,
+        )
     }
 
     /// Verifies a pre-aggregated signature over a set of distinct messages and
@@ -167,22 +241,84 @@ impl SignatureProjective {
         if public_keys.len() == 0 {
             return Err(BlsError::EmptyAggregation);
         }
+        let hashed_messages: alloc::vec::Vec<_> = messages.map(HashedMessage::new).collect();
+        Self::verify_distinct_aggregated_pre_hashed(
+            public_keys,
+            aggregate_signature,
+            hashed_messages.iter(),
+        )
+    }
 
-        // TODO: remove `Vec` allocation if possible for efficiency
-        let mut pubkeys_affine = alloc::vec::Vec::with_capacity(public_keys.len());
-        let public_keys_len = public_keys.len();
-        for pubkey in public_keys {
+    /// Verifies a pre-aggregated signature over a set of distinct pre-hashed
+    /// messages and public keys.
+    pub fn verify_distinct_aggregated_pre_hashed<'a, 'b, P, S>(
+        public_keys: impl ExactSizeIterator<Item = &'a P>,
+        aggregate_signature: &S,
+        hashed_messages: impl ExactSizeIterator<Item = &'b HashedMessage>,
+    ) -> Result<(), BlsError>
+    where
+        P: AsPubkeyAffine + 'a + ?Sized,
+        S: AsSignatureAffine + ?Sized,
+    {
+        if public_keys.len() != hashed_messages.len() {
+            return Err(BlsError::InputLengthMismatch);
+        }
+        if public_keys.len() == 0 {
+            return Err(BlsError::EmptyAggregation);
+        }
+        let prepared_hashed_messages: alloc::vec::Vec<_> = hashed_messages
+            .map(PreparedHashedMessage::from_hashed_message)
+            .collect();
+        Self::verify_distinct_aggregated_prepared(
+            public_keys,
+            aggregate_signature,
+            prepared_hashed_messages.iter(),
+        )
+    }
+
+    /// Verifies a pre-aggregated signature over a set of distinct pre-hashed and
+    /// prepared messages and public keys.
+    ///
+    /// Entries with identical message hashes are merged internally by summing
+    /// their public keys, reducing pairing terms.
+    ///
+    /// Security note: rogue-key concerns are not relevant here because keys are
+    /// assumed to be PoP-validated.
+    pub fn verify_distinct_aggregated_prepared<'a, 'b, P, S>(
+        public_keys: impl ExactSizeIterator<Item = &'a P>,
+        aggregate_signature: &S,
+        prepared_hashed_messages: impl ExactSizeIterator<Item = &'b PreparedHashedMessage>,
+    ) -> Result<(), BlsError>
+    where
+        P: AsPubkeyAffine + 'a + ?Sized,
+        S: AsSignatureAffine + ?Sized,
+    {
+        if public_keys.len() != prepared_hashed_messages.len() {
+            return Err(BlsError::InputLengthMismatch);
+        }
+        if public_keys.len() == 0 {
+            return Err(BlsError::EmptyAggregation);
+        }
+
+        // Group identical message hashes by summing their corresponding public keys.
+        let mut grouped_hashes = alloc::vec::Vec::with_capacity(public_keys.len());
+        let mut grouped_pubkeys = alloc::vec::Vec::with_capacity(public_keys.len());
+        let mut grouped_prepared_hashes = alloc::vec::Vec::with_capacity(public_keys.len());
+        for (pubkey, prepared_hashed_message) in public_keys.zip(prepared_hashed_messages) {
             let g1_affine = pubkey.try_as_affine()?;
             if bool::from(g1_affine.0.is_identity()) {
                 return Err(BlsError::VerificationFailed);
             }
-            pubkeys_affine.push(g1_affine.0);
-        }
-
-        let mut prepared_hashes = alloc::vec::Vec::with_capacity(messages.len());
-        for message in messages {
-            let hashed_message = HashedMessage::new(message).0;
-            prepared_hashes.push(G2Prepared::from(hashed_message));
+            if let Some(idx) = grouped_hashes
+                .iter()
+                .position(|hash| *hash == prepared_hashed_message.hashed_message)
+            {
+                grouped_pubkeys[idx] += g1_affine.0;
+            } else {
+                grouped_hashes.push(prepared_hashed_message.hashed_message);
+                grouped_pubkeys.push(G1Projective::from(g1_affine.0));
+                grouped_prepared_hashes.push(prepared_hashed_message.prepared.clone());
+            }
         }
 
         let aggregate_signature_affine = aggregate_signature.try_as_affine()?;
@@ -195,9 +331,11 @@ impl SignatureProjective {
         #[cfg(not(feature = "std"))]
         let neg_g1_generator = &neg_g1_generator_val;
 
-        let mut terms = alloc::vec::Vec::with_capacity(public_keys_len.saturating_add(1));
-        for i in 0..public_keys_len {
-            terms.push((&pubkeys_affine[i], &prepared_hashes[i]));
+        let grouped_pubkeys_affine: alloc::vec::Vec<G1Affine> =
+            grouped_pubkeys.into_iter().map(Into::into).collect();
+        let mut terms = alloc::vec::Vec::with_capacity(grouped_pubkeys_affine.len().saturating_add(1));
+        for i in 0..grouped_pubkeys_affine.len() {
+            terms.push((&grouped_pubkeys_affine[i], &grouped_prepared_hashes[i]));
         }
         terms.push((neg_g1_generator, &signature_prepared));
 
@@ -254,6 +392,36 @@ impl SignatureProjective {
         signatures: &[S],
         message: &[u8],
     ) -> Result<(), BlsError> {
+        let hashed_message = HashedMessage::new(message);
+        Self::par_verify_aggregate_pre_hashed(public_keys, signatures, &hashed_message)
+    }
+
+    /// Verify a list of signatures against a pre-hashed message and a list of
+    /// public keys in parallel.
+    #[cfg(feature = "parallel")]
+    pub fn par_verify_aggregate_pre_hashed<
+        P: AddToPubkeyProjective + Sync,
+        S: AddToSignatureProjective + Sync,
+    >(
+        public_keys: &[P],
+        signatures: &[S],
+        hashed_message: &HashedMessage,
+    ) -> Result<(), BlsError> {
+        let prepared_hashed_message = PreparedHashedMessage::from_hashed_message(hashed_message);
+        Self::par_verify_aggregate_prepared(public_keys, signatures, &prepared_hashed_message)
+    }
+
+    /// Verify a list of signatures against a pre-hashed and prepared message and
+    /// a list of public keys in parallel.
+    #[cfg(feature = "parallel")]
+    pub fn par_verify_aggregate_prepared<
+        P: AddToPubkeyProjective + Sync,
+        S: AddToSignatureProjective + Sync,
+    >(
+        public_keys: &[P],
+        signatures: &[S],
+        prepared_hashed_message: &PreparedHashedMessage,
+    ) -> Result<(), BlsError> {
         if public_keys.len() != signatures.len() {
             return Err(BlsError::InputLengthMismatch);
         }
@@ -264,7 +432,7 @@ impl SignatureProjective {
         );
         let aggregate_pubkey = aggregate_pubkey_res?;
         let aggregate_signature = aggregate_signature_res?;
-        aggregate_pubkey.verify_signature(&aggregate_signature, message)
+        aggregate_pubkey.verify_signature_prepared(&aggregate_signature, prepared_hashed_message)
     }
 
     /// Verifies a set of signatures over a set of distinct messages and
@@ -286,7 +454,65 @@ impl SignatureProjective {
             return Err(BlsError::EmptyAggregation);
         }
         let aggregate_signature = SignatureProjective::par_aggregate(signatures.into_par_iter())?;
-        Self::par_verify_distinct_aggregated(public_keys, &aggregate_signature, messages)
+        let hashed_messages: Vec<_> = messages.par_iter().map(|msg| HashedMessage::new(msg)).collect();
+        Self::par_verify_distinct_aggregated_pre_hashed(
+            public_keys,
+            &aggregate_signature,
+            &hashed_messages,
+        )
+    }
+
+    /// Verifies a set of signatures over a set of distinct pre-hashed messages
+    /// and public keys in parallel.
+    #[cfg(feature = "parallel")]
+    pub fn par_verify_distinct_pre_hashed<P, S>(
+        public_keys: &[P],
+        signatures: &[S],
+        hashed_messages: &[HashedMessage],
+    ) -> Result<(), BlsError>
+    where
+        P: AsPubkeyAffine + Sync,
+        S: AddToSignatureProjective + Sync,
+    {
+        if public_keys.len() != hashed_messages.len() || public_keys.len() != signatures.len() {
+            return Err(BlsError::InputLengthMismatch);
+        }
+        if public_keys.is_empty() {
+            return Err(BlsError::EmptyAggregation);
+        }
+        let aggregate_signature = SignatureProjective::par_aggregate(signatures.into_par_iter())?;
+        Self::par_verify_distinct_aggregated_pre_hashed(
+            public_keys,
+            &aggregate_signature,
+            hashed_messages,
+        )
+    }
+
+    /// Verifies a set of signatures over a set of distinct pre-hashed and
+    /// prepared messages and public keys in parallel.
+    #[cfg(feature = "parallel")]
+    pub fn par_verify_distinct_prepared<P, S>(
+        public_keys: &[P],
+        signatures: &[S],
+        prepared_hashed_messages: &[PreparedHashedMessage],
+    ) -> Result<(), BlsError>
+    where
+        P: AsPubkeyAffine + Sync,
+        S: AddToSignatureProjective + Sync,
+    {
+        if public_keys.len() != prepared_hashed_messages.len() || public_keys.len() != signatures.len()
+        {
+            return Err(BlsError::InputLengthMismatch);
+        }
+        if public_keys.is_empty() {
+            return Err(BlsError::EmptyAggregation);
+        }
+        let aggregate_signature = SignatureProjective::par_aggregate(signatures.into_par_iter())?;
+        Self::par_verify_distinct_aggregated_prepared(
+            public_keys,
+            &aggregate_signature,
+            prepared_hashed_messages,
+        )
     }
 
     /// In parallel, verifies a pre-aggregated signature over a set of distinct
@@ -307,38 +533,97 @@ impl SignatureProjective {
         if public_keys.is_empty() {
             return Err(BlsError::EmptyAggregation);
         }
+        let hashed_messages: Vec<_> = messages.par_iter().map(|msg| HashedMessage::new(msg)).collect();
+        Self::par_verify_distinct_aggregated_pre_hashed(
+            public_keys,
+            aggregate_signature,
+            &hashed_messages,
+        )
+    }
 
-        // Use `rayon` to perform the three expensive, independent tasks in parallel:
-        // 1. Deserialize public keys into curve points.
-        // 2. Hash messages into curve points and prepare them for pairing.
-        let (pubkeys_affine_res, prepared_hashes_res): (Result<Vec<_>, _>, Result<Vec<_>, _>) =
-            rayon::join(
-                || {
-                    public_keys
-                        .par_iter()
-                        .map(|pk| {
-                            let affine = pk.try_as_affine()?;
-                            if bool::from(affine.0.is_identity()) {
-                                return Err(BlsError::VerificationFailed);
-                            }
-                            Ok::<G1Affine, BlsError>(affine.0)
-                        })
-                        .collect()
-                },
-                || {
-                    messages
-                        .par_iter()
-                        .map(|msg| {
-                            let hashed_message: G2Affine = HashedMessage::new(msg).0;
-                            Ok::<_, BlsError>(G2Prepared::from(hashed_message))
-                        })
-                        .collect()
-                },
-            );
+    /// In parallel, verifies a pre-aggregated signature over a set of distinct
+    /// pre-hashed messages and public keys.
+    #[cfg(feature = "parallel")]
+    pub fn par_verify_distinct_aggregated_pre_hashed<P, S>(
+        public_keys: &[P],
+        aggregate_signature: &S,
+        hashed_messages: &[HashedMessage],
+    ) -> Result<(), BlsError>
+    where
+        P: AsPubkeyAffine + Sync,
+        S: AsSignatureAffine + Sync,
+    {
+        if public_keys.len() != hashed_messages.len() {
+            return Err(BlsError::InputLengthMismatch);
+        }
+        if public_keys.is_empty() {
+            return Err(BlsError::EmptyAggregation);
+        }
+        let prepared_hashed_messages: Vec<_> = hashed_messages
+            .par_iter()
+            .map(PreparedHashedMessage::from_hashed_message)
+            .collect();
+        Self::par_verify_distinct_aggregated_prepared(
+            public_keys,
+            aggregate_signature,
+            &prepared_hashed_messages,
+        )
+    }
 
-        // Check for errors from the parallel operations and unwrap the results.
-        let pubkeys_affine = pubkeys_affine_res?;
-        let prepared_hashes = prepared_hashes_res?;
+    /// In parallel, verifies a pre-aggregated signature over a set of distinct
+    /// pre-hashed and prepared messages and public keys.
+    ///
+    /// Entries with identical message hashes are merged internally by summing
+    /// their public keys, reducing pairing terms.
+    ///
+    /// Security note: rogue-key concerns are not relevant here because keys are
+    /// assumed to be PoP-validated.
+    #[cfg(feature = "parallel")]
+    pub fn par_verify_distinct_aggregated_prepared<P, S>(
+        public_keys: &[P],
+        aggregate_signature: &S,
+        prepared_hashed_messages: &[PreparedHashedMessage],
+    ) -> Result<(), BlsError>
+    where
+        P: AsPubkeyAffine + Sync,
+        S: AsSignatureAffine + Sync,
+    {
+        if public_keys.len() != prepared_hashed_messages.len() {
+            return Err(BlsError::InputLengthMismatch);
+        }
+        if public_keys.is_empty() {
+            return Err(BlsError::EmptyAggregation);
+        }
+
+        let pubkeys_affine: Vec<_> = public_keys
+            .par_iter()
+            .map(|pk| {
+                let affine = pk.try_as_affine()?;
+                if bool::from(affine.0.is_identity()) {
+                    return Err(BlsError::VerificationFailed);
+                }
+                Ok::<G1Affine, BlsError>(affine.0)
+            })
+            .collect::<Result<_, _>>()?;
+
+        // Group identical message hashes by summing their corresponding public keys.
+        let mut grouped_hashes = Vec::with_capacity(public_keys.len());
+        let mut grouped_pubkeys = Vec::with_capacity(public_keys.len());
+        let mut grouped_prepared_hashes = Vec::with_capacity(public_keys.len());
+        for (pubkey_affine, prepared_hashed_message) in
+            pubkeys_affine.into_iter().zip(prepared_hashed_messages.iter())
+        {
+            if let Some(idx) = grouped_hashes
+                .iter()
+                .position(|hash| *hash == prepared_hashed_message.hashed_message)
+            {
+                grouped_pubkeys[idx] += pubkey_affine;
+            } else {
+                grouped_hashes.push(prepared_hashed_message.hashed_message);
+                grouped_pubkeys.push(G1Projective::from(pubkey_affine));
+                grouped_prepared_hashes.push(prepared_hashed_message.prepared.clone());
+            }
+        }
 
         let aggregate_signature_affine = aggregate_signature.try_as_affine()?;
         let signature_prepared = G2Prepared::from(aggregate_signature_affine.0);
@@ -350,9 +635,10 @@ impl SignatureProjective {
         #[cfg(not(feature = "std"))]
         let neg_g1_generator = &neg_g1_generator_val;
 
-        let mut terms = alloc::vec::Vec::with_capacity(public_keys.len() + 1);
-        for i in 0..public_keys.len() {
-            terms.push((&pubkeys_affine[i], &prepared_hashes[i]));
+        let grouped_pubkeys_affine: Vec<G1Affine> = grouped_pubkeys.into_iter().map(Into::into).collect();
+        let mut terms = alloc::vec::Vec::with_capacity(grouped_pubkeys_affine.len() + 1);
+        for i in 0..grouped_pubkeys_affine.len() {
+            terms.push((&grouped_pubkeys_affine[i], &grouped_prepared_hashes[i]));
         }
         terms.push((neg_g1_generator, &signature_prepared));
 
