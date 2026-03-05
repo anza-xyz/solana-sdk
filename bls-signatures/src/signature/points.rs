@@ -231,7 +231,11 @@ impl SignatureProjective {
             return Err(BlsError::EmptyAggregation);
         }
         let aggregate_signature = SignatureProjective::aggregate(signatures)?;
-        Self::verify_distinct_aggregated_pre_hashed(public_keys, &aggregate_signature, hashed_messages)
+        Self::verify_distinct_aggregated_pre_hashed(
+            public_keys,
+            &aggregate_signature,
+            hashed_messages,
+        )
     }
 
     /// Verifies an aggregated signature over a set of distinct pre-hashed and
@@ -245,7 +249,8 @@ impl SignatureProjective {
         P: AsPubkeyAffine + 'a + ?Sized,
         S: AddToSignatureProjective + 'a + ?Sized,
     {
-        if public_keys.len() != prepared_hashed_messages.len() || public_keys.len() != signatures.len()
+        if public_keys.len() != prepared_hashed_messages.len()
+            || public_keys.len() != signatures.len()
         {
             return Err(BlsError::InputLengthMismatch);
         }
@@ -359,9 +364,12 @@ impl SignatureProjective {
         #[cfg(not(feature = "std"))]
         let neg_g1_generator = &neg_g1_generator_val;
 
-        let (grouped_pubkeys_affine, grouped_prepared_hashes) =
-            Self::group_prepared_terms(pubkeys_affine.into_iter().zip(prepared_refs.into_iter()), public_keys_len);
-        let mut terms = alloc::vec::Vec::with_capacity(grouped_pubkeys_affine.len().saturating_add(1));
+        let (grouped_pubkeys_affine, grouped_prepared_hashes) = Self::group_prepared_terms(
+            pubkeys_affine.into_iter().zip(prepared_refs),
+            public_keys_len,
+        );
+        let mut terms =
+            alloc::vec::Vec::with_capacity(grouped_pubkeys_affine.len().saturating_add(1));
         for i in 0..grouped_pubkeys_affine.len() {
             terms.push((&grouped_pubkeys_affine[i], &grouped_prepared_hashes[i]));
         }
@@ -531,7 +539,8 @@ impl SignatureProjective {
         P: AsPubkeyAffine + Sync,
         S: AddToSignatureProjective + Sync,
     {
-        if public_keys.len() != prepared_hashed_messages.len() || public_keys.len() != signatures.len()
+        if public_keys.len() != prepared_hashed_messages.len()
+            || public_keys.len() != signatures.len()
         {
             return Err(BlsError::InputLengthMismatch);
         }
@@ -642,7 +651,9 @@ impl SignatureProjective {
 
         let public_keys_len = public_keys.len();
         let (grouped_pubkeys_affine, grouped_prepared_hashes) = Self::group_prepared_terms(
-            pubkeys_affine.into_iter().zip(prepared_hashed_messages.iter()),
+            pubkeys_affine
+                .into_iter()
+                .zip(prepared_hashed_messages.iter()),
             public_keys_len,
         );
 

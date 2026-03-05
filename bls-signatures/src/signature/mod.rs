@@ -263,7 +263,10 @@ mod tests {
             messages.iter().cloned()
         )
         .is_ok());
-        let hashed_messages: Vec<_> = messages.iter().map(|message| HashedMessage::new(message)).collect();
+        let hashed_messages: Vec<_> = messages
+            .iter()
+            .map(|message| HashedMessage::new(message))
+            .collect();
         let prepared_hashed_messages: Vec<_> = hashed_messages
             .iter()
             .map(PreparedHashedMessage::from_hashed_message)
@@ -526,22 +529,18 @@ mod tests {
         assert!(SignatureProjective::par_verify_aggregate(&pubkeys, &signatures, message).is_ok());
         let hashed_message = HashedMessage::new(message);
         let prepared_hashed_message = PreparedHashedMessage::from_hashed_message(&hashed_message);
-        assert!(
-            SignatureProjective::par_verify_aggregate_pre_hashed(
-                &pubkeys,
-                &signatures,
-                &hashed_message
-            )
-            .is_ok()
-        );
-        assert!(
-            SignatureProjective::par_verify_aggregate_prepared(
-                &pubkeys,
-                &signatures,
-                &prepared_hashed_message
-            )
-            .is_ok()
-        );
+        assert!(SignatureProjective::par_verify_aggregate_pre_hashed(
+            &pubkeys,
+            &signatures,
+            &hashed_message
+        )
+        .is_ok());
+        assert!(SignatureProjective::par_verify_aggregate_prepared(
+            &pubkeys,
+            &signatures,
+            &prepared_hashed_message
+        )
+        .is_ok());
 
         // Failure case (wrong message)
         assert!(!SignatureProjective::par_verify_aggregate(
@@ -598,22 +597,18 @@ mod tests {
             .iter()
             .map(PreparedHashedMessage::from_hashed_message)
             .collect();
-        assert!(
-            SignatureProjective::par_verify_distinct_pre_hashed(
-                &pubkeys,
-                &signatures,
-                &hashed_messages
-            )
-            .is_ok()
-        );
-        assert!(
-            SignatureProjective::par_verify_distinct_prepared(
-                &pubkeys,
-                &signatures,
-                &prepared_hashed_messages
-            )
-            .is_ok()
-        );
+        assert!(SignatureProjective::par_verify_distinct_pre_hashed(
+            &pubkeys,
+            &signatures,
+            &hashed_messages
+        )
+        .is_ok());
+        assert!(SignatureProjective::par_verify_distinct_prepared(
+            &pubkeys,
+            &signatures,
+            &prepared_hashed_messages
+        )
+        .is_ok());
     }
 
     #[test]
