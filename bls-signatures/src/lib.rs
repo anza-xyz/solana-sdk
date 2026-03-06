@@ -9,6 +9,7 @@ extern crate std;
 #[cfg(not(target_os = "solana"))]
 pub use crate::{
     error::BlsError,
+    hash::{HashedMessage, PreparedHashedMessage},
     keypair::Keypair,
     proof_of_possession::{
         AsProofOfPossessionProjective, ProofOfPossessionProjective, VerifiableProofOfPossession,

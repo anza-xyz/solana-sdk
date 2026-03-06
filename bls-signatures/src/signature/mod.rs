@@ -20,6 +20,7 @@ mod tests {
         super::*,
         crate::{
             error::BlsError,
+            hash::{HashedMessage, PreparedHashedMessage},
             keypair::Keypair,
             pubkey::{
                 AsPubkeyAffine, AsPubkeyProjective, Pubkey, PubkeyAffine, PubkeyCompressed,
@@ -103,6 +104,27 @@ mod tests {
     }
 
     #[test]
+    fn test_signature_verification_prepared_hashed_message() {
+        let keypair = Keypair::new();
+        let message = b"test message";
+        let wrong_message = b"wrong message";
+        let signature = keypair.sign(message);
+
+        let hashed_message = HashedMessage::new(message);
+        let prepared_hashed_message = PreparedHashedMessage::from_hashed_message(&hashed_message);
+        let wrong_prepared_hashed_message = PreparedHashedMessage::new(wrong_message);
+
+        assert!(keypair
+            .public
+            .verify_signature_prepared(&signature, &prepared_hashed_message)
+            .is_ok());
+        assert!(keypair
+            .public
+            .verify_signature_prepared(&signature, &wrong_prepared_hashed_message)
+            .is_err());
+    }
+
+    #[test]
     fn test_signature_aggregate() {
         let test_message = b"test message";
         let keypair0 = Keypair::new();
@@ -142,6 +164,20 @@ mod tests {
             [&keypair0.public, &keypair1.public].into_iter(),
             [&signature0, &signature1].into_iter(),
             test_message,
+        )
+        .is_ok());
+        let hashed_message = HashedMessage::new(test_message);
+        let prepared_hashed_message = PreparedHashedMessage::from_hashed_message(&hashed_message);
+        assert!(SignatureProjective::verify_aggregate_pre_hashed(
+            [&keypair0.public, &keypair1.public].into_iter(),
+            [&signature0, &signature1].into_iter(),
+            &hashed_message,
+        )
+        .is_ok());
+        assert!(SignatureProjective::verify_aggregate_prepared(
+            [&keypair0.public, &keypair1.public].into_iter(),
+            [&signature0, &signature1].into_iter(),
+            &prepared_hashed_message,
         )
         .is_ok());
         // verify with affine and compressed types
@@ -227,6 +263,26 @@ mod tests {
             messages.iter().cloned()
         )
         .is_ok());
+        let hashed_messages: Vec<_> = messages
+            .iter()
+            .map(|message| HashedMessage::new(message))
+            .collect();
+        let prepared_hashed_messages: Vec<_> = hashed_messages
+            .iter()
+            .map(PreparedHashedMessage::from_hashed_message)
+            .collect();
+        assert!(SignatureProjective::verify_distinct_pre_hashed(
+            pubkeys.iter(),
+            signatures.iter(),
+            hashed_messages.iter(),
+        )
+        .is_ok());
+        assert!(SignatureProjective::verify_distinct_prepared(
+            pubkeys.iter(),
+            signatures.iter(),
+            prepared_hashed_messages.iter(),
+        )
+        .is_ok());
 
         // Failure cases
         let wrong_order_messages: Vec<&[u8]> = std::vec![message1, message0, message2];
@@ -291,6 +347,86 @@ mod tests {
         )
         .unwrap_err();
         assert_eq!(err, BlsError::EmptyAggregation);
+    }
+
+    #[test]
+    fn test_verify_distinct_prepared_identical_messages() {
+        let keypair0 = Keypair::new();
+        let keypair1 = Keypair::new();
+        let keypair2 = Keypair::new();
+
+        let message = b"same message for all signers";
+        let wrong_message = b"different message";
+
+        let signature0: Signature = keypair0.sign(message).into();
+        let signature1: Signature = keypair1.sign(message).into();
+        let signature2: Signature = keypair2.sign(message).into();
+
+        let pubkeys = [
+            Pubkey::from(keypair0.public),
+            Pubkey::from(keypair1.public),
+            Pubkey::from(keypair2.public),
+        ];
+        let signatures = [signature0, signature1, signature2];
+
+        // All entries intentionally reuse the same prepared hash input.
+        let prepared = PreparedHashedMessage::new(message);
+        let prepared_same = [prepared.clone(), prepared.clone(), prepared.clone()];
+        assert!(SignatureProjective::verify_distinct_prepared(
+            pubkeys.iter(),
+            signatures.iter(),
+            prepared_same.iter(),
+        )
+        .is_ok());
+
+        let wrong_prepared = PreparedHashedMessage::new(wrong_message);
+        let prepared_wrong = [
+            wrong_prepared.clone(),
+            wrong_prepared.clone(),
+            wrong_prepared.clone(),
+        ];
+        assert!(SignatureProjective::verify_distinct_prepared(
+            pubkeys.iter(),
+            signatures.iter(),
+            prepared_wrong.iter(),
+        )
+        .is_err());
+    }
+
+    #[test]
+    fn test_verify_distinct_subset_identical_messages() {
+        let keypair0 = Keypair::new();
+        let keypair1 = Keypair::new();
+        let keypair2 = Keypair::new();
+
+        let shared_message = b"shared message";
+        let unique_message = b"unique message";
+
+        let signature0: Signature = keypair0.sign(shared_message).into();
+        let signature1: Signature = keypair1.sign(shared_message).into();
+        let signature2: Signature = keypair2.sign(unique_message).into();
+
+        let pubkeys = [
+            Pubkey::from(keypair0.public),
+            Pubkey::from(keypair1.public),
+            Pubkey::from(keypair2.public),
+        ];
+        let signatures = [signature0, signature1, signature2];
+        let messages: Vec<&[u8]> = std::vec![shared_message, shared_message, unique_message];
+        assert!(SignatureProjective::verify_distinct(
+            pubkeys.iter(),
+            signatures.iter(),
+            messages.iter().cloned(),
+        )
+        .is_ok());
+
+        let wrong_messages: Vec<&[u8]> = std::vec![shared_message, shared_message, b"wrong"];
+        assert!(SignatureProjective::verify_distinct(
+            pubkeys.iter(),
+            signatures.iter(),
+            wrong_messages.iter().cloned(),
+        )
+        .is_err());
     }
 
     #[test]
@@ -391,6 +527,20 @@ mod tests {
 
         // Success case
         assert!(SignatureProjective::par_verify_aggregate(&pubkeys, &signatures, message).is_ok());
+        let hashed_message = HashedMessage::new(message);
+        let prepared_hashed_message = PreparedHashedMessage::from_hashed_message(&hashed_message);
+        assert!(SignatureProjective::par_verify_aggregate_pre_hashed(
+            &pubkeys,
+            &signatures,
+            &hashed_message
+        )
+        .is_ok());
+        assert!(SignatureProjective::par_verify_aggregate_prepared(
+            &pubkeys,
+            &signatures,
+            &prepared_hashed_message
+        )
+        .is_ok());
 
         // Failure case (wrong message)
         assert!(!SignatureProjective::par_verify_aggregate(
@@ -439,6 +589,26 @@ mod tests {
         assert!(
             SignatureProjective::par_verify_distinct(&pubkeys, &signatures, &messages_refs).is_ok()
         );
+        let hashed_messages: Vec<_> = messages_refs
+            .iter()
+            .map(|message| HashedMessage::new(message))
+            .collect();
+        let prepared_hashed_messages: Vec<_> = hashed_messages
+            .iter()
+            .map(PreparedHashedMessage::from_hashed_message)
+            .collect();
+        assert!(SignatureProjective::par_verify_distinct_pre_hashed(
+            &pubkeys,
+            &signatures,
+            &hashed_messages
+        )
+        .is_ok());
+        assert!(SignatureProjective::par_verify_distinct_prepared(
+            &pubkeys,
+            &signatures,
+            &prepared_hashed_messages
+        )
+        .is_ok());
     }
 
     #[test]
