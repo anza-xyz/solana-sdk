@@ -42,13 +42,13 @@ impl SignatureProjective {
     fn group_prepared_terms<'a>(
         pairs: impl Iterator<Item = (G1Affine, &'a PreparedHashedMessage)>,
         capacity: usize,
-    ) -> (alloc::vec::Vec<G1Affine>, alloc::vec::Vec<G2Prepared>) {
+    ) -> (alloc::vec::Vec<G1Affine>, alloc::vec::Vec<&'a G2Prepared>) {
         let mut entries = alloc::vec::Vec::with_capacity(capacity);
         for (pubkey_affine, prepared_hashed_message) in pairs {
             entries.push((
                 prepared_hashed_message.hashed_message.0.to_bytes(),
                 G1Projective::from(pubkey_affine),
-                prepared_hashed_message.prepared.clone(),
+                &prepared_hashed_message.prepared,
             ));
         }
 
@@ -59,11 +59,12 @@ impl SignatureProjective {
         let mut grouped_prepared_hashes = alloc::vec::Vec::with_capacity(entries.len());
 
         for (key, pubkey, prepared_hash) in entries {
-            if grouped_keys.last().is_some_and(|last| *last == key) {
-                let idx = grouped_pubkeys.len().saturating_sub(1);
-                #[allow(clippy::arithmetic_side_effects)]
-                {
-                    grouped_pubkeys[idx] += pubkey;
+            if grouped_keys.last() == Some(&key) {
+                if let Some(last_pubkey) = grouped_pubkeys.last_mut() {
+                    #[allow(clippy::arithmetic_side_effects)]
+                    {
+                        *last_pubkey += pubkey;
+                    }
                 }
             } else {
                 grouped_keys.push(key);
@@ -374,8 +375,11 @@ impl SignatureProjective {
         );
         let mut terms =
             alloc::vec::Vec::with_capacity(grouped_pubkeys_affine.len().saturating_add(1));
-        for i in 0..grouped_pubkeys_affine.len() {
-            terms.push((&grouped_pubkeys_affine[i], &grouped_prepared_hashes[i]));
+        for (pubkey, prepared_hash) in grouped_pubkeys_affine
+            .iter()
+            .zip(grouped_prepared_hashes.iter())
+        {
+            terms.push((pubkey, *prepared_hash));
         }
         terms.push((neg_g1_generator, &signature_prepared));
 
@@ -673,8 +677,11 @@ impl SignatureProjective {
         let neg_g1_generator = &neg_g1_generator_val;
 
         let mut terms = alloc::vec::Vec::with_capacity(grouped_pubkeys_affine.len() + 1);
-        for i in 0..grouped_pubkeys_affine.len() {
-            terms.push((&grouped_pubkeys_affine[i], &grouped_prepared_hashes[i]));
+        for (pubkey, prepared_hash) in grouped_pubkeys_affine
+            .iter()
+            .zip(grouped_prepared_hashes.iter())
+        {
+            terms.push((pubkey, *prepared_hash));
         }
         terms.push((neg_g1_generator, &signature_prepared));
 
