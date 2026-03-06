@@ -15,12 +15,7 @@ all-features = true
 rustdoc-args = ["--cfg=docsrs"]
 
 [features]
-bincode = [
-    "dep:bincode",
-    "dep:solana-instruction",
-    "dep:solana-sdk-ids",
-    "serde",
-]
+bincode = ["dep:bincode", "dep:solana-instruction", "dep:solana-sdk-ids", "serde"]
 dev-context-only-utils = ["bincode"]
 serde = ["dep:serde", "dep:serde_derive"]
 

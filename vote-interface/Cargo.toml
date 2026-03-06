@@ -22,11 +22,7 @@ bincode = [
     "dep:solana-system-interface",
     "serde",
 ]
-dev-context-only-utils = [
-    "bincode",
-    "dep:arbitrary",
-    "solana-pubkey/dev-context-only-utils",
-]
+dev-context-only-utils = ["bincode", "dep:arbitrary", "solana-pubkey/dev-context-only-utils"]
 frozen-abi = [
     "dep:solana-frozen-abi",
     "dep:solana-frozen-abi-macro",

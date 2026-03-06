@@ -23,7 +23,8 @@ crate-type = ["rlib"]
 [features]
 default = [
     "borsh",
-    "full",  # functionality that is not compatible or needed for on-chain programs
+    # functionality that is not compatible or needed for on-chain programs
+    "full",
 ]
 full = [
     "solana-signature",

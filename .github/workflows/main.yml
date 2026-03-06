@@ -317,7 +317,7 @@ jobs:
       - name: Install cargo-sort
         uses: taiki-e/cache-cargo-install-action@v2
         with:
-          tool: cargo-sort
+          tool: cargo-sort@2.1.1
 
       - name: Check toml ordering
         run: ./scripts/check-sort.sh

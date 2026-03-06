@@ -16,11 +16,7 @@ all-features = true
 rustdoc-args = ["--cfg=docsrs"]
 
 [features]
-frozen-abi = [
-    "dep:solana-frozen-abi",
-    "dep:solana-frozen-abi-macro",
-    "serde",
-]
+frozen-abi = ["dep:solana-frozen-abi", "dep:solana-frozen-abi-macro", "serde"]
 num-traits = ["dep:num-traits"]
 serde = ["dep:serde", "dep:serde_derive"]
 wincode = ["dep:wincode"]
