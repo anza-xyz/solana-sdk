@@ -33,12 +33,7 @@ frozen-abi = [
 rand = ["dep:rand", "atomic", "std"]
 sanitize = ["dep:solana-sanitize"]
 serde = ["dep:serde", "dep:serde_derive"]
-sha2 = [
-    "dep:sha2-const-stable",
-    "dep:solana-define-syscall",
-    "dep:solana-sha256-hasher",
-    "error",
-]
+sha2 = ["dep:sha2-const-stable", "dep:solana-sha256-hasher", "syscalls"]
 std = ["decode", "borsh?/std", "serde?/std", "wincode?/std", "alloc"]
 alloc = ["wincode?/alloc"]
 syscalls = ["dep:solana-define-syscall", "error"]
