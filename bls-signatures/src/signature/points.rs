@@ -334,9 +334,7 @@ impl SignatureProjective {
         let neg_g1_generator = &neg_g1_generator_val;
 
         let (grouped_pubkeys_affine, grouped_hashed_messages) = Self::group_hashed_terms(
-            pubkeys_affine
-                .into_iter()
-                .zip(hashed_messages_owned),
+            pubkeys_affine.into_iter().zip(hashed_messages_owned),
             public_keys_len,
         );
         let grouped_prepared_hashes: alloc::vec::Vec<_> = grouped_hashed_messages
