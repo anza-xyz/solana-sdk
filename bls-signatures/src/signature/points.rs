@@ -9,7 +9,7 @@ use {
         signature::bytes::{Signature, SignatureCompressed},
     },
     blstrs::{Bls12, G1Affine, G1Projective, G2Affine, G2Prepared, G2Projective, Gt, Scalar},
-    group::{prime::PrimeCurveAffine, Group, GroupEncoding},
+    group::{prime::PrimeCurveAffine, Group},
     pairing::{MillerLoopResult, MultiMillerLoop},
 };
 #[cfg(all(feature = "parallel", not(target_os = "solana")))]
@@ -443,7 +443,7 @@ impl SignatureProjective {
         let neg_g1_generator = &neg_g1_generator_val;
 
         let (grouped_pubkeys_affine, grouped_prepared_hashes) = Self::group_prepared_terms(
-            pubkeys_affine.into_iter().zip(prepared_refs.into_iter()),
+            pubkeys_affine.into_iter().zip(prepared_refs),
             public_keys_len,
         );
 
