@@ -1,4 +1,4 @@
-//! Solana Plain Old Data (Pod) zero-copy types and traits.
+//! Solana zero-copy types and traits.
 //!
 //! This crate provides zero-copy primitives for use in Solana programs:
 //!

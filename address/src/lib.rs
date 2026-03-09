@@ -382,8 +382,8 @@ pub fn address_eq(a1: &Address, a2: &Address) -> bool {
 /// Implementation of `Nullable` for `Address`.
 ///
 /// The zero address (`[0u8; 32]`) is the `None` value.
-#[cfg(feature = "pod")]
-impl solana_pod::Nullable for Address {
+#[cfg(feature = "zero-copy")]
+impl solana_zero_copy::Nullable for Address {
     const NONE: Self = Address::new_from_array([0u8; ADDRESS_BYTES]);
 }
 
@@ -810,11 +810,11 @@ mod tests {
         }
     }
 
-    #[cfg(feature = "pod")]
+    #[cfg(feature = "zero-copy")]
     mod pod_tests {
         use {
             super::*,
-            solana_pod::{Nullable, PodOption, PodOptionError},
+            solana_zero_copy::{Nullable, PodOption, PodOptionError},
         };
 
         #[test]

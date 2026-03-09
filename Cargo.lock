@@ -3334,11 +3334,11 @@ dependencies = [
  "solana-frozen-abi-macro",
  "solana-hash",
  "solana-instruction",
- "solana-pod",
  "solana-program-error",
  "solana-sanitize",
  "solana-sha256-hasher",
  "solana-system-interface",
+ "solana-zero-copy",
  "strum",
  "strum_macros",
  "wincode",
@@ -4074,21 +4074,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "solana-pod"
-version = "0.1.0"
-dependencies = [
- "borsh",
- "bytemuck",
- "bytemuck_derive",
- "serde",
- "serde_derive",
- "serde_json",
- "solana-pod",
- "test-case",
- "wincode",
-]
-
-[[package]]
 name = "solana-poh-config"
 version = "3.0.0"
 dependencies = [
@@ -4226,8 +4211,8 @@ dependencies = [
 name = "solana-program-option"
 version = "3.0.1"
 dependencies = [
- "solana-pod",
  "solana-program-option",
+ "solana-zero-copy",
 ]
 
 [[package]]
@@ -4772,6 +4757,21 @@ dependencies = [
  "solana-system-interface",
  "solana-vote-interface",
  "test-case",
+]
+
+[[package]]
+name = "solana-zero-copy"
+version = "0.1.0"
+dependencies = [
+ "borsh",
+ "bytemuck",
+ "bytemuck_derive",
+ "serde",
+ "serde_derive",
+ "serde_json",
+ "solana-zero-copy",
+ "test-case",
+ "wincode",
 ]
 
 [[package]]

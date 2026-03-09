@@ -10,8 +10,8 @@ use core::{
     convert, mem,
     ops::{Deref, DerefMut},
 };
-#[cfg(feature = "pod")]
-use solana_pod::{Nullable, PodOption, PodOptionError};
+#[cfg(feature = "zero-copy")]
+use solana_zero_copy::{Nullable, PodOption, PodOptionError};
 
 /// A C representation of Rust's `std::option::Option`
 #[repr(C)]
@@ -965,7 +965,7 @@ impl<T> From<COption<T>> for Option<T> {
     }
 }
 
-#[cfg(feature = "pod")]
+#[cfg(feature = "zero-copy")]
 impl<T: Nullable> TryFrom<COption<T>> for PodOption<T> {
     type Error = PodOptionError;
 
@@ -978,7 +978,7 @@ impl<T: Nullable> TryFrom<COption<T>> for PodOption<T> {
     }
 }
 
-#[cfg(feature = "pod")]
+#[cfg(feature = "zero-copy")]
 impl<T: Nullable> From<PodOption<T>> for COption<T> {
     fn from(value: PodOption<T>) -> Self {
         match value.get() {
@@ -1007,9 +1007,9 @@ mod test {
         assert_eq!(option, expected);
     }
 
-    #[cfg(feature = "pod")]
+    #[cfg(feature = "zero-copy")]
     mod pod_tests {
-        use {super::*, solana_pod::PodOptionError};
+        use {super::*, solana_zero_copy::PodOptionError};
 
         #[derive(Clone, Copy, Debug, PartialEq)]
         struct TestVal(u32);

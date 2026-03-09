@@ -56,7 +56,6 @@ members = [
     "package-metadata",
     "package-metadata-macro",
     "packet",
-    "pod",
     "poh-config",
     "poseidon",
     "precompile-error",
@@ -105,6 +104,7 @@ members = [
     "transaction-error",
     "validator-exit",
     "vote-interface",
+    "zero-copy",
 ]
 
 resolver = "2"
@@ -279,7 +279,6 @@ solana-offchain-message = { path = "offchain-message", version = "3.0.0" }
 solana-package-metadata = { path = "package-metadata", version = "3.0.0" }
 solana-package-metadata-macro = { path = "package-metadata-macro", version = "3.0.0" }
 solana-packet = { path = "packet", version = "4.1.0" }
-solana-pod = { path = "pod", version = "0.1.0", default-features = false }
 solana-poh-config = { path = "poh-config", version = "3.0.0" }
 solana-poseidon = { path = "poseidon", version = "4.0.0" }
 solana-precompile-error = { path = "precompile-error", version = "3.0.0" }
@@ -327,6 +326,7 @@ solana-transaction = { path = "transaction", version = "4.0.0" }
 solana-transaction-error = { path = "transaction-error", version = "3.1.0" }
 solana-validator-exit = { path = "validator-exit", version = "3.0.0" }
 solana-vote-interface = { path = "vote-interface", version = "5.0.0" }
+solana-zero-copy = { path = "zero-copy", version = "0.1.0", default-features = false }
 static_assertions = "1.1.0"
 strum = "0.24"
 strum_macros = "0.24"

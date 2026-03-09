@@ -30,7 +30,7 @@ frozen-abi = [
     "dep:solana-program-error",
     "std",
 ]
-pod = ["dep:solana-pod"]
+zero-copy = ["dep:solana-zero-copy"]
 rand = ["dep:rand", "atomic", "std"]
 sanitize = ["dep:solana-sanitize"]
 serde = ["dep:serde", "dep:serde_derive"]
@@ -59,7 +59,7 @@ sha2-const-stable = { version = "0.1.0", optional = true }
 solana-atomic-u64 = { workspace = true, optional = true }
 solana-frozen-abi = { workspace = true, features = ["frozen-abi"], optional = true }
 solana-frozen-abi-macro = { workspace = true, features = ["frozen-abi"], optional = true }
-solana-pod = { workspace = true, optional = true }
+solana-zero-copy = { workspace = true, optional = true }
 solana-program-error = { workspace = true, optional = true }
 solana-sanitize = { workspace = true, optional = true }
 wincode = { workspace = true, optional = true }
@@ -75,7 +75,7 @@ solana-sha256-hasher = { workspace = true, features = ["sha2"], optional = true 
 [dev-dependencies]
 anyhow = { workspace = true }
 solana-account-info = { path = "../account-info" }
-solana-address = { path = ".", features = ["atomic", "borsh", "curve25519", "decode", "dev-context-only-utils", "error", "pod", "sanitize", "sha2", "std", "syscalls"] }
+solana-address = { path = ".", features = ["atomic", "borsh", "curve25519", "decode", "dev-context-only-utils", "error", "zero-copy", "sanitize", "sha2", "std", "syscalls"] }
 solana-cpi = { path = "../cpi" }
 solana-example-mocks = { path = "../example-mocks" }
 solana-hash = { workspace = true }

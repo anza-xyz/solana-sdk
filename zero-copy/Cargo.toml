@@ -1,6 +1,6 @@
 [package]
-name = "solana-pod"
-description = "Solana Plain Old Data (Pod) zero-copy types and traits"
+name = "solana-zero-copy"
+description = "Solana zero-copy types and traits"
 version = "0.1.0"
 authors = { workspace = true }
 repository = { workspace = true }
@@ -29,7 +29,7 @@ wincode = { workspace = true, optional = true }
 
 [dev-dependencies]
 serde_json = { workspace = true }
-solana-pod = { path = ".", features = ["bytemuck", "borsh", "serde", "wincode"] }
+solana-zero-copy = { path = ".", features = ["bytemuck", "borsh", "serde", "wincode"] }
 test-case = { workspace = true }
 wincode = { workspace = true, features = ["alloc"] }
 
