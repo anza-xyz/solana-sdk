@@ -59,9 +59,9 @@ sha2-const-stable = { version = "0.1.0", optional = true }
 solana-atomic-u64 = { workspace = true, optional = true }
 solana-frozen-abi = { workspace = true, features = ["frozen-abi"], optional = true }
 solana-frozen-abi-macro = { workspace = true, features = ["frozen-abi"], optional = true }
-solana-zero-copy = { workspace = true, optional = true }
 solana-program-error = { workspace = true, optional = true }
 solana-sanitize = { workspace = true, optional = true }
+solana-zero-copy = { workspace = true, optional = true }
 wincode = { workspace = true, optional = true }
 
 [target.'cfg(any(target_os = "solana", target_arch = "bpf"))'.dependencies]
