@@ -3,6 +3,7 @@ use {
     criterion::{criterion_group, criterion_main, Criterion},
     ff::Field,
     solana_bls_signatures::{
+        hash::{HashedMessage, PreparedHashedMessage},
         keypair::Keypair,
         pubkey::{Pubkey, PubkeyProjective, VerifiablePubkey},
         signature::{Signature, SignatureAffineUnchecked, SignatureProjective},
@@ -180,6 +181,13 @@ fn bench_batch_verification(c: &mut Criterion) {
             .map(|(kp, msg)| kp.sign(msg).into())
             .collect();
 
+        let hashed_messages: Vec<HashedMessage> =
+            messages.iter().map(|msg| HashedMessage::new(msg)).collect();
+        let prepared_hashed_messages: Vec<PreparedHashedMessage> = hashed_messages
+            .iter()
+            .map(PreparedHashedMessage::from_hashed_message)
+            .collect();
+
         group.bench_function(
             format!("{num_validators} sequential batch verification"),
             |b| {
@@ -188,6 +196,34 @@ fn bench_batch_verification(c: &mut Criterion) {
                         pubkeys.iter(),
                         signatures.iter(),
                         messages.iter().map(Vec::as_slice),
+                    )
+                    .unwrap();
+                });
+            },
+        );
+
+        group.bench_function(
+            format!("{num_validators} sequential batch verification (pre-hashed)"),
+            |b| {
+                b.iter(|| {
+                    SignatureProjective::verify_distinct_pre_hashed(
+                        pubkeys.iter(),
+                        signatures.iter(),
+                        hashed_messages.iter(),
+                    )
+                    .unwrap();
+                });
+            },
+        );
+
+        group.bench_function(
+            format!("{num_validators} sequential batch verification (prepared)"),
+            |b| {
+                b.iter(|| {
+                    SignatureProjective::verify_distinct_prepared(
+                        pubkeys.iter(),
+                        signatures.iter(),
+                        prepared_hashed_messages.iter(),
                     )
                     .unwrap();
                 });

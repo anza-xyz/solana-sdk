@@ -46,35 +46,73 @@ impl SignatureProjective {
         let mut entries = alloc::vec::Vec::with_capacity(capacity);
         for (pubkey_affine, hashed_message) in pairs {
             entries.push((
-                hashed_message.0.to_bytes(),
-                G1Projective::from(pubkey_affine),
+                hashed_message.0.to_uncompressed(),
+                pubkey_affine,
                 hashed_message,
             ));
         }
 
+        #[cfg(feature = "parallel")]
+        entries.par_sort_unstable_by(|a, b| a.0.cmp(&b.0));
+        #[cfg(not(feature = "parallel"))]
         entries.sort_unstable_by(|a, b| a.0.cmp(&b.0));
 
-        let mut grouped_keys = alloc::vec::Vec::with_capacity(entries.len());
         let mut grouped_pubkeys = alloc::vec::Vec::with_capacity(entries.len());
         let mut grouped_hashed_messages = alloc::vec::Vec::with_capacity(entries.len());
 
-        for (key, pubkey, hashed_message) in entries {
-            if grouped_keys.last() == Some(&key) {
-                if let Some(last_pubkey) = grouped_pubkeys.last_mut() {
-                    #[allow(clippy::arithmetic_side_effects)]
-                    {
-                        *last_pubkey += pubkey;
-                    }
+        for chunk in entries.chunk_by(|a, b| a.0 == b.0) {
+            let mut aggregate_pubkey = G1Projective::from(chunk[0].1);
+            for item in &chunk[1..] {
+                #[allow(clippy::arithmetic_side_effects)]
+                {
+                    aggregate_pubkey += &item.1;
                 }
-            } else {
-                grouped_keys.push(key);
-                grouped_pubkeys.push(pubkey);
-                grouped_hashed_messages.push(hashed_message);
             }
+            grouped_pubkeys.push(aggregate_pubkey);
+            grouped_hashed_messages.push(chunk[0].2);
         }
 
         let grouped_pubkeys_affine = grouped_pubkeys.into_iter().map(Into::into).collect();
         (grouped_pubkeys_affine, grouped_hashed_messages)
+    }
+
+    /// Group pairing terms by message hash in `O(n log n)` time by sorting keys,
+    /// keeping prepared G2 terms to avoid recomputation.
+    fn group_prepared_terms<'b>(
+        pairs: impl Iterator<Item = (G1Affine, &'b PreparedHashedMessage)>,
+        capacity: usize,
+    ) -> (alloc::vec::Vec<G1Affine>, alloc::vec::Vec<&'b G2Prepared>) {
+        let mut entries = alloc::vec::Vec::with_capacity(capacity);
+        for (pubkey_affine, prepared) in pairs {
+            entries.push((
+                prepared.hashed_message.0.to_uncompressed(),
+                pubkey_affine,
+                &prepared.prepared,
+            ));
+        }
+
+        #[cfg(feature = "parallel")]
+        entries.par_sort_unstable_by(|a, b| a.0.cmp(&b.0));
+        #[cfg(not(feature = "parallel"))]
+        entries.sort_unstable_by(|a, b| a.0.cmp(&b.0));
+
+        let mut grouped_pubkeys = alloc::vec::Vec::with_capacity(entries.len());
+        let mut grouped_prepared = alloc::vec::Vec::with_capacity(entries.len());
+
+        for chunk in entries.chunk_by(|a, b| a.0 == b.0) {
+            let mut aggregate_pubkey = G1Projective::from(chunk[0].1);
+            for item in &chunk[1..] {
+                #[allow(clippy::arithmetic_side_effects)]
+                {
+                    aggregate_pubkey += &item.1;
+                }
+            }
+            grouped_pubkeys.push(aggregate_pubkey);
+            grouped_prepared.push(chunk[0].2);
+        }
+
+        let grouped_pubkeys_affine = grouped_pubkeys.into_iter().map(Into::into).collect();
+        (grouped_pubkeys_affine, grouped_prepared)
     }
 
     /// Creates the identity element, which is the starting point for aggregation
@@ -261,10 +299,10 @@ impl SignatureProjective {
             return Err(BlsError::EmptyAggregation);
         }
         let aggregate_signature = SignatureProjective::aggregate(signatures)?;
-        Self::verify_distinct_aggregated_pre_hashed(
+        Self::verify_distinct_aggregated_prepared(
             public_keys,
             &aggregate_signature,
-            prepared_hashed_messages.map(|prepared| &prepared.hashed_message),
+            prepared_hashed_messages,
         )
     }
 
@@ -381,12 +419,48 @@ impl SignatureProjective {
         if public_keys.len() == 0 {
             return Err(BlsError::EmptyAggregation);
         }
+        let public_keys_len = public_keys.len();
+        let mut pubkeys_affine = alloc::vec::Vec::with_capacity(public_keys_len);
+        let mut prepared_refs = alloc::vec::Vec::with_capacity(public_keys_len);
+        for (pubkey, prepared) in public_keys.zip(prepared_hashed_messages) {
+            let g1_affine = pubkey.try_as_affine()?;
+            if bool::from(g1_affine.0.is_identity()) {
+                return Err(BlsError::VerificationFailed);
+            }
+            pubkeys_affine.push(g1_affine.0);
+            prepared_refs.push(prepared);
+        }
 
-        Self::verify_distinct_aggregated_pre_hashed(
-            public_keys,
-            aggregate_signature,
-            prepared_hashed_messages.map(|prepared| &prepared.hashed_message),
-        )
+        let aggregate_signature_affine = aggregate_signature.try_as_affine()?;
+        let signature_prepared = G2Prepared::from(aggregate_signature_affine.0);
+
+        #[cfg(feature = "std")]
+        let neg_g1_generator = &*NEG_G1_GENERATOR_AFFINE;
+        #[cfg(not(feature = "std"))]
+        #[allow(clippy::arithmetic_side_effects)]
+        let neg_g1_generator_val: G1Affine = (-G1Projective::generator()).into();
+        #[cfg(not(feature = "std"))]
+        let neg_g1_generator = &neg_g1_generator_val;
+
+        let (grouped_pubkeys_affine, grouped_prepared_hashes) = Self::group_prepared_terms(
+            pubkeys_affine.into_iter().zip(prepared_refs.into_iter()),
+            public_keys_len,
+        );
+
+        let mut terms =
+            alloc::vec::Vec::with_capacity(grouped_pubkeys_affine.len().saturating_add(1));
+        for (pubkey, prepared_hash) in grouped_pubkeys_affine
+            .iter()
+            .zip(grouped_prepared_hashes.iter())
+        {
+            terms.push((pubkey, *prepared_hash));
+        }
+        terms.push((neg_g1_generator, &signature_prepared));
+
+        let miller_loop_result = Bls12::multi_miller_loop(&terms);
+        (miller_loop_result.final_exponentiation() == Gt::identity())
+            .then_some(())
+            .ok_or(BlsError::VerificationFailed)
     }
 
     /// Aggregate a list of signatures into an existing aggregate
