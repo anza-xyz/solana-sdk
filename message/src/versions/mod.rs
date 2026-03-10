@@ -1,5 +1,15 @@
 #[cfg(feature = "frozen-abi")]
 use solana_frozen_abi_macro::{frozen_abi, AbiEnumVisitor, AbiExample};
+#[cfg(feature = "wincode")]
+use {
+    crate::v1::{deserialize, serialize_into},
+    core::mem::MaybeUninit,
+    wincode::{
+        config::Config,
+        io::{Reader, Writer},
+        ReadResult, SchemaRead, SchemaWrite, WriteResult,
+    },
+};
 use {
     crate::{
         compiled_instruction::CompiledInstruction, legacy::Message as LegacyMessage,
@@ -9,20 +19,6 @@ use {
     solana_hash::Hash,
     solana_sanitize::{Sanitize, SanitizeError},
     std::collections::HashSet,
-};
-#[cfg(feature = "wincode")]
-use {
-    crate::{
-        legacy::MessageUninitBuilder as LegacyMessageUninitBuilder,
-        v1::{deserialize, serialize_into},
-        MessageHeaderUninitBuilder,
-    },
-    core::mem::MaybeUninit,
-    wincode::{
-        config::Config,
-        io::{Reader, Writer},
-        ReadResult, SchemaRead, SchemaWrite, WriteResult,
-    },
 };
 #[cfg(feature = "serde")]
 use {
@@ -427,9 +423,11 @@ unsafe impl<'de, C: Config> SchemaRead<'de, C> for VersionedMessage {
         // which message version is serialized starting from version `0`. If the first
         // is bit is not set, all bytes are used to encode the legacy `Message`
         // format.
-        let variant = <u8 as SchemaRead<C>>::get(&mut reader)?;
+        let variant = *reader.peek()?;
 
         if variant & MESSAGE_VERSION_PREFIX != 0 {
+            // Safety: at least 1 byte can be consumed, since it was peeked
+            unsafe { reader.consume_unchecked(1) };
             use wincode::error::invalid_tag_encoding;
 
             let version = variant & !MESSAGE_VERSION_PREFIX;
@@ -454,29 +452,9 @@ unsafe impl<'de, C: Config> SchemaRead<'de, C> for VersionedMessage {
                 }
                 _ => Err(invalid_tag_encoding(version as usize)),
             };
-        }
-
-        let mut msg = MaybeUninit::<LegacyMessage>::uninit();
-        let mut msg_builder = LegacyMessageUninitBuilder::<C>::from_maybe_uninit_mut(&mut msg);
-        // We've already read the variant byte which, in the legacy case, represents
-        // the `num_required_signatures` field.
-        // As such, we need to write the remaining fields into the message manually,
-        // as calling `LegacyMessage::read` will miss the first field.
-        let mut header_builder =
-            MessageHeaderUninitBuilder::<C>::from_maybe_uninit_mut(msg_builder.uninit_header_mut());
-        header_builder.write_num_required_signatures(variant);
-        header_builder.read_num_readonly_signed_accounts(&mut reader)?;
-        header_builder.read_num_readonly_unsigned_accounts(&mut reader)?;
-        header_builder.finish();
-        unsafe { msg_builder.assume_init_header() };
-
-        msg_builder.read_account_keys(&mut reader)?;
-        msg_builder.read_recent_blockhash(&mut reader)?;
-        msg_builder.read_instructions(reader)?;
-        msg_builder.finish();
-
-        let msg = unsafe { msg.assume_init() };
-        dst.write(VersionedMessage::Legacy(msg));
+        };
+        let legacy = <LegacyMessage as SchemaRead<C>>::get(reader)?;
+        dst.write(VersionedMessage::Legacy(legacy));
 
         Ok(())
     }
