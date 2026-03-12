@@ -38,6 +38,13 @@ no_std_crates=(
   -p solana-signature
   -p solana-sysvar-id
 )
+
+# Crates that are no_std but unconditionally require alloc.
+# These are only checked in the alloc+core pass, not the core-only pass.
+no_std_alloc_crates=(
+  -p solana-account-info
+)
+
 # Use the upstream BPF target, which doesn't support std, to make sure that our
 # no_std support really works.
 target="bpfel-unknown-none"
@@ -60,4 +67,4 @@ exclude_features="atomic,bincode,default,dev-context-only-utils,frozen-abi,rand,
   "--target=${target}" \
   "--exclude-features=${exclude_features}" \
   --each-feature \
-  "${no_std_crates[@]}"
+  "${no_std_crates[@]}" "${no_std_alloc_crates[@]}"
