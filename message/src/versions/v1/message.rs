@@ -42,6 +42,7 @@ use solana_frozen_abi_macro::AbiExample;
 #[cfg(feature = "wincode")]
 use {
     crate::v1::MAX_TRANSACTION_SIZE,
+    core::slice::from_raw_parts,
     wincode::{
         config::ConfigCore,
         error::invalid_tag_encoding,
@@ -521,15 +522,56 @@ unsafe impl<C: ConfigCore> SchemaWrite<C> for Message {
         Ok(src.size())
     }
 
-    // V0 and V1 add +1 for message version prefix
-    #[inline(always)]
     fn write(mut writer: impl Writer, src: &Self::Src) -> WriteResult<()> {
-        // SAFETY: Serializing a slice of `[u8]`.
-        unsafe {
-            writer
-                .write_slice_t(&serialize(src))
-                .map_err(wincode::WriteError::Io)
+        // SAFETY: `Message::size()` yields the exact number of bytes to be written.
+        let mut writer = unsafe { writer.as_trusted_for(src.size()) }?;
+        writer.write(&[
+            src.header.num_required_signatures,
+            src.header.num_readonly_signed_accounts,
+            src.header.num_readonly_unsigned_accounts,
+        ])?;
+        let mask = TransactionConfigMask::from(&src.config).0.to_le_bytes();
+        writer.write(&mask)?;
+        writer.write(src.lifetime_specifier.as_bytes())?;
+        writer.write(&[src.instructions.len() as u8, src.account_keys.len() as u8])?;
+
+        // SAFETY: `Address` is `#[repr(transparent)]` over `[u8; 32]`, so it is safe to
+        // treat as bytes.
+        #[expect(clippy::arithmetic_side_effects)]
+        let account_keys = unsafe {
+            from_raw_parts(
+                src.account_keys.as_ptr().cast::<u8>(),
+                src.account_keys.len() * size_of::<Address>(),
+            )
+        };
+        writer.write(account_keys)?;
+
+        if let Some(value) = src.config.priority_fee {
+            writer.write(&value.to_le_bytes())?;
         }
+        if let Some(value) = src.config.compute_unit_limit {
+            writer.write(&value.to_le_bytes())?;
+        }
+        if let Some(value) = src.config.loaded_accounts_data_size_limit {
+            writer.write(&value.to_le_bytes())?;
+        }
+        if let Some(value) = src.config.heap_size {
+            writer.write(&value.to_le_bytes())?;
+        }
+
+        for ix in &src.instructions {
+            writer.write(&[ix.program_id_index, ix.accounts.len() as u8])?;
+            writer.write(&(ix.data.len() as u16).to_le_bytes())?;
+        }
+
+        for ix in &src.instructions {
+            writer.write(&ix.accounts)?;
+            writer.write(&ix.data)?;
+        }
+
+        writer.finish()?;
+
+        Ok(())
     }
 }
 
@@ -551,99 +593,10 @@ unsafe impl<'de, C: ConfigCore> SchemaRead<'de, C> for Message {
 }
 
 /// Serialize the message.
+#[cfg(feature = "wincode")]
+#[inline]
 pub fn serialize(message: &Message) -> Vec<u8> {
-    let total = message.size();
-    let mut buffer = Vec::<u8>::with_capacity(total);
-
-    // SAFETY: `buffer` has sufficient capacity for serialization.
-    unsafe {
-        serialize_into(message, buffer.as_mut_ptr());
-        buffer.set_len(total);
-    }
-
-    buffer
-}
-
-/// Serialize the message into the provided buffer.
-///
-/// # Safety
-///
-/// The caller must ensure that the provided `dst` pointer has at least
-/// `message.size()` bytes of capacity.
-pub(crate) unsafe fn serialize_into(message: &Message, mut dst: *mut u8) {
-    // header
-    dst.write(message.header.num_required_signatures);
-    dst = dst.add(1);
-    dst.write(message.header.num_readonly_signed_accounts);
-    dst = dst.add(1);
-    dst.write(message.header.num_readonly_unsigned_accounts);
-    dst = dst.add(1);
-
-    // config mask
-    let mask = TransactionConfigMask::from(&message.config).0.to_le_bytes();
-    copy_nonoverlapping(mask.as_ptr(), dst, mask.len());
-    dst = dst.add(mask.len());
-
-    // lifetime specifier
-    let lifetime = message.lifetime_specifier.as_ref();
-    copy_nonoverlapping(lifetime.as_ptr(), dst, lifetime.len());
-    dst = dst.add(lifetime.len());
-
-    // counts
-    dst.write(message.instructions.len() as u8);
-    dst = dst.add(1);
-    dst.write(message.account_keys.len() as u8);
-    dst = dst.add(1);
-
-    // addresses
-    for addr in &message.account_keys {
-        let a = addr.as_ref();
-        copy_nonoverlapping(a.as_ptr(), dst, a.len());
-        dst = dst.add(a.len());
-    }
-
-    // config values
-    if let Some(value) = message.config.priority_fee {
-        let bytes = value.to_le_bytes();
-        copy_nonoverlapping(bytes.as_ptr(), dst, bytes.len());
-        dst = dst.add(bytes.len());
-    }
-    if let Some(value) = message.config.compute_unit_limit {
-        let bytes = value.to_le_bytes();
-        copy_nonoverlapping(bytes.as_ptr(), dst, bytes.len());
-        dst = dst.add(bytes.len());
-    }
-    if let Some(value) = message.config.loaded_accounts_data_size_limit {
-        let bytes = value.to_le_bytes();
-        copy_nonoverlapping(bytes.as_ptr(), dst, bytes.len());
-        dst = dst.add(bytes.len());
-    }
-    if let Some(value) = message.config.heap_size {
-        let bytes = value.to_le_bytes();
-        copy_nonoverlapping(bytes.as_ptr(), dst, bytes.len());
-        dst = dst.add(bytes.len());
-    }
-
-    // instruction headers
-    for ix in &message.instructions {
-        dst.write(ix.program_id_index);
-        dst = dst.add(1);
-        dst.write(ix.accounts.len() as u8);
-        dst = dst.add(1);
-
-        let len = (ix.data.len() as u16).to_le_bytes();
-        copy_nonoverlapping(len.as_ptr(), dst, 2);
-        dst = dst.add(2);
-    }
-
-    // instruction payloads
-    for ix in &message.instructions {
-        copy_nonoverlapping(ix.accounts.as_ptr(), dst, ix.accounts.len());
-        dst = dst.add(ix.accounts.len());
-
-        copy_nonoverlapping(ix.data.as_ptr(), dst, ix.data.len());
-        dst = dst.add(ix.data.len());
-    }
+    wincode::serialize(message).unwrap()
 }
 
 /// Deserialize the message from the provided input buffer, returning the message and

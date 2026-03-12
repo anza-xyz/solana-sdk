@@ -2,7 +2,7 @@
 use solana_frozen_abi_macro::{frozen_abi, AbiEnumVisitor, AbiExample};
 #[cfg(feature = "wincode")]
 use {
-    crate::v1::{deserialize, serialize_into},
+    crate::v1::deserialize,
     core::mem::MaybeUninit,
     wincode::{
         config::Config,
@@ -396,19 +396,8 @@ unsafe impl<C: Config> SchemaWrite<C> for VersionedMessage {
                 <v0::Message as SchemaWrite<C>>::write(writer, message)
             }
             VersionedMessage::V1(message) => {
-                let total = message.size();
-                let mut buffer: Vec<u8> = Vec::with_capacity(1 + total);
-                // SAFETY: buffer has sufficient capacity for serialization.
-                unsafe {
-                    let ptr = buffer.as_mut_ptr();
-                    ptr.write(crate::v1::V1_PREFIX);
-                    serialize_into(message, ptr.add(1));
-                    buffer.set_len(1 + total);
-
-                    writer
-                        .write_slice_t(&buffer)
-                        .map_err(wincode::WriteError::Io)
-                }
+                <u8 as SchemaWrite<C>>::write(writer.by_ref(), &crate::v1::V1_PREFIX)?;
+                <v1::Message as SchemaWrite<C>>::write(writer, message)
             }
         }
     }
