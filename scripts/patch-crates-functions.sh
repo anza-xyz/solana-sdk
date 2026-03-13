@@ -59,7 +59,6 @@ all_crate_dirs=(
   package-metadata
   package-metadata-macro
   packet
-  pod
   poh-config
   poseidon
   precompile-error
@@ -102,6 +101,7 @@ all_crate_dirs=(
   transaction-error
   validator-exit
   vote-interface
+  zero-copy
 )
 
 update_solana_sdk_dependencies() {

@@ -364,6 +364,7 @@ mod tests {
         fn wincode_roundtrip<
             T: PartialEq
                 + core::fmt::Debug
+                + wincode::ZeroCopy
                 + for<'de> wincode::SchemaRead<'de, wincode::config::DefaultConfig, Dst = T>
                 + wincode::SchemaWrite<wincode::config::DefaultConfig, Src = T>,
         >(
@@ -376,6 +377,9 @@ mod tests {
 
             let deserialized: T = wincode::deserialize(&bytes[..size]).unwrap();
             assert_eq!(pod, deserialized);
+
+            let zero_copy_ref = <T as wincode::ZeroCopy>::from_bytes(&bytes[..size]).unwrap();
+            assert_eq!(&pod, zero_copy_ref);
         }
     }
 }

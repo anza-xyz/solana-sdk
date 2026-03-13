@@ -51,6 +51,14 @@ pub trait Nullable: PartialEq + Sized {
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub struct PodOption<T: Nullable>(T);
 
+#[cfg(feature = "wincode")]
+unsafe impl<T, C> wincode::config::ZeroCopy<C> for PodOption<T>
+where
+    C: wincode::config::ConfigCore,
+    T: Nullable + wincode::config::ZeroCopy<C>,
+{
+}
+
 impl<T: Nullable> Default for PodOption<T> {
     fn default() -> Self {
         Self(T::NONE)
@@ -319,7 +327,7 @@ mod tests {
 
     #[cfg(feature = "wincode")]
     mod wincode_tests {
-        use super::*;
+        use {super::*, wincode::ZeroCopy};
 
         #[test]
         fn test_wincode_pod_option_roundtrip_and_size() {
@@ -338,6 +346,11 @@ mod tests {
             let none_roundtrip: PodOption<u64> = wincode::deserialize(&none_bytes).unwrap();
             assert_eq!(some_roundtrip, some);
             assert_eq!(none_roundtrip, none);
+
+            let some_zero_copy = PodOption::<u64>::from_bytes(&some_bytes).unwrap();
+            let none_zero_copy = PodOption::<u64>::from_bytes(&none_bytes).unwrap();
+            assert_eq!(some_zero_copy, &some);
+            assert_eq!(none_zero_copy, &none);
         }
 
         #[test]
