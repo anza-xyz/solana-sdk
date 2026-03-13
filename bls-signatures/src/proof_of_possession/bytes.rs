@@ -1,5 +1,7 @@
 #[cfg(feature = "bytemuck")]
 use bytemuck::{Pod, PodInOption, Zeroable, ZeroableInOption};
+#[cfg(feature = "wincode")]
+use wincode::{SchemaRead, SchemaWrite};
 use {
     base64::{prelude::BASE64_STANDARD, Engine},
     core::fmt,
@@ -26,6 +28,7 @@ pub const BLS_PROOF_OF_POSSESSION_AFFINE_BASE64_SIZE: usize = 256;
 #[cfg_attr(feature = "frozen-abi", derive(solana_frozen_abi_macro::AbiExample))]
 #[cfg_attr(feature = "serde", cfg_eval::cfg_eval, serde_as)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "wincode", derive(SchemaRead, SchemaWrite))]
 #[derive(Clone, Copy, Debug, Hash, Eq, Ord, PartialEq, PartialOrd)]
 #[repr(transparent)]
 pub struct ProofOfPossessionCompressed(
@@ -58,6 +61,7 @@ impl_from_str!(
 #[cfg_attr(feature = "frozen-abi", derive(solana_frozen_abi_macro::AbiExample))]
 #[cfg_attr(feature = "serde", cfg_eval::cfg_eval, serde_as)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "wincode", derive(SchemaRead, SchemaWrite))]
 #[derive(Clone, Copy, Debug, Hash, Eq, Ord, PartialEq, PartialOrd)]
 #[repr(transparent)]
 pub struct ProofOfPossession(
