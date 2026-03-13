@@ -811,10 +811,10 @@ mod tests {
     }
 
     #[cfg(feature = "zero-copy")]
-    mod pod_tests {
+    mod maybe_null_tests {
         use {
             super::*,
-            solana_zero_copy::{Nullable, PodOption, PodOptionError},
+            solana_zero_copy::{MaybeNull, MaybeNullError, Nullable},
         };
 
         #[test]
@@ -824,32 +824,32 @@ mod tests {
         }
 
         #[test]
-        fn test_pod_option_some() {
+        fn test_maybe_null_some() {
             let addr = Address::from([8; ADDRESS_BYTES]);
-            let pod = PodOption::from(addr);
-            assert_eq!(pod.get(), Some(addr));
+            let maybe_null = MaybeNull::from(addr);
+            assert_eq!(maybe_null.get(), Some(addr));
         }
 
         #[test]
-        fn test_pod_option_none() {
-            let pod = PodOption::from(Address::NONE);
-            assert_eq!(pod.get(), None);
+        fn test_maybe_null_none() {
+            let maybe_null = MaybeNull::from(Address::NONE);
+            assert_eq!(maybe_null.get(), None);
         }
 
         #[test]
         fn test_try_from_option() {
             let addr = Address::from([8; ADDRESS_BYTES]);
             assert_eq!(
-                PodOption::try_from(Some(addr)).unwrap(),
-                PodOption::from(addr),
+                MaybeNull::try_from(Some(addr)).unwrap(),
+                MaybeNull::from(addr),
             );
             assert_eq!(
-                PodOption::try_from(None::<Address>).unwrap(),
-                PodOption::from(Address::NONE),
+                MaybeNull::try_from(None::<Address>).unwrap(),
+                MaybeNull::from(Address::NONE),
             );
             assert_eq!(
-                PodOption::try_from(Some(Address::NONE)).unwrap_err(),
-                PodOptionError::NoneValueInSome,
+                MaybeNull::try_from(Some(Address::NONE)).unwrap_err(),
+                MaybeNullError::NoneValueInSome,
             );
         }
     }
