@@ -1,15 +1,50 @@
+//! BLS signature types and cryptographic operations.
+//!
+//! This module provides the representations of BLS signatures on the BLS12-381
+//! curve (G2 group), as well as the logic for aggregation and verification.
+//!
+//! Signatures can be represented as:
+//! - **Bytes** (`Signature`, `SignatureCompressed`): For storage and network transmission.
+//! - **Points** (`SignatureProjective`, `SignatureAffine`): For cryptographic operations.
+//!
+//! The module includes highly optimized multi-miller loop logic for verifying
+//! aggregated signatures over both shared messages (multisig) and distinct
+//! messages (batch verification).
+//!
+//! # Organization
+//! - `bytes`: Raw byte definitions and base64 string conversions.
+//! - `points`: Mathematical curve point wrappers and state traits.
+//! - `conversion`: Implementations to losslessly convert between bytes, affine, and
+//!   projective types.
+//! - `aggregate`: Methods for combining multiple signatures into a single aggregate signature.
+//! - `verify`: Multisig verification (Verifying multiple public keys against a **single**
+//!   shared message).
+//! - `verify_distinct`: Batch verification (Verifying multiple public keys against **multiple**
+//!   distinct messages).
+
+#[cfg(not(target_os = "solana"))]
+pub mod aggregate;
 pub mod bytes;
+#[cfg(not(target_os = "solana"))]
 pub mod conversion;
+#[cfg(not(target_os = "solana"))]
 pub mod points;
+#[cfg(not(target_os = "solana"))]
+pub mod verify;
+#[cfg(not(target_os = "solana"))]
+pub mod verify_distinct;
 
 pub use bytes::{
     Signature, SignatureCompressed, BLS_SIGNATURE_AFFINE_BASE64_SIZE, BLS_SIGNATURE_AFFINE_SIZE,
     BLS_SIGNATURE_COMPRESSED_BASE64_SIZE, BLS_SIGNATURE_COMPRESSED_SIZE,
 };
 #[cfg(not(target_os = "solana"))]
-pub use points::{
-    AddToSignatureProjective, AsSignatureAffine, AsSignatureProjective, SignatureAffine,
-    SignatureAffineUnchecked, SignatureProjective, VerifiableSignature,
+pub use {
+    points::{
+        AddToSignatureProjective, AsSignatureAffine, AsSignatureProjective, SignatureAffine,
+        SignatureAffineUnchecked, SignatureProjective,
+    },
+    verify::VerifiableSignature,
 };
 
 #[cfg(test)]
