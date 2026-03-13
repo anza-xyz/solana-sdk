@@ -10,6 +10,8 @@ use core::{
     convert, mem,
     ops::{Deref, DerefMut},
 };
+#[cfg(feature = "zero-copy")]
+use solana_zero_copy::{MaybeNull, MaybeNullError, Nullable};
 
 /// A C representation of Rust's `std::option::Option`
 #[repr(C)]
@@ -963,6 +965,29 @@ impl<T> From<COption<T>> for Option<T> {
     }
 }
 
+#[cfg(feature = "zero-copy")]
+impl<T: Nullable> TryFrom<COption<T>> for MaybeNull<T> {
+    type Error = MaybeNullError;
+
+    fn try_from(value: COption<T>) -> Result<Self, Self::Error> {
+        match value {
+            COption::Some(value) if value.is_none() => Err(MaybeNullError::NoneValueInSome),
+            COption::Some(value) => Ok(MaybeNull::from(value)),
+            COption::None => Ok(MaybeNull::from(T::NONE)),
+        }
+    }
+}
+
+#[cfg(feature = "zero-copy")]
+impl<T: Nullable> From<MaybeNull<T>> for COption<T> {
+    fn from(value: MaybeNull<T>) -> Self {
+        match value.get() {
+            Some(value) => COption::Some(value),
+            None => COption::None,
+        }
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
@@ -980,5 +1005,57 @@ mod test {
         assert_eq!(c_option, COption::None);
         let expected = c_option.into();
         assert_eq!(option, expected);
+    }
+
+    #[cfg(feature = "zero-copy")]
+    mod maybe_null_tests {
+        use {super::*, solana_zero_copy::MaybeNullError};
+
+        #[derive(Clone, Copy, Debug, PartialEq)]
+        struct TestVal(u32);
+
+        impl Nullable for TestVal {
+            const NONE: Self = TestVal(0);
+        }
+
+        #[test]
+        fn test_maybe_null_try_from_coption_some() {
+            let some = COption::Some(TestVal(42));
+            assert_eq!(
+                MaybeNull::try_from(some).unwrap(),
+                MaybeNull::from(TestVal(42)),
+            );
+        }
+
+        #[test]
+        fn test_maybe_null_try_from_coption_none() {
+            let none: COption<TestVal> = COption::None;
+            assert_eq!(
+                MaybeNull::try_from(none).unwrap(),
+                MaybeNull::from(TestVal::NONE),
+            );
+        }
+
+        #[test]
+        fn test_maybe_null_try_from_coption_rejects_none_value() {
+            let invalid = COption::Some(TestVal(0));
+            assert_eq!(
+                MaybeNull::try_from(invalid).unwrap_err(),
+                MaybeNullError::NoneValueInSome,
+            );
+        }
+
+        #[test]
+        fn test_maybe_null_coption_roundtrip() {
+            let some = COption::Some(TestVal(42));
+            let maybe_null: MaybeNull<TestVal> = MaybeNull::try_from(some).unwrap();
+            let coption: COption<TestVal> = maybe_null.into();
+            assert_eq!(coption, COption::Some(TestVal(42)));
+
+            let none: COption<TestVal> = COption::None;
+            let maybe_null: MaybeNull<TestVal> = MaybeNull::try_from(none).unwrap();
+            let coption: COption<TestVal> = maybe_null.into();
+            assert_eq!(coption, COption::None);
+        }
     }
 }

@@ -101,6 +101,7 @@ all_crate_dirs=(
   transaction-error
   validator-exit
   vote-interface
+  zero-copy
 )
 
 update_solana_sdk_dependencies() {

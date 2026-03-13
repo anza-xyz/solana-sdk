@@ -37,6 +37,7 @@ no_std_crates=(
   -p solana-sha256-hasher
   -p solana-signature
   -p solana-sysvar-id
+  -p solana-zero-copy
 )
 
 # Crates that are no_std but unconditionally require alloc.

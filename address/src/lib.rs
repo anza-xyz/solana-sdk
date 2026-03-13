@@ -379,6 +379,14 @@ pub fn address_eq(a1: &Address, a2: &Address) -> bool {
     }
 }
 
+/// Implementation of `Nullable` for `Address`.
+///
+/// The zero address (`[0u8; 32]`) is the `None` value.
+#[cfg(feature = "zero-copy")]
+impl solana_zero_copy::Nullable for Address {
+    const NONE: Self = Address::new_from_array([0u8; ADDRESS_BYTES]);
+}
+
 #[cfg(feature = "decode")]
 /// Convenience macro to define a static `Address` value.
 ///
@@ -799,6 +807,50 @@ mod tests {
             assert!(!p1.eq(&p3));
             assert_eq!(!p1.eq(&p3), p1.0 != p3.0);
             assert!(!address_eq(&p1, &p3));
+        }
+    }
+
+    #[cfg(feature = "zero-copy")]
+    mod maybe_null_tests {
+        use {
+            super::*,
+            solana_zero_copy::{MaybeNull, MaybeNullError, Nullable},
+        };
+
+        #[test]
+        fn test_nullable_impl() {
+            assert!(Address::NONE.is_none());
+            assert!(Address::from([1; ADDRESS_BYTES]).is_some());
+        }
+
+        #[test]
+        fn test_maybe_null_some() {
+            let addr = Address::from([8; ADDRESS_BYTES]);
+            let maybe_null = MaybeNull::from(addr);
+            assert_eq!(maybe_null.get(), Some(addr));
+        }
+
+        #[test]
+        fn test_maybe_null_none() {
+            let maybe_null = MaybeNull::from(Address::NONE);
+            assert_eq!(maybe_null.get(), None);
+        }
+
+        #[test]
+        fn test_try_from_option() {
+            let addr = Address::from([8; ADDRESS_BYTES]);
+            assert_eq!(
+                MaybeNull::try_from(Some(addr)).unwrap(),
+                MaybeNull::from(addr),
+            );
+            assert_eq!(
+                MaybeNull::try_from(None::<Address>).unwrap(),
+                MaybeNull::from(Address::NONE),
+            );
+            assert_eq!(
+                MaybeNull::try_from(Some(Address::NONE)).unwrap_err(),
+                MaybeNullError::NoneValueInSome,
+            );
         }
     }
 }
