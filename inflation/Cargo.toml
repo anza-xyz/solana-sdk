@@ -17,6 +17,7 @@ frozen-abi = ["dep:solana-frozen-abi", "dep:solana-frozen-abi-macro"]
 serde = ["dep:serde", "dep:serde_derive"]
 
 [dependencies]
+num-traits = { workspace = true, default-features = false, features = ["libm"] }
 serde = { workspace = true, optional = true }
 serde_derive = { workspace = true, optional = true }
 solana-frozen-abi = { workspace = true, optional = true }

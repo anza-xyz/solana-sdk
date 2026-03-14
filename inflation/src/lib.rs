@@ -1,8 +1,13 @@
 //! configuration for network inflation
+#![no_std]
 #![cfg_attr(docsrs, feature(doc_cfg))]
 #![cfg_attr(feature = "frozen-abi", feature(min_specialization))]
 #[cfg(feature = "serde")]
 use serde_derive::{Deserialize, Serialize};
+
+// The import is required for no_std compilation because .powf() which comes from the Float trait (not from std's inherent f64 methods).
+#[allow(unused_imports)]
+use num_traits::Float;
 
 #[cfg_attr(feature = "frozen-abi", derive(solana_frozen_abi_macro::AbiExample))]
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
@@ -89,7 +94,7 @@ impl Inflation {
     /// inflation rate at year
     pub fn total(&self, year: f64) -> f64 {
         assert!(year >= 0.0);
-        let tapered = self.initial * ((1.0 - self.taper).powf(year));
+        let tapered = self.initial * (1.0 - self.taper).powf(year);
 
         if tapered > self.terminal {
             tapered
