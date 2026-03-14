@@ -81,12 +81,20 @@ pub enum UpgradeableLoaderInstruction {
     ///   1. `[writable]` The uninitialized ProgramData account.
     ///   2. `[writable]` The uninitialized Program account.
     ///   3. `[writable]` The Buffer account where the program data has been
-    ///      written.  The buffer account's authority must match the program's
-    ///      authority
+    ///      written.
     ///   4. `[]` Rent sysvar.
     ///   5. `[]` Clock sysvar.
     ///   6. `[]` System program (`solana_sdk_ids::system_program::id()`).
     ///   7. `[signer]` The program's authority
+    ///
+    /// An optional trailing byte may be appended to the serialized instruction
+    /// data to indicate whether to close the buffer after deployment. Consider
+    /// this field `close_buffer: bool`.
+    /// * If `close_buffer=true`, the buffer account will be closed and its
+    ///   lamports transferred to the payer.
+    /// * If `close_buffer=false`, the buffer remains intact for potential reuse
+    ///   (requires SIMD-0430 feature to be active), and the signing authority
+    ///   *does not* have to match the authority on the buffer.
     DeployWithMaxDataLen {
         /// Maximum length that the program can be upgraded to.
         max_data_len: usize,
@@ -106,12 +114,20 @@ pub enum UpgradeableLoaderInstruction {
     ///   0. `[writable]` The ProgramData account.
     ///   1. `[writable]` The Program account.
     ///   2. `[writable]` The Buffer account where the program data has been
-    ///      written.  The buffer account's authority must match the program's
-    ///      authority
+    ///      written.
     ///   3. `[writable]` The spill account.
     ///   4. `[]` Rent sysvar.
     ///   5. `[]` Clock sysvar.
     ///   6. `[signer]` The program's authority.
+    ///
+    /// An optional trailing byte may be appended to the serialized instruction
+    /// data to indicate whether to close the buffer after deployment. Consider
+    /// this field `close_buffer: bool`.
+    /// * If `close_buffer=true`, the buffer account will be closed and its
+    ///   lamports transferred to the payer.
+    /// * If `close_buffer=false`, the buffer remains intact for potential reuse
+    ///   (requires SIMD-0430 feature to be active), and the signing authority
+    ///   *does not* have to match the authority on the buffer.
     Upgrade,
 
     /// Set a new authority that is allowed to write the buffer or upgrade the
@@ -247,6 +263,31 @@ pub fn write(
     )
 }
 
+#[cfg(feature = "bincode")]
+fn deploy_with_max_data_len_instruction(
+    payer_address: &Pubkey,
+    programdata_address: &Pubkey,
+    program_address: &Pubkey,
+    buffer_address: &Pubkey,
+    upgrade_authority_address: &Pubkey,
+    max_data_len: usize,
+) -> Instruction {
+    Instruction::new_with_bincode(
+        id(),
+        &UpgradeableLoaderInstruction::DeployWithMaxDataLen { max_data_len },
+        vec![
+            AccountMeta::new(*payer_address, true),
+            AccountMeta::new(*programdata_address, false),
+            AccountMeta::new(*program_address, false),
+            AccountMeta::new(*buffer_address, false),
+            AccountMeta::new_readonly(sysvar::rent::id(), false),
+            AccountMeta::new_readonly(sysvar::clock::id(), false),
+            AccountMeta::new_readonly(solana_sdk_ids::system_program::id(), false),
+            AccountMeta::new_readonly(*upgrade_authority_address, true),
+        ],
+    )
+}
+
 #[deprecated(since = "2.2.0", note = "Use loader-v4 instead")]
 #[cfg(feature = "bincode")]
 /// Returns the instructions required to deploy a program with a specified
@@ -269,20 +310,58 @@ pub fn deploy_with_max_program_len(
             UpgradeableLoaderState::size_of_program() as u64,
             &id(),
         ),
-        Instruction::new_with_bincode(
-            id(),
-            &UpgradeableLoaderInstruction::DeployWithMaxDataLen { max_data_len },
-            vec![
-                AccountMeta::new(*payer_address, true),
-                AccountMeta::new(programdata_address, false),
-                AccountMeta::new(*program_address, false),
-                AccountMeta::new(*buffer_address, false),
-                AccountMeta::new_readonly(sysvar::rent::id(), false),
-                AccountMeta::new_readonly(sysvar::clock::id(), false),
-                AccountMeta::new_readonly(solana_sdk_ids::system_program::id(), false),
-                AccountMeta::new_readonly(*upgrade_authority_address, true),
-            ],
+        deploy_with_max_data_len_instruction(
+            payer_address,
+            &programdata_address,
+            program_address,
+            buffer_address,
+            upgrade_authority_address,
+            max_data_len,
         ),
+    ])
+}
+
+#[deprecated(since = "2.2.0", note = "Use loader-v4 instead")]
+#[cfg(feature = "bincode")]
+/// Returns the instructions required to deploy a program with a specified
+/// maximum program length. The maximum length must be large enough to
+/// accommodate any future upgrades.
+///
+/// If `close_buffer=true`, the buffer account will be closed and its lamports
+/// transferred to the payer.
+///
+/// If `close_buffer=false`, the buffer remains intact for potential reuse
+/// (requires SIMD-0430 feature to be active), and the signing authority *does
+/// not* have to match the authority on the buffer.
+pub fn deploy_with_max_program_len_v2(
+    payer_address: &Pubkey,
+    program_address: &Pubkey,
+    buffer_address: &Pubkey,
+    upgrade_authority_address: &Pubkey,
+    program_lamports: u64,
+    max_data_len: usize,
+    close_buffer: bool,
+) -> Result<Vec<Instruction>, InstructionError> {
+    let programdata_address = get_program_data_address(program_address);
+    let mut deploy_instruction = deploy_with_max_data_len_instruction(
+        payer_address,
+        &programdata_address,
+        program_address,
+        buffer_address,
+        upgrade_authority_address,
+        max_data_len,
+    );
+    deploy_instruction.data.push(u8::from(close_buffer));
+
+    Ok(vec![
+        system_instruction::create_account(
+            payer_address,
+            program_address,
+            program_lamports,
+            UpgradeableLoaderState::size_of_program() as u64,
+            &id(),
+        ),
+        deploy_instruction,
     ])
 }
 
@@ -308,6 +387,33 @@ pub fn upgrade(
             AccountMeta::new_readonly(*authority_address, true),
         ],
     )
+}
+
+#[cfg(feature = "bincode")]
+/// Returns the instruction required to upgrade a program.
+///
+///
+/// If `close_buffer=true`, the buffer account will be closed and its lamports
+/// transferred to the payer.
+///
+/// If `close_buffer=false`, the buffer remains intact for potential reuse
+/// (requires SIMD-0430 feature to be active), and the signing authority *does
+/// not* have to match the authority on the buffer.
+pub fn upgrade_v2(
+    program_address: &Pubkey,
+    buffer_address: &Pubkey,
+    authority_address: &Pubkey,
+    spill_address: &Pubkey,
+    close_buffer: bool,
+) -> Instruction {
+    let mut instruction = upgrade(
+        program_address,
+        buffer_address,
+        authority_address,
+        spill_address,
+    );
+    instruction.data.push(u8::from(close_buffer));
+    instruction
 }
 
 pub fn is_upgrade_instruction(instruction_data: &[u8]) -> bool {
@@ -633,5 +739,75 @@ mod tests {
                 additional_bytes: 0,
             },
         );
+    }
+
+    #[test]
+    #[allow(deprecated)]
+    fn test_deploy_v2_trailing_byte() {
+        let payer = Pubkey::new_from_array([1; 32]);
+        let program = Pubkey::new_from_array([2; 32]);
+        let buffer = Pubkey::new_from_array([3; 32]);
+        let authority = Pubkey::new_from_array([4; 32]);
+        let max_data_len = 5000;
+
+        // close_buffer = true
+        let instructions = deploy_with_max_program_len_v2(
+            &payer,
+            &program,
+            &buffer,
+            &authority,
+            1000,
+            max_data_len,
+            true,
+        )
+        .unwrap();
+        let deploy_ix = &instructions[1];
+        assert_eq!(*deploy_ix.data.last().unwrap(), 1);
+        assert!(matches!(
+            solana_bincode::limited_deserialize(&deploy_ix.data, u64::MAX),
+            Ok(UpgradeableLoaderInstruction::DeployWithMaxDataLen { max_data_len: len }) if len == max_data_len
+        ));
+
+        // close_buffer = false
+        let instructions = deploy_with_max_program_len_v2(
+            &payer,
+            &program,
+            &buffer,
+            &authority,
+            1000,
+            max_data_len,
+            false,
+        )
+        .unwrap();
+        let deploy_ix = &instructions[1];
+        assert_eq!(*deploy_ix.data.last().unwrap(), 0);
+        assert!(matches!(
+            solana_bincode::limited_deserialize(&deploy_ix.data, u64::MAX),
+            Ok(UpgradeableLoaderInstruction::DeployWithMaxDataLen { max_data_len: len }) if len == max_data_len
+        ));
+    }
+
+    #[test]
+    fn test_upgrade_v2_trailing_byte() {
+        let program = Pubkey::new_from_array([1; 32]);
+        let buffer = Pubkey::new_from_array([2; 32]);
+        let authority = Pubkey::new_from_array([3; 32]);
+        let spill = Pubkey::new_from_array([4; 32]);
+
+        // close_buffer = true
+        let instruction = upgrade_v2(&program, &buffer, &authority, &spill, true);
+        assert_eq!(*instruction.data.last().unwrap(), 1);
+        assert!(matches!(
+            solana_bincode::limited_deserialize(&instruction.data, u64::MAX),
+            Ok(UpgradeableLoaderInstruction::Upgrade)
+        ));
+
+        // close_buffer = false
+        let instruction = upgrade_v2(&program, &buffer, &authority, &spill, false);
+        assert_eq!(*instruction.data.last().unwrap(), 0);
+        assert!(matches!(
+            solana_bincode::limited_deserialize(&instruction.data, u64::MAX),
+            Ok(UpgradeableLoaderInstruction::Upgrade)
+        ));
     }
 }
