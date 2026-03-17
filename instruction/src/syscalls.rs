@@ -59,8 +59,8 @@ pub fn get_processed_sibling_instruction(index: usize) -> Option<Instruction> {
                 &mut account_meta as *mut _ as *mut u8,
             )
         } {
-            let mut data = std::vec::Vec::new();
-            let mut accounts = std::vec::Vec::new();
+            let mut data = alloc::vec::Vec::new();
+            let mut accounts = alloc::vec::Vec::new();
             data.resize_with(meta.data_len as usize, u8::default);
             accounts.resize_with(meta.accounts_len as usize, AccountMeta::default);
 

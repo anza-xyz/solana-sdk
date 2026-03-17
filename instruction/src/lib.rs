@@ -14,17 +14,14 @@
 #![allow(clippy::arithmetic_side_effects)]
 #![no_std]
 
-#[cfg(feature = "std")]
-extern crate std;
-use solana_pubkey::Pubkey;
-#[cfg(feature = "std")]
-use std::vec::Vec;
+extern crate alloc;
+
 pub mod account_meta;
-#[cfg(feature = "std")]
-pub use account_meta::AccountMeta;
-pub use solana_instruction_error as error;
 #[cfg(any(feature = "syscalls", target_os = "solana"))]
 pub mod syscalls;
+
+pub use {account_meta::AccountMeta, solana_instruction_error as error};
+use {alloc::vec::Vec, solana_pubkey::Pubkey};
 
 /// A directive for a single invocation of a Solana program.
 ///
@@ -85,7 +82,6 @@ pub mod syscalls;
 /// Programs may require signatures from some accounts, in which case they
 /// should be specified as signers during `Instruction` construction. The
 /// program must still validate during execution that the account is a signer.
-#[cfg(feature = "std")]
 #[cfg_attr(
     feature = "serde",
     derive(serde_derive::Serialize, serde_derive::Deserialize)
@@ -101,7 +97,6 @@ pub struct Instruction {
     pub data: Vec<u8>,
 }
 
-#[cfg(feature = "std")]
 impl Instruction {
     #[cfg(feature = "borsh")]
     /// Create a new instruction from a value, encoded with [`borsh`].
@@ -344,7 +339,6 @@ pub struct BorrowedAccountMeta<'a> {
 ///
 /// This struct is used by the runtime when constructing the instructions sysvar. It is not
 /// useful to Solana programs.
-#[cfg(feature = "std")]
 pub struct BorrowedInstruction<'a> {
     pub program_id: &'a Pubkey,
     pub accounts: Vec<BorrowedAccountMeta<'a>>,
