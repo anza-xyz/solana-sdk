@@ -43,6 +43,7 @@ no_std_crates=(
 # These are only checked in the alloc+core pass, not the core-only pass.
 no_std_alloc_crates=(
   -p solana-account-info
+  -p solana-instruction
 )
 
 # Use the upstream BPF target, which doesn't support std, to make sure that our
