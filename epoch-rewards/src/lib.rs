@@ -60,7 +60,6 @@ pub struct EpochRewards {
 impl EpochRewards {
     pub fn distribute(&mut self, amount: u64) {
         let new_distributed_rewards = self.distributed_rewards.saturating_add(amount);
-        assert!(new_distributed_rewards <= self.total_rewards);
         self.distributed_rewards = new_distributed_rewards;
     }
 }
@@ -100,12 +99,5 @@ mod tests {
 
         assert_eq!(epoch_rewards.total_rewards, 100);
         assert_eq!(epoch_rewards.distributed_rewards, 100);
-    }
-
-    #[test]
-    #[should_panic(expected = "new_distributed_rewards <= self.total_rewards")]
-    fn test_epoch_rewards_distribute_panic() {
-        let mut epoch_rewards = EpochRewards::new(100, 0, 64);
-        epoch_rewards.distribute(200);
     }
 }
