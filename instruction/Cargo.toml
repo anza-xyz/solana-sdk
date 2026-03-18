@@ -20,8 +20,9 @@ borsh = ["dep:borsh"]
 default = ["std"]
 frozen-abi = ["dep:solana-frozen-abi", "dep:solana-frozen-abi-macro", "serde", "std"]
 serde = ["serde/alloc", "dep:serde_derive", "solana-pubkey/serde"]
-std = ["serde?/std", "borsh?/std"]
-syscalls = ["std"]
+# The `std` feature is currently unused and retained for backwards compatibility.
+std = []
+syscalls = []
 wincode = ["dep:wincode", "solana-pubkey/wincode"]
 
 [dependencies]
