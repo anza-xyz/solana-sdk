@@ -42,11 +42,13 @@ use solana_frozen_abi_macro::AbiExample;
 #[cfg(feature = "wincode")]
 use {
     crate::v1::{InstructionHeader, FIXED_HEADER_SIZE},
-    core::{mem::MaybeUninit, ptr::copy_nonoverlapping, slice::from_raw_parts},
+    core::{mem::MaybeUninit, slice::from_raw_parts},
     wincode::{
         config::{Config, ConfigCore},
+        context,
         io::{Reader, Writer},
-        ReadResult, SchemaRead, SchemaWrite, WriteResult,
+        len::SeqLen,
+        ReadResult, SchemaRead, SchemaReadContext, SchemaWrite, WriteResult,
     },
 };
 use {
@@ -608,24 +610,11 @@ unsafe impl<'de, C: Config> SchemaRead<'de, C> for Message {
             )
         };
 
-        let account_keys_bytes = reader.take_scoped(num_addresses * size_of::<Address>())?;
-        let mut account_keys = Vec::with_capacity(num_addresses);
-        // SAFETY:
-        // - `take_scoped(num_addresses * size_of::<Address>())` returns
-        //   exactly the requested number of bytes, or errors.
-        // - `Address` is `#[repr(transparent)]` over `[u8; 32]`, so it has alignment 1
-        //   and any 32-byte sequence is a valid in-memory representation.
-        // - `num_addresses * size_of::<Address>()` is exactly the number of bytes
-        //   needed to fill `num_addresses` elements into the `account_keys` vector.
-        // - `account_keys` was allocated with capacity for `num_addresses` elements.
-        unsafe {
-            copy_nonoverlapping(
-                account_keys_bytes.as_ptr().cast::<Address>(),
-                account_keys.as_mut_ptr(),
-                num_addresses,
-            );
-            account_keys.set_len(num_addresses);
-        }
+        <C::LengthEncoding as SeqLen<C>>::prealloc_check::<Address>(num_addresses)?;
+        let account_keys = <Vec<Address> as SchemaReadContext<C, context::Len>>::get_with_context(
+            context::Len(num_addresses),
+            reader.by_ref(),
+        )?;
 
         let mut config = TransactionConfig::empty();
         if config_mask.has_priority_fee() {
@@ -662,8 +651,16 @@ unsafe impl<'de, C: Config> SchemaRead<'de, C> for Message {
             let num_accounts = header.1 as usize;
             let data_len = u16::from_le_bytes(header.2) as usize;
 
-            let accounts = reader.take_scoped(num_accounts)?.to_vec();
-            let data = reader.take_scoped(data_len)?.to_vec();
+            <C::LengthEncoding as SeqLen<C>>::prealloc_check::<u8>(num_accounts)?;
+            let accounts = <Vec<u8> as SchemaReadContext<C, context::Len>>::get_with_context(
+                context::Len(num_accounts),
+                reader.by_ref(),
+            )?;
+            <C::LengthEncoding as SeqLen<C>>::prealloc_check::<u8>(data_len)?;
+            let data = <Vec<u8> as SchemaReadContext<C, context::Len>>::get_with_context(
+                context::Len(data_len),
+                reader.by_ref(),
+            )?;
 
             instructions.push(CompiledInstruction {
                 program_id_index,
