@@ -8,8 +8,8 @@ src_root="$(readlink -f "${here}/..")"
 cd "${src_root}"
 
 no_std_crates=(
-  -p solana-address
   -p solana-account-view
+  -p solana-address
   -p solana-blake3-hasher
   -p solana-clock
   -p solana-cluster-type
@@ -46,6 +46,7 @@ no_std_crates=(
 no_std_alloc_crates=(
   -p solana-account-info
   -p solana-borsh
+  -p solana-curve25519
   -p solana-instruction
 )
 

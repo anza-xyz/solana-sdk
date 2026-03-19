@@ -7,6 +7,7 @@ pub struct PodEdwardsPoint(pub [u8; 32]);
 
 #[cfg(not(target_os = "solana"))]
 mod target_arch {
+    extern crate alloc;
     use {
         super::*,
         crate::{
@@ -14,6 +15,7 @@ mod target_arch {
             errors::Curve25519Error,
             scalar::PodScalar,
         },
+        alloc::vec::Vec,
         curve25519_dalek::{
             edwards::{CompressedEdwardsY, EdwardsPoint},
             scalar::Scalar,
