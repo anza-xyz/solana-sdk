@@ -12,8 +12,12 @@ edition = { workspace = true }
 [package.metadata.docs.rs]
 targets = ["x86_64-unknown-linux-gnu"]
 
+[features]
+default = ["std"]
+std = ["borsh/std"]
+
 [dependencies]
-borsh = { workspace = true, features = ["std"] }
+borsh = { workspace = true }
 
 [lints]
 workspace = true

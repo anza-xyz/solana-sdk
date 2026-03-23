@@ -125,7 +125,12 @@ macro_rules! impl_tests {
         extern crate alloc;
         use {
             super::*,
-            std::{collections::HashMap, mem::size_of},
+            alloc::{
+                collections::BTreeMap,
+                string::ToString,
+                vec::Vec,
+            },
+            core::mem::size_of,
             $borsh::{BorshDeserialize, BorshSerialize},
             $borsh_io::ErrorKind,
         };
@@ -135,10 +140,10 @@ macro_rules! impl_tests {
 
         #[test]
         fn unchecked_deserialization() {
-            let parent = vec![[0u8; 64], [1u8; 64], [2u8; 64]];
+            let parent = alloc::vec![[0u8; 64], [1u8; 64], [2u8; 64]];
 
             // exact size, both work
-            let mut byte_vec = vec![0u8; 4 + get_packed_len::<Child>() * 3];
+            let mut byte_vec = alloc::vec![0u8; 4 + get_packed_len::<Child>() * 3];
             let mut bytes = byte_vec.as_mut_slice();
             parent.serialize(&mut bytes).unwrap();
             let deserialized = Parent::try_from_slice(&byte_vec).unwrap();
@@ -147,7 +152,7 @@ macro_rules! impl_tests {
             assert_eq!(deserialized, parent);
 
             // too big, only unchecked works
-            let mut byte_vec = vec![0u8; 4 + get_packed_len::<Child>() * 10];
+            let mut byte_vec = alloc::vec![0u8; 4 + get_packed_len::<Child>() * 10];
             let mut bytes = byte_vec.as_mut_slice();
             parent.serialize(&mut bytes).unwrap();
             let err = Parent::try_from_slice(&byte_vec).unwrap_err();
@@ -202,7 +207,7 @@ macro_rules! impl_tests {
 
         #[test]
         fn instance_packed_len_with_vec() {
-            let parent = vec![
+            let parent = alloc::vec![
                 [0u8; 64], [1u8; 64], [2u8; 64], [3u8; 64], [4u8; 64], [5u8; 64],
             ];
             assert_eq!(
@@ -212,8 +217,8 @@ macro_rules! impl_tests {
         }
 
         #[test]
-        fn instance_packed_len_with_varying_sizes_in_hashmap() {
-            let mut data = HashMap::new();
+        fn instance_packed_len_with_varying_sizes_in_btreemap() {
+            let mut data = BTreeMap::new();
             let key1 = "the first string, it's actually really really long".to_string();
             let value1 = "".to_string();
             let key2 = "second string, shorter".to_string();
