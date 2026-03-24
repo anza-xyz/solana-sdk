@@ -4029,7 +4029,9 @@ dependencies = [
  "borsh",
  "bytemuck",
  "serde",
+ "serde_derive",
  "serde_json",
+ "serde_with",
  "solana-nullable",
  "wincode",
 ]

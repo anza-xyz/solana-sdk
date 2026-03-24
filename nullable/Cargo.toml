@@ -17,17 +17,21 @@ rustdoc-args = ["--cfg=docsrs"]
 bytemuck = ["dep:bytemuck"]
 borsh = ["dep:borsh"]
 serde = ["dep:serde"]
+serde-with = ["serde", "dep:serde_with"]
 wincode = ["dep:wincode"]
 
 [dependencies]
 borsh = { workspace = true, optional = true }
 bytemuck = { workspace = true, optional = true }
 serde = { workspace = true, optional = true }
+serde_with = { workspace = true, optional = true }
 wincode = { workspace = true, optional = true }
 
 [dev-dependencies]
+serde_derive = { workspace = true }
 serde_json = { workspace = true }
-solana-nullable = { path = ".", features = ["bytemuck", "borsh", "serde", "wincode"] }
+serde_with = { workspace = true, features = ["macros"] }
+solana-nullable = { path = ".", features = ["bytemuck", "borsh", "serde", "serde-with", "wincode"] }
 wincode = { workspace = true, features = ["alloc"] }
 
 [lints]

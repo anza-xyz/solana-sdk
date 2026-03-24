@@ -8,5 +8,7 @@ extern crate alloc;
 
 mod maybe_null;
 mod nullable;
+#[cfg(feature = "serde-with")]
+mod serde_with;
 
 pub use self::{maybe_null::*, nullable::*};
