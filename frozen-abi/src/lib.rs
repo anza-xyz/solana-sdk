@@ -16,8 +16,9 @@
 //! The macro would generate the `test_abi_digest` test that verifies binary layout stability:
 //! - Initializes a deterministic random number generator with fixed seed
 //! - Generates 10_000 instances of the type via `StableAbi::random()`
-//! - Serializes each instance with `wincode` when the type implements `SchemaWrite`;
-//!   otherwise it falls back to `bincode`
+//! - Serializes each instance with `bincode` by default
+//! - Types using `wincode` can switch the ABI test to `wincode` with
+//!   `#[frozen_abi(abi_serializer = "wincode", ...)]`
 //! - Hashes all serialized bytes together
 //! - Compares the resulting hash against the provided in `abi_digest` attribute
 //!
@@ -59,9 +60,7 @@
 //! impl ::solana_frozen_abi::stable_abi::StableAbi for MyType {}
 //! ```
 //!
-//! For types that cannot use the blanket ABI serializer selection, you can implement
-//! `solana_frozen_abi::stable_abi::StableSerialize` manually and return the bytes that should
-//! participate in the ABI digest.
+//! For `wincode`-based types, add `abi_serializer = "wincode"` to `#[frozen_abi(...)]`.
 //!
 //! ## Edge Cases
 //!

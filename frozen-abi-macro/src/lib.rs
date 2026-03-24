@@ -32,16 +32,11 @@ pub fn derive_stable_abi(_item: TokenStream) -> TokenStream {
 #[cfg(feature = "frozen-abi")]
 #[proc_macro_derive(StableAbi)]
 pub fn derive_stable_abi(item: TokenStream) -> TokenStream {
-    use {
-        quote::quote,
-        syn::{parse_macro_input, Error, Item},
-    };
-
     let item = parse_macro_input!(item as Item);
-    let ident = match item {
-        Item::Struct(ref s) => &s.ident,
-        Item::Enum(ref e) => &e.ident,
-        Item::Type(ref t) => &t.ident,
+    let (ident, generics) = match &item {
+        Item::Struct(s) => (&s.ident, &s.generics),
+        Item::Enum(e) => (&e.ident, &e.generics),
+        Item::Type(t) => (&t.ident, &t.generics),
         _ => {
             return Error::new_spanned(
                 item,
@@ -51,10 +46,11 @@ pub fn derive_stable_abi(item: TokenStream) -> TokenStream {
             .into();
         }
     };
+    let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
 
     let expanded = quote! {
         #[automatically_derived]
-        impl ::solana_frozen_abi::stable_abi::StableAbi for #ident {}
+        impl #impl_generics ::solana_frozen_abi::stable_abi::StableAbi for #ident #ty_generics #where_clause {}
     };
     expanded.into()
 }
@@ -68,6 +64,12 @@ use syn::{
     parse_macro_input, Attribute, Error, Fields, Ident, Item, ItemEnum, ItemStruct, ItemType,
     LitStr, Variant,
 };
+
+#[cfg(feature = "frozen-abi")]
+enum AbiSerializer {
+    Bincode,
+    Wincode,
+}
 
 #[cfg(feature = "frozen-abi")]
 fn filter_serde_attrs(attrs: &[Attribute]) -> bool {
@@ -311,6 +313,7 @@ fn quote_for_test(
     type_name: &Ident,
     expected_api_digest: &str,
     expected_abi_digest: Option<&str>,
+    abi_serializer: AbiSerializer,
 ) -> TokenStream2 {
     let test_api = quote! {
             #[test]
@@ -341,6 +344,15 @@ fn quote_for_test(
             }
     };
 
+    let abi_serialize_expr = match abi_serializer {
+        AbiSerializer::Bincode => {
+            quote! { ::solana_frozen_abi::bincode::serialize(&val).unwrap() }
+        }
+        AbiSerializer::Wincode => {
+            quote! { ::solana_frozen_abi::wincode::serialize(&val).unwrap() }
+        }
+    };
+
     let test_abi = if expected_abi_digest.is_some() {
         quote! {
             #[test]
@@ -354,7 +366,7 @@ fn quote_for_test(
 
                 for _ in 0..10_000 {
                     let val = <#type_name>::random(&mut rng);
-                    digester.hash(&val.serialize_for_abi());
+                    digester.hash(&#abi_serialize_expr);
                 }
                 assert_eq!(#expected_abi_digest, ::std::format!("{}", digester.result()), "ABI layout has changed!");
             }
@@ -383,6 +395,7 @@ fn frozen_abi_type_alias(
     input: ItemType,
     expected_api_digest: &str,
     expected_abi_digest: Option<&str>,
+    abi_serializer: AbiSerializer,
 ) -> TokenStream {
     let type_name = &input.ident;
     let test = quote_for_test(
@@ -390,6 +403,7 @@ fn frozen_abi_type_alias(
         type_name,
         expected_api_digest,
         expected_abi_digest,
+        abi_serializer,
     );
     let result = quote! {
         #input
@@ -403,6 +417,7 @@ fn frozen_abi_struct_type(
     input: ItemStruct,
     expected_api_digest: &str,
     expected_abi_digest: Option<&str>,
+    abi_serializer: AbiSerializer,
 ) -> TokenStream {
     let type_name = &input.ident;
     let test = quote_for_test(
@@ -410,6 +425,7 @@ fn frozen_abi_struct_type(
         type_name,
         expected_api_digest,
         expected_abi_digest,
+        abi_serializer,
     );
     let result = quote! {
         #input
@@ -469,6 +485,7 @@ fn frozen_abi_enum_type(
     input: ItemEnum,
     expected_api_digest: &str,
     expected_abi_digest: Option<&str>,
+    abi_serializer: AbiSerializer,
 ) -> TokenStream {
     let type_name = &input.ident;
     let test = quote_for_test(
@@ -476,6 +493,7 @@ fn frozen_abi_enum_type(
         type_name,
         expected_api_digest,
         expected_abi_digest,
+        abi_serializer,
     );
     let result = quote! {
         #input
@@ -489,6 +507,7 @@ fn frozen_abi_enum_type(
 pub fn frozen_abi(attrs: TokenStream, item: TokenStream) -> TokenStream {
     let mut api_expected_digest: Option<String> = None;
     let mut abi_expected_digest: Option<String> = None;
+    let mut abi_serializer = AbiSerializer::Bincode;
 
     let attrs_parser = syn::meta::parser(|meta| {
         if meta.path.is_ident("digest") || meta.path.is_ident("api_digest") {
@@ -496,6 +515,17 @@ pub fn frozen_abi(attrs: TokenStream, item: TokenStream) -> TokenStream {
             Ok(())
         } else if meta.path.is_ident("abi_digest") {
             abi_expected_digest = Some(meta.value()?.parse::<LitStr>()?.value());
+            Ok(())
+        } else if meta.path.is_ident("abi_serializer") {
+            abi_serializer = match meta.value()?.parse::<LitStr>()?.value().as_str() {
+                "bincode" => AbiSerializer::Bincode,
+                "wincode" => AbiSerializer::Wincode,
+                other => {
+                    return Err(meta.error(format!(
+                        "unsupported `abi_serializer` value `{other}`; expected `bincode` or `wincode`"
+                    )));
+                }
+            };
             Ok(())
         } else {
             Err(meta.error("unsupported \"frozen_abi\" property"))
@@ -514,15 +544,24 @@ pub fn frozen_abi(attrs: TokenStream, item: TokenStream) -> TokenStream {
 
     let item = parse_macro_input!(item as Item);
     match item {
-        Item::Struct(input) => {
-            frozen_abi_struct_type(input, &api_expected_digest, abi_expected_digest.as_deref())
-        }
-        Item::Enum(input) => {
-            frozen_abi_enum_type(input, &api_expected_digest, abi_expected_digest.as_deref())
-        }
-        Item::Type(input) => {
-            frozen_abi_type_alias(input, &api_expected_digest, abi_expected_digest.as_deref())
-        }
+        Item::Struct(input) => frozen_abi_struct_type(
+            input,
+            &api_expected_digest,
+            abi_expected_digest.as_deref(),
+            abi_serializer,
+        ),
+        Item::Enum(input) => frozen_abi_enum_type(
+            input,
+            &api_expected_digest,
+            abi_expected_digest.as_deref(),
+            abi_serializer,
+        ),
+        Item::Type(input) => frozen_abi_type_alias(
+            input,
+            &api_expected_digest,
+            abi_expected_digest.as_deref(),
+            abi_serializer,
+        ),
         _ => Error::new_spanned(
             item,
             "frozen_abi isn't applicable; only for struct, enum and type",
