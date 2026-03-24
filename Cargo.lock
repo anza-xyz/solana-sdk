@@ -3725,6 +3725,7 @@ dependencies = [
  "sha2",
  "solana-frozen-abi-macro",
  "thiserror 2.0.18",
+ "wincode",
 ]
 
 [[package]]
