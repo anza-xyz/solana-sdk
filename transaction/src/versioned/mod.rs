@@ -10,16 +10,16 @@ use {
 };
 #[cfg(feature = "wincode")]
 use {
-    core::{mem::MaybeUninit, ptr::copy_nonoverlapping},
-    solana_message::v1::SIGNATURE_SIZE,
-    solana_message::MESSAGE_VERSION_PREFIX,
+    core::mem::MaybeUninit,
+    solana_message::{v1::SIGNATURE_SIZE, MESSAGE_VERSION_PREFIX},
     solana_signer::{signers::Signers, SignerError},
     wincode::{
         config::Config,
-        containers,
+        containers, context,
         io::{Reader, Writer},
         len::ShortU16,
-        ReadError, ReadResult, SchemaRead, SchemaWrite, UninitBuilder, WriteResult,
+        ReadError, ReadResult, SchemaRead, SchemaReadContext, SchemaWrite, UninitBuilder,
+        WriteResult,
     },
 };
 #[cfg(feature = "serde")]
@@ -301,18 +301,17 @@ unsafe impl<'de, C: Config> SchemaRead<'de, C> for VersionedTransaction {
         //   `> 128` and the top bit is always `1`.
 
         use solana_message::v1::V1_PREFIX;
-        let discriminator = reader.peek_byte()?;
-        let mut builder = VersionedTransactionUninitBuilder::<C>::from_maybe_uninit_mut(dst);
+        let discriminator = reader.take_byte()?;
 
         if discriminator & MESSAGE_VERSION_PREFIX == 0 {
             // Legacy or V0 transaction
 
-            builder.read_signatures(&mut reader)?;
-            builder.read_message(reader)?;
-
-            // SAFETY: The transaction is fully initialized at this point since
-            // both `signatures` and `message` have been read.
-            let message = unsafe { builder.uninit_message_mut().assume_init_ref() };
+            let signatures = <Vec<Signature> as SchemaReadContext<C, _>>::get_with_context(
+                // Here `discriminator < 0x80`, so it is a canonical one-byte `ShortU16`.
+                context::Len(discriminator as usize),
+                reader.by_ref(),
+            )?;
+            let message = <VersionedMessage as SchemaRead<C>>::get(reader)?;
 
             // validate that we got either a legacy or V0 message
             if !matches!(
@@ -322,41 +321,35 @@ unsafe impl<'de, C: Config> SchemaRead<'de, C> for VersionedTransaction {
                 return Err(ReadError::Custom("invalid message version"));
             }
 
-            builder.finish();
+            dst.write(Self {
+                signatures,
+                message,
+            });
         } else if discriminator == V1_PREFIX {
             // V1 transaction
 
-            builder.read_message(&mut reader)?;
-
-            // SAFETY: message is initialized by the above read.
-            let message = unsafe { builder.uninit_message_mut().assume_init_ref() };
+            let message = <VersionedMessage as SchemaReadContext<C, _>>::get_with_context(
+                // `discriminator` is the already-consumed first byte of the serialized
+                // `VersionedMessage`, so pass it as read context instead of reading it again.
+                discriminator,
+                reader.by_ref(),
+            )?;
 
             // validate that we got a V1 message
             if !matches!(message, VersionedMessage::V1(_)) {
                 return Err(ReadError::Custom("invalid message version"));
             }
 
-            let expected_signatures_len = message.header().num_required_signatures as usize;
+            let num_signatures = message.header().num_required_signatures as usize;
+            let signatures = <Vec<Signature> as SchemaReadContext<C, _>>::get_with_context(
+                context::Len(num_signatures),
+                reader,
+            )?;
 
-            let bytes_to_read = expected_signatures_len.saturating_mul(SIGNATURE_SIZE);
-            let bytes = reader.take_scoped(bytes_to_read)?;
-            let mut signatures = Vec::with_capacity(expected_signatures_len);
-
-            // SAFETY: signatures vector is allocated with enough capacity to hold
-            // `expected_signatures_len` signatures and `bytes` contains exactly that
-            // many signatures read from the reader.
-            unsafe {
-                let signatures_ptr = signatures.as_mut_ptr();
-                copy_nonoverlapping(
-                    bytes.as_ptr() as *const Signature,
-                    signatures_ptr,
-                    expected_signatures_len,
-                );
-                signatures.set_len(expected_signatures_len);
-            }
-
-            builder.write_signatures(signatures);
-            builder.finish();
+            dst.write(Self {
+                signatures,
+                message,
+            });
         } else {
             return Err(ReadError::Custom("invalid transaction discriminator"));
         }

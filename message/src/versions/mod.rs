@@ -16,7 +16,7 @@ use {
     wincode::{
         config::Config,
         io::{Reader, Writer},
-        ReadResult, SchemaRead, SchemaWrite, WriteResult,
+        ReadResult, SchemaRead, SchemaReadContext, SchemaWrite, WriteResult,
     },
 };
 #[cfg(feature = "serde")]
@@ -403,22 +403,22 @@ unsafe impl<C: Config> SchemaWrite<C> for VersionedMessage {
 }
 
 #[cfg(feature = "wincode")]
-unsafe impl<'de, C: Config> SchemaRead<'de, C> for VersionedMessage {
+unsafe impl<'de, C: Config> SchemaReadContext<'de, C, u8> for VersionedMessage {
     type Dst = Self;
 
-    fn read(mut reader: impl Reader<'de>, dst: &mut MaybeUninit<Self::Dst>) -> ReadResult<()> {
+    fn read_with_context(
+        discriminant: u8,
+        reader: impl Reader<'de>,
+        dst: &mut MaybeUninit<Self::Dst>,
+    ) -> ReadResult<()> {
         // If the first bit is set, the remaining 7 bits will be used to determine
         // which message version is serialized starting from version `0`. If the first
         // is bit is not set, all bytes are used to encode the legacy `Message`
         // format.
-        let variant = reader.peek_byte()?;
-
-        if variant & MESSAGE_VERSION_PREFIX != 0 {
-            // Safety: at least 1 byte can be consumed, since it was peeked
-            unsafe { reader.consume_unchecked(1) };
+        if discriminant & MESSAGE_VERSION_PREFIX != 0 {
             use wincode::error::invalid_tag_encoding;
 
-            let version = variant & !MESSAGE_VERSION_PREFIX;
+            let version = discriminant & !MESSAGE_VERSION_PREFIX;
             return match version {
                 0 => {
                     let msg = <v0::Message as SchemaRead<C>>::get(reader)?;
@@ -434,10 +434,21 @@ unsafe impl<'de, C: Config> SchemaRead<'de, C> for VersionedMessage {
                 _ => Err(invalid_tag_encoding(version as usize)),
             };
         };
-        let legacy = <LegacyMessage as SchemaRead<C>>::get(reader)?;
+        let legacy =
+            <LegacyMessage as SchemaReadContext<C, _>>::get_with_context(discriminant, reader)?;
         dst.write(VersionedMessage::Legacy(legacy));
 
         Ok(())
+    }
+}
+#[cfg(feature = "wincode")]
+unsafe impl<'de, C: Config> SchemaRead<'de, C> for VersionedMessage {
+    type Dst = Self;
+
+    #[inline]
+    fn read(mut reader: impl Reader<'de>, dst: &mut MaybeUninit<Self::Dst>) -> ReadResult<()> {
+        let discriminant = reader.take_byte()?;
+        <VersionedMessage as SchemaReadContext<C, _>>::read_with_context(discriminant, reader, dst)
     }
 }
 

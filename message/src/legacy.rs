@@ -15,8 +15,6 @@
 use serde_derive::{Deserialize, Serialize};
 #[cfg(feature = "frozen-abi")]
 use solana_frozen_abi_macro::{frozen_abi, AbiExample};
-#[cfg(feature = "wincode")]
-use wincode::{containers, len::ShortU16, SchemaRead, SchemaWrite};
 use {
     crate::{
         compiled_instruction::CompiledInstruction, compiled_keys::CompiledKeys,
@@ -27,6 +25,14 @@ use {
     solana_instruction::Instruction,
     solana_sanitize::{Sanitize, SanitizeError},
     std::{collections::HashSet, convert::TryFrom},
+};
+#[cfg(feature = "wincode")]
+use {
+    core::mem::MaybeUninit,
+    wincode::{
+        config::Config, containers, io::Reader, len::ShortU16, ReadResult, SchemaRead,
+        SchemaReadContext, SchemaWrite,
+    },
 };
 
 fn position(keys: &[Address], key: &Address) -> u8 {
@@ -95,6 +101,38 @@ pub struct Message {
     #[cfg_attr(feature = "serde", serde(with = "solana_short_vec"))]
     #[cfg_attr(feature = "wincode", wincode(with = "containers::Vec<_, ShortU16>"))]
     pub instructions: Vec<CompiledInstruction>,
+}
+
+#[cfg(feature = "wincode")]
+unsafe impl<'de, C: Config> SchemaReadContext<'de, C, u8> for Message {
+    type Dst = Self;
+
+    fn read_with_context(
+        num_required_signatures: u8,
+        mut reader: impl Reader<'de>,
+        dst: &mut MaybeUninit<Self::Dst>,
+    ) -> ReadResult<()> {
+        let header = {
+            let mut reader = unsafe { reader.as_trusted_for(2) }?;
+            MessageHeader {
+                num_required_signatures,
+                num_readonly_signed_accounts: reader.take_byte()?,
+                num_readonly_unsigned_accounts: reader.take_byte()?,
+            }
+        };
+        let account_keys =
+            <containers::Vec<Address, ShortU16> as SchemaRead<C>>::get(reader.by_ref())?;
+        let recent_blockhash = <Hash as SchemaRead<C>>::get(reader.by_ref())?;
+        let instructions =
+            <containers::Vec<CompiledInstruction, ShortU16> as SchemaRead<C>>::get(reader)?;
+        dst.write(Message {
+            header,
+            account_keys,
+            recent_blockhash,
+            instructions,
+        });
+        Ok(())
+    }
 }
 
 impl Sanitize for Message {
