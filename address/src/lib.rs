@@ -43,7 +43,7 @@ use core::{
     ptr::read_unaligned,
 };
 #[cfg(feature = "serde")]
-use serde_derive::{Deserialize, Serialize};
+use serde::{de, Deserialize, Deserializer, Serialize, Serializer};
 #[cfg(feature = "wincode")]
 use wincode::{SchemaRead, SchemaWrite};
 #[cfg(feature = "borsh")]
@@ -91,7 +91,6 @@ pub const PDA_MARKER: &[u8; 21] = b"ProgramDerivedAddress";
     borsh(crate = "borsh")
 )]
 #[cfg_attr(feature = "borsh", derive(BorshSchema))]
-#[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[cfg_attr(feature = "bytemuck", derive(Pod, Zeroable))]
 #[cfg_attr(feature = "wincode", derive(SchemaWrite, SchemaRead))]
 #[cfg_attr(feature = "dev-context-only-utils", derive(Arbitrary))]
@@ -172,6 +171,22 @@ impl TryFrom<&str> for Address {
     type Error = ParseAddressError;
     fn try_from(s: &str) -> Result<Self, Self::Error> {
         Address::from_str(s)
+    }
+}
+
+#[cfg(feature = "serde")]
+impl Serialize for Address {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.collect_str(self)
+    }
+}
+
+#[cfg(feature = "serde")]
+impl<'de> Deserialize<'de> for Address {
+    fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        <&str as Deserialize>::deserialize(deserializer)?
+            .parse()
+            .map_err(de::Error::custom)
     }
 }
 
@@ -509,6 +524,8 @@ macro_rules! declare_deprecated_id {
 
 #[cfg(test)]
 mod tests {
+    #[cfg(feature = "serde")]
+    use serde_json::{from_str, to_string};
     use {super::*, core::str::from_utf8, std::string::String};
 
     fn encode_address(address: &[u8; 32]) -> String {
@@ -808,5 +825,39 @@ mod tests {
             assert_eq!(!p1.eq(&p3), p1.0 != p3.0);
             assert!(!address_eq(&p1, &p3));
         }
+    }
+
+    #[cfg(feature = "serde")]
+    #[test]
+    fn test_serde_json_serializes_zero_address_as_base58_string() {
+        let address = Address::from([0u8; ADDRESS_BYTES]);
+        let serialized = to_string(&address).unwrap();
+        assert_eq!(serialized, "\"11111111111111111111111111111111\"");
+    }
+
+    #[cfg(feature = "serde")]
+    #[test]
+    fn test_serde_json_serializes_known_bytes_as_base58_string() {
+        let address = Address::from([1u8; ADDRESS_BYTES]);
+        let serialized = to_string(&address).unwrap();
+        assert_eq!(
+            serialized,
+            "\"4vJ9JU1bJJE96FWSJKvHsmmFADCg4gpZQff4P3bkLKi\""
+        );
+    }
+
+    #[cfg(feature = "serde")]
+    #[test]
+    fn test_serde_json_deserializes_known_base58_string() {
+        let expected = Address::from([1u8; ADDRESS_BYTES]);
+        let serialized = "\"4vJ9JU1bJJE96FWSJKvHsmmFADCg4gpZQff4P3bkLKi\"";
+        let deserialized = from_str::<Address>(serialized).unwrap();
+        assert_eq!(deserialized, expected);
+    }
+
+    #[cfg(feature = "serde")]
+    #[test]
+    fn test_serde_json_rejects_invalid_base58_string() {
+        assert!(from_str::<Address>("xyz_hello").is_err());
     }
 }

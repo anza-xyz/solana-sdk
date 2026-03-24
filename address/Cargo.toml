@@ -33,7 +33,7 @@ frozen-abi = [
 nullable = ["dep:solana-nullable"]
 rand = ["dep:rand", "atomic", "std"]
 sanitize = ["dep:solana-sanitize"]
-serde = ["dep:serde", "dep:serde_derive"]
+serde = ["dep:serde", "dep:serde_derive", "decode"]
 sha2 = ["dep:sha2-const-stable", "dep:solana-sha256-hasher", "syscalls"]
 std = ["decode", "borsh?/std", "serde?/std", "wincode?/std", "alloc"]
 alloc = ["wincode?/alloc"]
@@ -69,6 +69,7 @@ solana-sha256-hasher = { workspace = true, features = ["sha2"], optional = true 
 
 [dev-dependencies]
 anyhow = { workspace = true }
+serde_json = { workspace = true }
 solana-account-info = { path = "../account-info" }
 solana-address = { path = ".", features = ["atomic", "borsh", "curve25519", "decode", "dev-context-only-utils", "error", "nullable", "sanitize", "sha2", "std", "syscalls"] }
 solana-cpi = { path = "../cpi" }
