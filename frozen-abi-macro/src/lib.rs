@@ -347,7 +347,6 @@ fn quote_for_test(
             fn test_abi_digest() {
                 use ::solana_frozen_abi::rand::{SeedableRng, RngCore};
                 use ::solana_frozen_abi::rand_chacha::ChaCha8Rng;
-                use ::solana_frozen_abi::bincode;
                 use ::solana_frozen_abi::stable_abi::StableAbi;
 
                 let mut rng = ChaCha8Rng::seed_from_u64(20666175621446498);
@@ -355,7 +354,7 @@ fn quote_for_test(
 
                 for _ in 0..10_000 {
                     let val = <#type_name>::random(&mut rng);
-                    digester.hash(&bincode::serialize(&val).unwrap());
+                    digester.hash(&val.serialize_for_abi());
                 }
                 assert_eq!(#expected_abi_digest, ::std::format!("{}", digester.result()), "ABI layout has changed!");
             }
