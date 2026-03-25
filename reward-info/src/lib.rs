@@ -14,6 +14,7 @@ pub enum RewardType {
     Rent,
     Staking,
     Voting,
+    DeactivatedStake,
 }
 
 impl fmt::Display for RewardType {
@@ -26,6 +27,7 @@ impl fmt::Display for RewardType {
                 RewardType::Rent => "rent",
                 RewardType::Staking => "staking",
                 RewardType::Voting => "voting",
+                RewardType::DeactivatedStake => "deactivated-stake",
             }
         )
     }

@@ -11,6 +11,7 @@ use {
     core::ptr,
     ff::Field,
     rand::rngs::OsRng,
+    zeroize::{Zeroize, ZeroizeOnDrop},
 };
 #[cfg(feature = "solana-signer-derive")]
 use {solana_signature::Signature, solana_signer::Signer, subtle::ConstantTimeEq};
@@ -19,8 +20,30 @@ use {solana_signature::Signature, solana_signer::Signer, subtle::ConstantTimeEq}
 pub const BLS_SECRET_KEY_SIZE: usize = 32;
 
 /// A BLS secret key
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Eq, PartialEq)]
 pub struct SecretKey(pub(crate) Scalar);
+
+impl core::fmt::Debug for SecretKey {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        write!(f, "SecretKey(<hidden>)")
+    }
+}
+
+impl Zeroize for SecretKey {
+    fn zeroize(&mut self) {
+        unsafe {
+            core::ptr::write_volatile(&mut self.0, Scalar::ZERO);
+        }
+    }
+}
+
+impl Drop for SecretKey {
+    fn drop(&mut self) {
+        self.zeroize();
+    }
+}
+
+impl ZeroizeOnDrop for SecretKey {}
 
 impl SecretKey {
     /// Constructs a new, random `BlsSecretKey` using `OsRng`

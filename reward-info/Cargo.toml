@@ -2,7 +2,7 @@
 name = "solana-reward-info"
 description = "Solana vote reward info types"
 documentation = "https://docs.rs/solana-reward-info"
-version = "5.0.0"
+version = "6.0.0"
 authors = { workspace = true }
 repository = { workspace = true }
 homepage = { workspace = true }

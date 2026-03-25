@@ -295,7 +295,7 @@ solana-program-option = { path = "program-option", version = "3.0.0" }
 solana-program-pack = { path = "program-pack", version = "3.0.0" }
 solana-pubkey = { path = "pubkey", version = "4.1.0", default-features = false }
 solana-rent = { path = "rent", version = "4.0.0", default-features = false }
-solana-reward-info = { path = "reward-info", version = "5.0.0" }
+solana-reward-info = { path = "reward-info", version = "6.0.0" }
 solana-sanitize = { path = "sanitize", version = "3.0.0" }
 solana-sdk = { path = "sdk", version = "4.0.1" }
 solana-sdk-ids = { path = "sdk-ids", version = "3.0.0" }
@@ -342,6 +342,7 @@ toml = "0.8.23"
 uriparse = "0.6.4"
 wasm-bindgen = "0.2.100"
 wincode = { version = "0.4.9", features = ["derive"], default-features = false }
+zeroize = "1.8.2"
 
 [profile.release]
 split-debuginfo = "unpacked"

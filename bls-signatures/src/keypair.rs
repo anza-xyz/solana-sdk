@@ -1,12 +1,3 @@
-use crate::{
-    error::BlsError,
-    proof_of_possession::ProofOfPossessionProjective,
-    pubkey::{
-        PopVerified, PubkeyAffine, PubkeyProjective, VerifySignature, BLS_PUBLIC_KEY_AFFINE_SIZE,
-    },
-    secret_key::{SecretKey, BLS_SECRET_KEY_SIZE},
-    signature::{AsSignatureAffine, SignatureProjective},
-};
 #[cfg(feature = "solana-signer-derive")]
 use solana_signer::Signer;
 #[cfg(feature = "std")]
@@ -19,6 +10,19 @@ use std::{
     string::String,
     vec::Vec,
 };
+use {
+    crate::{
+        error::BlsError,
+        proof_of_possession::ProofOfPossessionProjective,
+        pubkey::{
+            PopVerified, PubkeyAffine, PubkeyProjective, VerifySignature,
+            BLS_PUBLIC_KEY_AFFINE_SIZE,
+        },
+        secret_key::{SecretKey, BLS_SECRET_KEY_SIZE},
+        signature::{AsSignatureAffine, SignatureProjective},
+    },
+    zeroize::{Zeroize, ZeroizeOnDrop},
+};
 
 /// Size of BLS keypair in bytes
 pub const BLS_KEYPAIR_SIZE: usize = BLS_SECRET_KEY_SIZE + BLS_PUBLIC_KEY_AFFINE_SIZE;
@@ -29,6 +33,16 @@ pub struct Keypair {
     pub secret: SecretKey,
     pub public: PopVerified<PubkeyAffine>,
 }
+
+impl Zeroize for Keypair {
+    fn zeroize(&mut self) {
+        // Delegate zeroization to the SecretKey.
+        // We skip `self.public` because public keys do not contain sensitive material.
+        self.secret.zeroize();
+    }
+}
+
+impl ZeroizeOnDrop for Keypair {}
 
 impl Keypair {
     /// Constructs a new, random `Keypair` using `OsRng`
