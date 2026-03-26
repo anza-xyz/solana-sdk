@@ -54,6 +54,20 @@ pub struct AddressHasherBuilder {
     offset: usize,
 }
 
+impl AddressHasherBuilder {
+    /// Constructs a builder with a specific offset.
+    ///
+    /// Prefer `AddressHasherBuilder::default()` unless deterministic results are required.
+    pub fn with_offset(offset: usize) -> Self {
+        AddressHasherBuilder { offset }
+    }
+
+    /// Returns the offset used to construct this builder.
+    pub fn offset(&self) -> usize {
+        self.offset
+    }
+}
+
 impl Default for AddressHasherBuilder {
     /// Default construct the AddressHasherBuilder.
     ///
@@ -136,5 +150,16 @@ mod tests {
         hasher1.write(key1.as_array());
         hasher2.write(key2.as_array());
         assert_ne!(hasher1.finish(), hasher2.finish());
+    }
+
+    #[test]
+    fn test_builder_with_offset() {
+        let builder1 = AddressHasherBuilder::default();
+        let offset1 = builder1.offset();
+        let builder2 = AddressHasherBuilder::with_offset(offset1);
+        let offset2 = builder2.offset();
+        assert_eq!(offset1, offset2);
+        let key = Address::new_unique();
+        assert_eq!(builder1.hash_one(key), builder2.hash_one(key));
     }
 }
