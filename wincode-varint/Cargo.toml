@@ -1,0 +1,30 @@
+[package]
+name = "solana-wincode-varint"
+description = "Wincode schemas for LEB128 variable-length integer encoding"
+documentation = "https://docs.rs/solana-wincode-varint"
+version = "1.0.0"
+authors = { workspace = true }
+repository = { workspace = true }
+homepage = { workspace = true }
+license = { workspace = true }
+edition = { workspace = true }
+rust-version = "1.85.0"
+
+[package.metadata.docs.rs]
+targets = ["x86_64-unknown-linux-gnu"]
+
+[dependencies]
+wincode = { workspace = true }
+
+[dev-dependencies]
+bincode = { workspace = true }
+criterion = { workspace = true }
+rand = { workspace = true }
+serde = { workspace = true }
+serde_derive = { workspace = true }
+solana-serde-varint = { workspace = true }
+wincode = { workspace = true, features = ["alloc"] }
+
+[[bench]]
+name = "write"
+harness = false

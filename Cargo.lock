@@ -4775,6 +4775,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "solana-wincode-varint"
+version = "1.0.0"
+dependencies = [
+ "bincode",
+ "criterion",
+ "rand 0.9.2",
+ "serde",
+ "serde_derive",
+ "solana-serde-varint",
+ "wincode",
+]
+
+[[package]]
 name = "solana-zero-copy"
 version = "1.0.0"
 dependencies = [
