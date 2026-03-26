@@ -10,6 +10,9 @@ use {
     std::{fmt, marker::PhantomData},
 };
 
+#[cfg(feature = "wincode")]
+pub mod wincode;
+
 pub trait VarInt: Sized {
     fn visit_seq<'de, A>(seq: A) -> Result<Self, A::Error>
     where

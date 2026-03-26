@@ -4450,6 +4450,7 @@ dependencies = [
  "serde",
  "serde_derive",
  "solana-short-vec 3.2.0",
+ "wincode",
 ]
 
 [[package]]
