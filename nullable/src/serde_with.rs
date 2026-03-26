@@ -4,10 +4,32 @@
 //! that any `serde_with` adapter can be composed with `MaybeNull<T>` using the
 //! `Option<Strategy>` pattern.
 //!
-//! # Usage
+//! ```rust
+//! # pub mod solana_address {
+//! #     #[derive(PartialEq, serde_derive::Serialize, serde_derive::Deserialize)]
+//! #     pub struct Address([u8; 32]);
+//! #     impl solana_nullable::Nullable for Address {
+//! #         const NONE: Self = Address([0u8; 32]);
+//! #     }
+//! #     impl core::str::FromStr for Address {
+//! #         type Err = String;
+//! #         fn from_str(s: &str) -> Result<Self, Self::Err> {
+//! #             Ok(Address([0u8; 32]))
+//! #         }
+//! #     }
+//! #     impl core::fmt::Display for Address {
+//! #         fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+//! #             Ok(())
+//! #         }
+//! #     }
+//! # }
 //!
-//! ```ignore
-//! use serde_with::{serde_as, DisplayFromStr};
+//! use {
+//!     serde_derive::{Deserialize, Serialize},
+//!     serde_with::{serde_as, DisplayFromStr},
+//!     solana_address::Address,
+//!     solana_nullable::MaybeNull,
+//! };
 //!
 //! #[serde_as]
 //! #[derive(Serialize, Deserialize)]
