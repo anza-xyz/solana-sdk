@@ -3815,8 +3815,6 @@ dependencies = [
  "serde",
  "serde_derive",
  "solana-define-syscall",
- "solana-frozen-abi",
- "solana-frozen-abi-macro",
  "solana-instruction",
  "solana-instruction-error",
  "solana-pubkey",

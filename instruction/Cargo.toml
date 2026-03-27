@@ -18,7 +18,6 @@ rustdoc-args = ["--cfg=docsrs"]
 bincode = ["dep:bincode", "dep:serde"]
 borsh = ["dep:borsh"]
 default = ["std"]
-frozen-abi = ["dep:solana-frozen-abi", "dep:solana-frozen-abi-macro", "serde", "std"]
 serde = ["serde/alloc", "dep:serde_derive", "solana-pubkey/serde"]
 # The `std` feature is currently unused and retained for backwards compatibility.
 std = []
@@ -30,8 +29,6 @@ bincode = { workspace = true, optional = true }
 borsh = { workspace = true, optional = true }
 serde = { workspace = true, optional = true }
 serde_derive = { workspace = true, optional = true }
-solana-frozen-abi = { workspace = true, optional = true }
-solana-frozen-abi-macro = { workspace = true, optional = true }
 solana-instruction-error = { workspace = true, features = ["num-traits"] }
 solana-pubkey = { workspace = true, default-features = false }
 wincode = { workspace = true, features = ["alloc"], optional = true }
