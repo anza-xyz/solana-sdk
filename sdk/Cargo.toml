@@ -4,7 +4,7 @@ description = "Solana SDK"
 documentation = "https://docs.rs/solana-sdk"
 readme = "README.md"
 version = "4.0.1"
-rust-version = "1.85.0"
+rust-version = { workspace = true }
 authors = { workspace = true }
 repository = { workspace = true }
 homepage = { workspace = true }

@@ -3,7 +3,7 @@ name = "solana-commitment-config"
 description = "Solana commitment config."
 documentation = "https://docs.rs/solana-commitment-config"
 version = "3.1.1"
-rust-version = "1.81.0"
+rust-version = { workspace = true }
 authors = { workspace = true }
 repository = { workspace = true }
 homepage = { workspace = true }
