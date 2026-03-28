@@ -116,6 +116,7 @@ repository = "https://github.com/anza-xyz/solana-sdk"
 homepage = "https://anza.xyz/"
 license = "Apache-2.0"
 edition = "2021"
+rust-version = "1.89.0"                          # solana platform-tools rust version
 
 [workspace.lints.rust.unexpected_cfgs]
 level = "warn"

@@ -27,12 +27,12 @@ fi
 if [[ -n $RUST_MINIMUM_VERSION ]]; then
   minimum_version="$RUST_MINIMUM_VERSION"
 else
-  # read MSRV from program/Cargo.toml file
+  # read MSRV from workspace Cargo.toml file
   base="$(dirname "${BASH_SOURCE[0]}")"
   # pacify shellcheck: cannot follow dynamic path
   # shellcheck disable=SC1090,SC1091
   source "$base/read-cargo-variable.sh"
-  minimum_version=$(readCargoVariable rust-version "$base/../program/Cargo.toml")
+  minimum_version=$(readCargoVariable rust-version "$base/../Cargo.toml")
 fi
 
 if [[ -n $RUST_NIGHTLY_VERSION ]]; then

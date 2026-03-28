@@ -3,7 +3,7 @@ name = "solana-address"
 description = "Solana account addresses"
 documentation = "https://docs.rs/solana-address"
 version = "2.5.0"
-rust-version = "1.81.0"
+rust-version = { workspace = true }
 authors = { workspace = true }
 repository = { workspace = true }
 homepage = { workspace = true }
