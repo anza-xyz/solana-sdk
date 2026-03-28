@@ -43,9 +43,9 @@ pub mod v0 {
     use {
         super::{is_printable_ascii, is_utf8, MessageFormat, OffchainMessage as Base},
         solana_hash::Hash,
-        solana_packet::PACKET_DATA_SIZE,
         solana_sanitize::SanitizeError,
         solana_sha256_hasher::Hasher,
+        solana_transaction::MAX_TRANSACTION_SIZE,
     };
 
     /// OffchainMessage Version 0.
@@ -62,7 +62,8 @@ pub mod v0 {
         // Max length of the OffchainMessage
         pub const MAX_LEN: usize = u16::MAX as usize - Base::HEADER_LEN - Self::HEADER_LEN;
         // Max Length of the OffchainMessage supported by the Ledger
-        pub const MAX_LEN_LEDGER: usize = PACKET_DATA_SIZE - Base::HEADER_LEN - Self::HEADER_LEN;
+        pub const MAX_LEN_LEDGER: usize =
+            MAX_TRANSACTION_SIZE - Base::HEADER_LEN - Self::HEADER_LEN;
 
         /// Construct a new OffchainMessage object from the given message
         pub fn new(message: &[u8]) -> Result<Self, SanitizeError> {
