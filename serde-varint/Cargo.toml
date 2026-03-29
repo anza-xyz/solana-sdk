@@ -21,7 +21,13 @@ wincode = { workspace = true, features = ["alloc"], optional = true }
 
 [dev-dependencies]
 bincode = { workspace = true }
+criterion = { workspace = true }
 rand = { workspace = true }
 serde_derive = { workspace = true }
 solana-short-vec = { workspace = true, features = ["serde"] }
 wincode = { workspace = true, features = ["alloc"] }
+
+[[bench]]
+name = "wincode_write"
+harness = false
+required-features = ["wincode"]
