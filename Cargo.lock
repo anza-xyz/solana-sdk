@@ -3842,6 +3842,7 @@ dependencies = [
  "solana-account-view",
  "solana-address",
  "solana-define-syscall",
+ "solana-instruction-view",
  "solana-program-error",
 ]
 

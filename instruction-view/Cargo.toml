@@ -27,5 +27,8 @@ solana-program-error = { workspace = true, optional = true }
 [target.'cfg(any(target_os = "solana", target_arch = "bpf"))'.dependencies]
 solana-define-syscall = { workspace = true, optional = true }
 
+[dev-dependencies]
+solana-instruction-view = { path = ".", features = ["cpi"] }
+
 [lints]
 workspace = true
