@@ -14,12 +14,12 @@ use {
     crate::InstructionView,
     core::{
         marker::PhantomData,
-        mem::{size_of, MaybeUninit},
+        mem::{offset_of, size_of, MaybeUninit},
         ops::Deref,
         ptr::{addr_of, addr_of_mut, copy_nonoverlapping},
         slice::from_raw_parts,
     },
-    solana_account_view::AccountView,
+    solana_account_view::{AccountView, RuntimeAccount},
     solana_address::Address,
     solana_program_error::{ProgramError, ProgramResult},
 };
@@ -76,6 +76,28 @@ pub struct CpiAccount<'account> {
     /// actually holding one using a `PhantomData<&'account AccountView>`.
     _account_view: PhantomData<&'account AccountView>,
 }
+
+// Make sure the layout of `CpiAccount` and `RuntimeAccount` are compatible for the fields
+// that are copied over as a single value in `CpiAccount::init_from_account_view`.
+const _: () = {
+    const RUNTIME_SIGNER_OFFSET: usize = offset_of!(RuntimeAccount, is_signer);
+    const CPI_SIGNER_OFFSET: usize = offset_of!(CpiAccount<'static>, is_signer);
+
+    assert!(
+        offset_of!(RuntimeAccount, is_writable) - RUNTIME_SIGNER_OFFSET
+            == offset_of!(CpiAccount<'static>, is_writable) - CPI_SIGNER_OFFSET
+    );
+
+    assert!(
+        offset_of!(RuntimeAccount, executable) - RUNTIME_SIGNER_OFFSET
+            == offset_of!(CpiAccount<'static>, executable) - CPI_SIGNER_OFFSET
+    );
+
+    assert!(
+        offset_of!(RuntimeAccount, padding) - RUNTIME_SIGNER_OFFSET
+            == offset_of!(CpiAccount<'static>, _padding) - CPI_SIGNER_OFFSET
+    );
+};
 
 impl<'account> From<&'account AccountView> for CpiAccount<'account> {
     fn from(account: &'account AccountView) -> Self {
