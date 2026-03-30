@@ -79,24 +79,10 @@ pub struct CpiAccount<'account> {
 
 impl<'account> From<&'account AccountView> for CpiAccount<'account> {
     fn from(account: &'account AccountView) -> Self {
-        Self {
-            address: account.address(),
-            // SAFETY:  Dereferencing `account.account_ptr()` to access its
-            // `lamports` field.
-            lamports: unsafe { &(*account.account_ptr()).lamports },
-            data_len: account.data_len() as u64,
-            data: account.data_ptr(),
-            owner: account.owner(),
-            // The `rent_epoch` field is not present in the `AccountView` struct,
-            // since the value occurs after the variable data of the account in
-            // the runtime input data.
-            rent_epoch: 0,
-            is_signer: account.is_signer() as u8,
-            is_writable: account.is_writable() as u8,
-            executable: account.executable() as u8,
-            _padding: 0,
-            _account_view: PhantomData::<&AccountView>,
-        }
+        let mut uninit = MaybeUninit::<Self>::uninit();
+        Self::init_from_account_view(account, &mut uninit);
+        // SAFETY: `init_from_account_view` initializes all fields of the struct.
+        unsafe { uninit.assume_init() }
     }
 }
 
