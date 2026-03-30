@@ -77,8 +77,8 @@ pub struct CpiAccount<'account> {
     _account_view: PhantomData<&'account AccountView>,
 }
 
-impl From<&AccountView> for CpiAccount<'_> {
-    fn from(account: &AccountView) -> Self {
+impl<'account> From<&'account AccountView> for CpiAccount<'account> {
+    fn from(account: &'account AccountView) -> Self {
         Self {
             address: account.address(),
             // SAFETY:  Dereferencing `account.account_ptr()` to access its
@@ -106,12 +106,10 @@ impl<'account> CpiAccount<'account> {
     /// After this function is called, the `uninit` parameter will be initialized
     /// with the information from the `account_view`.
     #[inline(always)]
-    pub fn init_from_account_view<'seeds>(
-        account_view: &'seeds AccountView,
+    pub fn init_from_account_view(
+        account_view: &'account AccountView,
         uninit: &mut MaybeUninit<Self>,
-    ) where
-        'seeds: 'account,
-    {
+    ) {
         let uninit_ptr = uninit.as_mut_ptr();
         let account_view_ptr = account_view.account_ptr();
 
