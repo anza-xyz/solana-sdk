@@ -24,9 +24,17 @@ bincode = [
     "solana-instruction/bincode",
 ]
 bytemuck = ["dep:bytemuck", "solana-pubkey/bytemuck"]
-dev-context-only-utils = ["bincode", "bytemuck"]
+dev-context-only-utils = ["wincode", "bytemuck"]
 frozen-abi = ["dep:solana-frozen-abi", "dep:solana-frozen-abi-macro", "serde"]
 serde = ["dep:serde", "dep:serde_derive", "serde/alloc", "solana-pubkey/serde"]
+wincode = [
+    "dep:wincode",
+    "dep:solana-instruction",
+    "dep:solana-instruction-error",
+    "wincode/alloc",
+    "solana-pubkey/wincode",
+    "solana-instruction/wincode",
+]
 
 [dependencies]
 bincode = { workspace = true, optional = true }
@@ -41,6 +49,7 @@ solana-instruction-error = { workspace = true, optional = true }
 solana-pubkey = { workspace = true }
 solana-sdk-ids = { workspace = true }
 solana-slot-hashes = { workspace = true }
+wincode = { workspace = true, optional = true }
 
 [target.'cfg(not(target_os = "solana"))'.dependencies]
 solana-pubkey = { workspace = true, features = ["curve25519"] }
