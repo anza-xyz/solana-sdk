@@ -6,7 +6,10 @@ use {
         hash::{HashedMessage, PreparedHashedMessage},
         keypair::Keypair,
         pubkey::{PopVerified, Pubkey, PubkeyProjective, VerifyPop, VerifySignature},
-        signature::{Signature, SignatureAffineUnchecked, SignatureProjective},
+        signature::{
+            verify_signature_subgroup_batch, Signature, SignatureAffineUnchecked,
+            SignatureProjective,
+        },
     },
     std::hint::black_box,
 };
@@ -262,12 +265,49 @@ fn bench_batch_verification(c: &mut Criterion) {
     group.finish()
 }
 
+fn bench_signature_subgroup(c: &mut Criterion) {
+    let mut group = c.benchmark_group("signature_subgroup");
+
+    for k in [10usize, 100usize, 1000usize, 2000usize] {
+        let unchecked_signatures: Vec<SignatureAffineUnchecked> = (0..k)
+            .map(|i| {
+                let keypair = Keypair::new();
+                let message = format!("subgroup-bench-{k}-{i}");
+                SignatureAffineUnchecked::from(keypair.sign(message.as_bytes()))
+            })
+            .collect();
+
+        group.bench_function(format!("{k} batch subgroup check"), |b| {
+            b.iter(|| {
+                black_box(verify_signature_subgroup_batch(black_box(
+                    &unchecked_signatures,
+                )))
+                .expect("batch subgroup check should succeed");
+            });
+        });
+
+        group.bench_function(format!("{k} individual subgroup checks"), |b| {
+            b.iter(|| {
+                let checked = unchecked_signatures
+                    .iter()
+                    .map(|signature| signature.verify_subgroup())
+                    .collect::<Result<Vec<_>, _>>()
+                    .expect("individual subgroup checks should succeed");
+                black_box(checked);
+            });
+        });
+    }
+
+    group.finish();
+}
+
 criterion_group!(
     benches,
-    bench_single_signature,
-    bench_aggregate,
-    bench_key_generation,
-    bench_proof_of_possession,
-    bench_batch_verification
+    // bench_single_signature,
+    // bench_aggregate,
+    // bench_key_generation,
+    // bench_proof_of_possession,
+    // bench_batch_verification,
+    bench_signature_subgroup
 );
 criterion_main!(benches);

@@ -30,6 +30,8 @@ pub mod conversion;
 #[cfg(not(target_os = "solana"))]
 pub mod points;
 #[cfg(not(target_os = "solana"))]
+pub mod subgroup;
+#[cfg(not(target_os = "solana"))]
 pub mod verify;
 #[cfg(not(target_os = "solana"))]
 pub mod verify_distinct;
@@ -44,6 +46,7 @@ pub use {
         AddToSignatureProjective, AsSignatureAffine, AsSignatureProjective, SignatureAffine,
         SignatureAffineUnchecked, SignatureProjective,
     },
+    subgroup::verify_signature_subgroup_batch,
     verify::VerifiableSignature,
 };
 

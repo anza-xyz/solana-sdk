@@ -19,7 +19,8 @@ pub use crate::{
     },
     secret_key::{SecretKey, BLS_SECRET_KEY_SIZE},
     signature::{
-        AsSignatureProjective, SignatureAffineUnchecked, SignatureProjective, VerifiableSignature,
+        verify_signature_subgroup_batch, AsSignatureProjective, SignatureAffineUnchecked,
+        SignatureProjective, VerifiableSignature,
     },
 };
 pub use crate::{
