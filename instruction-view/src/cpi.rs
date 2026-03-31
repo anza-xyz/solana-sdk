@@ -79,6 +79,7 @@ pub struct CpiAccount<'account> {
 
 // Make sure the layout of `CpiAccount` and `RuntimeAccount` are compatible for the fields
 // that are copied over as a single value in `CpiAccount::init_from_account_view`.
+#[allow(clippy::arithmetic_side_effects)]
 const _: () = {
     const RUNTIME_SIGNER_OFFSET: usize = offset_of!(RuntimeAccount, is_signer);
     const CPI_SIGNER_OFFSET: usize = offset_of!(CpiAccount<'static>, is_signer);
