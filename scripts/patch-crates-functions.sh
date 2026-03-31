@@ -102,6 +102,7 @@ all_crate_dirs=(
   transaction-error
   validator-exit
   vote-interface
+  wincode-varint
   zero-copy
 )
 
