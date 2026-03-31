@@ -7,12 +7,26 @@ use {
         keypair::Keypair,
         pubkey::{PopVerified, Pubkey, PubkeyProjective, VerifyPop, VerifySignature},
         signature::{
+            subgroup::{profile_signature_subgroup_batch, SignatureSubgroupBatchProfile},
             verify_signature_subgroup_batch, Signature, SignatureAffineUnchecked,
             SignatureProjective,
         },
     },
     std::hint::black_box,
 };
+
+fn print_batch_subgroup_profile(k: usize, profile: SignatureSubgroupBatchProfile) {
+    eprintln!(
+        "signature_subgroup profile k={k}: precompute={:?}, sample={:?}, select={:?}, affine={:?}, accumulate={:?}, subgroup={:?}, total={:?}",
+        profile.precompute_tables,
+        profile.sample_coefficients,
+        profile.select_projective,
+        profile.batch_affine,
+        profile.accumulate_rounds,
+        profile.subgroup_checks,
+        profile.total,
+    );
+}
 
 // Benchmark for verifying a single signature
 fn bench_single_signature(c: &mut Criterion) {
@@ -268,7 +282,7 @@ fn bench_batch_verification(c: &mut Criterion) {
 fn bench_signature_subgroup(c: &mut Criterion) {
     let mut group = c.benchmark_group("signature_subgroup");
 
-    for k in [10usize, 100usize, 1000usize, 2000usize] {
+    for k in [10usize, 100usize, 1000usize, 2000usize, 4000usize] {
         let unchecked_signatures: Vec<SignatureAffineUnchecked> = (0..k)
             .map(|i| {
                 let keypair = Keypair::new();
@@ -276,6 +290,10 @@ fn bench_signature_subgroup(c: &mut Criterion) {
                 SignatureAffineUnchecked::from(keypair.sign(message.as_bytes()))
             })
             .collect();
+
+        let profile = profile_signature_subgroup_batch(&unchecked_signatures)
+            .expect("batch subgroup profile should succeed");
+        print_batch_subgroup_profile(k, profile);
 
         group.bench_function(format!("{k} batch subgroup check"), |b| {
             b.iter(|| {

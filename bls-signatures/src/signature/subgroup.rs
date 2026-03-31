@@ -24,10 +24,11 @@ use {
     alloc::vec::Vec,
     blst::{blst_p2, blst_p2_affine, blst_p2_in_g2, blst_p2s_to_affine},
     blstrs::{G2Affine, G2Projective},
-    core::ptr,
     group::{prime::PrimeCurveAffine, Group},
     rand::{rngs::OsRng, Rng},
 };
+#[cfg(all(feature = "std", not(target_os = "solana")))]
+use {core::time::Duration, std::time::Instant};
 
 #[cfg(not(target_os = "solana"))]
 const BATCH_SUBGROUP_CHECK_MODULUS: u8 = 13;
@@ -42,9 +43,9 @@ type G2LookupTable = [G2Projective; PRECOMPUTED_MULTIPLES];
 #[cfg(not(target_os = "solana"))]
 fn build_lookup_table(point: &SignatureAffineUnchecked) -> G2LookupTable {
     let mut table = [G2Projective::identity(); PRECOMPUTED_MULTIPLES];
-    let mut multiple = G2Projective::identity();
-
-    for entry in table.iter_mut().skip(1) {
+    let mut multiple = point.0.into();
+    table[1] = multiple;
+    for entry in table.iter_mut().skip(2) {
         multiple += &point.0;
         *entry = multiple;
     }
@@ -54,17 +55,31 @@ fn build_lookup_table(point: &SignatureAffineUnchecked) -> G2LookupTable {
 
 #[cfg(not(target_os = "solana"))]
 fn sample_coefficients<R: Rng + ?Sized>(num_points: usize, rng: &mut R) -> Vec<u8> {
-    let mut coefficients = Vec::with_capacity(BATCH_SUBGROUP_CHECK_ROUNDS * num_points);
+    let target_len = BATCH_SUBGROUP_CHECK_ROUNDS * num_points;
+    let mut coefficients = Vec::with_capacity(target_len);
 
-    for _ in 0..BATCH_SUBGROUP_CHECK_ROUNDS * num_points {
-        coefficients.push(rng.gen_range(0..BATCH_SUBGROUP_CHECK_MODULUS));
+    // rejection sampling based approach.
+    // this is better than mod reducing 13
+    while coefficients.len() < target_len {
+        let mut sample = rng.next_u64();
+
+        for _ in 0..16 {
+            let coefficient = (sample & 0x0f) as u8;
+            if coefficient < BATCH_SUBGROUP_CHECK_MODULUS {
+                coefficients.push(coefficient);
+                if coefficients.len() == target_len {
+                    break;
+                }
+            }
+            sample >>= 4;
+        }
     }
 
     coefficients
 }
 
 #[cfg(not(target_os = "solana"))]
-fn build_selected_affine_table(tables: &[G2LookupTable], coefficients: &[u8]) -> Vec<G2Affine> {
+fn collect_selected_projective(tables: &[G2LookupTable], coefficients: &[u8]) -> Vec<G2Projective> {
     let mut selected_projective = Vec::with_capacity(coefficients.len());
 
     for round_coefficients in coefficients.chunks_exact(tables.len()) {
@@ -73,17 +88,21 @@ fn build_selected_affine_table(tables: &[G2LookupTable], coefficients: &[u8]) ->
         }
     }
 
+    selected_projective
+}
+
+#[cfg(not(target_os = "solana"))]
+fn batch_to_affine(selected_projective: &[G2Projective]) -> Vec<G2Affine> {
     // `blstrs` does not override `group::Curve::batch_normalize`, so that API
     // would just loop over `to_affine()`. Call `blst` directly to get the real
     // batch inversion-based projective-to-affine conversion.
     let mut selected_affine: Vec<G2Affine> = Vec::with_capacity(selected_projective.len());
     unsafe { selected_affine.set_len(selected_projective.len()) };
 
-    let mut point_ptrs = Vec::with_capacity(selected_projective.len() + 1);
-    for point in &selected_projective {
+    let mut point_ptrs = Vec::with_capacity(selected_projective.len());
+    for point in selected_projective {
         point_ptrs.push(point.as_ref() as *const blst_p2);
     }
-    point_ptrs.push(ptr::null());
 
     unsafe {
         blst_p2s_to_affine(
@@ -94,6 +113,12 @@ fn build_selected_affine_table(tables: &[G2LookupTable], coefficients: &[u8]) ->
     }
 
     selected_affine
+}
+
+#[cfg(not(target_os = "solana"))]
+fn build_selected_affine_table(tables: &[G2LookupTable], coefficients: &[u8]) -> Vec<G2Affine> {
+    let selected_projective = collect_selected_projective(tables, coefficients);
+    batch_to_affine(&selected_projective)
 }
 
 #[cfg(not(target_os = "solana"))]
@@ -123,6 +148,86 @@ fn check_combination_in_subgroup(combination: &G2Projective) -> Result<(), BlsEr
     } else {
         Err(BlsError::VerificationFailed)
     }
+}
+
+#[cfg(all(feature = "std", not(target_os = "solana")))]
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+pub struct SignatureSubgroupBatchProfile {
+    pub precompute_tables: Duration,
+    pub sample_coefficients: Duration,
+    pub select_projective: Duration,
+    pub batch_affine: Duration,
+    pub accumulate_rounds: Duration,
+    pub subgroup_checks: Duration,
+    pub total: Duration,
+}
+
+#[cfg(all(feature = "std", not(target_os = "solana")))]
+fn check_selected_affine_table_profiled(
+    selected_points: &[G2Affine],
+    points_per_round: usize,
+) -> Result<(Duration, Duration), BlsError> {
+    let mut accumulate_rounds = Duration::ZERO;
+    let mut subgroup_checks = Duration::ZERO;
+
+    for round_points in selected_points.chunks_exact(points_per_round) {
+        let accumulate_start = Instant::now();
+        let mut combination = G2Projective::identity();
+
+        for point in round_points {
+            if !bool::from(point.is_identity()) {
+                combination = combination.add_mixed(point);
+            }
+        }
+        accumulate_rounds += accumulate_start.elapsed();
+
+        let subgroup_start = Instant::now();
+        check_combination_in_subgroup(&combination)?;
+        subgroup_checks += subgroup_start.elapsed();
+    }
+
+    Ok((accumulate_rounds, subgroup_checks))
+}
+
+#[cfg(all(feature = "std", not(target_os = "solana")))]
+pub fn profile_signature_subgroup_batch(
+    points: &[SignatureAffineUnchecked],
+) -> Result<SignatureSubgroupBatchProfile, BlsError> {
+    if points.is_empty() {
+        return Ok(SignatureSubgroupBatchProfile::default());
+    }
+
+    let total_start = Instant::now();
+    let mut rng = OsRng;
+
+    let precompute_start = Instant::now();
+    let tables = points.iter().map(build_lookup_table).collect::<Vec<_>>();
+    let precompute_tables = precompute_start.elapsed();
+
+    let sample_start = Instant::now();
+    let coefficients = sample_coefficients(points.len(), &mut rng);
+    let sample_coefficients = sample_start.elapsed();
+
+    let select_start = Instant::now();
+    let selected_projective = collect_selected_projective(&tables, &coefficients);
+    let select_projective = select_start.elapsed();
+
+    let affine_start = Instant::now();
+    let selected_points = batch_to_affine(&selected_projective);
+    let batch_affine = affine_start.elapsed();
+
+    let (accumulate_rounds, subgroup_checks) =
+        check_selected_affine_table_profiled(&selected_points, points.len())?;
+
+    Ok(SignatureSubgroupBatchProfile {
+        precompute_tables,
+        sample_coefficients,
+        select_projective,
+        batch_affine,
+        accumulate_rounds,
+        subgroup_checks,
+        total: total_start.elapsed(),
+    })
 }
 
 /// Probabilistically verifies that every unchecked G2 point lies in the prime-order subgroup.
