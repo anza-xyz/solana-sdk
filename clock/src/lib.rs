@@ -70,6 +70,7 @@ static_assertions::const_assert_eq!(DEFAULT_SLOTS_PER_EPOCH, 432_000);
 pub const DEFAULT_SLOTS_PER_EPOCH: u64 = 2 * TICKS_PER_DAY / DEFAULT_TICKS_PER_SLOT;
 
 // leader schedule is governed by this
+#[deprecated(since = "3.1.0", note = "Moved to solana-leader-schedule crate")]
 pub const NUM_CONSECUTIVE_LEADER_SLOTS: u64 = 4;
 
 #[cfg(test)]
