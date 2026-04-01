@@ -5,8 +5,8 @@
 //! The [`Sysvar::get`] method always returns
 //! [`ProgramError::UnsupportedSysvar`], and in practice the data size of this
 //! sysvar is too large to process on chain. One can still use the
-//! [`SysvarId::id`], [`SysvarId::check_id`] and [`SysvarSerialize::size_of`] methods in
-//! an on-chain program, and it can be accessed off-chain through RPC.
+//! [`SysvarId::id`] and [`SysvarId::check_id`] methods in an on-chain program,
+//! and it can be accessed off-chain through RPC.
 //!
 //! [`ProgramError::UnsupportedSysvar`]: https://docs.rs/solana-program-error/latest/solana_program_error/enum.ProgramError.html#variant.UnsupportedSysvar
 //! [`SysvarId::id`]: https://docs.rs/solana-sysvar-id/latest/solana_sysvar_id/trait.SysvarId.html
@@ -43,8 +43,6 @@
 //! # Ok::<(), anyhow::Error>(())
 //! ```
 
-#[cfg(feature = "bincode")]
-use solana_sysvar::SysvarSerialize;
 use {
     crate::stake_history::{StakeHistory, StakeHistoryEntry, StakeHistoryGetEntry, MAX_ENTRIES},
     solana_clock::Epoch,
@@ -55,14 +53,6 @@ use {
 declare_sysvar_id!("SysvarStakeHistory1111111111111111111111111", StakeHistory);
 
 impl Sysvar for StakeHistory {}
-#[cfg(feature = "bincode")]
-impl SysvarSerialize for StakeHistory {
-    // override
-    fn size_of() -> usize {
-        // hard-coded so that we don't have to construct an empty
-        16392 // golden, update if MAX_ENTRIES changes
-    }
-}
 
 // we do not provide Default because this requires the real current epoch
 #[derive(Debug, PartialEq, Eq, Clone)]
@@ -170,7 +160,7 @@ mod tests {
 
         assert_eq!(
             bincode::serialized_size(&stake_history).unwrap() as usize,
-            StakeHistory::size_of()
+            size_of::<u64>() + MAX_ENTRIES * EPOCH_AND_ENTRY_SERIALIZED_SIZE as usize
         );
 
         let stake_history_inner: Vec<(Epoch, StakeHistoryEntry)> =
