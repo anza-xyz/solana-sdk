@@ -155,6 +155,12 @@ static_assertions::const_assert_eq!(
 );
 const NONCED_TX_MARKER_IX_INDEX: u8 = 0;
 
+/// Maximum over-the-wire size of a transaction in bytes.
+///   1280 is IPv6 minimum MTU
+///   40 bytes is the size of the IPv6 header
+///   8 bytes is the size of the fragment header
+pub const MAX_TRANSACTION_SIZE: usize = 1280 - 40 - 8;
+
 /// An atomically-committed sequence of instructions.
 ///
 /// While [`Instruction`]s are the basic unit of computation in Solana,

@@ -1,6 +1,8 @@
 //! The definition of a Solana network packet.
 #![cfg_attr(feature = "frozen-abi", feature(min_specialization))]
 #![cfg_attr(docsrs, feature(doc_cfg))]
+#![deprecated(since = "4.2.0", note = "Scheduled for removal")]
+#![allow(deprecated)]
 
 #[cfg(feature = "frozen-abi")]
 use solana_frozen_abi_macro::AbiExample;
@@ -30,6 +32,10 @@ static_assertions::const_assert_eq!(PACKET_DATA_SIZE, 1232);
 ///   1280 is IPv6 minimum MTU
 ///   40 bytes is the size of the IPv6 header
 ///   8 bytes is the size of the fragment header
+#[deprecated(
+    since = "4.2.0",
+    note = "Use `solana_transaction::MAX_TRANSACTION_SIZE` instead"
+)]
 pub const PACKET_DATA_SIZE: usize = 1280 - 40 - 8;
 
 #[cfg(feature = "bincode")]
