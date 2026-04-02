@@ -21,6 +21,7 @@ use solana_sdk_macro::CloneZeroed;
     feature = "serde",
     derive(serde_derive::Deserialize, serde_derive::Serialize)
 )]
+#[cfg_attr(feature = "wincode", derive(wincode::SchemaWrite, wincode::SchemaRead))]
 #[derive(PartialEq, CloneZeroed, Debug)]
 pub struct Rent {
     /// Rental rate in lamports/byte.

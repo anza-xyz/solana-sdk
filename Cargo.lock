@@ -3625,6 +3625,7 @@ dependencies = [
  "solana-sdk-macro",
  "solana-sysvar-id",
  "static_assertions",
+ "wincode",
 ]
 
 [[package]]
@@ -3776,6 +3777,7 @@ dependencies = [
  "serde_derive",
  "solana-frozen-abi",
  "solana-frozen-abi-macro",
+ "wincode",
 ]
 
 [[package]]
@@ -3805,6 +3807,7 @@ dependencies = [
  "serde_derive",
  "solana-frozen-abi",
  "solana-frozen-abi-macro",
+ "wincode",
 ]
 
 [[package]]
@@ -4260,6 +4263,7 @@ dependencies = [
  "solana-sdk-macro",
  "solana-sysvar-id",
  "static_assertions",
+ "wincode",
 ]
 
 [[package]]

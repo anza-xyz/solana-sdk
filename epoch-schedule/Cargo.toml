@@ -16,6 +16,7 @@ targets = ["x86_64-unknown-linux-gnu"]
 frozen-abi = ["dep:solana-frozen-abi", "dep:solana-frozen-abi-macro"]
 serde = ["dep:serde", "dep:serde_derive"]
 sysvar = ["dep:solana-sdk-ids", "dep:solana-sysvar-id"]
+wincode = ["dep:wincode"]
 
 [dependencies]
 serde = { workspace = true, optional = true }
@@ -25,6 +26,7 @@ solana-frozen-abi-macro = { workspace = true, optional = true }
 solana-sdk-ids = { workspace = true, optional = true }
 solana-sdk-macro = { workspace = true }
 solana-sysvar-id = { workspace = true, optional = true }
+wincode = { workspace = true, optional = true }
 
 [dev-dependencies]
 solana-clock = { workspace = true }

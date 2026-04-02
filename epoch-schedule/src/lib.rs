@@ -53,6 +53,7 @@ pub const MINIMUM_SLOTS_PER_EPOCH: u64 = 32;
     derive(Deserialize, Serialize),
     serde(rename_all = "camelCase")
 )]
+#[cfg_attr(feature = "wincode", derive(wincode::SchemaWrite, wincode::SchemaRead))]
 #[derive(Debug, CloneZeroed, PartialEq, Eq)]
 pub struct EpochSchedule {
     /// The maximum number of slots in each epoch.

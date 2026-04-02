@@ -9,6 +9,7 @@
     feature = "serde",
     derive(serde_derive::Deserialize, serde_derive::Serialize)
 )]
+#[cfg_attr(feature = "wincode", derive(wincode::SchemaWrite, wincode::SchemaRead))]
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct HardForks {
     hard_forks: Vec<(u64, usize)>,

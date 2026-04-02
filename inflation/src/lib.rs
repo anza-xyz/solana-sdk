@@ -6,6 +6,7 @@ use serde_derive::{Deserialize, Serialize};
 
 #[cfg_attr(feature = "frozen-abi", derive(solana_frozen_abi_macro::AbiExample))]
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
+#[cfg_attr(feature = "wincode", derive(wincode::SchemaWrite, wincode::SchemaRead))]
 #[derive(PartialEq, Clone, Debug, Copy)]
 #[cfg_attr(feature = "serde", serde(rename_all = "camelCase"))]
 pub struct Inflation {
