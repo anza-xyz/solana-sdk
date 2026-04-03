@@ -598,14 +598,6 @@ mod tests {
         )
         .is_ok());
 
-        let err = SignatureProjective::par_verify_aggregate_prepared(
-            &pubkeys,
-            &signatures[..signatures.len() - 1],
-            &prepared_hashed_message,
-        )
-        .unwrap_err();
-        assert_eq!(err, BlsError::InputLengthMismatch);
-
         // Failure case (wrong message)
         assert!(!SignatureProjective::par_verify_aggregate(
             &pubkeys,

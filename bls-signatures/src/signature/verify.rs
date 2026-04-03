@@ -105,10 +105,6 @@ impl SignatureProjective {
         signatures: &[S],
         prepared_hashed_message: &PreparedHashedMessage,
     ) -> Result<(), BlsError> {
-        if public_keys.len() != signatures.len() {
-            return Err(BlsError::InputLengthMismatch);
-        }
-
         let (aggregate_pubkey_res, aggregate_signature_res) = rayon::join(
             || PubkeyProjective::par_aggregate(public_keys.into_par_iter()),
             || SignatureProjective::par_aggregate(signatures.into_par_iter()),
