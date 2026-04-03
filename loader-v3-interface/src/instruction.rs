@@ -89,12 +89,22 @@ pub enum UpgradeableLoaderInstruction {
     ///   1. `[writable]` The uninitialized ProgramData account.
     ///   2. `[writable]` The uninitialized Program account.
     ///   3. `[writable]` The Buffer account where the program data has been
-    ///      written.  The buffer account's authority must match the program's
-    ///      authority
+    ///      written.
     ///   4. `[]` Rent sysvar.
     ///   5. `[]` Clock sysvar.
     ///   6. `[]` System program (`solana_sdk_ids::system_program::id()`).
     ///   7. `[signer]` The program's authority
+    ///
+    /// An additional parameter can be serialized at the end of this
+    /// instruction. Consider this `close_buffer: bool`.
+    /// * If `true`:
+    ///   * The buffer account's authority must match the program's authority.
+    ///   * The buffer account will be closed and its lamports transferred to
+    ///     the payer.
+    /// * If `false`:
+    ///   * The buffer account's authority *does not* have to match the
+    ///     program's authority.
+    ///   * The buffer remains unchanged for potential reuse.
     DeployWithMaxDataLen {
         /// Maximum length that the program can be upgraded to.
         max_data_len: usize,
@@ -114,12 +124,22 @@ pub enum UpgradeableLoaderInstruction {
     ///   0. `[writable]` The ProgramData account.
     ///   1. `[writable]` The Program account.
     ///   2. `[writable]` The Buffer account where the program data has been
-    ///      written.  The buffer account's authority must match the program's
-    ///      authority
+    ///      written.
     ///   3. `[writable]` The spill account.
     ///   4. `[]` Rent sysvar.
     ///   5. `[]` Clock sysvar.
     ///   6. `[signer]` The program's authority.
+    ///
+    /// An additional parameter can be serialized at the end of this
+    /// instruction. Consider this `close_buffer: bool`.
+    /// * If `true`:
+    ///   * The buffer account's authority must match the program's authority.
+    ///   * The buffer account will be closed and its lamports transferred to
+    ///     the payer.
+    /// * If `false`:
+    ///   * The buffer account's authority *does not* have to match the
+    ///     program's authority.
+    ///   * The buffer remains unchanged for potential reuse.
     Upgrade,
 
     /// Set a new authority that is allowed to write the buffer or upgrade the
@@ -187,6 +207,53 @@ pub enum UpgradeableLoaderInstruction {
     SetAuthorityChecked,
 }
 
+// 4-byte discriminator + 8-byte usize
+#[cfg(feature = "bincode")]
+const SIZE_OF_DEPLOY_WITH_MAX_DATA_LEN: usize = 12;
+// 4-byte discriminator
+#[cfg(feature = "bincode")]
+const SIZE_OF_UPGRADE: usize = 4;
+
+#[cfg(feature = "bincode")]
+fn deserialize_trailing_bool(bytes: &[u8], offset: usize) -> Result<bool, InstructionError> {
+    if bytes.len() < offset {
+        return Err(InstructionError::InvalidInstructionData);
+    }
+    match bytes.get(offset) {
+        None | Some(1) => Ok(true), // <-- Defaults to `true`
+        Some(0) => Ok(false),
+        Some(_) => Err(InstructionError::InvalidInstructionData),
+    }
+}
+
+/// Deserialize the optional trailing `close_buffer: bool` from a
+/// `DeployWithMaxDataLen` instruction.
+///
+/// Per SIMD-0430, the absence of this byte defaults to `true`.
+#[cfg(feature = "bincode")]
+pub fn deserialize_deploy_close_buffer(instruction_data: &[u8]) -> Result<bool, InstructionError> {
+    deserialize_trailing_bool(instruction_data, SIZE_OF_DEPLOY_WITH_MAX_DATA_LEN)
+}
+
+/// Deserialize the optional trailing `close_buffer: bool` from an
+/// `Upgrade` instruction.
+///
+/// Per SIMD-0430, the absence of this byte defaults to `true`.
+#[cfg(feature = "bincode")]
+pub fn deserialize_upgrade_close_buffer(instruction_data: &[u8]) -> Result<bool, InstructionError> {
+    deserialize_trailing_bool(instruction_data, SIZE_OF_UPGRADE)
+}
+
+#[cfg(feature = "bincode")]
+fn serialize_with_trailing_bool(
+    instruction: &UpgradeableLoaderInstruction,
+    value: bool,
+) -> Vec<u8> {
+    let mut data = bincode::serialize(instruction).unwrap();
+    data.push(value.into());
+    data
+}
+
 #[cfg(feature = "bincode")]
 /// Returns the instructions required to initialize a Buffer account.
 pub fn create_buffer(
@@ -245,8 +312,13 @@ pub fn deploy_with_max_program_len(
     upgrade_authority_address: &Pubkey,
     program_lamports: u64,
     max_data_len: usize,
+    close_buffer: bool,
 ) -> Result<Vec<Instruction>, InstructionError> {
     let programdata_address = get_program_data_address(program_address);
+    let bytes = serialize_with_trailing_bool(
+        &UpgradeableLoaderInstruction::DeployWithMaxDataLen { max_data_len },
+        close_buffer,
+    );
     Ok(vec![
         system_instruction::create_account(
             payer_address,
@@ -255,9 +327,9 @@ pub fn deploy_with_max_program_len(
             UpgradeableLoaderState::size_of_program() as u64,
             &id(),
         ),
-        Instruction::new_with_bincode(
+        Instruction::new_with_bytes(
             id(),
-            &UpgradeableLoaderInstruction::DeployWithMaxDataLen { max_data_len },
+            &bytes,
             vec![
                 AccountMeta::new(*payer_address, true),
                 AccountMeta::new(programdata_address, false),
@@ -279,11 +351,13 @@ pub fn upgrade(
     buffer_address: &Pubkey,
     authority_address: &Pubkey,
     spill_address: &Pubkey,
+    close_buffer: bool,
 ) -> Instruction {
     let programdata_address = get_program_data_address(program_address);
-    Instruction::new_with_bincode(
+    let bytes = serialize_with_trailing_bool(&UpgradeableLoaderInstruction::Upgrade, close_buffer);
+    Instruction::new_with_bytes(
         id(),
-        &UpgradeableLoaderInstruction::Upgrade,
+        &bytes,
         vec![
             AccountMeta::new(programdata_address, false),
             AccountMeta::new(*program_address, false),
@@ -548,6 +622,167 @@ mod tests {
         assert_is_instruction(
             is_upgrade_instruction,
             UpgradeableLoaderInstruction::Upgrade {},
+        );
+    }
+
+    // -- SIMD-0430 tests --
+
+    #[test]
+    fn test_simd_0430_instruction_sizes() {
+        // Gut-check that the constants stay in sync.
+
+        assert_eq!(
+            bincode::serialized_size(&UpgradeableLoaderInstruction::DeployWithMaxDataLen {
+                max_data_len: usize::MAX
+            })
+            .unwrap() as usize,
+            SIZE_OF_DEPLOY_WITH_MAX_DATA_LEN,
+        );
+        assert_eq!(
+            bincode::serialized_size(&UpgradeableLoaderInstruction::Upgrade).unwrap() as usize,
+            SIZE_OF_UPGRADE,
+        );
+    }
+
+    #[test]
+    fn test_simd_0430_ignore_trailing_bytes() {
+        // Make sure we can still deserialize with bincode, ignoring trailing
+        // bytes by default.
+
+        // -- DeployWithMaxDataLen --
+        let max_data_len = usize::MAX;
+        let mut bytes = bincode::serialize(&UpgradeableLoaderInstruction::DeployWithMaxDataLen {
+            max_data_len,
+        })
+        .unwrap();
+        bytes.extend_from_slice(&[0xFF; 16]);
+        let deserialized: UpgradeableLoaderInstruction = bincode::deserialize(&bytes).unwrap();
+        assert_eq!(
+            deserialized,
+            UpgradeableLoaderInstruction::DeployWithMaxDataLen { max_data_len },
+        );
+
+        // -- Upgrade --
+        let mut bytes = bincode::serialize(&UpgradeableLoaderInstruction::Upgrade).unwrap();
+        bytes.extend_from_slice(&[0xFF; 16]);
+        let deserialized: UpgradeableLoaderInstruction = bincode::deserialize(&bytes).unwrap();
+        assert_eq!(deserialized, UpgradeableLoaderInstruction::Upgrade,);
+    }
+
+    #[test]
+    #[allow(clippy::bool_assert_comparison)]
+    fn test_simd_0430_close_buffer_no_trailing_bytes() {
+        // Legacy instructions without trailing bytes should default to `true`.
+
+        // -- DeployWithMaxDataLen --
+        let bytes = bincode::serialize(&UpgradeableLoaderInstruction::DeployWithMaxDataLen {
+            max_data_len: 1000,
+        })
+        .unwrap();
+        assert_eq!(bytes.len(), SIZE_OF_DEPLOY_WITH_MAX_DATA_LEN);
+        assert_eq!(deserialize_deploy_close_buffer(&bytes).unwrap(), true);
+
+        // -- Upgrade --
+        let bytes = bincode::serialize(&UpgradeableLoaderInstruction::Upgrade).unwrap();
+        assert_eq!(bytes.len(), SIZE_OF_UPGRADE);
+        assert_eq!(deserialize_upgrade_close_buffer(&bytes).unwrap(), true);
+    }
+
+    #[test]
+    fn test_simd_0430_close_buffer_valid_trailing_bytes() {
+        // The `close_buffer: bool` deserializer should be able to read a valid
+        // trailing `bool`.
+
+        for close_buffer in [true, false] {
+            // -- DeployWithMaxDataLen --
+            let bytes = serialize_with_trailing_bool(
+                &UpgradeableLoaderInstruction::DeployWithMaxDataLen { max_data_len: 1000 },
+                close_buffer,
+            );
+            assert_eq!(
+                deserialize_deploy_close_buffer(&bytes).unwrap(),
+                close_buffer,
+            );
+
+            // -- Upgrade --
+            let bytes =
+                serialize_with_trailing_bool(&UpgradeableLoaderInstruction::Upgrade, close_buffer);
+            assert_eq!(
+                deserialize_upgrade_close_buffer(&bytes).unwrap(),
+                close_buffer,
+            );
+        }
+
+        // It should still work with extra bytes after the `bool`.
+        let garbage_data = &[0xDE, 0xAD, 0xBE, 0xEF];
+        for close_buffer in [true, false] {
+            // -- DeployWithMaxDataLen --
+            let mut bytes = serialize_with_trailing_bool(
+                &UpgradeableLoaderInstruction::DeployWithMaxDataLen { max_data_len: 1000 },
+                close_buffer,
+            );
+            bytes.extend_from_slice(garbage_data);
+            assert_eq!(
+                deserialize_deploy_close_buffer(&bytes).unwrap(),
+                close_buffer,
+            );
+
+            // -- Upgrade --
+            let mut bytes =
+                serialize_with_trailing_bool(&UpgradeableLoaderInstruction::Upgrade, close_buffer);
+            bytes.extend_from_slice(garbage_data);
+            assert_eq!(
+                deserialize_upgrade_close_buffer(&bytes).unwrap(),
+                close_buffer,
+            );
+        }
+    }
+
+    #[test]
+    fn test_simd_0430_close_buffer_invalid_trailing_bytes() {
+        // The `close_buffer: bool` deserializer should REJECT an invalid
+        // `bool`.
+
+        for invalid_byte in [2, 42, 0xFF] {
+            // -- DeployWithMaxDataLen --
+            let mut bytes =
+                bincode::serialize(&UpgradeableLoaderInstruction::DeployWithMaxDataLen {
+                    max_data_len: 1000,
+                })
+                .unwrap();
+            bytes.push(invalid_byte);
+            assert_eq!(
+                deserialize_deploy_close_buffer(&bytes),
+                Err(InstructionError::InvalidInstructionData),
+            );
+
+            // -- Upgrade --
+            let mut bytes = bincode::serialize(&UpgradeableLoaderInstruction::Upgrade).unwrap();
+            bytes.push(invalid_byte);
+            assert_eq!(
+                deserialize_upgrade_close_buffer(&bytes),
+                Err(InstructionError::InvalidInstructionData),
+            );
+        }
+    }
+
+    #[test]
+    fn test_simd_0430_close_buffer_not_enough_bytes() {
+        // The `close_buffer: bool` deserializer should REJECT a payload with
+        // not enough bytes.
+
+        // -- DeployWithMaxDataLen --
+        let bytes = &[0xFF; SIZE_OF_DEPLOY_WITH_MAX_DATA_LEN - 1];
+        assert_eq!(
+            deserialize_deploy_close_buffer(bytes),
+            Err(InstructionError::InvalidInstructionData),
+        );
+
+        // -- Upgrade --
+        let bytes = &[0xFF; SIZE_OF_UPGRADE - 1];
+        assert_eq!(
+            deserialize_upgrade_close_buffer(bytes),
+            Err(InstructionError::InvalidInstructionData),
         );
     }
 }
