@@ -137,11 +137,8 @@ impl TryFrom<&[u8]> for SecretKey {
 
 impl From<&SecretKey> for [u8; BLS_SECRET_KEY_SIZE] {
     fn from(secret_key: &SecretKey) -> Self {
-        // WARNING: `out` contains raw secret-key bytes. Callers should zeroize it as soon as they
-        // are done using it.
-        let mut bytes = secret_key.0.to_bytes_le();
-        let out = bytes;
-        bytes.zeroize();
-        out
+        // WARNING: The returned buffer contains raw secret-key bytes. Callers should zeroize it
+        // as soon as they are done using it.
+        secret_key.0.to_bytes_le()
     }
 }
