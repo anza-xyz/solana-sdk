@@ -21,7 +21,7 @@ use {
         secret_key::{SecretKey, BLS_SECRET_KEY_SIZE},
         signature::{AsSignatureAffine, SignatureProjective},
     },
-    zeroize::{Zeroize, ZeroizeOnDrop},
+    zeroize::{Zeroize, ZeroizeOnDrop, Zeroizing},
 };
 
 /// Size of BLS keypair in bytes
@@ -121,9 +121,11 @@ impl TryFrom<&[u8]> for Keypair {
 
 impl From<&Keypair> for [u8; BLS_KEYPAIR_SIZE] {
     fn from(keypair: &Keypair) -> Self {
+        // WARNING: `bytes` contains raw secret-key material. Callers should zeroize the returned
+        // buffer as soon as they are done using it.
         let mut bytes = [0u8; BLS_KEYPAIR_SIZE];
-        bytes[..BLS_SECRET_KEY_SIZE]
-            .copy_from_slice(&Into::<[u8; BLS_SECRET_KEY_SIZE]>::into(&keypair.secret));
+        let secret_bytes = Zeroizing::new(Into::<[u8; BLS_SECRET_KEY_SIZE]>::into(&keypair.secret));
+        bytes[..BLS_SECRET_KEY_SIZE].copy_from_slice(secret_bytes.as_slice());
         bytes[BLS_SECRET_KEY_SIZE..].copy_from_slice(&keypair.public.to_bytes_uncompressed());
         bytes
     }
@@ -132,7 +134,7 @@ impl From<&Keypair> for [u8; BLS_KEYPAIR_SIZE] {
 #[cfg(feature = "std")]
 impl Keypair {
     pub fn read_json<R: Read>(reader: &mut R) -> Result<Self, Box<dyn error::Error>> {
-        let bytes: Vec<u8> = serde_json::from_reader(reader)?;
+        let bytes: Zeroizing<Vec<u8>> = Zeroizing::new(serde_json::from_reader(reader)?);
         Self::try_from(bytes.as_slice())
             .ok()
             .ok_or_else(|| std::io::Error::other("Invalid BLS keypair").into())
@@ -143,8 +145,11 @@ impl Keypair {
         Self::read_json(&mut file)
     }
 
+    /// WARNING: The returned JSON string contains secret-key material. Callers should clear it as
+    /// soon as they are done using it.
     pub fn write_json<W: Write>(&self, writer: &mut W) -> Result<String, Box<dyn error::Error>> {
-        let json = serde_json::to_string(&Into::<[u8; BLS_KEYPAIR_SIZE]>::into(self).as_slice())?;
+        let bytes = Zeroizing::new(Into::<[u8; BLS_KEYPAIR_SIZE]>::into(self));
+        let json = serde_json::to_string(bytes.as_slice())?;
         writer.write_all(json.as_bytes())?;
         Ok(json)
     }

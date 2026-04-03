@@ -11,10 +11,14 @@ use {
     core::ptr,
     ff::Field,
     rand::rngs::OsRng,
-    zeroize::{Zeroize, ZeroizeOnDrop},
+    zeroize::{Zeroize, ZeroizeOnDrop, Zeroizing},
 };
 #[cfg(feature = "solana-signer-derive")]
-use {solana_signature::Signature, solana_signer::Signer, subtle::ConstantTimeEq};
+use {
+    solana_signature::{Signature, SIGNATURE_BYTES},
+    solana_signer::Signer,
+    subtle::ConstantTimeEq,
+};
 
 /// Size of BLS secret key in bytes
 pub const BLS_SECRET_KEY_SIZE: usize = 32;
@@ -58,17 +62,18 @@ impl SecretKey {
         if ikm.len() < 32 {
             return Err(BlsError::KeyDerivation);
         }
-        let mut scalar = blst_scalar::default();
+        let mut scalar = Zeroizing::new(blst_scalar::default());
         unsafe {
             blst_keygen(
-                &mut scalar as *mut blst_scalar,
+                &mut *scalar as *mut blst_scalar,
                 ikm.as_ptr(),
                 ikm.len(),
                 ptr::null(),
                 0,
             );
         }
-        scalar
+        (*scalar)
+            .clone()
             .try_into()
             .map(Self)
             .map_err(|_| BlsError::FieldDecode)
@@ -78,17 +83,19 @@ impl SecretKey {
     #[cfg(feature = "solana-signer-derive")]
     pub fn derive_from_signer(signer: &dyn Signer, public_seed: &[u8]) -> Result<Self, BlsError> {
         let message = [b"bls-key-derive-", public_seed].concat();
-        let signature = signer
-            .try_sign_message(&message)
-            .map_err(|_| BlsError::KeyDerivation)?;
+        let signature = Zeroizing::new(<[u8; SIGNATURE_BYTES]>::from(
+            signer
+                .try_sign_message(&message)
+                .map_err(|_| BlsError::KeyDerivation)?,
+        ));
 
         // Some `Signer` implementations return the default signature, which is not suitable for
         // use as key material
-        if bool::from(signature.as_ref().ct_eq(Signature::default().as_ref())) {
+        if bool::from(signature.as_slice().ct_eq(Signature::default().as_ref())) {
             return Err(BlsError::KeyDerivation);
         }
 
-        Self::derive(signature.as_ref())
+        Self::derive(signature.as_slice())
     }
 
     /// Generate a proof of possession for the corresponding pubkey
@@ -130,6 +137,8 @@ impl TryFrom<&[u8]> for SecretKey {
 
 impl From<&SecretKey> for [u8; BLS_SECRET_KEY_SIZE] {
     fn from(secret_key: &SecretKey) -> Self {
+        // WARNING: The returned buffer contains raw secret-key bytes. Callers should zeroize it
+        // as soon as they are done using it.
         secret_key.0.to_bytes_le()
     }
 }
