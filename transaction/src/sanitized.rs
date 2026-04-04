@@ -272,7 +272,11 @@ impl SanitizedTransaction {
         match &self.message {
             SanitizedMessage::Legacy(legacy_message) => legacy_message.message.serialize(),
             SanitizedMessage::V0(loaded_msg) => loaded_msg.message.serialize(),
-            SanitizedMessage::V1(cached_msg) => v1::serialize(&cached_msg.message),
+            SanitizedMessage::V1(cached_msg) => {
+                // Must match `VersionedMessage::serialize` / `VersionedTransaction::try_new` signing
+                // payload: v1 wire is `V1_PREFIX` followed by the raw v1 message body (`v1::serialize`).
+                VersionedMessage::V1(cached_msg.message.clone().into_owned()).serialize()
+            }
         }
     }
 
@@ -452,5 +456,34 @@ mod tests {
             )
             .is_ok());
         }
+    }
+
+    #[test]
+    fn test_sanitized_v1_signature_verify_matches_versioned_transaction() {
+        use solana_message::{v1, VersionedMessage};
+        use solana_system_interface::instruction as system_ix;
+
+        let payer = Keypair::new();
+        let to = Keypair::new();
+        let blockhash = Hash::new_unique();
+        let ix = system_ix::transfer(&payer.pubkey(), &to.pubkey(), 1);
+        let msg = v1::Message::try_compile(&payer.pubkey(), &[ix], blockhash).unwrap();
+        let vtx = crate::versioned::VersionedTransaction::try_new(
+            VersionedMessage::V1(msg),
+            &[&payer],
+        )
+        .unwrap();
+        assert!(vtx.verify_with_results().iter().all(|verified| *verified));
+
+        let sanitized = SanitizedTransaction::try_create(
+            vtx,
+            MessageHash::Compute,
+            None,
+            SimpleAddressLoader::Disabled,
+            &HashSet::default(),
+        )
+        .unwrap();
+
+        sanitized.verify().unwrap();
     }
 }
