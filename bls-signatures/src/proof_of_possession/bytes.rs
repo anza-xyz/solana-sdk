@@ -39,12 +39,6 @@ pub struct ProofOfPossessionCompressed(
     pub [u8; BLS_PROOF_OF_POSSESSION_COMPRESSED_SIZE],
 );
 
-impl Default for ProofOfPossessionCompressed {
-    fn default() -> Self {
-        Self([0; BLS_PROOF_OF_POSSESSION_COMPRESSED_SIZE])
-    }
-}
-
 impl fmt::Display for ProofOfPossessionCompressed {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}", BASE64_STANDARD.encode(self.0))
@@ -71,12 +65,6 @@ pub struct ProofOfPossession(
     )]
     pub [u8; BLS_PROOF_OF_POSSESSION_AFFINE_SIZE],
 );
-
-impl Default for ProofOfPossession {
-    fn default() -> Self {
-        Self([0; BLS_PROOF_OF_POSSESSION_AFFINE_SIZE])
-    }
-}
 
 impl fmt::Display for ProofOfPossession {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {

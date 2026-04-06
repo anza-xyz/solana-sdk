@@ -39,12 +39,6 @@ pub struct PubkeyCompressed(
     pub [u8; BLS_PUBLIC_KEY_COMPRESSED_SIZE],
 );
 
-impl Default for PubkeyCompressed {
-    fn default() -> Self {
-        Self([0; BLS_PUBLIC_KEY_COMPRESSED_SIZE])
-    }
-}
-
 impl fmt::Display for PubkeyCompressed {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}", BASE64_STANDARD.encode(self.0))
@@ -68,12 +62,6 @@ pub struct Pubkey(
     #[cfg_attr(feature = "serde", serde_as(as = "[_; BLS_PUBLIC_KEY_AFFINE_SIZE]"))]
     pub  [u8; BLS_PUBLIC_KEY_AFFINE_SIZE],
 );
-
-impl Default for Pubkey {
-    fn default() -> Self {
-        Self([0; BLS_PUBLIC_KEY_AFFINE_SIZE])
-    }
-}
 
 impl fmt::Display for Pubkey {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {

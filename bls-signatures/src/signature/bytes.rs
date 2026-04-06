@@ -36,12 +36,6 @@ pub struct SignatureCompressed(
     pub  [u8; BLS_SIGNATURE_COMPRESSED_SIZE],
 );
 
-impl Default for SignatureCompressed {
-    fn default() -> Self {
-        Self([0; BLS_SIGNATURE_COMPRESSED_SIZE])
-    }
-}
-
 impl fmt::Display for SignatureCompressed {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}", BASE64_STANDARD.encode(self.0))
@@ -65,12 +59,6 @@ pub struct Signature(
     #[cfg_attr(feature = "serde", serde_as(as = "[_; BLS_SIGNATURE_AFFINE_SIZE]"))]
     pub  [u8; BLS_SIGNATURE_AFFINE_SIZE],
 );
-
-impl Default for Signature {
-    fn default() -> Self {
-        Self([0; BLS_SIGNATURE_AFFINE_SIZE])
-    }
-}
 
 impl fmt::Display for Signature {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
