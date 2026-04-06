@@ -225,9 +225,7 @@ pub struct VoteInitV2 {
     pub authorized_voter_bls_proof_of_possession: [u8; BLS_PROOF_OF_POSSESSION_COMPRESSED_SIZE],
     pub authorized_withdrawer: Pubkey,
     pub inflation_rewards_commission_bps: u16,
-    pub inflation_rewards_collector: Pubkey,
     pub block_revenue_commission_bps: u16,
-    pub block_revenue_collector: Pubkey,
 }
 
 impl Default for VoteInitV2 {
@@ -240,9 +238,7 @@ impl Default for VoteInitV2 {
                 BLS_PROOF_OF_POSSESSION_COMPRESSED_SIZE],
             authorized_withdrawer: Pubkey::default(),
             inflation_rewards_commission_bps: 0,
-            inflation_rewards_collector: Pubkey::default(),
             block_revenue_commission_bps: 0,
-            block_revenue_collector: Pubkey::default(),
         }
     }
 }

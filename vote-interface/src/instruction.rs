@@ -192,11 +192,21 @@ pub enum VoteInstruction {
         Hash,
     ),
 
-    // Initialize a vote account using VoteInitV2
+    /// Initialize a vote account with all vote state v4 fields, including
+    /// BLS public key and collector accounts.
+    ///
+    /// The vote program performs BLS proof-of-possession verification on the
+    /// submitted BLS public key (per SIMD-0387). For each collector account
+    /// (indices 2 and 3), the program performs the same validation as
+    /// `UpdateCommissionCollector` (per SIMD-0232): if the collector is not
+    /// the vote account itself, it must be system-program owned, rent-exempt,
+    /// and writable (not a reserved account).
     ///
     /// # Account references
     ///   0. `[WRITE]` Uninitialized vote account
     ///   1. `[SIGNER]` New validator identity (node_pubkey)
+    ///   2. `[WRITE]` Inflation rewards collector
+    ///   3. `[WRITE]` Block revenue collector
     InitializeAccountV2(VoteInitV2),
 
     /// Update the commission collector for the vote account
@@ -323,10 +333,17 @@ fn initialize_account(vote_pubkey: &Pubkey, vote_init: &VoteInit) -> Instruction
 }
 
 #[cfg(feature = "bincode")]
-fn initialize_account_v2(vote_pubkey: &Pubkey, vote_init: &VoteInitV2) -> Instruction {
+fn initialize_account_v2(
+    vote_pubkey: &Pubkey,
+    vote_init: &VoteInitV2,
+    inflation_rewards_collector: &Pubkey,
+    block_revenue_collector: &Pubkey,
+) -> Instruction {
     let account_metas = vec![
         AccountMeta::new(*vote_pubkey, false),
         AccountMeta::new_readonly(vote_init.node_pubkey, true),
+        AccountMeta::new(*inflation_rewards_collector, false),
+        AccountMeta::new(*block_revenue_collector, false),
     ];
 
     Instruction::new_with_bincode(
@@ -387,6 +404,8 @@ pub fn create_account_with_config_v2(
     from_pubkey: &Pubkey,
     vote_pubkey: &Pubkey,
     vote_init: &VoteInitV2,
+    inflation_rewards_collector: &Pubkey,
+    block_revenue_collector: &Pubkey,
     lamports: u64,
     config: CreateVoteAccountConfig,
 ) -> Vec<Instruction> {
@@ -409,7 +428,12 @@ pub fn create_account_with_config_v2(
             &id(),
         )
     };
-    let init_ix = initialize_account_v2(vote_pubkey, vote_init);
+    let init_ix = initialize_account_v2(
+        vote_pubkey,
+        vote_init,
+        inflation_rewards_collector,
+        block_revenue_collector,
+    );
     vec![create_ix, init_ix]
 }
 

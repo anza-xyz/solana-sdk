@@ -92,16 +92,23 @@ impl VoteStateV4 {
         }
     }
 
-    pub fn new(vote_init: &VoteInitV2, clock: &Clock) -> Self {
+    /// Creates a new `VoteStateV4` from a `VoteInitV2` and the collector
+    /// account addresses.
+    pub fn new(
+        vote_init: &VoteInitV2,
+        inflation_rewards_collector: &Pubkey,
+        block_revenue_collector: &Pubkey,
+        clock: &Clock,
+    ) -> Self {
         Self {
             node_pubkey: vote_init.node_pubkey,
             authorized_voters: AuthorizedVoters::new(clock.epoch, vote_init.authorized_voter),
             bls_pubkey_compressed: Some(vote_init.authorized_voter_bls_pubkey),
             authorized_withdrawer: vote_init.authorized_withdrawer,
             inflation_rewards_commission_bps: vote_init.inflation_rewards_commission_bps,
-            inflation_rewards_collector: vote_init.inflation_rewards_collector,
+            inflation_rewards_collector: *inflation_rewards_collector,
             block_revenue_commission_bps: vote_init.block_revenue_commission_bps,
-            block_revenue_collector: vote_init.block_revenue_collector,
+            block_revenue_collector: *block_revenue_collector,
             ..Self::default()
         }
     }
