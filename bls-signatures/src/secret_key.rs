@@ -50,6 +50,16 @@ impl Drop for SecretKey {
 impl ZeroizeOnDrop for SecretKey {}
 
 impl SecretKey {
+    /// Parses a canonical, non-zero secret scalar from little-endian bytes.
+    fn parse_scalar(bytes: &[u8; BLS_SECRET_KEY_SIZE]) -> Result<Scalar, BlsError> {
+        let scalar: Option<Scalar> = Scalar::from_bytes_le(bytes).into();
+        let scalar = scalar.ok_or(BlsError::FieldDecode)?;
+        if bool::from(scalar.is_zero()) {
+            return Err(BlsError::FieldDecode);
+        }
+        Ok(scalar)
+    }
+
     /// Constructs a new, random `BlsSecretKey` using `OsRng`
     #[allow(clippy::new_without_default)]
     pub fn new() -> Self {
@@ -72,11 +82,7 @@ impl SecretKey {
                 0,
             );
         }
-        (*scalar)
-            .clone()
-            .try_into()
-            .map(Self)
-            .map_err(|_| BlsError::FieldDecode)
+        Self::parse_scalar(&scalar.b).map(Self)
     }
 
     /// Derive a `BlsSecretKey` from a Solana signer
@@ -126,12 +132,7 @@ impl TryFrom<&[u8]> for SecretKey {
             return Err(BlsError::ParseFromBytes);
         }
         // unwrap safe due to the length check above
-        let scalar: Option<Scalar> = Scalar::from_bytes_le(bytes.try_into().unwrap()).into();
-        let scalar = scalar.ok_or(BlsError::FieldDecode)?;
-        if bool::from(scalar.is_zero()) {
-            return Err(BlsError::FieldDecode);
-        }
-        Ok(Self(scalar))
+        Self::parse_scalar(bytes.try_into().unwrap()).map(Self)
     }
 }
 
