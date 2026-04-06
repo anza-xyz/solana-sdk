@@ -9,6 +9,14 @@ use {
     solana_system_interface::instruction as system_instruction,
 };
 
+/// Minimum number of bytes for an `ExtendProgram` instruction.
+///
+/// After the SIMD-0431 feature gate is activated, `ExtendProgram` will
+/// reject requests smaller than this value, unless the program data
+/// account is within this many bytes of the max permitted data length of
+/// an account: 10 MiB.
+pub const MINIMUM_EXTEND_PROGRAM_BYTES: u32 = 10_240;
+
 #[repr(u8)]
 #[cfg_attr(
     feature = "serde",
@@ -141,6 +149,12 @@ pub enum UpgradeableLoaderInstruction {
 
     /// Extend a program's ProgramData account by the specified number of bytes.
     /// Only upgradeable programs can be extended.
+    ///
+    /// After the SIMD-0431 feature gate is activated, `additional_bytes`
+    /// must be at least [`MINIMUM_EXTEND_PROGRAM_BYTES`] (10 KiB).
+    /// The minimum does not apply when the program data account is
+    /// within [`MINIMUM_EXTEND_PROGRAM_BYTES`] of the max permitted
+    /// data length of an account: 10 MiB.
     ///
     /// The payer account must contain sufficient lamports to fund the
     /// ProgramData account to be rent-exempt. If the ProgramData account
@@ -449,7 +463,11 @@ pub fn close_any(
 
 #[cfg(feature = "bincode")]
 /// Returns the instruction required to extend the size of a program's
-/// executable data account
+/// executable data account.
+///
+/// After SIMD-0431 activation, `additional_bytes` must be at least
+/// [`MINIMUM_EXTEND_PROGRAM_BYTES`] unless the account is near the
+/// max permitted data length of an account: 10 MiB.
 pub fn extend_program(
     program_address: &Pubkey,
     payer_address: Option<&Pubkey>,
