@@ -93,7 +93,7 @@ mod tests {
     #[cfg(feature = "serde")]
     #[test]
     fn serialize_and_deserialize_proof_of_possession() {
-        let original = ProofOfPossession::default();
+        let original = ProofOfPossession([0; BLS_PROOF_OF_POSSESSION_AFFINE_SIZE]);
         let serialized = bincode::serialize(&original).unwrap();
         let deserialized: ProofOfPossession = bincode::deserialize(&serialized).unwrap();
         assert_eq!(original, deserialized);
@@ -107,7 +107,7 @@ mod tests {
     #[cfg(feature = "serde")]
     #[test]
     fn serialize_and_deserialize_proof_of_possession_compressed() {
-        let original = ProofOfPossessionCompressed::default();
+        let original = ProofOfPossessionCompressed([0; BLS_PROOF_OF_POSSESSION_COMPRESSED_SIZE]);
         let serialized = bincode::serialize(&original).unwrap();
         let deserialized: ProofOfPossessionCompressed = bincode::deserialize(&serialized).unwrap();
         assert_eq!(original, deserialized);

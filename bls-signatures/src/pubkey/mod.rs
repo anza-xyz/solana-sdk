@@ -262,7 +262,7 @@ mod tests {
     #[cfg(feature = "serde")]
     #[test]
     fn serialize_and_deserialize_pubkey() {
-        let original = Pubkey::default();
+        let original = Pubkey([0; BLS_PUBLIC_KEY_AFFINE_SIZE]);
         let serialized = bincode::serialize(&original).unwrap();
         let deserialized: Pubkey = bincode::deserialize(&serialized).unwrap();
         assert_eq!(original, deserialized);
@@ -276,7 +276,7 @@ mod tests {
     #[cfg(feature = "serde")]
     #[test]
     fn serialize_and_deserialize_pubkey_compressed() {
-        let original = PubkeyCompressed::default();
+        let original = PubkeyCompressed([0; BLS_PUBLIC_KEY_COMPRESSED_SIZE]);
         let serialized = bincode::serialize(&original).unwrap();
         let deserialized: PubkeyCompressed = bincode::deserialize(&serialized).unwrap();
         assert_eq!(original, deserialized);
