@@ -4,7 +4,7 @@ use {
 };
 
 const HASH_BYTES: usize = 32;
-#[derive(AbiExample)]
+#[derive(AbiExample, Debug, PartialEq)]
 pub struct Hash(pub [u8; HASH_BYTES]);
 
 #[derive(Default)]

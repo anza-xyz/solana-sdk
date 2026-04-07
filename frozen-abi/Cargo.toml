@@ -45,7 +45,7 @@ memmap2 = { workspace = true }
 # to avoid version skew and keep digest computation stable regardless of consumer dependencies.
 rand = { workspace = true }
 rand_chacha = { workspace = true }
-wincode = { workspace = true, features = ["alloc"], optional = true }
+wincode = { workspace = true, features = ["alloc", "derive"], optional = true }
 
 [target.'cfg(not(target_os = "solana"))'.dev-dependencies]
 bitflags = { workspace = true, features = ["serde"] }
