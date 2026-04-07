@@ -225,10 +225,10 @@ sha2 = { version = "0.10.8", default-features = false }
 sha3 = "0.10.8"
 signal-hook = "0.3.17"
 siphasher = "0.3.11"
-solana-account = { path = "account", version = "4.1.0" }
+solana-account = { path = "account", version = "4.2.0" }
 solana-account-info = { path = "account-info", version = "3.0.0" }
 solana-account-view = { path = "account-view", version = "2.0.0" }
-solana-address = { path = "address", version = "2.2.0" }
+solana-address = { path = "address", version = "2.6.0" }
 solana-address-lookup-table-interface = { path = "address-lookup-table-interface", version = "3.0.0" }
 solana-atomic-u64 = { path = "atomic-u64", version = "3.0.0" }
 solana-big-mod-exp = { path = "big-mod-exp", version = "3.0.0" }
@@ -261,11 +261,11 @@ solana-frozen-abi = { path = "frozen-abi", version = "3.0.0" }
 solana-frozen-abi-macro = { path = "frozen-abi-macro", version = "3.0.1" }
 solana-genesis-config = { path = "genesis-config", version = "4.0.0" }
 solana-hard-forks = { path = "hard-forks", version = "3.0.0", default-features = false }
-solana-hash = { path = "hash", version = "4.2.0", default-features = false }
+solana-hash = { path = "hash", version = "4.3.0", default-features = false }
 solana-inflation = { path = "inflation", version = "3.0.0" }
-solana-instruction = { path = "instruction", version = "3.3.0", default-features = false }
+solana-instruction = { path = "instruction", version = "3.4.0", default-features = false }
 solana-instruction-error = { path = "instruction-error", version = "2.2.0" }
-solana-instruction-view = { path = "instruction-view", version = "2.0.0" }
+solana-instruction-view = { path = "instruction-view", version = "2.1.0" }
 solana-instructions-sysvar = { path = "instructions-sysvar", version = "3.0.0" }
 solana-keccak-hasher = { path = "keccak-hasher", version = "3.0.0" }
 solana-keypair = { path = "keypair", version = "3.0.0" }
@@ -295,7 +295,7 @@ solana-program-log-macro = { path = "program-log-macro", version = "1.0.0" }
 solana-program-memory = { path = "program-memory", version = "3.0.0" }
 solana-program-option = { path = "program-option", version = "3.0.0" }
 solana-program-pack = { path = "program-pack", version = "3.0.0" }
-solana-pubkey = { path = "pubkey", version = "4.1.0", default-features = false }
+solana-pubkey = { path = "pubkey", version = "4.2.0", default-features = false }
 solana-rent = { path = "rent", version = "4.0.0", default-features = false }
 solana-reward-info = { path = "reward-info", version = "6.0.0" }
 solana-sanitize = { path = "sanitize", version = "3.0.0" }
@@ -314,7 +314,7 @@ solana-serialize-utils = { path = "serialize-utils", version = "3.1.0" }
 solana-sha256-hasher = { path = "sha256-hasher", version = "3.0.0" }
 solana-short-vec = { path = "short-vec", version = "3.2.0", default-features = false }
 solana-shred-version = { path = "shred-version", version = "3.0.0" }
-solana-signature = { path = "signature", version = "3.3.0", default-features = false }
+solana-signature = { path = "signature", version = "3.4.0", default-features = false }
 solana-signer = { path = "signer", version = "3.0.0" }
 solana-signer-store = { path = "signer-store", version = "0.1.0" }
 solana-slot-hashes = { path = "slot-hashes", version = "3.0.0" }
