@@ -2,7 +2,7 @@
 name = "solana-wincode-varint"
 description = "Wincode schemas for LEB128 variable-length integer encoding"
 documentation = "https://docs.rs/solana-wincode-varint"
-version = "1.0.0"
+version = "0.1.0"
 authors = { workspace = true }
 repository = { workspace = true }
 homepage = { workspace = true }

@@ -330,7 +330,7 @@ solana-transaction = { path = "transaction", version = "4.1.0" }
 solana-transaction-error = { path = "transaction-error", version = "3.2.0" }
 solana-validator-exit = { path = "validator-exit", version = "3.0.0" }
 solana-vote-interface = { path = "vote-interface", version = "6.0.0" }
-solana-wincode-varint = { path = "wincode-varint", version = "1.0.0" }
+solana-wincode-varint = { path = "wincode-varint", version = "0.1.0" }
 solana-zero-copy = { path = "zero-copy", version = "1.0.0", default-features = false }
 static_assertions = "1.1.0"
 strum = "0.24"
