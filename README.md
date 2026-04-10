@@ -1,5 +1,6 @@
 [![Solana crate](https://img.shields.io/crates/v/solana-sdk.svg)](https://crates.io/crates/solana-sdk)
 [![Solana documentation](https://docs.rs/solana-sdk/badge.svg)](https://docs.rs/solana-sdk)
+[![Solana main](https://github.com/anza-xyz/solana-sdk/actions/workflows/main.yml/badge.svg)](https://github.com/anza-xyz/solana-sdk/actions/workflows/main.yml)
 
 # solana-sdk
 
