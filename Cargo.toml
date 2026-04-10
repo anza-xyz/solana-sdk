@@ -46,7 +46,6 @@ members = [
     "keypair",
     "loader-v2-interface",
     "loader-v3-interface",
-    "loader-v4-interface",
     "message",
     "msg",
     "native-token",
@@ -272,7 +271,6 @@ solana-keypair = { path = "keypair", version = "3.0.0" }
 solana-last-restart-slot = { path = "last-restart-slot", version = "3.0.0" }
 solana-loader-v2-interface = { path = "loader-v2-interface", version = "3.0.0" }
 solana-loader-v3-interface = { path = "loader-v3-interface", version = "7.0.0" }
-solana-loader-v4-interface = { path = "loader-v4-interface", version = "3.0.0" }
 solana-message = { path = "message", version = "4.1.0" }
 solana-msg = { path = "msg", version = "3.0.0", default-features = false }
 solana-native-token = { path = "native-token", version = "3.0.0" }

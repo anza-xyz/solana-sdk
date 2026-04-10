@@ -3937,23 +3937,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "solana-loader-v4-interface"
-version = "3.1.0"
-dependencies = [
- "memoffset",
- "serde",
- "serde_bytes",
- "serde_derive",
- "solana-frozen-abi",
- "solana-frozen-abi-macro",
- "solana-instruction",
- "solana-loader-v4-interface",
- "solana-pubkey",
- "solana-sdk-ids",
- "solana-system-interface",
-]
-
-[[package]]
 name = "solana-message"
 version = "4.1.0"
 dependencies = [

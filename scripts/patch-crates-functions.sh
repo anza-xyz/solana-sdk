@@ -49,7 +49,6 @@ all_crate_dirs=(
   last-restart-slot
   loader-v2-interface
   loader-v3-interface
-  loader-v4-interface
   message
   msg
   native-token
