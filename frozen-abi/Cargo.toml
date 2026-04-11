@@ -18,7 +18,7 @@ rustdoc-args = ["--cfg=docsrs"]
 default = []
 # activate the frozen-abi feature when we actually want to do frozen-abi testing,
 # otherwise leave it off because it requires nightly Rust
-frozen-abi = []
+frozen-abi = ["dep:wincode", "solana-frozen-abi-macro/frozen-abi"]
 
 [dependencies]
 boxcar = { workspace = true }
@@ -45,6 +45,7 @@ memmap2 = { workspace = true }
 # to avoid version skew and keep digest computation stable regardless of consumer dependencies.
 rand = { workspace = true }
 rand_chacha = { workspace = true }
+wincode = { workspace = true, features = ["alloc", "derive"], optional = true }
 
 [target.'cfg(not(target_os = "solana"))'.dev-dependencies]
 bitflags = { workspace = true, features = ["serde"] }
