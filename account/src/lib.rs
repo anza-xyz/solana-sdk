@@ -7,7 +7,7 @@ use qualifier_attr::qualifiers;
 #[cfg(feature = "serde")]
 use serde::ser::{Serialize, Serializer};
 #[cfg(feature = "frozen-abi")]
-use solana_frozen_abi_macro::{frozen_abi, AbiExample};
+use solana_frozen_abi_macro::{frozen_abi, AbiExample, StableAbi};
 #[cfg(feature = "bincode")]
 use solana_sysvar::SysvarSerialize;
 use {
@@ -25,8 +25,11 @@ pub mod state_traits;
 #[repr(C)]
 #[cfg_attr(
     feature = "frozen-abi",
-    derive(AbiExample),
-    frozen_abi(digest = "62EqVoynUFvuui7DVfqWCvZP7bxKGJGioeSBnWrdjRME")
+    derive(AbiExample, StableAbi),
+    frozen_abi(
+        api_digest = "62EqVoynUFvuui7DVfqWCvZP7bxKGJGioeSBnWrdjRME",
+        abi_digest = "4mREmGBUAcqNdDHw5xR9hd2EznmGpfQYNB4b9aSPDsUT"
+    )
 )]
 #[cfg_attr(
     feature = "serde",
@@ -47,6 +50,23 @@ pub struct Account {
     pub executable: bool,
     /// the epoch at which this account will next owe rent
     pub rent_epoch: Epoch,
+}
+
+#[cfg(feature = "frozen-abi")]
+impl solana_frozen_abi::rand::prelude::Distribution<Account>
+    for solana_frozen_abi::rand::distr::StandardUniform
+{
+    fn sample<R: solana_frozen_abi::rand::Rng + ?Sized>(&self, rng: &mut R) -> Account {
+        Account {
+            lamports: rng.random(),
+            data: (0..rng.random_range(0..=10_000))
+                .map(|_| rng.random())
+                .collect(),
+            owner: Pubkey::new_from_array(rng.random()),
+            executable: rng.random(),
+            rent_epoch: rng.random(),
+        }
+    }
 }
 
 // mod because we need 'Account' below to have the name 'Account' to match expected serialization
