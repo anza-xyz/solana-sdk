@@ -37,7 +37,7 @@ serde_derive = { workspace = true, optional = true }
 solana-fee-calculator = { workspace = true }
 solana-hash = { workspace = true, features = ["copy", "decode"] }
 solana-pubkey = { workspace = true, default-features = false }
-solana-sha256-hasher = { workspace = true }
+solana-sha256-hasher = { workspace = true, features = ["sha2"] }
 wincode = { workspace = true, optional = true, features = ["alloc"] }
 
 [dev-dependencies]
