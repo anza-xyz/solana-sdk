@@ -767,7 +767,7 @@ mod tests {
     #[test]
     fn test_message_header_len_constant() {
         assert_eq!(
-            bincode::serialized_size(&MessageHeader::default()).unwrap() as usize,
+            wincode::serialize(&MessageHeader::default()).unwrap().len(),
             MESSAGE_HEADER_LENGTH
         );
     }
