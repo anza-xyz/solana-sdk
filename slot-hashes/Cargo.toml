@@ -24,4 +24,4 @@ solana-sdk-ids = { workspace = true, optional = true }
 solana-sysvar-id = { workspace = true, optional = true }
 
 [dev-dependencies]
-solana-sha256-hasher = { workspace = true }
+solana-sha256-hasher = { workspace = true, features = ["sha2"] }
