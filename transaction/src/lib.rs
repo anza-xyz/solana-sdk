@@ -182,7 +182,8 @@ const NONCED_TX_MARKER_IX_INDEX: u8 = 0;
     derive(AbiExample, StableAbi),
     frozen_abi(
         api_digest = "ADDDuk3dAZJ5hDxue8v4btH7nhEyngxUpXaC7A4k8gyQ",
-        abi_digest = "B9cGfEfYQtYccbPKXWBRoWhdfLRjaUBimic11Vp5Bjzx"
+        abi_digest = "B9cGfEfYQtYccbPKXWBRoWhdfLRjaUBimic11Vp5Bjzx",
+        abi_serializer = "wincode"
     )
 )]
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
