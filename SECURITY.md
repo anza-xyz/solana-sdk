@@ -93,3 +93,4 @@ At its sole discretion, the Solana Foundation may offer a bounty for
 Please see the [Agave Security Bug
 Bounties](https://github.com/anza-xyz/agave/security/policy#security-bug-bounties)
 for details on classes of bugs and payment amounts.
+gh repo clone anza-xyz/solana-sdk
