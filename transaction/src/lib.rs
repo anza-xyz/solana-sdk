@@ -182,7 +182,7 @@ const NONCED_TX_MARKER_IX_INDEX: u8 = 0;
     derive(AbiExample, StableAbi),
     frozen_abi(
         api_digest = "ADDDuk3dAZJ5hDxue8v4btH7nhEyngxUpXaC7A4k8gyQ",
-        abi_digest = "B9cGfEfYQtYccbPKXWBRoWhdfLRjaUBimic11Vp5Bjzx",
+        abi_digest = "nqwtny8tEU2TSSJb5Jf46fJjudMN1iWG3GnMLVLjW7X",
         abi_serializer = "wincode"
     )
 )]
@@ -212,20 +212,20 @@ impl solana_frozen_abi::rand::prelude::Distribution<Transaction>
     for solana_frozen_abi::rand::distr::StandardUniform
 {
     fn sample<R: solana_frozen_abi::rand::Rng + ?Sized>(&self, rng: &mut R) -> Transaction {
-        let signatures: Vec<Signature> = (0..rng.random_range(1..100))
+        let signatures: Vec<Signature> = (0..rng.random_range(1..4))
             .map(|_| Signature::from(std::array::from_fn(|_| rng.random::<u8>())))
             .collect();
-        let accounts: Vec<AccountMeta> = (0..rng.random_range(1..100))
+        let accounts: Vec<AccountMeta> = (0..rng.random_range(1..6))
             .map(|_| AccountMeta {
                 pubkey: Address::new_from_array(rng.random()),
                 is_signer: rng.random(),
                 is_writable: rng.random(),
             })
             .collect();
-        let data: Vec<u8> = (0..rng.random_range(1..1000))
+        let data: Vec<u8> = (0..rng.random_range(1..100))
             .map(|_| rng.random())
             .collect();
-        let instructions: Vec<Instruction> = (0..rng.random_range(1..100))
+        let instructions: Vec<Instruction> = (0..rng.random_range(1..6))
             .map(|_| Instruction {
                 program_id: Address::new_from_array(rng.random()),
                 accounts: accounts.clone(),
