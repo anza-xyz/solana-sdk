@@ -764,10 +764,11 @@ mod tests {
         assert!(!message.is_instruction_account(2));
     }
 
+    #[cfg(feature = "wincode")]
     #[test]
     fn test_message_header_len_constant() {
         assert_eq!(
-            bincode::serialized_size(&MessageHeader::default()).unwrap() as usize,
+            wincode::serialize(&MessageHeader::default()).unwrap().len(),
             MESSAGE_HEADER_LENGTH
         );
     }

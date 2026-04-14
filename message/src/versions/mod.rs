@@ -508,20 +508,21 @@ mod tests {
         message.recent_blockhash = Hash::new_unique();
         let wrapped_message = VersionedMessage::Legacy(message.clone());
 
-        // bincode
+        #[cfg(feature = "wincode")]
         {
-            let bytes = bincode::serialize(&message).unwrap();
-            assert_eq!(bytes, bincode::serialize(&wrapped_message).unwrap());
+            let bytes = wincode::serialize(&message).unwrap();
+            assert_eq!(bytes, wincode::serialize(&wrapped_message).unwrap());
 
-            let message_from_bytes: LegacyMessage = bincode::deserialize(&bytes).unwrap();
+            let message_from_bytes: LegacyMessage = wincode::deserialize(&bytes).unwrap();
             let wrapped_message_from_bytes: VersionedMessage =
-                bincode::deserialize(&bytes).unwrap();
+                wincode::deserialize(&bytes).unwrap();
 
             assert_eq!(message, message_from_bytes);
             assert_eq!(wrapped_message, wrapped_message_from_bytes);
         }
 
         // serde_json
+        #[cfg(feature = "serde")]
         {
             let string = serde_json::to_string(&message).unwrap();
             let message_from_string: LegacyMessage = serde_json::from_str(&string).unwrap();
@@ -558,13 +559,19 @@ mod tests {
             }],
         });
 
-        let bytes = bincode::serialize(&message).unwrap();
-        let message_from_bytes: VersionedMessage = bincode::deserialize(&bytes).unwrap();
-        assert_eq!(message, message_from_bytes);
+        #[cfg(feature = "wincode")]
+        {
+            let bytes = wincode::serialize(&message).unwrap();
+            let message_from_bytes: VersionedMessage = wincode::deserialize(&bytes).unwrap();
+            assert_eq!(message, message_from_bytes);
+        }
 
-        let string = serde_json::to_string(&message).unwrap();
-        let message_from_string: VersionedMessage = serde_json::from_str(&string).unwrap();
-        assert_eq!(message, message_from_string);
+        #[cfg(feature = "serde")]
+        {
+            let string = serde_json::to_string(&message).unwrap();
+            let message_from_string: VersionedMessage = serde_json::from_str(&string).unwrap();
+            assert_eq!(message, message_from_string);
+        }
     }
 
     prop_compose! {
@@ -671,6 +678,7 @@ mod tests {
         }
     }
 
+    #[cfg(feature = "serde")]
     #[test]
     fn test_v1_versioned_message_json_roundtrip() {
         let msg = v1::MessageBuilder::new()
