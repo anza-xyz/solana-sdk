@@ -49,7 +49,7 @@ solana-poh-config = { workspace = true }
 solana-pubkey = { workspace = true }
 solana-rent = { workspace = true }
 solana-sdk-ids = { workspace = true }
-solana-sha256-hasher = { workspace = true }
+solana-sha256-hasher = { workspace = true, features = ["sha2"] }
 solana-shred-version = { workspace = true }
 solana-signer = { workspace = true }
 solana-time-utils = { workspace = true }
