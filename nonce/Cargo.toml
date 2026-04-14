@@ -42,5 +42,6 @@ wincode = { workspace = true, optional = true, features = ["alloc"] }
 
 [dev-dependencies]
 bincode = { workspace = true }
+solana-sha256-hasher = { workspace = true, features = ["sha2"] }
 solana-nonce = { path = ".", features = ["dev-context-only-utils", "wincode"] }
 solana-pubkey = { workspace = true, features = ["std"], default-features = false }
