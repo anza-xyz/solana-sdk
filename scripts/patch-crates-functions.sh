@@ -41,6 +41,7 @@ all_crate_dirs=(
   genesis-config
   hard-forks
   hash
+  hash-512
   inflation
   instruction
   instructions-sysvar
@@ -85,6 +86,7 @@ all_crate_dirs=(
   serde-varint
   serialize-utils
   sha256-hasher
+  sha512-hasher
   short-vec
   shred-version
   signature

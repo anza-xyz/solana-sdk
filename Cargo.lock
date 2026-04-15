@@ -3800,6 +3800,26 @@ dependencies = [
 ]
 
 [[package]]
+name = "solana-hash-512"
+version = "0.0.0"
+dependencies = [
+ "borsh",
+ "bs58",
+ "bytemuck",
+ "bytemuck_derive",
+ "five8",
+ "serde",
+ "serde-big-array",
+ "serde_derive",
+ "solana-atomic-u64",
+ "solana-frozen-abi",
+ "solana-frozen-abi-macro",
+ "solana-hash",
+ "solana-hash-512",
+ "wincode",
+]
+
+[[package]]
 name = "solana-inflation"
 version = "3.1.0"
 dependencies = [
@@ -4463,6 +4483,16 @@ dependencies = [
  "solana-define-syscall",
  "solana-hash",
  "solana-sha256-hasher",
+]
+
+[[package]]
+name = "solana-sha512-hasher"
+version = "0.0.0"
+dependencies = [
+ "sha2",
+ "solana-define-syscall",
+ "solana-hash-512",
+ "solana-sha512-hasher",
 ]
 
 [[package]]

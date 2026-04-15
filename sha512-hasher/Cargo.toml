@@ -1,0 +1,33 @@
+[package]
+name = "solana-sha512-hasher"
+description = "Solana SHA512 hashing"
+documentation = "https://docs.rs/solana-sha512-hasher"
+version = "0.0.0"
+authors = { workspace = true }
+repository = { workspace = true }
+homepage = { workspace = true }
+license = { workspace = true }
+edition = { workspace = true }
+
+[package.metadata.docs.rs]
+targets = ["x86_64-unknown-linux-gnu"]
+all-features = true
+rustdoc-args = ["--cfg=docsrs"]
+
+[features]
+sha2 = ["dep:sha2"]
+
+[dependencies]
+solana-hash-512 = { workspace = true }
+
+[target.'cfg(any(target_os = "solana", target_arch = "bpf"))'.dependencies]
+solana-define-syscall = { workspace = true }
+
+[target.'cfg(not(any(target_os = "solana", target_arch = "bpf")))'.dependencies]
+sha2 = { workspace = true, optional = true }
+
+[dev-dependencies]
+solana-sha512-hasher = { path = ".", features = ["sha2"] }
+
+[lints]
+workspace = true

@@ -1,0 +1,49 @@
+[package]
+name = "solana-hash-512"
+description = "Solana wrapper for the 64-byte output of the SHA-512 hashing algorithm."
+documentation = "https://docs.rs/solana-hash-512"
+version = "0.0.0"
+rust-version = { workspace = true }
+authors = { workspace = true }
+repository = { workspace = true }
+homepage = { workspace = true }
+license = { workspace = true }
+edition = { workspace = true }
+
+[package.metadata.docs.rs]
+targets = ["x86_64-unknown-linux-gnu", "wasm32-unknown-unknown"]
+all-features = true
+rustdoc-args = ["--cfg=docsrs"]
+
+[features]
+atomic = ["dep:solana-atomic-u64"]
+borsh = ["dep:borsh"]
+bytemuck = ["copy", "dep:bytemuck", "dep:bytemuck_derive"]
+copy = []
+decode = ["dep:five8", "solana-hash/decode"]
+default = []
+frozen-abi = ["dep:solana-frozen-abi", "dep:solana-frozen-abi-macro", "std"]
+serde = ["dep:serde", "dep:serde_derive", "dep:serde-big-array"]
+std = ["borsh?/std", "serde?/std", "wincode?/std"]
+wincode = ["dep:wincode"]
+
+[dependencies]
+borsh = { workspace = true, optional = true }
+bytemuck = { workspace = true, optional = true }
+bytemuck_derive = { workspace = true, optional = true }
+five8 = { workspace = true, optional = true }
+serde = { workspace = true, optional = true }
+serde-big-array = { workspace = true, optional = true }
+serde_derive = { workspace = true, optional = true }
+solana-atomic-u64 = { workspace = true, optional = true }
+solana-frozen-abi = { workspace = true, optional = true, features = ["frozen-abi"] }
+solana-frozen-abi-macro = { workspace = true, optional = true, features = ["frozen-abi"] }
+solana-hash = { workspace = true, optional = true }
+wincode = { workspace = true, optional = true }
+
+[dev-dependencies]
+bs58 = { workspace = true, default-features = false, features = ["alloc"] }
+solana-hash-512 = { path = ".", features = ["atomic", "copy", "decode"] }
+
+[lints]
+workspace = true

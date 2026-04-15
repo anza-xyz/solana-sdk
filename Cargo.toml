@@ -37,6 +37,7 @@ members = [
     "genesis-config",
     "hard-forks",
     "hash",
+    "hash-512",
     "inflation",
     "instruction",
     "instruction-error",
@@ -86,6 +87,7 @@ members = [
     "serde-varint",
     "serialize-utils",
     "sha256-hasher",
+    "sha512-hasher",
     "short-vec",
     "shred-version",
     "signature",
@@ -261,6 +263,7 @@ solana-frozen-abi-macro = { path = "frozen-abi-macro", version = "3.0.1" }
 solana-genesis-config = { path = "genesis-config", version = "4.0.0" }
 solana-hard-forks = { path = "hard-forks", version = "3.1.0", default-features = false }
 solana-hash = { path = "hash", version = "4.3.0", default-features = false }
+solana-hash-512 = { path = "hash-512", version = "0.0.0", default-features = false }
 solana-inflation = { path = "inflation", version = "3.1.0" }
 solana-instruction = { path = "instruction", version = "3.4.0", default-features = false }
 solana-instruction-error = { path = "instruction-error", version = "2.3.0" }
@@ -310,6 +313,7 @@ solana-serde = { path = "serde", version = "3.0.0" }
 solana-serde-varint = { path = "serde-varint", version = "3.0.1" }
 solana-serialize-utils = { path = "serialize-utils", version = "3.1.0" }
 solana-sha256-hasher = { path = "sha256-hasher", version = "3.0.0" }
+solana-sha512-hasher = { path = "sha512-hasher", version = "0.0.0" }
 solana-short-vec = { path = "short-vec", version = "3.2.0", default-features = false }
 solana-shred-version = { path = "shred-version", version = "3.0.0" }
 solana-signature = { path = "signature", version = "3.4.0", default-features = false }
