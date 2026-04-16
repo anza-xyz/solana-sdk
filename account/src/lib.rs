@@ -693,7 +693,7 @@ pub fn create_is_signer_account_infos<'a>(
 }
 
 /// Replacement for the executable flag: An account being owned by one of these contains a program.
-#[deprecated(since = "5.0.0", note = "no longer available as a constant")]
+#[deprecated(since = "4.3.0", note = "no longer available as a constant")]
 pub const PROGRAM_OWNERS: &[Pubkey] = &[
     bpf_loader_upgradeable::id(),
     bpf_loader::id(),
