@@ -231,9 +231,11 @@ pub fn log(input: TokenStream) -> TokenStream {
             }
         })
     } else {
-        TokenStream::from(
-            quote! {::solana_program_log::logger::log_message(#format_string.as_bytes());},
-        )
+        TokenStream::from(quote! {
+            {
+                ::solana_program_log::logger::log_message(#format_string.as_bytes());
+            }
+        })
     }
 }
 
