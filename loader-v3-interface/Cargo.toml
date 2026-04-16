@@ -40,7 +40,9 @@ solana-system-interface = { workspace = true, optional = true }
 wincode = { workspace = true, optional = true }
 
 [dev-dependencies]
-solana-loader-v3-interface = { path = ".", features = ["dev-context-only-utils"] }
+bincode = { workspace = true }
+solana-loader-v3-interface = { path = ".", features = ["dev-context-only-utils", "serde"] }
+test-case = { workspace = true }
 
 [lints]
 workspace = true

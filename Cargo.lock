@@ -3944,6 +3944,7 @@ dependencies = [
 name = "solana-loader-v3-interface"
 version = "7.0.0"
 dependencies = [
+ "bincode",
  "serde",
  "serde_bytes",
  "serde_derive",
@@ -3954,6 +3955,7 @@ dependencies = [
  "solana-pubkey",
  "solana-sdk-ids",
  "solana-system-interface",
+ "test-case",
  "wincode",
 ]
 

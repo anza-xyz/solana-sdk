@@ -461,7 +461,7 @@ pub fn extend_program(
 
 #[cfg(all(test, feature = "wincode"))]
 mod tests {
-    use super::*;
+    use {super::*, test_case::test_case};
 
     fn assert_is_instruction<F>(
         is_instruction_fn: F,
@@ -551,5 +551,31 @@ mod tests {
             is_upgrade_instruction,
             UpgradeableLoaderInstruction::Upgrade {},
         );
+    }
+
+    /// Verify that wincode produces the exact same bytes as bincode for
+    /// every instruction variant, and that both round-trip correctly.
+    #[test_case(UpgradeableLoaderInstruction::InitializeBuffer)]
+    #[test_case(UpgradeableLoaderInstruction::Write { offset: 42, bytes: vec![1, 2, 3, 4, 5] })]
+    #[test_case(UpgradeableLoaderInstruction::Write { offset: 0, bytes: vec![] })]
+    #[test_case(UpgradeableLoaderInstruction::DeployWithMaxDataLen { max_data_len: 1_000_000 })]
+    #[test_case(UpgradeableLoaderInstruction::DeployWithMaxDataLen { max_data_len: 0 })]
+    #[test_case(UpgradeableLoaderInstruction::Upgrade)]
+    #[test_case(UpgradeableLoaderInstruction::SetAuthority)]
+    #[test_case(UpgradeableLoaderInstruction::Close)]
+    #[test_case(UpgradeableLoaderInstruction::ExtendProgram { additional_bytes: 10_240 })]
+    #[test_case(UpgradeableLoaderInstruction::ExtendProgram { additional_bytes: 0 })]
+    #[test_case(UpgradeableLoaderInstruction::SetAuthorityChecked)]
+    fn wire_compat_bincode_vs_wincode(instr: UpgradeableLoaderInstruction) {
+        let bincode_bytes = bincode::serialize(&instr).unwrap();
+        let wincode_bytes = wincode::serialize(&instr).unwrap();
+        assert_eq!(bincode_bytes, wincode_bytes);
+
+        let from_bincode: UpgradeableLoaderInstruction =
+            bincode::deserialize(&bincode_bytes).unwrap();
+        let from_wincode: UpgradeableLoaderInstruction =
+            wincode::deserialize(&wincode_bytes).unwrap();
+        assert_eq!(from_bincode, instr);
+        assert_eq!(from_wincode, instr);
     }
 }
