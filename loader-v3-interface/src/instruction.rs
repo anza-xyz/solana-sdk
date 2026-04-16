@@ -3,11 +3,16 @@
 #[cfg(feature = "wincode")]
 use {
     crate::{get_program_data_address, state::UpgradeableLoaderState},
+    core::mem::MaybeUninit,
     solana_instruction::{error::InstructionError, AccountMeta, Instruction},
     solana_pubkey::Pubkey,
     solana_sdk_ids::{bpf_loader_upgradeable::id, sysvar},
     solana_system_interface::instruction as system_instruction,
-    wincode::{SchemaRead, SchemaWrite},
+    wincode::{
+        config::ConfigCore,
+        io::{Reader, Writer},
+        ReadResult, SchemaRead, SchemaWrite, TypeMeta, WriteResult,
+    },
 };
 
 /// Minimum number of bytes for an `ExtendProgram` instruction.
@@ -100,6 +105,12 @@ pub enum UpgradeableLoaderInstruction {
     DeployWithMaxDataLen {
         /// Maximum length that the program can be upgraded to.
         max_data_len: usize,
+        /// SIMD-0430: Whether to close the buffer account after deployment.
+        ///
+        /// Optional on the wire: when the trailing byte is absent, this
+        /// decodes to `true`.
+        #[cfg_attr(feature = "wincode", wincode(with = "OptionalTrailingBool<true>"))]
+        close_buffer: bool,
     },
 
     /// Upgrade a program.
@@ -122,7 +133,14 @@ pub enum UpgradeableLoaderInstruction {
     ///   4. `[]` Rent sysvar.
     ///   5. `[]` Clock sysvar.
     ///   6. `[signer]` The program's authority.
-    Upgrade,
+    Upgrade {
+        /// SIMD-0430: Whether to close the buffer account after upgrade.
+        ///
+        /// Optional on the wire: when the trailing byte is absent, this
+        /// decodes to `true`.
+        #[cfg_attr(feature = "wincode", wincode(with = "OptionalTrailingBool<true>"))]
+        close_buffer: bool,
+    },
 
     /// Set a new authority that is allowed to write the buffer or upgrade the
     /// program.  To permanently make the buffer immutable or disable program
@@ -189,6 +207,44 @@ pub enum UpgradeableLoaderInstruction {
     SetAuthorityChecked,
 }
 
+/// A wincode schema for a `bool` that may be absent from the end of the
+/// wire payload. On write, the byte is always emitted. On read, an
+/// exhausted reader yields `DEFAULT`.
+#[cfg(feature = "wincode")]
+pub struct OptionalTrailingBool<const DEFAULT: bool>;
+
+#[cfg(feature = "wincode")]
+unsafe impl<'de, C: ConfigCore, const DEFAULT: bool> SchemaRead<'de, C>
+    for OptionalTrailingBool<DEFAULT>
+{
+    type Dst = bool;
+
+    fn read(mut reader: impl Reader<'de>, dst: &mut MaybeUninit<Self::Dst>) -> ReadResult<()> {
+        let value = reader.take_byte().map(|b| b != 0).unwrap_or(DEFAULT);
+        dst.write(value);
+        Ok(())
+    }
+}
+
+#[cfg(feature = "wincode")]
+unsafe impl<C: ConfigCore, const DEFAULT: bool> SchemaWrite<C> for OptionalTrailingBool<DEFAULT> {
+    type Src = bool;
+
+    const TYPE_META: TypeMeta = TypeMeta::Static {
+        size: 1,
+        zero_copy: false,
+    };
+
+    fn size_of(_src: &Self::Src) -> WriteResult<usize> {
+        Ok(1)
+    }
+
+    fn write(mut writer: impl Writer, src: &Self::Src) -> WriteResult<()> {
+        writer.write(&[u8::from(*src)])?;
+        Ok(())
+    }
+}
+
 #[cfg(feature = "wincode")]
 /// Returns the instructions required to initialize a Buffer account.
 pub fn create_buffer(
@@ -247,6 +303,7 @@ pub fn deploy_with_max_program_len(
     upgrade_authority_address: &Pubkey,
     program_lamports: u64,
     max_data_len: usize,
+    close_buffer: bool,
 ) -> Result<Vec<Instruction>, InstructionError> {
     let programdata_address = get_program_data_address(program_address);
     Ok(vec![
@@ -259,7 +316,10 @@ pub fn deploy_with_max_program_len(
         ),
         Instruction::new_with_wincode(
             id(),
-            &UpgradeableLoaderInstruction::DeployWithMaxDataLen { max_data_len },
+            &UpgradeableLoaderInstruction::DeployWithMaxDataLen {
+                max_data_len,
+                close_buffer,
+            },
             vec![
                 AccountMeta::new(*payer_address, true),
                 AccountMeta::new(programdata_address, false),
@@ -281,11 +341,12 @@ pub fn upgrade(
     buffer_address: &Pubkey,
     authority_address: &Pubkey,
     spill_address: &Pubkey,
+    close_buffer: bool,
 ) -> Instruction {
     let programdata_address = get_program_data_address(program_address);
     Instruction::new_with_wincode(
         id(),
-        &UpgradeableLoaderInstruction::Upgrade,
+        &UpgradeableLoaderInstruction::Upgrade { close_buffer },
         vec![
             AccountMeta::new(programdata_address, false),
             AccountMeta::new(*program_address, false),
@@ -497,18 +558,24 @@ mod tests {
         let result = is_instruction_fn(
             &wincode::serialize(&UpgradeableLoaderInstruction::DeployWithMaxDataLen {
                 max_data_len: 0,
+                close_buffer: true,
             })
             .unwrap(),
         );
         let expected_result = matches!(
             expected_instruction,
-            UpgradeableLoaderInstruction::DeployWithMaxDataLen { max_data_len: _ }
+            UpgradeableLoaderInstruction::DeployWithMaxDataLen { .. }
         );
         assert_eq!(expected_result, result);
 
-        let result =
-            is_instruction_fn(&wincode::serialize(&UpgradeableLoaderInstruction::Upgrade).unwrap());
-        let expected_result = matches!(expected_instruction, UpgradeableLoaderInstruction::Upgrade);
+        let result = is_instruction_fn(
+            &wincode::serialize(&UpgradeableLoaderInstruction::Upgrade { close_buffer: true })
+                .unwrap(),
+        );
+        let expected_result = matches!(
+            expected_instruction,
+            UpgradeableLoaderInstruction::Upgrade { .. }
+        );
         assert_eq!(expected_result, result);
 
         let result = is_instruction_fn(
@@ -549,7 +616,7 @@ mod tests {
         assert!(!is_upgrade_instruction(&[]));
         assert_is_instruction(
             is_upgrade_instruction,
-            UpgradeableLoaderInstruction::Upgrade {},
+            UpgradeableLoaderInstruction::Upgrade { close_buffer: true },
         );
     }
 
@@ -558,9 +625,10 @@ mod tests {
     #[test_case(UpgradeableLoaderInstruction::InitializeBuffer)]
     #[test_case(UpgradeableLoaderInstruction::Write { offset: 42, bytes: vec![1, 2, 3, 4, 5] })]
     #[test_case(UpgradeableLoaderInstruction::Write { offset: 0, bytes: vec![] })]
-    #[test_case(UpgradeableLoaderInstruction::DeployWithMaxDataLen { max_data_len: 1_000_000 })]
-    #[test_case(UpgradeableLoaderInstruction::DeployWithMaxDataLen { max_data_len: 0 })]
-    #[test_case(UpgradeableLoaderInstruction::Upgrade)]
+    #[test_case(UpgradeableLoaderInstruction::DeployWithMaxDataLen { max_data_len: 1_000_000, close_buffer: true })]
+    #[test_case(UpgradeableLoaderInstruction::DeployWithMaxDataLen { max_data_len: 0, close_buffer: false })]
+    #[test_case(UpgradeableLoaderInstruction::Upgrade { close_buffer: true })]
+    #[test_case(UpgradeableLoaderInstruction::Upgrade { close_buffer: false })]
     #[test_case(UpgradeableLoaderInstruction::SetAuthority)]
     #[test_case(UpgradeableLoaderInstruction::Close)]
     #[test_case(UpgradeableLoaderInstruction::ExtendProgram { additional_bytes: 10_240 })]
@@ -577,5 +645,36 @@ mod tests {
             wincode::deserialize(&wincode_bytes).unwrap();
         assert_eq!(from_bincode, instr);
         assert_eq!(from_wincode, instr);
+    }
+
+    /// Legacy `DeployWithMaxDataLen` payloads omit the trailing
+    /// `close_buffer` byte; wincode must decode these to `close_buffer: true`.
+    #[test]
+    fn legacy_deploy_decodes_close_buffer_as_true() {
+        let mut data = Vec::new();
+        data.extend_from_slice(&2u32.to_le_bytes()); // Discriminator
+        data.extend_from_slice(&42u64.to_le_bytes()); // max_data_len
+        let decoded: UpgradeableLoaderInstruction = wincode::deserialize(&data).unwrap();
+        assert_eq!(
+            decoded,
+            UpgradeableLoaderInstruction::DeployWithMaxDataLen {
+                max_data_len: 42,
+                close_buffer: true, // <-- Default value
+            }
+        );
+    }
+
+    /// Legacy `Upgrade` payloads omit the trailing `close_buffer` byte;
+    /// wincode must decode these to `close_buffer: true`.
+    #[test]
+    fn legacy_upgrade_decodes_close_buffer_as_true() {
+        let data = 3u32.to_le_bytes(); // Discriminator
+        let decoded: UpgradeableLoaderInstruction = wincode::deserialize(&data).unwrap();
+        assert_eq!(
+            decoded,
+            UpgradeableLoaderInstruction::Upgrade {
+                close_buffer: true, // <-- Default value
+            }
+        );
     }
 }
