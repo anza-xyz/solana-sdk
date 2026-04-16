@@ -165,7 +165,15 @@ pub enum UpgradeableLoaderInstruction {
     ///      initialized accounts.
     ///   3. `[writable]` The associated Program account if the account to close
     ///      is a ProgramData account.
-    Close,
+    Close {
+        /// SIMD-0432: Whether to tombstone the program account instead of
+        /// reclaiming its address.
+        ///
+        /// Optional on the wire: when the trailing byte is absent, this
+        /// decodes to `false`.
+        #[cfg_attr(feature = "wincode", wincode(with = "OptionalTrailingBool<false>"))]
+        tombstone: bool,
+    },
 
     /// Extend a program's ProgramData account by the specified number of bytes.
     /// Only upgradeable programs can be extended.
@@ -459,12 +467,14 @@ pub fn close(
     close_address: &Pubkey,
     recipient_address: &Pubkey,
     authority_address: &Pubkey,
+    tombstone: bool,
 ) -> Instruction {
     close_any(
         close_address,
         recipient_address,
         Some(authority_address),
         None,
+        tombstone,
     )
 }
 
@@ -475,6 +485,7 @@ pub fn close_any(
     recipient_address: &Pubkey,
     authority_address: Option<&Pubkey>,
     program_address: Option<&Pubkey>,
+    tombstone: bool,
 ) -> Instruction {
     let mut metas = vec![
         AccountMeta::new(*close_address, false),
@@ -486,7 +497,11 @@ pub fn close_any(
     if let Some(program_address) = program_address {
         metas.push(AccountMeta::new(*program_address, false));
     }
-    Instruction::new_with_wincode(id(), &UpgradeableLoaderInstruction::Close, metas)
+    Instruction::new_with_wincode(
+        id(),
+        &UpgradeableLoaderInstruction::Close { tombstone },
+        metas,
+    )
 }
 
 #[cfg(feature = "wincode")]
@@ -587,9 +602,13 @@ mod tests {
         );
         assert_eq!(expected_result, result);
 
-        let result =
-            is_instruction_fn(&wincode::serialize(&UpgradeableLoaderInstruction::Close).unwrap());
-        let expected_result = matches!(expected_instruction, UpgradeableLoaderInstruction::Close);
+        let result = is_instruction_fn(
+            &wincode::serialize(&UpgradeableLoaderInstruction::Close { tombstone: false }).unwrap(),
+        );
+        let expected_result = matches!(
+            expected_instruction,
+            UpgradeableLoaderInstruction::Close { .. }
+        );
         assert_eq!(expected_result, result);
     }
 
@@ -630,7 +649,8 @@ mod tests {
     #[test_case(UpgradeableLoaderInstruction::Upgrade { close_buffer: true })]
     #[test_case(UpgradeableLoaderInstruction::Upgrade { close_buffer: false })]
     #[test_case(UpgradeableLoaderInstruction::SetAuthority)]
-    #[test_case(UpgradeableLoaderInstruction::Close)]
+    #[test_case(UpgradeableLoaderInstruction::Close { tombstone: false })]
+    #[test_case(UpgradeableLoaderInstruction::Close { tombstone: true })]
     #[test_case(UpgradeableLoaderInstruction::ExtendProgram { additional_bytes: 10_240 })]
     #[test_case(UpgradeableLoaderInstruction::ExtendProgram { additional_bytes: 0 })]
     #[test_case(UpgradeableLoaderInstruction::SetAuthorityChecked)]
@@ -674,6 +694,20 @@ mod tests {
             decoded,
             UpgradeableLoaderInstruction::Upgrade {
                 close_buffer: true, // <-- Default value
+            }
+        );
+    }
+
+    /// Legacy `Close` payloads omit the trailing `tombstone` byte; wincode
+    /// must decode these to `tombstone: false`.
+    #[test]
+    fn legacy_close_decodes_tombstone_as_false() {
+        let data = 5u32.to_le_bytes(); // Discriminator
+        let decoded: UpgradeableLoaderInstruction = wincode::deserialize(&data).unwrap();
+        assert_eq!(
+            decoded,
+            UpgradeableLoaderInstruction::Close {
+                tombstone: false, // <-- Default value
             }
         );
     }
