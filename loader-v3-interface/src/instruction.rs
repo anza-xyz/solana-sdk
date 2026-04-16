@@ -1,12 +1,13 @@
 //! Instructions for the upgradable BPF loader.
 
-#[cfg(feature = "bincode")]
+#[cfg(feature = "wincode")]
 use {
     crate::{get_program_data_address, state::UpgradeableLoaderState},
     solana_instruction::{error::InstructionError, AccountMeta, Instruction},
     solana_pubkey::Pubkey,
     solana_sdk_ids::{bpf_loader_upgradeable::id, sysvar},
     solana_system_interface::instruction as system_instruction,
+    wincode::{SchemaRead, SchemaWrite},
 };
 
 /// Minimum number of bytes for an `ExtendProgram` instruction.
@@ -22,6 +23,7 @@ pub const MINIMUM_EXTEND_PROGRAM_BYTES: u32 = 10_240;
     feature = "serde",
     derive(serde_derive::Deserialize, serde_derive::Serialize)
 )]
+#[cfg_attr(feature = "wincode", derive(SchemaRead, SchemaWrite))]
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum UpgradeableLoaderInstruction {
     /// Initialize a Buffer account.
@@ -187,7 +189,7 @@ pub enum UpgradeableLoaderInstruction {
     SetAuthorityChecked,
 }
 
-#[cfg(feature = "bincode")]
+#[cfg(feature = "wincode")]
 /// Returns the instructions required to initialize a Buffer account.
 pub fn create_buffer(
     payer_address: &Pubkey,
@@ -204,7 +206,7 @@ pub fn create_buffer(
             UpgradeableLoaderState::size_of_buffer(program_len) as u64,
             &id(),
         ),
-        Instruction::new_with_bincode(
+        Instruction::new_with_wincode(
             id(),
             &UpgradeableLoaderInstruction::InitializeBuffer,
             vec![
@@ -215,7 +217,7 @@ pub fn create_buffer(
     ])
 }
 
-#[cfg(feature = "bincode")]
+#[cfg(feature = "wincode")]
 /// Returns the instructions required to write a chunk of program data to a
 /// buffer account.
 pub fn write(
@@ -224,7 +226,7 @@ pub fn write(
     offset: u32,
     bytes: Vec<u8>,
 ) -> Instruction {
-    Instruction::new_with_bincode(
+    Instruction::new_with_wincode(
         id(),
         &UpgradeableLoaderInstruction::Write { offset, bytes },
         vec![
@@ -234,7 +236,7 @@ pub fn write(
     )
 }
 
-#[cfg(feature = "bincode")]
+#[cfg(feature = "wincode")]
 /// Returns the instructions required to deploy a program with a specified
 /// maximum program length.  The maximum length must be large enough to
 /// accommodate any future upgrades.
@@ -255,7 +257,7 @@ pub fn deploy_with_max_program_len(
             UpgradeableLoaderState::size_of_program() as u64,
             &id(),
         ),
-        Instruction::new_with_bincode(
+        Instruction::new_with_wincode(
             id(),
             &UpgradeableLoaderInstruction::DeployWithMaxDataLen { max_data_len },
             vec![
@@ -272,7 +274,7 @@ pub fn deploy_with_max_program_len(
     ])
 }
 
-#[cfg(feature = "bincode")]
+#[cfg(feature = "wincode")]
 /// Returns the instructions required to upgrade a program.
 pub fn upgrade(
     program_address: &Pubkey,
@@ -281,7 +283,7 @@ pub fn upgrade(
     spill_address: &Pubkey,
 ) -> Instruction {
     let programdata_address = get_program_data_address(program_address);
-    Instruction::new_with_bincode(
+    Instruction::new_with_wincode(
         id(),
         &UpgradeableLoaderInstruction::Upgrade,
         vec![
@@ -312,14 +314,14 @@ pub fn is_set_authority_checked_instruction(instruction_data: &[u8]) -> bool {
     !instruction_data.is_empty() && 7 == instruction_data[0]
 }
 
-#[cfg(feature = "bincode")]
+#[cfg(feature = "wincode")]
 /// Returns the instructions required to set a buffers's authority.
 pub fn set_buffer_authority(
     buffer_address: &Pubkey,
     current_authority_address: &Pubkey,
     new_authority_address: &Pubkey,
 ) -> Instruction {
-    Instruction::new_with_bincode(
+    Instruction::new_with_wincode(
         id(),
         &UpgradeableLoaderInstruction::SetAuthority,
         vec![
@@ -330,7 +332,7 @@ pub fn set_buffer_authority(
     )
 }
 
-#[cfg(feature = "bincode")]
+#[cfg(feature = "wincode")]
 /// Returns the instructions required to set a buffers's authority. If using this instruction, the new authority
 /// must sign.
 pub fn set_buffer_authority_checked(
@@ -338,7 +340,7 @@ pub fn set_buffer_authority_checked(
     current_authority_address: &Pubkey,
     new_authority_address: &Pubkey,
 ) -> Instruction {
-    Instruction::new_with_bincode(
+    Instruction::new_with_wincode(
         id(),
         &UpgradeableLoaderInstruction::SetAuthorityChecked,
         vec![
@@ -349,7 +351,7 @@ pub fn set_buffer_authority_checked(
     )
 }
 
-#[cfg(feature = "bincode")]
+#[cfg(feature = "wincode")]
 /// Returns the instructions required to set a program's authority.
 pub fn set_upgrade_authority(
     program_address: &Pubkey,
@@ -365,10 +367,10 @@ pub fn set_upgrade_authority(
     if let Some(address) = new_authority_address {
         metas.push(AccountMeta::new_readonly(*address, false));
     }
-    Instruction::new_with_bincode(id(), &UpgradeableLoaderInstruction::SetAuthority, metas)
+    Instruction::new_with_wincode(id(), &UpgradeableLoaderInstruction::SetAuthority, metas)
 }
 
-#[cfg(feature = "bincode")]
+#[cfg(feature = "wincode")]
 /// Returns the instructions required to set a program's authority. If using this instruction, the new authority
 /// must sign.
 pub fn set_upgrade_authority_checked(
@@ -383,14 +385,14 @@ pub fn set_upgrade_authority_checked(
         AccountMeta::new_readonly(*current_authority_address, true),
         AccountMeta::new_readonly(*new_authority_address, true),
     ];
-    Instruction::new_with_bincode(
+    Instruction::new_with_wincode(
         id(),
         &UpgradeableLoaderInstruction::SetAuthorityChecked,
         metas,
     )
 }
 
-#[cfg(feature = "bincode")]
+#[cfg(feature = "wincode")]
 /// Returns the instructions required to close a buffer account
 pub fn close(
     close_address: &Pubkey,
@@ -405,7 +407,7 @@ pub fn close(
     )
 }
 
-#[cfg(feature = "bincode")]
+#[cfg(feature = "wincode")]
 /// Returns the instructions required to close program, buffer, or uninitialized account
 pub fn close_any(
     close_address: &Pubkey,
@@ -423,10 +425,10 @@ pub fn close_any(
     if let Some(program_address) = program_address {
         metas.push(AccountMeta::new(*program_address, false));
     }
-    Instruction::new_with_bincode(id(), &UpgradeableLoaderInstruction::Close, metas)
+    Instruction::new_with_wincode(id(), &UpgradeableLoaderInstruction::Close, metas)
 }
 
-#[cfg(feature = "bincode")]
+#[cfg(feature = "wincode")]
 /// Returns the instruction required to extend the size of a program's
 /// executable data account.
 ///
@@ -450,14 +452,14 @@ pub fn extend_program(
         ));
         metas.push(AccountMeta::new(*payer_address, true));
     }
-    Instruction::new_with_bincode(
+    Instruction::new_with_wincode(
         id(),
         &UpgradeableLoaderInstruction::ExtendProgram { additional_bytes },
         metas,
     )
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "wincode"))]
 mod tests {
     use super::*;
 
@@ -468,7 +470,7 @@ mod tests {
         F: Fn(&[u8]) -> bool,
     {
         let result = is_instruction_fn(
-            &bincode::serialize(&UpgradeableLoaderInstruction::InitializeBuffer).unwrap(),
+            &wincode::serialize(&UpgradeableLoaderInstruction::InitializeBuffer).unwrap(),
         );
         let expected_result = matches!(
             expected_instruction,
@@ -477,7 +479,7 @@ mod tests {
         assert_eq!(expected_result, result);
 
         let result = is_instruction_fn(
-            &bincode::serialize(&UpgradeableLoaderInstruction::Write {
+            &wincode::serialize(&UpgradeableLoaderInstruction::Write {
                 offset: 0,
                 bytes: vec![],
             })
@@ -493,7 +495,7 @@ mod tests {
         assert_eq!(expected_result, result);
 
         let result = is_instruction_fn(
-            &bincode::serialize(&UpgradeableLoaderInstruction::DeployWithMaxDataLen {
+            &wincode::serialize(&UpgradeableLoaderInstruction::DeployWithMaxDataLen {
                 max_data_len: 0,
             })
             .unwrap(),
@@ -505,12 +507,12 @@ mod tests {
         assert_eq!(expected_result, result);
 
         let result =
-            is_instruction_fn(&bincode::serialize(&UpgradeableLoaderInstruction::Upgrade).unwrap());
+            is_instruction_fn(&wincode::serialize(&UpgradeableLoaderInstruction::Upgrade).unwrap());
         let expected_result = matches!(expected_instruction, UpgradeableLoaderInstruction::Upgrade);
         assert_eq!(expected_result, result);
 
         let result = is_instruction_fn(
-            &bincode::serialize(&UpgradeableLoaderInstruction::SetAuthority).unwrap(),
+            &wincode::serialize(&UpgradeableLoaderInstruction::SetAuthority).unwrap(),
         );
         let expected_result = matches!(
             expected_instruction,
@@ -519,7 +521,7 @@ mod tests {
         assert_eq!(expected_result, result);
 
         let result =
-            is_instruction_fn(&bincode::serialize(&UpgradeableLoaderInstruction::Close).unwrap());
+            is_instruction_fn(&wincode::serialize(&UpgradeableLoaderInstruction::Close).unwrap());
         let expected_result = matches!(expected_instruction, UpgradeableLoaderInstruction::Close);
         assert_eq!(expected_result, result);
     }
