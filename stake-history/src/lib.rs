@@ -13,6 +13,7 @@ pub const MAX_ENTRIES: usize = 512; // it should never take as many as 512 epoch
     feature = "serde",
     derive(serde_derive::Deserialize, serde_derive::Serialize)
 )]
+#[cfg_attr(feature = "wincode", derive(wincode::SchemaRead, wincode::SchemaWrite))]
 #[derive(Debug, PartialEq, Eq, Default, Clone)]
 pub struct StakeHistoryEntry {
     pub effective: u64,    // effective stake at this epoch
@@ -62,6 +63,7 @@ impl std::ops::Add for StakeHistoryEntry {
     feature = "serde",
     derive(serde_derive::Deserialize, serde_derive::Serialize)
 )]
+#[cfg_attr(feature = "wincode", derive(wincode::SchemaRead, wincode::SchemaWrite))]
 #[derive(Debug, PartialEq, Eq, Default, Clone)]
 pub struct StakeHistory(Vec<(Epoch, StakeHistoryEntry)>);
 
