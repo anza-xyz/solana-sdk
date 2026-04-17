@@ -94,4 +94,34 @@ mod tests {
         // shared by bincode and wincode
         abi_digest = "AgNkEpErnFBuy7iTAEUUAC1fbvokEkhbsfFnx4DtXAvY",
     );
+
+    // Verify abi_digest-only: no API digest, should still run ABI test.
+    #[derive(wincode::SchemaWrite)]
+    #[cfg_attr(
+        feature = "frozen-abi",
+        derive(solana_frozen_abi_macro::StableAbi),
+        solana_frozen_abi_macro::frozen_abi(
+            abi_digest = "AgNkEpErnFBuy7iTAEUUAC1fbvokEkhbsfFnx4DtXAvY",
+            abi_serializer = "wincode"
+        )
+    )]
+    struct TestStructAbiDigestOnly {
+        a: u64,
+        b: bool,
+        c: [u8; 32],
+        d: (u8, u8),
+    }
+
+    impl crate::rand::distr::Distribution<TestStructAbiDigestOnly>
+        for crate::rand::distr::StandardUniform
+    {
+        fn sample<R: crate::rand::Rng + ?Sized>(&self, rng: &mut R) -> TestStructAbiDigestOnly {
+            TestStructAbiDigestOnly {
+                a: rng.random(),
+                b: rng.random(),
+                c: rng.random(),
+                d: rng.random(),
+            }
+        }
+    }
 }

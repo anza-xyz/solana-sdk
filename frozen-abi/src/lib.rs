@@ -1,8 +1,7 @@
 //! # StableAbi
 //!
 //! The `StableAbi` is an optional extension to `frozen-abi` that provides functionality for
-//! detecting unintended encoding changes. It is designed to be used in conjunction with the
-//! mandatory `AbiExample`.
+//! detecting unintended encoding changes.
 //!
 //! ## How it works?
 //!

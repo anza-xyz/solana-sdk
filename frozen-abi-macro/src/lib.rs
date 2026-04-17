@@ -311,37 +311,41 @@ pub fn derive_abi_enum_visitor(item: TokenStream) -> TokenStream {
 fn quote_for_test(
     test_mod_ident: &Ident,
     type_name: &Ident,
-    expected_api_digest: &str,
+    expected_api_digest: Option<&str>,
     expected_abi_digest: Option<&str>,
     abi_serializer: AbiSerializer,
 ) -> TokenStream2 {
-    let test_api = quote! {
-            #[test]
-            fn test_api_digest() {
-                use ::solana_frozen_abi::abi_example::{AbiExample, AbiEnumVisitor};
+    let test_api = if expected_api_digest.is_some() {
+        quote! {
+                #[test]
+                fn test_api_digest() {
+                    use ::solana_frozen_abi::abi_example::{AbiExample, AbiEnumVisitor};
 
-                let mut digester = ::solana_frozen_abi::abi_digester::AbiDigester::create();
-                let example = <#type_name>::example();
-                let result = <_>::visit_for_abi(&&example, &mut digester);
-                let mut hash = digester.finalize();
-                if result.is_err() {
-                    ::std::eprintln!("Error: digest error: {:#?}", result);
-                }
-                result.unwrap();
-                let actual_digest = ::std::format!("{}", hash);
-                if ::std::env::var("SOLANA_ABI_BULK_UPDATE").is_ok() {
-                    if #expected_api_digest != actual_digest {
-                        ::std::eprintln!("sed -i -e 's/{}/{}/g' $(git grep --files-with-matches frozen_abi)", #expected_api_digest, hash);
+                    let mut digester = ::solana_frozen_abi::abi_digester::AbiDigester::create();
+                    let example = <#type_name>::example();
+                    let result = <_>::visit_for_abi(&&example, &mut digester);
+                    let mut hash = digester.finalize();
+                    if result.is_err() {
+                        ::std::eprintln!("Error: digest error: {:#?}", result);
                     }
-                    ::std::eprintln!("Warning: Not testing the abi digest under SOLANA_ABI_BULK_UPDATE!");
-                } else {
-                    if let Ok(dir) = ::std::env::var("SOLANA_ABI_DUMP_DIR") {
-                        assert_eq!(#expected_api_digest, actual_digest, "Possibly API changed? Examine the diff in SOLANA_ABI_DUMP_DIR!: \n$ diff -u {}/*{}* {}/*{}*", dir, #expected_api_digest, dir, actual_digest);
+                    result.unwrap();
+                    let actual_digest = ::std::format!("{}", hash);
+                    if ::std::env::var("SOLANA_ABI_BULK_UPDATE").is_ok() {
+                        if #expected_api_digest != actual_digest {
+                            ::std::eprintln!("sed -i -e 's/{}/{}/g' $(git grep --files-with-matches frozen_abi)", #expected_api_digest, hash);
+                        }
+                        ::std::eprintln!("Warning: Not testing the abi digest under SOLANA_ABI_BULK_UPDATE!");
                     } else {
-                        assert_eq!(#expected_api_digest, actual_digest, "Possibly API changed? Confirm the diff by rerunning before and after this test failed with SOLANA_ABI_DUMP_DIR!");
+                        if let Ok(dir) = ::std::env::var("SOLANA_ABI_DUMP_DIR") {
+                            assert_eq!(#expected_api_digest, actual_digest, "Possibly API changed? Examine the diff in SOLANA_ABI_DUMP_DIR!: \n$ diff -u {}/*{}* {}/*{}*", dir, #expected_api_digest, dir, actual_digest);
+                        } else {
+                            assert_eq!(#expected_api_digest, actual_digest, "Possibly API changed? Confirm the diff by rerunning before and after this test failed with SOLANA_ABI_DUMP_DIR!");
+                        }
                     }
                 }
-            }
+        }
+    } else {
+        TokenStream2::new()
     };
 
     let abi_serialize_expr = match abi_serializer {
@@ -393,7 +397,7 @@ fn test_mod_name(type_name: &Ident) -> Ident {
 #[cfg(feature = "frozen-abi")]
 fn frozen_abi_type_alias(
     input: ItemType,
-    expected_api_digest: &str,
+    expected_api_digest: Option<&str>,
     expected_abi_digest: Option<&str>,
     abi_serializer: AbiSerializer,
 ) -> TokenStream {
@@ -415,7 +419,7 @@ fn frozen_abi_type_alias(
 #[cfg(feature = "frozen-abi")]
 fn frozen_abi_struct_type(
     input: ItemStruct,
-    expected_api_digest: &str,
+    expected_api_digest: Option<&str>,
     expected_abi_digest: Option<&str>,
     abi_serializer: AbiSerializer,
 ) -> TokenStream {
@@ -483,7 +487,7 @@ fn quote_sample_variant(
 #[cfg(feature = "frozen-abi")]
 fn frozen_abi_enum_type(
     input: ItemEnum,
-    expected_api_digest: &str,
+    expected_api_digest: Option<&str>,
     expected_abi_digest: Option<&str>,
     abi_serializer: AbiSerializer,
 ) -> TokenStream {
@@ -533,32 +537,32 @@ pub fn frozen_abi(attrs: TokenStream, item: TokenStream) -> TokenStream {
     });
     parse_macro_input!(attrs with attrs_parser);
 
-    let Some(api_expected_digest) = api_expected_digest else {
+    if api_expected_digest.is_none() && abi_expected_digest.is_none() {
         return Error::new_spanned(
             TokenStream2::from(item),
-            "missing required attribute: #[frozen_abi(api_digest = \"...\")]",
+            "missing required attribute: #[frozen_abi(api_digest = \"...\" or abi_digest = \"...\")]",
         )
         .to_compile_error()
         .into();
-    };
+    }
 
     let item = parse_macro_input!(item as Item);
     match item {
         Item::Struct(input) => frozen_abi_struct_type(
             input,
-            &api_expected_digest,
+            api_expected_digest.as_deref(),
             abi_expected_digest.as_deref(),
             abi_serializer,
         ),
         Item::Enum(input) => frozen_abi_enum_type(
             input,
-            &api_expected_digest,
+            api_expected_digest.as_deref(),
             abi_expected_digest.as_deref(),
             abi_serializer,
         ),
         Item::Type(input) => frozen_abi_type_alias(
             input,
-            &api_expected_digest,
+            api_expected_digest.as_deref(),
             abi_expected_digest.as_deref(),
             abi_serializer,
         ),
