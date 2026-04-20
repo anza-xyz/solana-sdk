@@ -3419,6 +3419,7 @@ dependencies = [
  "criterion",
  "ff",
  "group",
+ "hex",
  "pairing",
  "rand 0.8.5",
  "rayon",
