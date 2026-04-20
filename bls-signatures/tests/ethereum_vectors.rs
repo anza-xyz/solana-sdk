@@ -99,13 +99,12 @@ fn deterministic_batch_verify(
         return false;
     }
 
-    let pubkeys = match pubkeys
+    let Some(pubkeys) = pubkeys
         .iter()
         .map(|pubkey| parse_g1(pubkey))
         .collect::<Option<Vec<_>>>()
-    {
-        Some(pubkeys) => pubkeys,
-        None => return false,
+    else {
+        return false;
     };
     if pubkeys
         .iter()
@@ -114,24 +113,25 @@ fn deterministic_batch_verify(
         return false;
     }
 
-    let signatures = match signatures
+    let Some(signatures) = signatures
         .iter()
         .map(|signature| parse_g2(signature))
         .collect::<Option<Vec<_>>>()
-    {
-        Some(signatures) => signatures,
-        None => return false,
+    else {
+        return false;
     };
 
     let scalars = (1..=pubkeys.len())
         .map(|index| Scalar::from(index as u64))
         .collect::<Vec<_>>();
 
+    #[allow(clippy::arithmetic_side_effects)]
     let weighted_pubkeys = pubkeys
         .iter()
         .zip(&scalars)
         .map(|(pubkey, scalar)| G1Affine::from(G1Projective::from(*pubkey) * scalar))
         .collect::<Vec<_>>();
+    #[allow(clippy::arithmetic_side_effects)]
     let weighted_signature = signatures
         .iter()
         .zip(&scalars)
@@ -149,12 +149,12 @@ fn deterministic_batch_verify(
             )))
         })
         .collect::<Vec<_>>();
+    #[allow(clippy::arithmetic_side_effects)]
     let neg_g1_generator: G1Affine = (-G1Projective::generator()).into();
 
     let mut terms = weighted_pubkeys
         .iter()
         .zip(&hashed_messages)
-        .map(|(pubkey, message)| (pubkey, message))
         .collect::<Vec<_>>();
     terms.push((&neg_g1_generator, &weighted_signature_prepared));
 
