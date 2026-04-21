@@ -315,7 +315,7 @@ fn quote_for_test(
     expected_abi_digest: Option<&str>,
     abi_serializer: AbiSerializer,
 ) -> TokenStream2 {
-    let test_api = if expected_api_digest.is_some() {
+    let test_api = if let Some(expected_api_digest) = expected_api_digest {
         quote! {
                 #[test]
                 fn test_api_digest() {
@@ -357,7 +357,7 @@ fn quote_for_test(
         }
     };
 
-    let test_abi = if expected_abi_digest.is_some() {
+    let test_abi = if let Some(expected_abi_digest) = expected_abi_digest {
         quote! {
             #[test]
             fn test_abi_digest() {
