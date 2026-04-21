@@ -10,6 +10,7 @@ use {
     solana_system_interface::instruction as system_instruction,
     wincode::{
         config::ConfigCore,
+        error::invalid_bool_encoding,
         io::{Reader, Writer},
         ReadResult, SchemaRead, SchemaWrite, TypeMeta, WriteResult,
     },
@@ -228,7 +229,12 @@ unsafe impl<'de, C: ConfigCore, const DEFAULT: bool> SchemaRead<'de, C>
     type Dst = bool;
 
     fn read(mut reader: impl Reader<'de>, dst: &mut MaybeUninit<Self::Dst>) -> ReadResult<()> {
-        let value = reader.take_byte().map(|b| b != 0).unwrap_or(DEFAULT);
+        let value = match reader.take_byte() {
+            Ok(0) => false,
+            Ok(1) => true,
+            Ok(byte) => return Err(invalid_bool_encoding(byte)),
+            Err(_) => DEFAULT,
+        };
         dst.write(value);
         Ok(())
     }
@@ -710,5 +716,36 @@ mod tests {
                 tombstone: false, // <-- Default value
             }
         );
+    }
+
+    /// `OptionalTrailingBool` must reject a trailing byte that is not `0` or `1`.
+    #[test]
+    fn invalid_optional_trailing_bool_byte_errors() {
+        let assert_invalid_trailing_bool = |data: &[u8]| {
+            let err = wincode::deserialize::<UpgradeableLoaderInstruction>(data).unwrap_err();
+            assert!(
+                matches!(err, wincode::ReadError::InvalidBoolEncoding(2)),
+                "expected InvalidBoolEncoding(2), got {err:?}",
+            );
+        };
+
+        // `DeployWithMaxDataLen`
+        let mut data = Vec::new();
+        data.extend_from_slice(&2u32.to_le_bytes()); // Discriminator
+        data.extend_from_slice(&42u64.to_le_bytes()); // max_data_len
+        data.push(2);
+        assert_invalid_trailing_bool(&data);
+
+        // `Upgrade`
+        let mut data = Vec::new();
+        data.extend_from_slice(&3u32.to_le_bytes()); // Discriminator
+        data.push(2);
+        assert_invalid_trailing_bool(&data);
+
+        // `Close`
+        let mut data = Vec::new();
+        data.extend_from_slice(&5u32.to_le_bytes()); // Discriminator
+        data.push(2);
+        assert_invalid_trailing_bool(&data);
     }
 }
