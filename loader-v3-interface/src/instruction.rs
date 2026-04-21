@@ -10,7 +10,6 @@ use {
     solana_system_interface::instruction as system_instruction,
     wincode::{
         config::ConfigCore,
-        error::invalid_bool_encoding,
         io::{Reader, Writer},
         ReadResult, SchemaRead, SchemaWrite, TypeMeta, WriteResult,
     },
@@ -218,7 +217,7 @@ pub enum UpgradeableLoaderInstruction {
 
 /// A wincode schema for a `bool` that may be absent from the end of the
 /// wire payload. On write, the byte is always emitted. On read, an
-/// exhausted reader yields `DEFAULT`.
+/// exhausted reader or any byte other than `0` or `1` yields `DEFAULT`.
 #[cfg(feature = "wincode")]
 pub struct OptionalTrailingBool<const DEFAULT: bool>;
 
@@ -232,8 +231,7 @@ unsafe impl<'de, C: ConfigCore, const DEFAULT: bool> SchemaRead<'de, C>
         let value = match reader.take_byte() {
             Ok(0) => false,
             Ok(1) => true,
-            Ok(byte) => return Err(invalid_bool_encoding(byte)),
-            Err(_) => DEFAULT,
+            _ => DEFAULT,
         };
         dst.write(value);
         Ok(())
@@ -718,34 +716,46 @@ mod tests {
         );
     }
 
-    /// `OptionalTrailingBool` must reject a trailing byte that is not `0` or `1`.
+    /// `OptionalTrailingBool` must treat a trailing byte that is not `0` or
+    /// `1` as the default value.
     #[test]
-    fn invalid_optional_trailing_bool_byte_errors() {
-        let assert_invalid_trailing_bool = |data: &[u8]| {
-            let err = wincode::deserialize::<UpgradeableLoaderInstruction>(data).unwrap_err();
-            assert!(
-                matches!(err, wincode::ReadError::InvalidBoolEncoding(2)),
-                "expected InvalidBoolEncoding(2), got {err:?}",
-            );
-        };
-
+    fn invalid_optional_trailing_bool_byte_decodes_as_default() {
         // `DeployWithMaxDataLen`
         let mut data = Vec::new();
         data.extend_from_slice(&2u32.to_le_bytes()); // Discriminator
         data.extend_from_slice(&42u64.to_le_bytes()); // max_data_len
         data.push(2);
-        assert_invalid_trailing_bool(&data);
+        let decoded: UpgradeableLoaderInstruction = wincode::deserialize(&data).unwrap();
+        assert_eq!(
+            decoded,
+            UpgradeableLoaderInstruction::DeployWithMaxDataLen {
+                max_data_len: 42,
+                close_buffer: true, // Default value
+            }
+        );
 
         // `Upgrade`
         let mut data = Vec::new();
         data.extend_from_slice(&3u32.to_le_bytes()); // Discriminator
         data.push(2);
-        assert_invalid_trailing_bool(&data);
+        let decoded: UpgradeableLoaderInstruction = wincode::deserialize(&data).unwrap();
+        assert_eq!(
+            decoded,
+            UpgradeableLoaderInstruction::Upgrade {
+                close_buffer: true // Default value
+            }
+        );
 
         // `Close`
         let mut data = Vec::new();
         data.extend_from_slice(&5u32.to_le_bytes()); // Discriminator
         data.push(2);
-        assert_invalid_trailing_bool(&data);
+        let decoded: UpgradeableLoaderInstruction = wincode::deserialize(&data).unwrap();
+        assert_eq!(
+            decoded,
+            UpgradeableLoaderInstruction::Close {
+                tombstone: false // Default value
+            }
+        );
     }
 }
