@@ -56,8 +56,8 @@ use {
         compiled_instruction::CompiledInstruction,
         compiled_keys::CompiledKeys,
         v1::{
-            MessageError, TransactionConfig, TransactionConfigMask, DEFAULT_HEAP_SIZE,
-            MAX_ADDRESSES, MAX_HEAP_SIZE, MAX_INSTRUCTIONS, MAX_SIGNATURES,
+            MessageError, TransactionConfig, TransactionConfigMask, MAX_ADDRESSES, MAX_HEAP_SIZE,
+            MAX_INSTRUCTIONS, MAX_SIGNATURES, MIN_HEAP_SIZE,
         },
         AccountKeys, CompileError, MessageHeader,
     },
@@ -468,7 +468,7 @@ impl Message {
                 return Err(MessageError::InvalidHeapSize);
             }
 
-            if !(DEFAULT_HEAP_SIZE..=MAX_HEAP_SIZE).contains(&heap_size) {
+            if !(MIN_HEAP_SIZE..=MAX_HEAP_SIZE).contains(&heap_size) {
                 return Err(MessageError::InvalidHeapSize);
             }
         }
@@ -1083,6 +1083,34 @@ mod tests {
         let mut message = create_test_message();
         message.config.heap_size = Some(1025); // Not a multiple of 1024
         assert_eq!(message.sanitize(), Err(SanitizeError::InvalidValue));
+    }
+
+    #[test]
+    fn sanitize_rejects_heap_size_below_minimum() {
+        let mut message = create_test_message();
+        message.config.heap_size = Some(MIN_HEAP_SIZE - 1);
+        assert_eq!(message.sanitize(), Err(SanitizeError::InvalidValue));
+    }
+
+    #[test]
+    fn sanitize_rejects_heap_size_above_maximum() {
+        let mut message = create_test_message();
+        message.config.heap_size = Some(MAX_HEAP_SIZE + 1);
+        assert_eq!(message.sanitize(), Err(SanitizeError::InvalidValue));
+    }
+
+    #[test]
+    fn sanitize_accepts_minimum_heap_size() {
+        let mut message = create_test_message();
+        message.config.heap_size = Some(MIN_HEAP_SIZE);
+        assert!(message.sanitize().is_ok());
+    }
+
+    #[test]
+    fn sanitize_accepts_maximum_heap_size() {
+        let mut message = create_test_message();
+        message.config.heap_size = Some(MAX_HEAP_SIZE);
+        assert!(message.sanitize().is_ok());
     }
 
     #[test]

@@ -456,13 +456,15 @@ unsafe impl<'de, C: Config> SchemaRead<'de, C> for VersionedMessage {
 mod tests {
     use {
         super::*,
-        crate::{v0::MessageAddressTableLookup, v1::V1_PREFIX},
+        crate::{
+            v0::MessageAddressTableLookup,
+            v1::{MAX_HEAP_SIZE, MIN_HEAP_SIZE, V1_PREFIX},
+        },
         proptest::{
             collection::vec,
             option::of,
             prelude::{any, Just},
             prop_compose, proptest,
-            strategy::Strategy,
         },
         solana_instruction::{AccountMeta, Instruction},
     };
@@ -577,7 +579,7 @@ mod tests {
                 priority_fee in of(any::<u64>()),
                 compute_unit_limit in of(0..=1_400_000u32),
                 loaded_accounts_data_size_limit in of(0..=20_480u32),
-                heap_size in of((0..=32u32).prop_map(|n| n.saturating_mul(1024))),
+                heap_size in of(MIN_HEAP_SIZE..=MAX_HEAP_SIZE),
                 required_signatures in 1..=12u8,
             )
             (

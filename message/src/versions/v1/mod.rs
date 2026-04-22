@@ -31,10 +31,13 @@ pub const MAX_INSTRUCTIONS: u8 = 64;
 /// Maximum number of signatures in a V1 transaction.
 pub const MAX_SIGNATURES: u8 = 12;
 
-/// Default heap size in bytes when not specified (32KB).
+/// Default heap size in bytes when not specified.
 ///
-/// This also represents the minimum heap size.
-pub const DEFAULT_HEAP_SIZE: u32 = 32 * 1024;
+/// This is the same as the minimum heap size.
+pub const DEFAULT_HEAP_SIZE: u32 = MIN_HEAP_SIZE;
+
+/// Minimum heap size in bytes (32KB).
+pub const MIN_HEAP_SIZE: u32 = 32 * 1024;
 
 /// Maximum heap size in bytes (256KB).
 pub const MAX_HEAP_SIZE: u32 = 256 * 1024;
