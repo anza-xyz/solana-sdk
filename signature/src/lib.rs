@@ -116,7 +116,7 @@ impl Signature {
                     small_signatures[len] = Some(signature);
                     small_pubkeys[len] = Some(pubkey);
                     small_messages[len] = Some(message);
-                    len += 1;
+                    len = len.checked_add(1).unwrap();
                 }
                 (None, None, None) => {
                     return small_signatures[..len]
@@ -166,9 +166,7 @@ impl Signature {
         pubkey_bytes.push(next_signature.1);
         message_bytes.push(next_signature.2);
 
-        for ((signature, pubkey), message) in
-            signature_iter.zip(pubkey_iter).zip(message_iter)
-        {
+        for ((signature, pubkey), message) in signature_iter.zip(pubkey_iter).zip(message_iter) {
             signatures.push(signature);
             pubkey_bytes.push(pubkey);
             message_bytes.push(message);
