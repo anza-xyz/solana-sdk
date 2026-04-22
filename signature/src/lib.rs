@@ -15,6 +15,8 @@ extern crate std;
 #[cfg(feature = "alloc")]
 use alloc::vec::Vec;
 use core::error::Error;
+#[cfg(feature = "parallel")]
+use rayon::prelude::*;
 #[cfg(feature = "wincode")]
 use wincode::{SchemaRead, SchemaWrite};
 #[cfg(feature = "serde")]
@@ -87,9 +89,26 @@ impl Signature {
         pubkey_bytes: impl Iterator<Item = &'a [u8]>,
         message_bytes: impl Iterator<Item = &'a [u8]>,
     ) -> bool {
+        // on my laptop, we start to gain improvement over individual verify as long as
+        // we have more than 2 signatures to verify
+        let signatures = signatures.collect::<Vec<_>>();
+        let pubkey_bytes = pubkey_bytes.collect::<Vec<_>>();
         let message_bytes = message_bytes.collect::<Vec<_>>();
-        let mut parsed_signatures = Vec::with_capacity(message_bytes.len());
-        let mut parsed_pubkeys = Vec::with_capacity(message_bytes.len());
+
+        if signatures.len() != pubkey_bytes.len() || signatures.len() != message_bytes.len() {
+            return false;
+        }
+
+        if signatures.is_empty() {
+            return true;
+        }
+
+        if signatures.len() == 1 {
+            return signatures[0].verify(pubkey_bytes[0], message_bytes[0]);
+        }
+
+        let mut parsed_signatures = Vec::with_capacity(signatures.len());
+        let mut parsed_pubkeys = Vec::with_capacity(signatures.len());
 
         for signature in signatures {
             let Ok(signature) = ed25519_dalek::Signature::try_from(signature.0.as_slice()) else {
@@ -105,11 +124,40 @@ impl Signature {
             parsed_pubkeys.push(pubkey);
         }
 
-        // we currently use ed25519-dalek's batch verification.
-        // this may need to be revisited in a future PR.
-        // dalek uses RLCs to do the batch, regardless the size of the batch.
-        // it is possible that for small batches, the overhead of RLCs outweighs the benefits, and a naive batch verification may be faster.
         ed25519_dalek::verify_batch(&message_bytes, &parsed_signatures, &parsed_pubkeys).is_ok()
+    }
+
+    #[cfg(feature = "parallel")]
+    pub fn par_batch_verify<'a>(
+        signatures: impl Iterator<Item = &'a Signature>,
+        pubkey_bytes: impl Iterator<Item = &'a [u8]>,
+        message_bytes: impl Iterator<Item = &'a [u8]>,
+    ) -> bool {
+        let signatures = signatures.collect::<Vec<_>>();
+        let pubkey_bytes = pubkey_bytes.collect::<Vec<_>>();
+        let message_bytes = message_bytes.collect::<Vec<_>>();
+
+        if signatures.len() != pubkey_bytes.len() || signatures.len() != message_bytes.len() {
+            return false;
+        }
+
+        if signatures.is_empty() {
+            return true;
+        }
+
+        let chunk_size = signatures.len().div_ceil(rayon::current_num_threads());
+
+        signatures
+            .par_chunks(chunk_size)
+            .zip(pubkey_bytes.par_chunks(chunk_size))
+            .zip(message_bytes.par_chunks(chunk_size))
+            .all(|((signatures, pubkeys), messages)| {
+                Self::batch_verify(
+                    signatures.iter().copied(),
+                    pubkeys.iter().copied(),
+                    messages.iter().copied(),
+                )
+            })
     }
 }
 
@@ -360,6 +408,37 @@ mod tests {
 
         let bad_messages = [messages[0], b"not-world".as_slice()];
         assert!(!Signature::batch_verify(
+            signatures.iter(),
+            pubkeys.iter().map(|pubkey| pubkey.as_slice()),
+            bad_messages.iter().copied(),
+        ));
+    }
+
+    #[cfg(feature = "parallel")]
+    #[test]
+    fn test_par_batch_verify() {
+        let messages = [b"hello".as_slice(), b"world".as_slice()];
+        let signing_keys = [
+            ed25519_dalek::SigningKey::from_bytes(&[1u8; 32]),
+            ed25519_dalek::SigningKey::from_bytes(&[2u8; 32]),
+        ];
+        let pubkeys = [
+            signing_keys[0].verifying_key().to_bytes(),
+            signing_keys[1].verifying_key().to_bytes(),
+        ];
+        let signatures = [
+            Signature::from(signing_keys[0].sign(messages[0]).to_bytes()),
+            Signature::from(signing_keys[1].sign(messages[1]).to_bytes()),
+        ];
+
+        assert!(Signature::par_batch_verify(
+            signatures.iter(),
+            pubkeys.iter().map(|pubkey| pubkey.as_slice()),
+            messages.iter().copied(),
+        ));
+
+        let bad_messages = [messages[0], b"not-world".as_slice()];
+        assert!(!Signature::par_batch_verify(
             signatures.iter(),
             pubkeys.iter().map(|pubkey| pubkey.as_slice()),
             bad_messages.iter().copied(),
