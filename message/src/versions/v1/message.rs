@@ -56,8 +56,8 @@ use {
         compiled_instruction::CompiledInstruction,
         compiled_keys::CompiledKeys,
         v1::{
-            MessageError, TransactionConfig, TransactionConfigMask, MAX_ADDRESSES,
-            MAX_INSTRUCTIONS, MAX_SIGNATURES,
+            MessageError, TransactionConfig, TransactionConfigMask, DEFAULT_HEAP_SIZE,
+            MAX_ADDRESSES, MAX_HEAP_SIZE, MAX_INSTRUCTIONS, MAX_SIGNATURES,
         },
         AccountKeys, CompileError, MessageHeader,
     },
@@ -462,9 +462,13 @@ impl Message {
             return Err(MessageError::InvalidConfigMask);
         }
 
-        // heap size must be a multiple of 1024
+        // if specified, heap size must be a multiple of 1024 and within valid bounds
         if let Some(heap_size) = self.config.heap_size {
             if heap_size % 1024 != 0 {
+                return Err(MessageError::InvalidHeapSize);
+            }
+
+            if !(DEFAULT_HEAP_SIZE..=MAX_HEAP_SIZE).contains(&heap_size) {
                 return Err(MessageError::InvalidHeapSize);
             }
         }

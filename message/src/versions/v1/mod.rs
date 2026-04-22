@@ -32,7 +32,12 @@ pub const MAX_INSTRUCTIONS: u8 = 64;
 pub const MAX_SIGNATURES: u8 = 12;
 
 /// Default heap size in bytes when not specified (32KB).
-pub const DEFAULT_HEAP_SIZE: u32 = 32_768;
+///
+/// This also represents the minimum heap size.
+pub const DEFAULT_HEAP_SIZE: u32 = 32 * 1024;
+
+/// Maximum heap size in bytes (256KB).
+pub const MAX_HEAP_SIZE: u32 = 256 * 1024;
 
 /// Size of the fixed header portion of a serialized V1 message.
 pub const FIXED_HEADER_SIZE: usize = size_of::<MessageHeader>() // legacy header
