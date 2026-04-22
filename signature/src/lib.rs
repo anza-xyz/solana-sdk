@@ -12,9 +12,9 @@ use core::{
 extern crate alloc;
 #[cfg(feature = "std")]
 extern crate std;
+#[cfg(feature = "alloc")]
+use alloc::vec::Vec;
 use core::error::Error;
-#[cfg(feature = "std")]
-use std::vec::Vec;
 #[cfg(feature = "wincode")]
 use wincode::{SchemaRead, SchemaWrite};
 #[cfg(feature = "serde")]
@@ -80,6 +80,36 @@ impl Signature {
 
     pub fn verify(&self, pubkey_bytes: &[u8], message_bytes: &[u8]) -> bool {
         self.verify_verbose(pubkey_bytes, message_bytes).is_ok()
+    }
+
+    pub fn batch_verify<'a>(
+        signatures: impl Iterator<Item = &'a Signature>,
+        pubkey_bytes: impl Iterator<Item = &'a [u8]>,
+        message_bytes: impl Iterator<Item = &'a [u8]>,
+    ) -> bool {
+        let message_bytes = message_bytes.collect::<Vec<_>>();
+        let mut parsed_signatures = Vec::with_capacity(message_bytes.len());
+        let mut parsed_pubkeys = Vec::with_capacity(message_bytes.len());
+
+        for signature in signatures {
+            let Ok(signature) = ed25519_dalek::Signature::try_from(signature.0.as_slice()) else {
+                return false;
+            };
+            parsed_signatures.push(signature);
+        }
+
+        for pubkey_bytes in pubkey_bytes {
+            let Ok(pubkey) = ed25519_dalek::VerifyingKey::try_from(pubkey_bytes) else {
+                return false;
+            };
+            parsed_pubkeys.push(pubkey);
+        }
+
+        // we currently use ed25519-dalek's batch verification.
+        // this may need to be revisited in a future PR.
+        // dalek uses RLCs to do the batch, regardless the size of the batch.
+        // it is possible that for small batches, the overhead of RLCs outweighs the benefits, and a naive batch verification may be faster.
+        ed25519_dalek::verify_batch(&message_bytes, &parsed_signatures, &parsed_pubkeys).is_ok()
     }
 }
 
@@ -184,6 +214,7 @@ impl FromStr for Signature {
 mod tests {
     use {
         super::*,
+        ed25519_dalek::Signer,
         serde_derive::{Deserialize, Serialize},
         solana_pubkey::Pubkey,
     };
@@ -303,5 +334,35 @@ mod tests {
         );
         // Sanity check: ensure the pointer is the same.
         assert_eq!(signature.as_array().as_ptr(), signature.0.as_ptr());
+    }
+
+    #[test]
+    fn test_batch_verify() {
+        let messages = [b"hello".as_slice(), b"world".as_slice()];
+        let signing_keys = [
+            ed25519_dalek::SigningKey::from_bytes(&[1u8; 32]),
+            ed25519_dalek::SigningKey::from_bytes(&[2u8; 32]),
+        ];
+        let pubkeys = [
+            signing_keys[0].verifying_key().to_bytes(),
+            signing_keys[1].verifying_key().to_bytes(),
+        ];
+        let signatures = [
+            Signature::from(signing_keys[0].sign(messages[0]).to_bytes()),
+            Signature::from(signing_keys[1].sign(messages[1]).to_bytes()),
+        ];
+
+        assert!(Signature::batch_verify(
+            signatures.iter(),
+            pubkeys.iter().map(|pubkey| pubkey.as_slice()),
+            messages.iter().copied(),
+        ));
+
+        let bad_messages = [messages[0], b"not-world".as_slice()];
+        assert!(!Signature::batch_verify(
+            signatures.iter(),
+            pubkeys.iter().map(|pubkey| pubkey.as_slice()),
+            bad_messages.iter().copied(),
+        ));
     }
 }
