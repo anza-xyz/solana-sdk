@@ -12,7 +12,7 @@ use core::{
 extern crate alloc;
 #[cfg(feature = "std")]
 extern crate std;
-#[cfg(feature = "alloc")]
+#[cfg(any(feature = "std", feature = "verify"))]
 use alloc::vec::Vec;
 use core::error::Error;
 #[cfg(feature = "parallel")]

@@ -17,7 +17,10 @@ struct BenchData {
 
 fn create_bench_data(size: usize) -> BenchData {
     let signing_keys: Vec<_> = (0..size)
-        .map(|i| ed25519_dalek::SigningKey::from_bytes(&[i as u8 + 1; 32]))
+        .map(|i| {
+            let byte = u8::try_from(i.checked_add(1).unwrap()).unwrap();
+            ed25519_dalek::SigningKey::from_bytes(&[byte; 32])
+        })
         .collect();
     let messages: Vec<_> = (0..size)
         .map(|i| format!("solana-signature-bench-message-{i}").into_bytes())
