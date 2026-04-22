@@ -7,7 +7,7 @@ use {
     std::vec::Vec,
 };
 
-const BATCH_SIZES: [usize; 8] = [1, 2, 4, 8, 16, 32, 64, 128];
+const BATCH_SIZES: [usize; 10] = [1, 2, 4, 8, 16, 32, 64, 128, 256, 512];
 
 struct BenchData {
     messages: Vec<Vec<u8>>,

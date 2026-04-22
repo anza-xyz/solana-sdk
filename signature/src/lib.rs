@@ -89,36 +89,103 @@ impl Signature {
         pubkey_bytes: impl Iterator<Item = &'a [u8]>,
         message_bytes: impl Iterator<Item = &'a [u8]>,
     ) -> bool {
-        // on my laptop, we start to gain improvement over individual verify as long as
-        // we have more than 2 signatures to verify
-        let signatures = signatures.collect::<Vec<_>>();
-        let pubkey_bytes = pubkey_bytes.collect::<Vec<_>>();
-        let message_bytes = message_bytes.collect::<Vec<_>>();
+        // on my laptop, we start to gain improvement over individual verify
+        // for single-threaded batch: at 2 signatures
+        // for 16 thread parallel batch: at 16 * 16 = 256 signatures
+        #[cfg(not(feature = "parallel"))]
+        const INDIVIDUAL_VERIFY_THRESHOLD: usize = 1;
+        #[cfg(feature = "parallel")]
+        const INDIVIDUAL_VERIFY_THRESHOLD: usize = 8;
 
-        if signatures.len() != pubkey_bytes.len() || signatures.len() != message_bytes.len() {
-            return false;
+        let mut signature_iter = signatures;
+        let mut pubkey_iter = pubkey_bytes;
+        let mut message_iter = message_bytes;
+
+        let mut small_signatures = [None; INDIVIDUAL_VERIFY_THRESHOLD];
+        let mut small_pubkeys = [None; INDIVIDUAL_VERIFY_THRESHOLD];
+        let mut small_messages = [None; INDIVIDUAL_VERIFY_THRESHOLD];
+        let mut len = 0;
+
+        while len < INDIVIDUAL_VERIFY_THRESHOLD {
+            match (
+                signature_iter.next(),
+                pubkey_iter.next(),
+                message_iter.next(),
+            ) {
+                (Some(signature), Some(pubkey), Some(message)) => {
+                    small_signatures[len] = Some(signature);
+                    small_pubkeys[len] = Some(pubkey);
+                    small_messages[len] = Some(message);
+                    len += 1;
+                }
+                (None, None, None) => {
+                    return small_signatures[..len]
+                        .iter()
+                        .zip(small_pubkeys[..len].iter())
+                        .zip(small_messages[..len].iter())
+                        .all(|((signature, pubkey), message)| {
+                            signature.unwrap().verify(pubkey.unwrap(), message.unwrap())
+                        });
+                }
+                _ => return false,
+            }
         }
 
-        if signatures.is_empty() {
-            return true;
-        }
+        let next_signature = match (
+            signature_iter.next(),
+            pubkey_iter.next(),
+            message_iter.next(),
+        ) {
+            (Some(signature), Some(pubkey), Some(message)) => (signature, pubkey, message),
+            (None, None, None) => {
+                return small_signatures
+                    .iter()
+                    .zip(small_pubkeys.iter())
+                    .zip(small_messages.iter())
+                    .all(|((signature, pubkey), message)| {
+                        signature.unwrap().verify(pubkey.unwrap(), message.unwrap())
+                    });
+            }
+            _ => return false,
+        };
 
-        if signatures.len() == 1 {
-            return signatures[0].verify(pubkey_bytes[0], message_bytes[0]);
+        let mut signatures = small_signatures[..len]
+            .iter()
+            .map(|signature| signature.unwrap())
+            .collect::<Vec<_>>();
+        let mut pubkey_bytes = small_pubkeys[..len]
+            .iter()
+            .map(|pubkey| pubkey.unwrap())
+            .collect::<Vec<_>>();
+        let mut message_bytes = small_messages[..len]
+            .iter()
+            .map(|message| message.unwrap())
+            .collect::<Vec<_>>();
+
+        signatures.push(next_signature.0);
+        pubkey_bytes.push(next_signature.1);
+        message_bytes.push(next_signature.2);
+
+        for ((signature, pubkey), message) in
+            signature_iter.zip(pubkey_iter).zip(message_iter)
+        {
+            signatures.push(signature);
+            pubkey_bytes.push(pubkey);
+            message_bytes.push(message);
         }
 
         let mut parsed_signatures = Vec::with_capacity(signatures.len());
         let mut parsed_pubkeys = Vec::with_capacity(signatures.len());
 
-        for signature in signatures {
+        for signature in &signatures {
             let Ok(signature) = ed25519_dalek::Signature::try_from(signature.0.as_slice()) else {
                 return false;
             };
             parsed_signatures.push(signature);
         }
 
-        for pubkey_bytes in pubkey_bytes {
-            let Ok(pubkey) = ed25519_dalek::VerifyingKey::try_from(pubkey_bytes) else {
+        for pubkey_bytes in &pubkey_bytes {
+            let Ok(pubkey) = ed25519_dalek::VerifyingKey::try_from(*pubkey_bytes) else {
                 return false;
             };
             parsed_pubkeys.push(pubkey);
