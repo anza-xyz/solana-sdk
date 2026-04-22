@@ -166,11 +166,11 @@ mod tests {
 
         let attacker_scalar = Scalar::from(7u64);
         let rogue_pubkey = PubkeyProjective(
-            (G1Projective::generator() * attacker_scalar) - PubkeyProjective::from(*honest.public).0,
+            (G1Projective::generator() * attacker_scalar)
+                - PubkeyProjective::from(*honest.public).0,
         );
-        let rogue_pop = ProofOfPossessionProjective(
-            (hashed_payload * attacker_scalar) - honest_pop.0,
-        );
+        let rogue_pop =
+            ProofOfPossessionProjective((hashed_payload * attacker_scalar) - honest_pop.0);
 
         assert!(rogue_pubkey
             .verify_proof_of_possession(&rogue_pop, Some(payload))

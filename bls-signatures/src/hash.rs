@@ -88,7 +88,8 @@ pub(crate) fn hash_pop_to_projective(payload: &[u8]) -> G2Projective {
 }
 
 pub(crate) fn hash_bound_pop_to_projective(payload: &[u8], pubkey_bytes: &[u8]) -> G2Projective {
-    let mut bound_payload = Vec::with_capacity(payload.len() + pubkey_bytes.len());
+    let capacity = payload.len().saturating_add(pubkey_bytes.len());
+    let mut bound_payload = Vec::with_capacity(capacity);
     bound_payload.extend_from_slice(payload);
     bound_payload.extend_from_slice(pubkey_bytes);
     hash_pop_to_projective(&bound_payload)
