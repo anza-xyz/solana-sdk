@@ -70,13 +70,7 @@ impl Keypair {
 
     /// Generate a proof of possession for the given keypair
     pub fn proof_of_possession(&self, payload: Option<&[u8]>) -> ProofOfPossessionProjective {
-        match payload {
-            Some(p) => self.secret.proof_of_possession(Some(p)),
-            None => {
-                let pubkey_bytes = self.public.to_bytes_compressed();
-                self.secret.proof_of_possession(Some(&pubkey_bytes))
-            }
-        }
+        self.secret.proof_of_possession(payload)
     }
 
     /// Sign a message using the provided secret key

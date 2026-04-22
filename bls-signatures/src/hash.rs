@@ -1,5 +1,6 @@
 use {
     crate::proof_of_possession::POP_DST,
+    alloc::vec::Vec,
     blstrs::{G2Affine, G2Prepared, G2Projective},
 };
 
@@ -71,9 +72,9 @@ impl PreparedHashedMessage {
 pub struct HashedPoPPayload(pub(crate) G2Affine);
 
 impl HashedPoPPayload {
-    /// Hash a message to a curve point (G2) and prepare it for verification.
-    pub fn new(payload: &[u8]) -> Self {
-        let point = G2Projective::hash_to_curve(payload, POP_DST, &[]);
+    /// Hash a payload bound to a specific public key for proof-of-possession checks.
+    pub fn new(payload: &[u8], pubkey_bytes: &[u8]) -> Self {
+        let point = hash_bound_pop_to_projective(payload, pubkey_bytes);
         Self(point.into())
     }
 }
@@ -84,4 +85,11 @@ pub(crate) fn hash_message_to_projective(message: &[u8]) -> G2Projective {
 
 pub(crate) fn hash_pop_to_projective(payload: &[u8]) -> G2Projective {
     G2Projective::hash_to_curve(payload, POP_DST, &[])
+}
+
+pub(crate) fn hash_bound_pop_to_projective(payload: &[u8], pubkey_bytes: &[u8]) -> G2Projective {
+    let mut bound_payload = Vec::with_capacity(payload.len() + pubkey_bytes.len());
+    bound_payload.extend_from_slice(payload);
+    bound_payload.extend_from_slice(pubkey_bytes);
+    hash_pop_to_projective(&bound_payload)
 }

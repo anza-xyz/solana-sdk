@@ -23,10 +23,13 @@ mod tests {
     use {
         super::*,
         crate::{
+            hash::hash_pop_to_projective,
             keypair::Keypair,
             pubkey::{Pubkey, PubkeyAffine, PubkeyCompressed, PubkeyProjective, VerifyPop},
         },
+        blstrs::{G1Projective, Scalar},
         core::str::FromStr,
+        group::Group,
         std::string::ToString,
     };
 
@@ -150,6 +153,27 @@ mod tests {
         assert!(keypair
             .public
             .verify_proof_of_possession(&proof_standard, Some(custom_payload))
+            .is_err());
+    }
+
+    #[test]
+    #[allow(clippy::arithmetic_side_effects)]
+    fn test_custom_payload_pop_is_bound_to_pubkey() {
+        let honest = Keypair::new();
+        let payload = b"SIMD-0387-context-data";
+        let honest_pop = honest.proof_of_possession(Some(payload));
+        let hashed_payload = hash_pop_to_projective(payload);
+
+        let attacker_scalar = Scalar::from(7u64);
+        let rogue_pubkey = PubkeyProjective(
+            (G1Projective::generator() * attacker_scalar) - PubkeyProjective::from(*honest.public).0,
+        );
+        let rogue_pop = ProofOfPossessionProjective(
+            (hashed_payload * attacker_scalar) - honest_pop.0,
+        );
+
+        assert!(rogue_pubkey
+            .verify_proof_of_possession(&rogue_pop, Some(payload))
             .is_err());
     }
 

@@ -1,7 +1,7 @@
 use {
     crate::{
         error::BlsError,
-        hash::{hash_message_to_projective, hash_pop_to_projective},
+        hash::{hash_bound_pop_to_projective, hash_message_to_projective},
         proof_of_possession::ProofOfPossessionProjective,
         pubkey::PubkeyProjective,
         signature::SignatureProjective,
@@ -108,13 +108,9 @@ impl SecretKey {
     #[allow(clippy::arithmetic_side_effects)]
     #[allow(clippy::op_ref)]
     pub fn proof_of_possession(&self, payload: Option<&[u8]>) -> ProofOfPossessionProjective {
-        let hashed_point = if let Some(bytes) = payload {
-            hash_pop_to_projective(bytes)
-        } else {
-            let pubkey = PubkeyProjective::from_secret(self);
-            let pubkey_bytes = pubkey.to_bytes_compressed();
-            hash_pop_to_projective(&pubkey_bytes)
-        };
+        let pubkey = PubkeyProjective::from_secret(self);
+        let pubkey_bytes = pubkey.to_bytes_compressed();
+        let hashed_point = hash_bound_pop_to_projective(payload.unwrap_or(&[]), &pubkey_bytes);
         ProofOfPossessionProjective(hashed_point * &self.0)
     }
 

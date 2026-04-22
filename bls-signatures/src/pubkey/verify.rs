@@ -26,12 +26,8 @@ pub trait VerifyPop: AsPubkeyAffine + Sized {
         proof: &P,
         payload: Option<&[u8]>,
     ) -> Result<(), BlsError> {
-        let hashed_pubkey = if let Some(bytes) = payload {
-            HashedPoPPayload::new(bytes)
-        } else {
-            let pubkey_bytes = self.try_as_affine()?.to_bytes_compressed();
-            HashedPoPPayload::new(&pubkey_bytes)
-        };
+        let pubkey_bytes = self.try_as_affine()?.to_bytes_compressed();
+        let hashed_pubkey = HashedPoPPayload::new(payload.unwrap_or(&[]), &pubkey_bytes);
         self.verify_proof_of_possession_pre_hashed(proof, &hashed_pubkey)
     }
 
