@@ -1,10 +1,11 @@
-//! Batch verification for distinct messages.
+//! Aggregate screening for distinct-message signature sets.
 //!
 //! # Security Note: Individual Signature Validity
 //!
-//! The functions in this module verify that an **aggregated** signature is valid for a given set
-//! of public keys and their corresponding messages. However, they **do not guarantee that each
-//! individual signature was valid prior to aggregation**.
+//! The functions in this module perform aggregate screening by grouping signatures by message hash
+//! and checking the aggregate relation per bucket. They verify that an **aggregated** signature is
+//! valid for a given set of public keys and their corresponding messages, but they **do not
+//! guarantee that each individual signature was valid prior to aggregation**.
 //!
 //! Because the verification evaluates the sum of the pairings without using random linear
 //! combinations, it is mathematically possible for individually invalid signatures to cancel
@@ -109,8 +110,12 @@ impl SignatureProjective {
         (grouped_pubkeys_affine, grouped_prepared)
     }
 
-    /// Verifies an aggregated signature over a set of multiple messages and
-    /// public keys.
+    /// Performs aggregate screening of signatures over distinct messages.
+    ///
+    /// This function groups signatures by message hash and verifies the aggregate relation per
+    /// bucket. A successful result does not imply that every individual signature in the set is
+    /// valid. Callers that require per-signer validity guarantees must verify each signature
+    /// individually.
     ///
     /// Note: The term "distinct" indicates that each public key is paired with a
     /// corresponding message from the iterator. It does *not* imply that the
@@ -140,8 +145,11 @@ impl SignatureProjective {
         )
     }
 
-    /// Verifies an aggregated signature over a set of multiple pre-hashed
-    /// messages and public keys.
+    /// Performs aggregate screening of signatures over distinct pre-hashed messages.
+    ///
+    /// This function provides screening guarantees only. A successful result does not imply that
+    /// every individual signature in the set is valid. Callers that require per-signer validity
+    /// guarantees must verify each signature individually.
     ///
     /// Note: The term "distinct" indicates that each public key is paired with a
     /// corresponding message from the iterator. It does *not* imply that the
@@ -169,8 +177,11 @@ impl SignatureProjective {
         )
     }
 
-    /// Verifies an aggregated signature over a set of multiple pre-hashed and
-    /// prepared messages and public keys.
+    /// Performs aggregate screening of signatures over distinct prepared messages.
+    ///
+    /// This function provides screening guarantees only. A successful result does not imply that
+    /// every individual signature in the set is valid. Callers that require per-signer validity
+    /// guarantees must verify each signature individually.
     ///
     /// Note: The term "distinct" indicates that each public key is paired with a
     /// corresponding message from the iterator. It does *not* imply that the
@@ -200,8 +211,11 @@ impl SignatureProjective {
         )
     }
 
-    /// Verifies a pre-aggregated signature over a set of multiple messages and
-    /// public keys.
+    /// Performs aggregate screening with a pre-aggregated signature over distinct messages.
+    ///
+    /// This function provides screening guarantees only. A successful result does not imply that
+    /// every individual signature in the set is valid. Callers that require per-signer validity
+    /// guarantees must verify each signature individually.
     ///
     /// Note: The term "distinct" indicates that each public key is paired with a
     /// corresponding message from the iterator. It does *not* imply that the
@@ -229,8 +243,12 @@ impl SignatureProjective {
         )
     }
 
-    /// Verifies a pre-aggregated signature over a set of multiple pre-hashed
-    /// messages and public keys.
+    /// Performs aggregate screening with a pre-aggregated signature over distinct pre-hashed
+    /// messages.
+    ///
+    /// This function provides screening guarantees only. A successful result does not imply that
+    /// every individual signature in the set is valid. Callers that require per-signer validity
+    /// guarantees must verify each signature individually.
     ///
     /// Note: The term "distinct" indicates that each public key is paired with a
     /// corresponding message from the iterator. It does *not* imply that the
@@ -301,8 +319,12 @@ impl SignatureProjective {
             .ok_or(BlsError::VerificationFailed)
     }
 
-    /// Verifies a pre-aggregated signature over a set of multiple pre-hashed and
-    /// prepared messages and public keys.
+    /// Performs aggregate screening with a pre-aggregated signature over distinct prepared
+    /// messages.
+    ///
+    /// This function provides screening guarantees only. A successful result does not imply that
+    /// every individual signature in the set is valid. Callers that require per-signer validity
+    /// guarantees must verify each signature individually.
     ///
     /// Entries with identical message hashes are merged internally by summing
     /// their public keys, reducing pairing terms.
@@ -375,8 +397,11 @@ impl SignatureProjective {
             .ok_or(BlsError::VerificationFailed)
     }
 
-    /// Verifies a set of signatures over a set of multiple messages and
-    /// public keys in parallel.
+    /// Performs aggregate screening of signatures over distinct messages in parallel.
+    ///
+    /// This function provides screening guarantees only. A successful result does not imply that
+    /// every individual signature in the set is valid. Callers that require per-signer validity
+    /// guarantees must verify each signature individually.
     ///
     /// Note: The term "distinct" indicates that each public key is paired with a
     /// corresponding message from the slice. It does *not* imply that the messages
@@ -409,8 +434,11 @@ impl SignatureProjective {
         )
     }
 
-    /// Verifies a set of signatures over a set of distinct pre-hashed messages
-    /// and public keys in parallel.
+    /// Performs aggregate screening of signatures over distinct pre-hashed messages in parallel.
+    ///
+    /// This function provides screening guarantees only. A successful result does not imply that
+    /// every individual signature in the set is valid. Callers that require per-signer validity
+    /// guarantees must verify each signature individually.
     ///
     /// Note: The term "distinct" indicates that each public key is paired with a
     /// corresponding message from the slice. It does *not* imply that the messages
@@ -439,8 +467,11 @@ impl SignatureProjective {
         )
     }
 
-    /// Verifies a set of signatures over a set of distinct pre-hashed and
-    /// prepared messages and public keys in parallel.
+    /// Performs aggregate screening of signatures over distinct prepared messages in parallel.
+    ///
+    /// This function provides screening guarantees only. A successful result does not imply that
+    /// every individual signature in the set is valid. Callers that require per-signer validity
+    /// guarantees must verify each signature individually.
     ///
     /// Note: The term "distinct" indicates that each public key is paired with a
     /// corresponding message from the slice. It does *not* imply that the messages
@@ -475,8 +506,12 @@ impl SignatureProjective {
         )
     }
 
-    /// In parallel, verifies a pre-aggregated signature over a set of distinct
-    /// messages and public keys.
+    /// Performs aggregate screening in parallel with a pre-aggregated signature over distinct
+    /// messages.
+    ///
+    /// This function provides screening guarantees only. A successful result does not imply that
+    /// every individual signature in the set is valid. Callers that require per-signer validity
+    /// guarantees must verify each signature individually.
     ///
     /// Note: The term "distinct" indicates that each public key is paired with a
     /// corresponding message from the slice. It does *not* imply that the messages
@@ -508,8 +543,12 @@ impl SignatureProjective {
         )
     }
 
-    /// In parallel, verifies a pre-aggregated signature over a set of distinct
-    /// pre-hashed messages and public keys.
+    /// Performs aggregate screening in parallel with a pre-aggregated signature over distinct
+    /// pre-hashed messages.
+    ///
+    /// This function provides screening guarantees only. A successful result does not imply that
+    /// every individual signature in the set is valid. Callers that require per-signer validity
+    /// guarantees must verify each signature individually.
     ///
     /// Note: The term "distinct" indicates that each public key is paired with a
     /// corresponding message from the slice. It does *not* imply that the messages
@@ -582,8 +621,12 @@ impl SignatureProjective {
             .ok_or(BlsError::VerificationFailed)
     }
 
-    /// In parallel, verifies a pre-aggregated signature over a set of distinct
-    /// pre-hashed and prepared messages and public keys.
+    /// Performs aggregate screening in parallel with a pre-aggregated signature over distinct
+    /// prepared messages.
+    ///
+    /// This function provides screening guarantees only. A successful result does not imply that
+    /// every individual signature in the set is valid. Callers that require per-signer validity
+    /// guarantees must verify each signature individually.
     ///
     /// Entries with identical message hashes are merged internally by summing
     /// their public keys, reducing pairing terms.

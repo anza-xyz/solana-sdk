@@ -8,8 +8,8 @@
 //! - **Points** (`SignatureProjective`, `SignatureAffine`): For cryptographic operations.
 //!
 //! The module includes highly optimized multi-miller loop logic for verifying
-//! aggregated signatures over both shared messages (multisig) and distinct
-//! messages (batch verification).
+//! aggregated signatures over shared messages (multisig) and for aggregate
+//! screening over distinct-message signature sets.
 //!
 //! # Organization
 //! - `bytes`: Raw byte definitions and base64 string conversions.
@@ -19,8 +19,8 @@
 //! - `aggregate`: Methods for combining multiple signatures into a single aggregate signature.
 //! - `verify`: Multisig verification (Verifying multiple public keys against a **single**
 //!   shared message).
-//! - `verify_distinct`: Batch verification (Verifying multiple public keys against **multiple**
-//!   distinct messages).
+//! - `verify_distinct`: Aggregate screening (Screening multiple public keys against **multiple**
+//!   distinct messages without implying per-signer validity).
 
 #[cfg(not(target_os = "solana"))]
 pub mod aggregate;

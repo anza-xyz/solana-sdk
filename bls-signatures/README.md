@@ -2,7 +2,7 @@
 
 This crate provides an implementation of BLS (Boneh-Lynn-Shacham) signatures over the BLS12-381 elliptic curve.
 
-It is primarily intended for use in the Solana Alpenglow consensus protocol, but it is general enough to be used in any Rust application requiring BLS signatures, threshold cryptography, or batch verification. Under the hood, it uses the `blst` library as its cryptographic backend.
+It is primarily intended for use in the Solana Alpenglow consensus protocol, but it is general enough to be used in any Rust application requiring BLS signatures, threshold cryptography, or aggregate screening of distinct-message signature sets. Under the hood, it uses the `blst` library as its cryptographic backend.
 
 ---
 
@@ -10,7 +10,8 @@ It is primarily intended for use in the Solana Alpenglow consensus protocol, but
 
 - **Multiple Point Representations:** Convert seamlessly between serialized Bytes (`Signature`), Compressed Bytes (`SignatureCompressed`), Projective points (`SignatureProjective` optimized for fast aggregation), and Affine points (`SignatureAffine` optimized for pairings). The same representations exist for Public Keys and Proofs of Possession.
 - **Ergonomic Verification:** Verify signatures bi-directionally (from the public key or the signature) using any representation type via the `VerifySignature` and `VerifiableSignature` traits.
-- **Aggregate & Batch Verification:** Optimized multi-miller loop algorithms for verifying aggregated signatures against shared messages (multisig) or multiple distinct messages (batch verification).
+- **Aggregate Verification & Screening:** Optimized multi-miller loop algorithms for verifying aggregated signatures against shared messages (multisig) or screening multiple distinct-message signatures via aggregate relations.
+- Supports aggregate screening of distinct-message signature sets. Note that `verify_distinct` and its variants provide screening guarantees only and do not imply individual signature validity per signer. See the API documentation for details.
 - **Parallelization:** Optional `rayon` integration to speed up multi-scalar multiplications (MSMs) and heavy verification loops.
 - **Rogue-Key Attack Prevention:** Type-safe wrappers like `PopVerified` ensure that aggregation only occurs with keys that have proven their Proof of Possession.
 
