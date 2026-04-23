@@ -8,7 +8,7 @@ use {
     },
     blst::{blst_keygen, blst_scalar},
     blstrs::Scalar,
-    core::ptr,
+    core::{ptr, sync::atomic},
     ff::Field,
     rand::rngs::OsRng,
     zeroize::{Zeroize, ZeroizeOnDrop, Zeroizing},
@@ -36,8 +36,9 @@ impl core::fmt::Debug for SecretKey {
 impl Zeroize for SecretKey {
     fn zeroize(&mut self) {
         unsafe {
-            core::ptr::write_volatile(&mut self.0, Scalar::ZERO);
+            ptr::write_volatile(&mut self.0, Scalar::ZERO);
         }
+        atomic::compiler_fence(atomic::Ordering::SeqCst);
     }
 }
 
@@ -51,7 +52,7 @@ impl ZeroizeOnDrop for SecretKey {}
 
 impl SecretKey {
     /// Parses a canonical, non-zero secret scalar from little-endian bytes.
-    fn parse_scalar(bytes: &[u8; BLS_SECRET_KEY_SIZE]) -> Result<Scalar, BlsError> {
+    fn parse_scalar(bytes: &Zeroizing<[u8; BLS_SECRET_KEY_SIZE]>) -> Result<Scalar, BlsError> {
         let scalar: Option<Scalar> = Scalar::from_bytes_le(bytes).into();
         let scalar = scalar.ok_or(BlsError::FieldDecode)?;
         if bool::from(scalar.is_zero()) {
@@ -82,7 +83,8 @@ impl SecretKey {
                 0,
             );
         }
-        Self::parse_scalar(&scalar.b).map(Self)
+        let bytes = Zeroizing::new(scalar.b);
+        Self::parse_scalar(&bytes).map(Self)
     }
 
     /// Derive a `BlsSecretKey` from a Solana signer
@@ -133,8 +135,8 @@ impl TryFrom<&[u8]> for SecretKey {
         if bytes.len() != BLS_SECRET_KEY_SIZE {
             return Err(BlsError::ParseFromBytes);
         }
-        // unwrap safe due to the length check above
-        Self::parse_scalar(bytes.try_into().unwrap()).map(Self)
+        let bytes = Zeroizing::new(<[u8; BLS_SECRET_KEY_SIZE]>::try_from(bytes).unwrap());
+        Self::parse_scalar(&bytes).map(Self)
     }
 }
 
@@ -143,5 +145,11 @@ impl From<&SecretKey> for [u8; BLS_SECRET_KEY_SIZE] {
         // WARNING: The returned buffer contains raw secret-key bytes. Callers should zeroize it
         // as soon as they are done using it.
         secret_key.0.to_bytes_le()
+    }
+}
+
+impl From<&SecretKey> for Zeroizing<[u8; BLS_SECRET_KEY_SIZE]> {
+    fn from(secret_key: &SecretKey) -> Self {
+        Zeroizing::new(secret_key.0.to_bytes_le())
     }
 }
