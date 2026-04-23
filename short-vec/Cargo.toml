@@ -16,17 +16,23 @@ targets = ["x86_64-unknown-linux-gnu"]
 default = ["serde"]
 serde = ["dep:serde_core"]
 frozen-abi = ["dep:solana-frozen-abi", "dep:solana-frozen-abi-macro"]
+wincode = ["dep:wincode"]
 
 [dependencies]
 serde_core = { workspace = true, optional = true }
 solana-frozen-abi = { workspace = true, optional = true, features = ["frozen-abi"] }
 solana-frozen-abi-macro = { workspace = true, optional = true, features = ["frozen-abi"] }
+wincode = { workspace = true, optional = true }
 
 [dev-dependencies]
 assert_matches = { workspace = true }
 bincode = { workspace = true }
+proptest = { workspace = true }
+serde = { workspace = true }
+serde_derive = { workspace = true }
 serde_json = { workspace = true }
-solana-short-vec = { path = ".", features = ["serde"] }
+solana-short-vec = { path = ".", features = ["serde", "wincode"] }
+wincode = { workspace = true, features = ["alloc", "derive"] }
 
 [lints]
 workspace = true

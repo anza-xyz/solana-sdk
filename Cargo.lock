@@ -4504,11 +4504,15 @@ version = "3.2.0"
 dependencies = [
  "assert_matches",
  "bincode",
+ "proptest",
+ "serde",
  "serde_core",
+ "serde_derive",
  "serde_json",
  "solana-frozen-abi",
  "solana-frozen-abi-macro",
  "solana-short-vec 3.2.0",
+ "wincode",
 ]
 
 [[package]]
