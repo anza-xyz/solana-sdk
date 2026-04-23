@@ -579,7 +579,9 @@ mod tests {
                 priority_fee in of(any::<u64>()),
                 compute_unit_limit in of(0..=1_400_000u32),
                 loaded_accounts_data_size_limit in of(0..=20_480u32),
-                heap_size in of(MIN_HEAP_SIZE..=MAX_HEAP_SIZE),
+                // heap size must be a multiple of 1024 and between MIN_HEAP_SIZE
+                // and MAX_HEAP_SIZE if specified.
+                heap_size in of(MIN_HEAP_SIZE.saturating_div(1024)..=MAX_HEAP_SIZE.saturating_div(1024)),
                 required_signatures in 1..=12u8,
             )
             (
@@ -598,7 +600,7 @@ mod tests {
                 priority_fee in Just(priority_fee),
                 compute_unit_limit in Just(compute_unit_limit),
                 loaded_accounts_data_size_limit in Just(loaded_accounts_data_size_limit),
-                heap_size in Just(heap_size),
+                heap_size in Just(heap_size.map(|size| size.saturating_mul(1024))),
                 required_signatures in Just(required_signatures),
             ) -> TestMessageData
         {
