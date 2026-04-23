@@ -4504,6 +4504,7 @@ version = "3.2.0"
 dependencies = [
  "assert_matches",
  "bincode",
+ "criterion",
  "proptest",
  "serde",
  "serde_core",

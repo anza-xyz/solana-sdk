@@ -27,12 +27,18 @@ wincode = { workspace = true, optional = true }
 [dev-dependencies]
 assert_matches = { workspace = true }
 bincode = { workspace = true }
+criterion = { workspace = true }
 proptest = { workspace = true }
 serde = { workspace = true }
 serde_derive = { workspace = true }
 serde_json = { workspace = true }
 solana-short-vec = { path = ".", features = ["serde", "wincode"] }
 wincode = { workspace = true, features = ["alloc", "derive"] }
+
+[[bench]]
+name = "short_u16"
+harness = false
+required-features = ["wincode"]
 
 [lints]
 workspace = true
