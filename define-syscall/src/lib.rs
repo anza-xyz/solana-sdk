@@ -9,7 +9,7 @@ pub mod definitions;
 ))]
 #[macro_export]
 macro_rules! define_syscall {
-    ($(#[$attr:meta])* fn $name:ident($($arg:ident: $typ:ty),*) -> $ret:ty) => {
+    ($(#[$attr:meta])* fn $name:ident($($arg:ident: $typ:ty),* $(,)?) -> $ret:ty) => {
         $(#[$attr])*
         #[inline]
         pub unsafe fn $name($($arg: $typ),*) -> $ret {
@@ -24,7 +24,7 @@ macro_rules! define_syscall {
         }
 
     };
-    ($(#[$attr:meta])* fn $name:ident($($arg:ident: $typ:ty),*)) => {
+    ($(#[$attr:meta])* fn $name:ident($($arg:ident: $typ:ty),* $(,)?)) => {
         define_syscall!($(#[$attr])* fn $name($($arg: $typ),*) -> ());
     }
 }
@@ -35,13 +35,13 @@ macro_rules! define_syscall {
 )))]
 #[macro_export]
 macro_rules! define_syscall {
-    ($(#[$attr:meta])* fn $name:ident($($arg:ident: $typ:ty),*) -> $ret:ty) => {
+    ($(#[$attr:meta])* fn $name:ident($($arg:ident: $typ:ty),* $(,)?) -> $ret:ty) => {
         extern "C" {
             $(#[$attr])*
             pub fn $name($($arg: $typ),*) -> $ret;
         }
     };
-    ($(#[$attr:meta])* fn $name:ident($($arg:ident: $typ:ty),*)) => {
+    ($(#[$attr:meta])* fn $name:ident($($arg:ident: $typ:ty),* $(,)?)) => {
         define_syscall!($(#[$attr])* fn $name($($arg: $typ),*) -> ());
     }
 }
