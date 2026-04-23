@@ -124,7 +124,7 @@ impl From<&Keypair> for [u8; BLS_KEYPAIR_SIZE] {
         // WARNING: `bytes` contains raw secret-key material. Callers should zeroize the returned
         // buffer as soon as they are done using it.
         let mut bytes = [0u8; BLS_KEYPAIR_SIZE];
-        let secret_bytes = Zeroizing::new(Into::<[u8; BLS_SECRET_KEY_SIZE]>::into(&keypair.secret));
+        let secret_bytes: Zeroizing<[u8; BLS_SECRET_KEY_SIZE]> = (&keypair.secret).into();
         bytes[..BLS_SECRET_KEY_SIZE].copy_from_slice(secret_bytes.as_slice());
         bytes[BLS_SECRET_KEY_SIZE..].copy_from_slice(&keypair.public.to_bytes_uncompressed());
         bytes

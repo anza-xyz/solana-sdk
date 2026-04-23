@@ -131,23 +131,30 @@ impl SecretKey {
 
 impl TryFrom<&[u8]> for SecretKey {
     type Error = BlsError;
-    fn try_from(bytes: &[u8]) -> Result<Self, Self::Error> {
-        if bytes.len() != BLS_SECRET_KEY_SIZE {
+    fn try_from(src: &[u8]) -> Result<Self, Self::Error> {
+        if src.len() != BLS_SECRET_KEY_SIZE {
             return Err(BlsError::ParseFromBytes);
         }
-        let bytes = Zeroizing::new(<[u8; BLS_SECRET_KEY_SIZE]>::try_from(bytes).unwrap());
+        let mut bytes = Zeroizing::new([0u8; BLS_SECRET_KEY_SIZE]);
+        bytes.copy_from_slice(src);
         Self::parse_scalar(&bytes).map(Self)
     }
 }
 
-impl From<&SecretKey> for [u8; BLS_SECRET_KEY_SIZE] {
-    fn from(secret_key: &SecretKey) -> Self {
-        // WARNING: The returned buffer contains raw secret-key bytes. Callers should zeroize it
-        // as soon as they are done using it.
-        secret_key.0.to_bytes_le()
-    }
-}
-
+/// Converts a secret key into a zeroizing little-endian byte buffer.
+///
+/// If a caller explicitly needs a plain `[u8; BLS_SECRET_KEY_SIZE]`, they can
+/// copy it out of the zeroizing wrapper:
+///
+/// ```
+/// use zeroize::Zeroizing;
+/// use solana_bls_signatures::secret_key::{SecretKey, BLS_SECRET_KEY_SIZE};
+///
+/// let secret_key = SecretKey::new();
+/// let zeroizing_bytes: Zeroizing<[u8; BLS_SECRET_KEY_SIZE]> = (&secret_key).into();
+/// let mut raw_bytes = [0u8; BLS_SECRET_KEY_SIZE];
+/// raw_bytes.copy_from_slice(zeroizing_bytes.as_slice());
+/// ```
 impl From<&SecretKey> for Zeroizing<[u8; BLS_SECRET_KEY_SIZE]> {
     fn from(secret_key: &SecretKey) -> Self {
         Zeroizing::new(secret_key.0.to_bytes_le())
