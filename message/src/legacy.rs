@@ -29,9 +29,10 @@ use {
 #[cfg(feature = "wincode")]
 use {
     core::mem::MaybeUninit,
+    solana_short_vec::ShortU16,
     wincode::{
-        config::Config, containers, io::Reader, len::ShortU16, ReadResult, SchemaRead,
-        SchemaReadContext, SchemaWrite,
+        config::Config, containers, io::Reader, ReadResult, SchemaRead, SchemaReadContext,
+        SchemaWrite,
     },
 };
 

@@ -3987,7 +3987,7 @@ dependencies = [
  "solana-nonce",
  "solana-sanitize",
  "solana-sdk-ids",
- "solana-short-vec 3.2.1",
+ "solana-short-vec",
  "solana-system-interface",
  "solana-transaction-error",
  "static_assertions",
@@ -4179,7 +4179,7 @@ dependencies = [
  "solana-serde-varint",
  "solana-serialize-utils",
  "solana-sha256-hasher",
- "solana-short-vec 3.2.1",
+ "solana-short-vec",
  "solana-slot-hashes",
  "solana-slot-history",
  "solana-stable-layout",
@@ -4316,7 +4316,7 @@ dependencies = [
  "solana-seed-phrase",
  "solana-serde",
  "solana-serde-varint",
- "solana-short-vec 3.2.1",
+ "solana-short-vec",
  "solana-shred-version",
  "solana-signature",
  "solana-signer",
@@ -4463,7 +4463,7 @@ dependencies = [
  "rand 0.9.2",
  "serde",
  "serde_derive",
- "solana-short-vec 3.2.1",
+ "solana-short-vec",
 ]
 
 [[package]]
@@ -4501,12 +4501,6 @@ dependencies = [
 
 [[package]]
 name = "solana-short-vec"
-version = "3.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "de3bd991c2cc415291c86bb0b6b4d53e93d13bb40344e4c5a2884e0e4f5fa93f"
-
-[[package]]
-name = "solana-short-vec"
 version = "3.2.1"
 dependencies = [
  "assert_matches",
@@ -4519,7 +4513,7 @@ dependencies = [
  "serde_json",
  "solana-frozen-abi",
  "solana-frozen-abi-macro",
- "solana-short-vec 3.2.1",
+ "solana-short-vec",
  "wincode",
 ]
 
@@ -4552,7 +4546,7 @@ dependencies = [
  "solana-frozen-abi-macro",
  "solana-pubkey",
  "solana-sanitize",
- "solana-short-vec 3.2.1",
+ "solana-short-vec",
  "solana-signature",
  "wincode",
 ]
@@ -4741,7 +4735,7 @@ dependencies = [
  "solana-sanitize",
  "solana-sdk-ids",
  "solana-sha256-hasher",
- "solana-short-vec 3.2.1",
+ "solana-short-vec",
  "solana-signature",
  "solana-signer",
  "solana-system-interface",
@@ -4796,7 +4790,7 @@ dependencies = [
  "solana-sdk-ids",
  "solana-serde-varint",
  "solana-serialize-utils",
- "solana-short-vec 3.2.1",
+ "solana-short-vec",
  "solana-system-interface",
  "solana-vote-interface",
  "test-case",
@@ -5493,7 +5487,6 @@ dependencies = [
  "pastey",
  "proc-macro2",
  "quote",
- "solana-short-vec 3.2.0",
  "thiserror 2.0.18",
  "wincode-derive",
 ]

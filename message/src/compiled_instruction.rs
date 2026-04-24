@@ -2,9 +2,12 @@
 use serde_derive::{Deserialize, Serialize};
 #[cfg(feature = "frozen-abi")]
 use solana_frozen_abi_macro::AbiExample;
-#[cfg(feature = "wincode")]
-use wincode::{containers, len::ShortU16, SchemaRead, SchemaWrite};
 use {solana_address::Address, solana_sanitize::Sanitize};
+#[cfg(feature = "wincode")]
+use {
+    solana_short_vec::ShortU16,
+    wincode::{containers, SchemaRead, SchemaWrite},
+};
 
 /// A compact encoding of an instruction.
 ///

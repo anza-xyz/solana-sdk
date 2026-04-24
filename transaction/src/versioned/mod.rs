@@ -12,12 +12,12 @@ use {
 use {
     core::mem::MaybeUninit,
     solana_message::{v1::SIGNATURE_SIZE, MESSAGE_VERSION_PREFIX},
+    solana_short_vec::ShortU16,
     solana_signer::{signers::Signers, SignerError},
     wincode::{
         config::Config,
         containers, context,
         io::{Reader, Writer},
-        len::ShortU16,
         ReadError, ReadResult, SchemaRead, SchemaReadContext, SchemaWrite, UninitBuilder,
         WriteResult,
     },

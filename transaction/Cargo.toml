@@ -38,6 +38,7 @@ verify = ["blake3", "solana-signature/verify"]
 wincode = [
     "dep:solana-signer",
     "dep:wincode",
+    "solana-short-vec/wincode",
     "solana-message/wincode",
     "solana-signature/wincode",
 ]
@@ -58,7 +59,7 @@ solana-short-vec = { workspace = true, optional = true }
 solana-signature = { workspace = true }
 solana-signer = { workspace = true, optional = true }
 solana-transaction-error = { workspace = true }
-wincode = { workspace = true, optional = true, features = ["solana-short-vec", "alloc"] }
+wincode = { workspace = true, optional = true, features = ["alloc"] }
 
 [dev-dependencies]
 anyhow = { workspace = true }

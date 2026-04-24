@@ -128,8 +128,9 @@ pub use {
 #[cfg(feature = "wincode")]
 pub use {
     solana_hash::Hash,
+    solana_short_vec::ShortU16,
     solana_signer::{signers::Signers, SignerError},
-    wincode::{containers, len::ShortU16, SchemaRead, SchemaWrite},
+    wincode::{containers, SchemaRead, SchemaWrite},
 };
 use {
     solana_message::inline_nonce::is_advance_nonce_instruction_data,

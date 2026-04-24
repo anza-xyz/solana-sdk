@@ -35,7 +35,12 @@ serde = [
     "solana-hash/serde",
     "solana-short-vec/serde",
 ]
-wincode = ["dep:wincode", "solana-hash/wincode", "solana-address/wincode"]
+wincode = [
+    "dep:wincode",
+    "solana-short-vec/wincode",
+    "solana-hash/wincode",
+    "solana-address/wincode",
+]
 
 [dependencies]
 blake3 = { workspace = true, features = ["traits-preview"], optional = true }
@@ -51,7 +56,7 @@ solana-sanitize = { workspace = true }
 solana-sdk-ids = { workspace = true }
 solana-short-vec = { workspace = true, optional = true }
 solana-transaction-error = { workspace = true }
-wincode = { workspace = true, optional = true, features = ["std", "solana-short-vec"] }
+wincode = { workspace = true, optional = true, features = ["std"] }
 
 [dev-dependencies]
 anyhow = { workspace = true }

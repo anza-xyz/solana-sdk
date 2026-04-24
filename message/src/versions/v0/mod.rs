@@ -14,8 +14,6 @@ pub use loaded::*;
 use serde_derive::{Deserialize, Serialize};
 #[cfg(feature = "frozen-abi")]
 use solana_frozen_abi_macro::AbiExample;
-#[cfg(feature = "wincode")]
-use wincode::{containers, len::ShortU16, SchemaRead, SchemaWrite};
 use {
     crate::{
         compiled_instruction::CompiledInstruction,
@@ -28,6 +26,11 @@ use {
     solana_sanitize::SanitizeError,
     solana_sdk_ids::bpf_loader_upgradeable,
     std::collections::HashSet,
+};
+#[cfg(feature = "wincode")]
+use {
+    solana_short_vec::ShortU16,
+    wincode::{containers, SchemaRead, SchemaWrite},
 };
 
 mod loaded;
