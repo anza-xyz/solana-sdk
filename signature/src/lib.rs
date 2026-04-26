@@ -115,6 +115,15 @@ impl Signature {
 
 #[cfg(any(test, feature = "batch-verify"))]
 impl Signature {
+    /// Batch-verifies signatures over their corresponding public keys and
+    /// messages.
+    ///
+    /// Each iterator item is a tuple of `(signature, pubkey_bytes,
+    /// message_bytes)`, where `signature` is the Ed25519 signature to verify,
+    /// `pubkey_bytes` is the signer's public key, and `message_bytes` is the
+    /// exact message that was signed. Returns `false` if any signature fails to
+    /// verify, any public key or signature cannot be parsed, or batch
+    /// verification fails.
     pub fn batch_verify<'a>(
         signature_data: impl Iterator<Item = (&'a Signature, &'a [u8], &'a [u8])>,
     ) -> bool {
@@ -195,6 +204,13 @@ impl Signature {
     }
 
     #[cfg(feature = "parallel")]
+    /// Parallel batch-verifies signatures over their corresponding public keys
+    /// and messages.
+    ///
+    /// Each iterator item is a tuple of `(signature, pubkey_bytes,
+    /// message_bytes)`, where `signature` is the Ed25519 signature to verify,
+    /// `pubkey_bytes` is the signer's public key, and `message_bytes` is the
+    /// exact message that was signed.
     pub fn par_batch_verify<'a>(
         signature_data: impl Iterator<Item = (&'a Signature, &'a [u8], &'a [u8])>,
     ) -> bool {
