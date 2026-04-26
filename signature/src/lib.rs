@@ -8,11 +8,11 @@ use core::{
     fmt,
     str::{from_utf8_unchecked, FromStr},
 };
-#[cfg(feature = "alloc")]
+#[cfg(any(test, feature = "alloc"))]
 extern crate alloc;
 #[cfg(feature = "std")]
 extern crate std;
-#[cfg(any(feature = "std", feature = "verify"))]
+#[cfg(any(test, feature = "std", feature = "batch-verify"))]
 use alloc::vec::Vec;
 use core::error::Error;
 #[cfg(feature = "parallel")]
@@ -83,90 +83,71 @@ impl Signature {
     pub fn verify(&self, pubkey_bytes: &[u8], message_bytes: &[u8]) -> bool {
         self.verify_verbose(pubkey_bytes, message_bytes).is_ok()
     }
+}
 
+#[cfg(any(test, feature = "batch-verify"))]
+impl Signature {
     pub fn batch_verify<'a>(
-        signatures: impl Iterator<Item = &'a Signature>,
-        pubkey_bytes: impl Iterator<Item = &'a [u8]>,
-        message_bytes: impl Iterator<Item = &'a [u8]>,
+        signature_data: impl Iterator<Item = (&'a Signature, &'a [u8], &'a [u8])>,
     ) -> bool {
-        // on my laptop, we start to gain improvement over individual verify
-        // for single-threaded batch: at 2 signatures
-        // for 16 thread parallel batch: at 16 * 16 = 256 signatures
+        // Empirical benchmarks indicate that batch verification outperforms
+        // individual verification starting at 2 signatures for single-threaded
+        // execution, and at approximately 256 signatures for highly parallel
+        // environments (for example, 16-thread execution). These thresholds can
+        // be tuned further based on future profiling and experimentation.
         #[cfg(not(feature = "parallel"))]
         const INDIVIDUAL_VERIFY_THRESHOLD: usize = 1;
         #[cfg(feature = "parallel")]
         const INDIVIDUAL_VERIFY_THRESHOLD: usize = 8;
 
-        let mut signature_iter = signatures;
-        let mut pubkey_iter = pubkey_bytes;
-        let mut message_iter = message_bytes;
+        let mut signature_iter = signature_data;
 
         let mut small_signatures = [None; INDIVIDUAL_VERIFY_THRESHOLD];
-        let mut small_pubkeys = [None; INDIVIDUAL_VERIFY_THRESHOLD];
-        let mut small_messages = [None; INDIVIDUAL_VERIFY_THRESHOLD];
         let mut len = 0;
 
         while len < INDIVIDUAL_VERIFY_THRESHOLD {
-            match (
-                signature_iter.next(),
-                pubkey_iter.next(),
-                message_iter.next(),
-            ) {
-                (Some(signature), Some(pubkey), Some(message)) => {
+            match signature_iter.next() {
+                Some(signature) => {
                     small_signatures[len] = Some(signature);
-                    small_pubkeys[len] = Some(pubkey);
-                    small_messages[len] = Some(message);
                     len = len.checked_add(1).unwrap();
                 }
-                (None, None, None) => {
-                    return small_signatures[..len]
-                        .iter()
-                        .zip(small_pubkeys[..len].iter())
-                        .zip(small_messages[..len].iter())
-                        .all(|((signature, pubkey), message)| {
-                            signature.unwrap().verify(pubkey.unwrap(), message.unwrap())
-                        });
+                None => {
+                    return small_signatures[..len].iter().all(|signature| {
+                        let (signature, pubkey, message) = signature.unwrap();
+                        signature.verify(pubkey, message)
+                    });
                 }
-                _ => return false,
             }
         }
 
-        let next_signature = match (
-            signature_iter.next(),
-            pubkey_iter.next(),
-            message_iter.next(),
-        ) {
-            (Some(signature), Some(pubkey), Some(message)) => (signature, pubkey, message),
-            (None, None, None) => {
-                return small_signatures
-                    .iter()
-                    .zip(small_pubkeys.iter())
-                    .zip(small_messages.iter())
-                    .all(|((signature, pubkey), message)| {
-                        signature.unwrap().verify(pubkey.unwrap(), message.unwrap())
-                    });
+        let next_signature = match signature_iter.next() {
+            Some(signature) => signature,
+            None => {
+                return small_signatures.iter().all(|signature| {
+                    let (signature, pubkey, message) = signature.unwrap();
+                    signature.verify(pubkey, message)
+                });
             }
-            _ => return false,
         };
 
         let mut signatures = small_signatures[..len]
             .iter()
-            .map(|signature| signature.unwrap())
+            .map(|signature| signature.unwrap().0)
             .collect::<Vec<_>>();
-        let mut pubkey_bytes = small_pubkeys[..len]
+        let mut pubkey_bytes = small_signatures[..len]
             .iter()
-            .map(|pubkey| pubkey.unwrap())
+            .map(|signature| signature.unwrap().1)
             .collect::<Vec<_>>();
-        let mut message_bytes = small_messages[..len]
+        let mut message_bytes = small_signatures[..len]
             .iter()
-            .map(|message| message.unwrap())
+            .map(|signature| signature.unwrap().2)
             .collect::<Vec<_>>();
 
         signatures.push(next_signature.0);
         pubkey_bytes.push(next_signature.1);
         message_bytes.push(next_signature.2);
 
-        for ((signature, pubkey), message) in signature_iter.zip(pubkey_iter).zip(message_iter) {
+        for (signature, pubkey, message) in signature_iter {
             signatures.push(signature);
             pubkey_bytes.push(pubkey);
             message_bytes.push(message);
@@ -194,17 +175,9 @@ impl Signature {
 
     #[cfg(feature = "parallel")]
     pub fn par_batch_verify<'a>(
-        signatures: impl Iterator<Item = &'a Signature>,
-        pubkey_bytes: impl Iterator<Item = &'a [u8]>,
-        message_bytes: impl Iterator<Item = &'a [u8]>,
+        signature_data: impl Iterator<Item = (&'a Signature, &'a [u8], &'a [u8])>,
     ) -> bool {
-        let signatures = signatures.collect::<Vec<_>>();
-        let pubkey_bytes = pubkey_bytes.collect::<Vec<_>>();
-        let message_bytes = message_bytes.collect::<Vec<_>>();
-
-        if signatures.len() != pubkey_bytes.len() || signatures.len() != message_bytes.len() {
-            return false;
-        }
+        let signatures = signature_data.collect::<Vec<_>>();
 
         if signatures.is_empty() {
             return true;
@@ -214,15 +187,7 @@ impl Signature {
 
         signatures
             .par_chunks(chunk_size)
-            .zip(pubkey_bytes.par_chunks(chunk_size))
-            .zip(message_bytes.par_chunks(chunk_size))
-            .all(|((signatures, pubkeys), messages)| {
-                Self::batch_verify(
-                    signatures.iter().copied(),
-                    pubkeys.iter().copied(),
-                    messages.iter().copied(),
-                )
-            })
+            .all(|signatures| Self::batch_verify(signatures.iter().copied()))
     }
 }
 
@@ -331,6 +296,46 @@ mod tests {
         serde_derive::{Deserialize, Serialize},
         solana_pubkey::Pubkey,
     };
+
+    fn signing_key_from_index(index: usize) -> ed25519_dalek::SigningKey {
+        let key_index = index.checked_add(1).unwrap();
+        let key_index_bytes = key_index.to_le_bytes();
+        let mut bytes = [0; 32];
+        bytes[..key_index_bytes.len()].copy_from_slice(&key_index_bytes);
+        ed25519_dalek::SigningKey::from_bytes(&bytes)
+    }
+
+    fn batch_verify_data(size: usize) -> (Vec<Vec<u8>>, Vec<[u8; 32]>, Vec<Signature>) {
+        let signing_keys: Vec<_> = (0..size).map(signing_key_from_index).collect();
+        let messages: Vec<Vec<u8>> = (0..size)
+            .map(|i| i.checked_add(1).unwrap().to_le_bytes().to_vec())
+            .collect();
+        let pubkeys: Vec<[u8; 32]> = signing_keys
+            .iter()
+            .map(|signing_key| signing_key.verifying_key().to_bytes())
+            .collect();
+        let signatures: Vec<Signature> = signing_keys
+            .iter()
+            .zip(messages.iter())
+            .map(|(signing_key, message)| Signature::from(signing_key.sign(message).to_bytes()))
+            .collect();
+
+        (messages, pubkeys, signatures)
+    }
+
+    fn batch_verify_items<'a>(
+        signatures: &'a [Signature],
+        pubkeys: &'a [[u8; 32]],
+        messages: &'a [Vec<u8>],
+    ) -> impl Iterator<Item = (&'a Signature, &'a [u8], &'a [u8])> {
+        signatures
+            .iter()
+            .zip(pubkeys)
+            .zip(messages)
+            .map(|((signature, pubkey), message)| {
+                (signature, pubkey.as_slice(), message.as_slice())
+            })
+    }
 
     #[test]
     fn test_off_curve_pubkey_verify_fails() {
@@ -451,62 +456,40 @@ mod tests {
 
     #[test]
     fn test_batch_verify() {
-        let messages = [b"hello".as_slice(), b"world".as_slice()];
-        let signing_keys = [
-            ed25519_dalek::SigningKey::from_bytes(&[1u8; 32]),
-            ed25519_dalek::SigningKey::from_bytes(&[2u8; 32]),
-        ];
-        let pubkeys = [
-            signing_keys[0].verifying_key().to_bytes(),
-            signing_keys[1].verifying_key().to_bytes(),
-        ];
-        let signatures = [
-            Signature::from(signing_keys[0].sign(messages[0]).to_bytes()),
-            Signature::from(signing_keys[1].sign(messages[1]).to_bytes()),
-        ];
+        let (messages, pubkeys, signatures) = batch_verify_data(9);
 
-        assert!(Signature::batch_verify(
-            signatures.iter(),
-            pubkeys.iter().map(|pubkey| pubkey.as_slice()),
-            messages.iter().copied(),
-        ));
+        assert!(Signature::batch_verify(batch_verify_items(
+            &signatures,
+            &pubkeys,
+            &messages,
+        )));
 
-        let bad_messages = [messages[0], b"not-world".as_slice()];
-        assert!(!Signature::batch_verify(
-            signatures.iter(),
-            pubkeys.iter().map(|pubkey| pubkey.as_slice()),
-            bad_messages.iter().copied(),
-        ));
+        let mut bad_messages = messages;
+        bad_messages[1] = b"not-world".to_vec();
+        assert!(!Signature::batch_verify(batch_verify_items(
+            &signatures,
+            &pubkeys,
+            &bad_messages,
+        )));
     }
 
     #[cfg(feature = "parallel")]
     #[test]
     fn test_par_batch_verify() {
-        let messages = [b"hello".as_slice(), b"world".as_slice()];
-        let signing_keys = [
-            ed25519_dalek::SigningKey::from_bytes(&[1u8; 32]),
-            ed25519_dalek::SigningKey::from_bytes(&[2u8; 32]),
-        ];
-        let pubkeys = [
-            signing_keys[0].verifying_key().to_bytes(),
-            signing_keys[1].verifying_key().to_bytes(),
-        ];
-        let signatures = [
-            Signature::from(signing_keys[0].sign(messages[0]).to_bytes()),
-            Signature::from(signing_keys[1].sign(messages[1]).to_bytes()),
-        ];
+        let (messages, pubkeys, signatures) = batch_verify_data(9);
 
-        assert!(Signature::par_batch_verify(
-            signatures.iter(),
-            pubkeys.iter().map(|pubkey| pubkey.as_slice()),
-            messages.iter().copied(),
-        ));
+        assert!(Signature::par_batch_verify(batch_verify_items(
+            &signatures,
+            &pubkeys,
+            &messages,
+        )));
 
-        let bad_messages = [messages[0], b"not-world".as_slice()];
-        assert!(!Signature::par_batch_verify(
-            signatures.iter(),
-            pubkeys.iter().map(|pubkey| pubkey.as_slice()),
-            bad_messages.iter().copied(),
-        ));
+        let mut bad_messages = messages;
+        bad_messages[1] = b"not-world".to_vec();
+        assert!(!Signature::par_batch_verify(batch_verify_items(
+            &signatures,
+            &pubkeys,
+            &bad_messages,
+        )));
     }
 }

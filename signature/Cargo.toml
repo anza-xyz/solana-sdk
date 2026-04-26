@@ -18,19 +18,20 @@ rustdoc-args = ["--cfg=docsrs"]
 [features]
 default = ["std", "alloc"]
 alloc = ["wincode?/alloc"]
+batch-verify = ["alloc", "verify", "ed25519-dalek/batch"]
 bytemuck = ["dep:bytemuck", "dep:bytemuck_derive"]
 frozen-abi = ["dep:solana-frozen-abi", "dep:solana-frozen-abi-macro", "std"]
-parallel = ["std", "verify", "dep:rayon"]
+parallel = ["std", "batch-verify", "dep:rayon"]
 rand = ["dep:rand"]
 serde = ["dep:serde", "dep:serde_derive", "dep:serde-big-array"]
 std = ["alloc", "serde?/std", "wincode?/std"]
-verify = ["alloc", "dep:ed25519-dalek"]
+verify = ["dep:ed25519-dalek"]
 wincode = ["dep:wincode"]
 
 [dependencies]
 bytemuck = { workspace = true, optional = true }
 bytemuck_derive = { workspace = true, optional = true }
-ed25519-dalek = { workspace = true, optional = true, features = ["batch"] }
+ed25519-dalek = { workspace = true, optional = true }
 five8 = { workspace = true }
 rand = { workspace = true, optional = true }
 rayon = { workspace = true, optional = true }
@@ -60,4 +61,4 @@ workspace = true
 [[bench]]
 name = "verify"
 harness = false
-required-features = ["verify"]
+required-features = ["batch-verify"]
