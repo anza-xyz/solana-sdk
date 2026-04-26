@@ -147,11 +147,8 @@ impl Signature {
             }
         }
 
-        let next_signature = match signature_iter.next() {
-            Some(signature) => signature,
-            None => {
-                return verify_individual(small_signatures.iter().copied().map(Option::unwrap));
-            }
+        let Some(next_signature) = signature_iter.next() else {
+            return verify_individual(small_signatures.iter().copied().map(Option::unwrap));
         };
 
         let initial_capacity = INDIVIDUAL_VERIFY_THRESHOLD.saturating_add(1);
