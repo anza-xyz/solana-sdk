@@ -45,6 +45,14 @@ fn create_bench_data(size: usize) -> BenchData {
     }
 }
 
+fn signature_data(data: &BenchData) -> impl Iterator<Item = (&Signature, &[u8], &[u8])> {
+    data.signatures
+        .iter()
+        .zip(data.pubkeys.iter())
+        .zip(data.messages.iter())
+        .map(|((signature, pubkey), message)| (signature, pubkey.as_slice(), message.as_slice()))
+}
+
 fn bench_verify(c: &mut Criterion) {
     let mut group = c.benchmark_group("signature_verify");
 
@@ -66,14 +74,7 @@ fn bench_verify(c: &mut Criterion) {
 
         group.bench_with_input(BenchmarkId::new("batch", size), &data, |b, data| {
             b.iter(|| {
-                assert!(Signature::batch_verify(
-                    black_box(data.signatures.iter())
-                        .zip(black_box(data.pubkeys.iter()))
-                        .zip(black_box(data.messages.iter()))
-                        .map(|((signature, pubkey), message)| {
-                            (signature, pubkey.as_slice(), message.as_slice())
-                        }),
-                ));
+                assert!(Signature::batch_verify(black_box(signature_data(data))));
             });
         });
 
@@ -97,14 +98,7 @@ fn bench_verify(c: &mut Criterion) {
         #[cfg(feature = "parallel")]
         group.bench_with_input(BenchmarkId::new("par_batch", size), &data, |b, data| {
             b.iter(|| {
-                assert!(Signature::par_batch_verify(
-                    black_box(data.signatures.iter())
-                        .zip(black_box(data.pubkeys.iter()))
-                        .zip(black_box(data.messages.iter()))
-                        .map(|((signature, pubkey), message)| {
-                            (signature, pubkey.as_slice(), message.as_slice())
-                        }),
-                ));
+                assert!(Signature::par_batch_verify(black_box(signature_data(data))));
             });
         });
     }

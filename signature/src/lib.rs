@@ -32,6 +32,34 @@ pub const SIGNATURE_BYTES: usize = 64;
 /// Maximum string length of a base58 encoded signature
 const MAX_BASE58_SIGNATURE_LEN: usize = 88;
 
+#[cfg(any(test, feature = "batch-verify"))]
+type SignatureData<'a> = (&'a Signature, &'a [u8], &'a [u8]);
+
+#[cfg(any(test, feature = "batch-verify"))]
+fn verify_individual<'a>(mut signature_data: impl Iterator<Item = SignatureData<'a>>) -> bool {
+    signature_data.all(|(signature, pubkey, message)| signature.verify(pubkey, message))
+}
+
+#[cfg(any(test, feature = "batch-verify"))]
+fn push_batch_verification_inputs<'a>(
+    (signature, pubkey_bytes, message): SignatureData<'a>,
+    message_bytes: &mut Vec<&'a [u8]>,
+    parsed_signatures: &mut Vec<ed25519_dalek::Signature>,
+    parsed_pubkeys: &mut Vec<ed25519_dalek::VerifyingKey>,
+) -> bool {
+    let Ok(signature) = ed25519_dalek::Signature::try_from(signature.0.as_slice()) else {
+        return false;
+    };
+    let Ok(pubkey) = ed25519_dalek::VerifyingKey::try_from(pubkey_bytes) else {
+        return false;
+    };
+
+    message_bytes.push(message);
+    parsed_signatures.push(signature);
+    parsed_pubkeys.push(pubkey);
+    true
+}
+
 #[repr(transparent)]
 #[cfg_attr(feature = "frozen-abi", derive(solana_frozen_abi_macro::AbiExample))]
 #[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Hash)]
@@ -112,10 +140,9 @@ impl Signature {
                     len = len.checked_add(1).unwrap();
                 }
                 None => {
-                    return small_signatures[..len].iter().all(|signature| {
-                        let (signature, pubkey, message) = signature.unwrap();
-                        signature.verify(pubkey, message)
-                    });
+                    return verify_individual(
+                        small_signatures[..len].iter().copied().map(Option::unwrap),
+                    );
                 }
             }
         }
@@ -123,51 +150,48 @@ impl Signature {
         let next_signature = match signature_iter.next() {
             Some(signature) => signature,
             None => {
-                return small_signatures.iter().all(|signature| {
-                    let (signature, pubkey, message) = signature.unwrap();
-                    signature.verify(pubkey, message)
-                });
+                return verify_individual(small_signatures.iter().copied().map(Option::unwrap));
             }
         };
 
-        let mut signatures = small_signatures[..len]
-            .iter()
-            .map(|signature| signature.unwrap().0)
-            .collect::<Vec<_>>();
-        let mut pubkey_bytes = small_signatures[..len]
-            .iter()
-            .map(|signature| signature.unwrap().1)
-            .collect::<Vec<_>>();
-        let mut message_bytes = small_signatures[..len]
-            .iter()
-            .map(|signature| signature.unwrap().2)
-            .collect::<Vec<_>>();
+        let initial_capacity = INDIVIDUAL_VERIFY_THRESHOLD.saturating_add(1);
+        let mut message_bytes = Vec::with_capacity(initial_capacity);
+        let mut parsed_signatures = Vec::with_capacity(initial_capacity);
+        let mut parsed_pubkeys = Vec::with_capacity(initial_capacity);
 
-        signatures.push(next_signature.0);
-        pubkey_bytes.push(next_signature.1);
-        message_bytes.push(next_signature.2);
-
-        for (signature, pubkey, message) in signature_iter {
-            signatures.push(signature);
-            pubkey_bytes.push(pubkey);
-            message_bytes.push(message);
+        for signature_data in small_signatures[..len].iter().copied().map(Option::unwrap) {
+            if !push_batch_verification_inputs(
+                signature_data,
+                &mut message_bytes,
+                &mut parsed_signatures,
+                &mut parsed_pubkeys,
+            ) {
+                return false;
+            }
+        }
+        if !push_batch_verification_inputs(
+            next_signature,
+            &mut message_bytes,
+            &mut parsed_signatures,
+            &mut parsed_pubkeys,
+        ) {
+            return false;
         }
 
-        let mut parsed_signatures = Vec::with_capacity(signatures.len());
-        let mut parsed_pubkeys = Vec::with_capacity(signatures.len());
+        let (remaining_lower_bound, _) = signature_iter.size_hint();
+        message_bytes.reserve(remaining_lower_bound);
+        parsed_signatures.reserve(remaining_lower_bound);
+        parsed_pubkeys.reserve(remaining_lower_bound);
 
-        for signature in &signatures {
-            let Ok(signature) = ed25519_dalek::Signature::try_from(signature.0.as_slice()) else {
+        for signature_data in signature_iter {
+            if !push_batch_verification_inputs(
+                signature_data,
+                &mut message_bytes,
+                &mut parsed_signatures,
+                &mut parsed_pubkeys,
+            ) {
                 return false;
-            };
-            parsed_signatures.push(signature);
-        }
-
-        for pubkey_bytes in &pubkey_bytes {
-            let Ok(pubkey) = ed25519_dalek::VerifyingKey::try_from(*pubkey_bytes) else {
-                return false;
-            };
-            parsed_pubkeys.push(pubkey);
+            }
         }
 
         ed25519_dalek::verify_batch(&message_bytes, &parsed_signatures, &parsed_pubkeys).is_ok()
