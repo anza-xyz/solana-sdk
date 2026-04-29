@@ -13,15 +13,22 @@ use {
         parse::{Parse, ParseStream},
         parse_macro_input, parse_str,
         punctuated::Punctuated,
-        Error, Expr, ItemFn, LitInt, LitStr, Token,
+        Error, Expr, ItemFn, LitInt, LitStr, Path, Token,
     },
 };
 
 /// The default buffer size for the logger.
 const DEFAULT_BUFFER_SIZE: &str = "200";
 
+/// The default name of the `solana-program-log` package to search for when
+/// discovering the crate path.
+const PROGRAM_LOG_PACKAGE_NAME: &str = "::solana_program_log";
+
 /// Represents the input arguments to the `log!` macro.
 struct LogArgs {
+    /// The path to the crate where the `Logger` struct is defined.
+    crate_path: Path,
+
     /// The length of the buffer to use for the logger.
     ///
     /// This does not have effect when the literal `str` does
@@ -45,6 +52,10 @@ struct LogArgs {
 
 impl Parse for LogArgs {
     fn parse(input: ParseStream) -> syn::Result<Self> {
+        let crate_path = input.parse::<Path>()?;
+        // Parse the comma after the crat path.
+        input.parse::<Token![,]>()?;
+
         // Optional buffer length.
         let buffer_len = if input.peek(LitInt) {
             let literal = input.parse()?;
@@ -65,6 +76,7 @@ impl Parse for LogArgs {
         };
 
         Ok(LogArgs {
+            crate_path,
             buffer_len,
             format_string,
             args,
@@ -72,7 +84,46 @@ impl Parse for LogArgs {
     }
 }
 
-/// Companion `log!` macro for `solana-program-log`.
+/// Represents the input arguments to the `log_cu_usage` attribute macro.
+struct LogCuUsageArgs {
+    /// Explicitly specify the crate path for the `Logger` struct.
+    crate_path: Path,
+}
+
+impl Parse for LogCuUsageArgs {
+    fn parse(input: ParseStream) -> syn::Result<Self> {
+        if input.is_empty() {
+            return Ok(Self {
+                crate_path: parse_str::<Path>(PROGRAM_LOG_PACKAGE_NAME)?,
+            });
+        }
+
+        // Support for `crate = <PATH>`.
+        if input.peek(Token![crate]) {
+            input.parse::<Token![crate]>()?;
+            input.parse::<Token![=]>()?;
+
+            let crate_path = input.parse::<Path>()?;
+
+            if !input.is_empty() {
+                return Err(input.error("unexpected tokens after `crate = ...`"));
+            }
+
+            return Ok(Self { crate_path });
+        }
+
+        // Support for standalone path.
+        let crate_path = input.parse::<Path>()?;
+
+        if !input.is_empty() {
+            return Err(input.error("unexpected tokens after crate path"));
+        }
+
+        Ok(Self { crate_path })
+    }
+}
+
+/// Companion `log!` macro.
 ///
 /// The macro automates the creation of a `Logger` object to log a message.
 /// It support a limited subset of the [`format!`](https://doc.rust-lang.org/std/fmt/) syntax.
@@ -81,6 +132,7 @@ impl Parse for LogArgs {
 ///
 /// # Arguments
 ///
+/// - `crate_path`: The path to the crate where the `Logger` struct is defined. This is a required argument.
 /// - `buffer_len`: The length of the buffer to use for the logger (default to `200`). This is an optional argument.
 /// - `format_string`: The literal string to log. This string can contain placeholders `{}` to be replaced by the arguments.
 /// - `args`: The arguments to replace the placeholders in the format string. The arguments must implement the `Log` trait.
@@ -88,6 +140,7 @@ impl Parse for LogArgs {
 pub fn log(input: TokenStream) -> TokenStream {
     // Parse the input into a `LogArgs`.
     let LogArgs {
+        crate_path,
         buffer_len,
         format_string,
         args,
@@ -168,7 +221,7 @@ pub fn log(input: TokenStream) -> TokenStream {
                         replaced_parts.push(quote! {
                             logger.append_with_args(
                                 #arg,
-                                &[solana_program_log::logger::Argument::Precision(#precision)]
+                                &[#crate_path::logger::Argument::Precision(#precision)]
                             )
                         });
                     }
@@ -187,7 +240,7 @@ pub fn log(input: TokenStream) -> TokenStream {
                                 replaced_parts.push(quote! {
                                     logger.append_with_args(
                                         #arg,
-                                        &[solana_program_log::logger::Argument::TruncateStart(#size)]
+                                        &[#crate_path::logger::Argument::TruncateStart(#size)]
                                     )
                                 });
                             }
@@ -195,7 +248,7 @@ pub fn log(input: TokenStream) -> TokenStream {
                                 replaced_parts.push(quote! {
                                     logger.append_with_args(
                                         #arg,
-                                        &[solana_program_log::logger::Argument::TruncateEnd(#size)]
+                                        &[#crate_path::logger::Argument::TruncateEnd(#size)]
                                     )
                                 });
                             }
@@ -225,7 +278,7 @@ pub fn log(input: TokenStream) -> TokenStream {
         // Generate the output string as a compile-time constant
         TokenStream::from(quote! {
             {
-                let mut logger = ::solana_program_log::logger::Logger::<#buffer_len>::default();
+                let mut logger = #crate_path::logger::Logger::<#buffer_len>::default();
                 #(#replaced_parts;)*
                 logger.log();
             }
@@ -233,7 +286,7 @@ pub fn log(input: TokenStream) -> TokenStream {
     } else {
         TokenStream::from(quote! {
             {
-                ::solana_program_log::logger::log_message(#format_string.as_bytes());
+                #crate_path::logger::log_message(#format_string.as_bytes());
             }
         })
     }
@@ -272,25 +325,56 @@ pub fn log(input: TokenStream) -> TokenStream {
 /// * [Compute budget](https://github.com/anza-xyz/agave/blob/d88050cda335f87e872eddbdf8506bc063f039d3/program-runtime/src/compute_budget.rs#L150)
 ///
 #[proc_macro_attribute]
-pub fn log_cu_usage(_attr: TokenStream, item: TokenStream) -> TokenStream {
+pub fn log_cu_usage(attr: TokenStream, item: TokenStream) -> TokenStream {
+    let crate_path = parse_macro_input!(attr as LogCuUsageArgs).crate_path;
     let mut input = parse_macro_input!(item as ItemFn);
     let fn_name = &input.sig.ident;
     let block = &input.block;
 
     input.block = syn::parse_quote!({
-        let cu_before = unsafe { ::solana_program_log::logger::remaining_compute_units() };
+        let cu_before = unsafe { #crate_path::logger::remaining_compute_units() };
 
         let __result = (|| #block)();
 
-        let cu_after = unsafe { ::solana_program_log::logger::remaining_compute_units() };
-        let introspection_cost = 102; // 100 - compute budget syscall_base_cost,  2 - extra calculations
+        let cu_after = unsafe { #crate_path::logger::remaining_compute_units() };
+        // 100 (compute budget syscall_base_cost) + 2 (extra calculations)
+        let introspection_cost = 102;
 
         let consumed = cu_before - cu_after - introspection_cost;
 
-        ::solana_program_log::log!("Function {} consumed {} compute units", stringify!(#fn_name), consumed);
+        #crate_path::log!("Function {} consumed {} compute units", stringify!(#fn_name), consumed);
 
         __result
     });
 
     quote!(#input).into()
+}
+
+#[cfg(test)]
+mod tests {
+    use {
+        super::LogCuUsageArgs,
+        syn::{parse_quote, parse_str, Path},
+    };
+
+    #[test]
+    fn log_cu_usage() {
+        let args = parse_str::<LogCuUsageArgs>("").unwrap();
+        let expected: Path = parse_quote!(::solana_program_log);
+        assert_eq!(args.crate_path, expected);
+    }
+
+    #[test]
+    fn log_cu_usage_args_support_standalone_path() {
+        let args = parse_str::<LogCuUsageArgs>("mylog").unwrap();
+        let expected: Path = parse_quote!(mylog);
+        assert_eq!(args.crate_path, expected);
+    }
+
+    #[test]
+    fn log_cu_usage_args_support_crate_equals_path() {
+        let args = parse_str::<LogCuUsageArgs>("crate = another_log").unwrap();
+        let expected: Path = parse_quote!(another_log);
+        assert_eq!(args.crate_path, expected);
+    }
 }
