@@ -119,10 +119,30 @@ pub enum UpgradeableLoaderInstruction {
     /// A program can be updated as long as the program's authority has not been
     /// set to `None`.
     ///
-    /// The Buffer account must contain sufficient lamports to fund the
-    /// ProgramData account to be rent-exempt, any additional lamports left over
-    /// will be transferred to the spill account, leaving the Buffer account
-    /// balance at zero.
+    /// After SIMD-0433 is activated, the ProgramData account is automatically
+    /// resized to match the length of the ELF in the buffer being used to upgrade.
+    /// The account may grow or shrink as needed.
+    ///
+    /// If the new ELF is smaller:
+    ///
+    /// - Surplus lamports are refunded to the spill account.
+    ///
+    /// If the new ELF is larger:
+    ///
+    /// - When `close_buffer` is `true`, the buffer account's lamports and the
+    ///   ProgramData account's existing lamports are combined to meet the new
+    ///   rent-exempt minimum.
+    /// - When `close_buffer` is `false`, the ProgramData account's existing
+    ///   lamports must already meet the new rent-exempt minimum.
+    ///
+    /// If the combined (or existing) lamports are insufficient, the upgrade
+    /// fails with `InsufficientFunds`. Any lamports in excess of the
+    /// rent-exempt minimum are refunded to the spill account.
+    ///
+    /// When invoked via CPI, the 10 KiB per-instruction account growth limit
+    /// still applies. Programs requiring larger growth must upgrade at the
+    /// top level of the transaction or split the growth across multiple
+    /// `ExtendProgram` instructions before upgrading.
     ///
     /// # Account references
     ///   0. `[writable]` The ProgramData account.
