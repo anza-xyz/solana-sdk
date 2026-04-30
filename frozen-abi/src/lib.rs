@@ -15,9 +15,7 @@
 //! The macro would generate the `test_abi_digest` test that verifies binary layout stability:
 //! - Initializes a deterministic random number generator with fixed seed
 //! - Generates 10_000 instances of the type via `StableAbi::random()`
-//! - Serializes each instance with `bincode` by default
-//! - Types using `wincode` can switch the ABI test to `wincode` with
-//!   `#[frozen_abi(abi_serializer = "wincode", ...)]`
+//! - Serializes each instance
 //! - Hashes all serialized bytes together
 //! - Compares the resulting hash against the provided in `abi_digest` attribute
 //!
@@ -28,15 +26,51 @@
 //!
 //! ## Adding StableAbi to a New Type
 //!
-//! For types which implement `Distribution<T>` for `StandardUniform`:
+//! Deriving `StableAbi` adds:
 //!
 //! ```rust,ignore
-//! #[derive(StableAbi)]
-//! #[frozen_abi(abi_digest = "...")]
-//!    struct MyType { ... }
+//! impl ::solana_frozen_abi::stable_abi::StableAbi for MyType {}
 //! ```
 //!
-//! For types which don't, you must provide as well a custom implementation:
+//! The `StableAbi::random()` default implementation calls `rng.random::<MyType>()`, so your type
+//! also needs `Distribution<MyType> for StandardUniform`.
+//!
+//! There are two ways to provide it:
+//!
+//! 1. Derive `StableAbiSample`
+//!
+//! `StableAbiSample` auto-generates `Distribution<MyType> for StandardUniform` and, by default,
+//! tries to sample each field via `rng.random()`.
+//!
+//! ```rust,ignore
+//! #[derive(StableAbi, StableAbiSample)]
+//! #[frozen_abi(abi_digest = "...")]
+//! struct MyType {
+//!     a: u64,
+//!     b: bool,
+//!     c: [u8; 32],
+//!     d: (u8, u8),
+//! }
+//! ```
+//!
+//! Field override is optional and only needed for fields that cannot be sampled with plain
+//! `rng.random()` (for example `Vec<_>` or `HashMap<_, _>`), or when you want a specific shape.
+//!
+//! ```rust,ignore
+//! #[derive(StableAbi, StableAbiSample)]
+//! #[frozen_abi(abi_digest = "...", abi_serializer = "wincode")]
+//! struct MyTypeWithOverride {
+//!     #[stable_abi_sample(with = "rng.random::<[bool; 4]>().to_vec()")]
+//!     a: Vec<bool>,
+//!     #[stable_abi_sample(
+//!         with = "{ let mut m = std::collections::HashMap::new(); m.insert(rng.random(), rng.random()); m }"
+//!     )]
+//!     b: std::collections::HashMap<u64, bool>,
+//!     c: [u8; 32],
+//! }
+//! ```
+//!
+//! 2. Write a manual `Distribution` implementation
 //!
 //! ```rust,ignore
 //! #[cfg(feature = "frozen-abi")]
@@ -52,21 +86,27 @@
 //!    }
 //! ```
 //!
-//! Deriving the `StableAbi` adds the following impl, which comes with the default `random()`
-//! implementation:
+//! For `wincode`-based types, add `abi_serializer = "wincode"` to `#[frozen_abi(...)]`.
 //!
 //! ```rust,ignore
-//! impl ::solana_frozen_abi::stable_abi::StableAbi for MyType {}
+//! #[derive(StableAbi, StableAbiSample, wincode::SchemaWrite)]
+//! #[frozen_abi(
+//!     api_digest = "...",
+//!     abi_digest = "...",
+//!     abi_serializer = "wincode",
+//! )]
+//! struct MyWincodeType {
+//!     a: u64,
+//!     b: bool,
+//! }
 //! ```
-//!
-//! For `wincode`-based types, add `abi_serializer = "wincode"` to `#[frozen_abi(...)]`.
 //!
 //! ## Edge Cases
 //!
 //! 1. It will not detect field name or order changes, nor same size type swaps (e.g., `i64`
 //!    and `u64`). These cases are still covered by `AbiExample`
-//! 2. The implementor must ensure a consistent order of `rng.random()` calls, as any change
-//!    will result in different hash
+//! 2. The implementor must ensure a consistent order of `rng.random()` calls in case of manual implementation
+//!    or with overrides, as any change to these will result in different hash
 //! 3. For collection types with non deterministic ordering (e.g., `HashMap`), it is recommended
 //!    to insert only one item to avoid false positives caused by iteration order differences
 
