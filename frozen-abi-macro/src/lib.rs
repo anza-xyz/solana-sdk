@@ -55,13 +55,34 @@ pub fn derive_stable_abi(item: TokenStream) -> TokenStream {
     expanded.into()
 }
 
+#[cfg(not(feature = "frozen-abi"))]
+#[proc_macro_derive(StableAbiSample, attributes(stable_abi_sample))]
+pub fn derive_stable_abi_sample(_item: TokenStream) -> TokenStream {
+    "".parse().unwrap()
+}
+
+#[cfg(feature = "frozen-abi")]
+#[proc_macro_derive(StableAbiSample, attributes(stable_abi_sample))]
+pub fn derive_stable_abi_sample(item: TokenStream) -> TokenStream {
+    let item = parse_macro_input!(item as Item);
+    let expanded = match item {
+        Item::Struct(input) => derive_stable_abi_sample_struct_type(input),
+        Item::Enum(input) => derive_stable_abi_sample_enum_type(input),
+        _ => Err(Error::new_spanned(
+            item,
+            "StableAbiSample can only be derived for struct or enum",
+        )),
+    };
+    expanded.unwrap_or_else(|err| err.to_compile_error()).into()
+}
+
 #[cfg(feature = "frozen-abi")]
 use proc_macro2::{Span, TokenStream as TokenStream2, TokenTree};
 #[cfg(feature = "frozen-abi")]
 use quote::{quote, ToTokens};
 #[cfg(feature = "frozen-abi")]
 use syn::{
-    parse_macro_input, Attribute, Error, Fields, Ident, Item, ItemEnum, ItemStruct, ItemType,
+    parse_macro_input, Attribute, Error, Expr, Fields, Ident, Item, ItemEnum, ItemStruct, ItemType,
     LitStr, Variant,
 };
 
@@ -112,6 +133,153 @@ fn filter_allow_attrs(attrs: &mut Vec<Attribute>) {
         let ss = &attr.path().segments.first().unwrap().ident.to_string();
         ss.starts_with("allow")
     });
+}
+
+#[cfg(feature = "frozen-abi")]
+fn parse_stable_abi_sample_override(field: &syn::Field) -> Result<Option<TokenStream2>, Error> {
+    let mut override_expr: Option<TokenStream2> = None;
+    for attr in &field.attrs {
+        if !attr.path().is_ident("stable_abi_sample") {
+            continue;
+        }
+        attr.parse_nested_meta(|meta| {
+            if meta.path.is_ident("with") {
+                // reject duplicate `with` on the same field
+                if override_expr.is_some() {
+                    return Err(meta.error("duplicate `with` in `#[stable_abi_sample(...)]`"));
+                }
+                let value = meta.value()?.parse::<LitStr>()?;
+                let expr = value.parse::<Expr>().map_err(|err| {
+                    Error::new(value.span(), format!("invalid `with` expression: {err}"))
+                })?;
+                override_expr = Some(quote! { #expr });
+                Ok(())
+            } else {
+                Err(meta.error("unsupported `stable_abi_sample` option; expected `with = \"...\"`"))
+            }
+        })?;
+    }
+    Ok(override_expr)
+}
+
+#[cfg(feature = "frozen-abi")]
+fn stable_abi_sample_field_expr(field: &syn::Field) -> Result<TokenStream2, Error> {
+    Ok(match parse_stable_abi_sample_override(field)? {
+        Some(expr) => expr,
+        None => quote! { rng.random() },
+    })
+}
+
+#[cfg(feature = "frozen-abi")]
+fn derive_stable_abi_sample_struct_type(input: ItemStruct) -> Result<TokenStream2, Error> {
+    let type_name = &input.ident;
+    let (impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
+    let turbofish = ty_generics.as_turbofish();
+    let sample_expr = match &input.fields {
+        Fields::Named(named_fields) => {
+            let fields = named_fields
+                .named
+                .iter()
+                .map(|field| -> Result<_, Error> {
+                    let field_name = &field.ident;
+                    let field_expr = stable_abi_sample_field_expr(field)?;
+                    Ok(quote! {#field_name: #field_expr,})
+                })
+                .collect::<Result<Vec<_>, _>>()?;
+            quote! {#type_name #turbofish { #(#fields)* }}
+        }
+        Fields::Unnamed(unnamed_fields) => {
+            let fields = unnamed_fields
+                .unnamed
+                .iter()
+                .map(stable_abi_sample_field_expr)
+                .collect::<Result<Vec<_>, _>>()?;
+            quote! {#type_name #turbofish ( #(#fields),* )}
+        }
+        Fields::Unit => quote! {#type_name #turbofish},
+    };
+    Ok(quote! {
+        #[automatically_derived]
+        impl #impl_generics ::solana_frozen_abi::rand::distr::Distribution<#type_name #ty_generics>
+            for ::solana_frozen_abi::rand::distr::StandardUniform
+            #where_clause
+        {
+            fn sample<R: ::solana_frozen_abi::rand::Rng + ?Sized>(
+                &self,
+                rng: &mut R,
+            ) -> #type_name #ty_generics {
+                #sample_expr
+            }
+        }
+    })
+}
+
+#[cfg(feature = "frozen-abi")]
+fn stable_abi_sample_enum_variant_expr(
+    type_name: &Ident,
+    ty_generics: &syn::TypeGenerics,
+    variant: &Variant,
+) -> Result<TokenStream2, Error> {
+    let variant_name = &variant.ident;
+    let turbofish = ty_generics.as_turbofish();
+    match &variant.fields {
+        Fields::Unit => Ok(quote! {#type_name #turbofish::#variant_name}),
+        Fields::Named(variant_fields) => {
+            let fields = variant_fields
+                .named
+                .iter()
+                .map(|field| -> Result<_, Error> {
+                    let field_name = &field.ident;
+                    let field_expr = stable_abi_sample_field_expr(field)?;
+                    Ok(quote! {#field_name: #field_expr,})
+                })
+                .collect::<Result<Vec<_>, _>>()?;
+            Ok(quote! {#type_name #turbofish::#variant_name { #(#fields)* }})
+        }
+        Fields::Unnamed(variant_fields) => {
+            let fields = variant_fields
+                .unnamed
+                .iter()
+                .map(stable_abi_sample_field_expr)
+                .collect::<Result<Vec<_>, _>>()?;
+            Ok(quote! {#type_name #turbofish::#variant_name( #(#fields),* )})
+        }
+    }
+}
+
+#[cfg(feature = "frozen-abi")]
+fn derive_stable_abi_sample_enum_type(input: ItemEnum) -> Result<TokenStream2, Error> {
+    let type_name = &input.ident;
+    let variants = &input.variants;
+    let (impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
+    let variant_count = variants.len();
+    let match_arms = variants
+        .iter()
+        .enumerate()
+        .map(|(index, variant)| -> Result<_, Error> {
+            let sample_expr =
+                stable_abi_sample_enum_variant_expr(type_name, &ty_generics, variant)?;
+            Ok(quote! {#index => #sample_expr})
+        })
+        .collect::<Result<Vec<_>, _>>()?;
+
+    Ok(quote! {
+        #[automatically_derived]
+        impl #impl_generics ::solana_frozen_abi::rand::distr::Distribution<#type_name #ty_generics>
+            for ::solana_frozen_abi::rand::distr::StandardUniform
+            #where_clause
+        {
+            fn sample<R: ::solana_frozen_abi::rand::Rng + ?Sized>(
+                &self,
+                rng: &mut R,
+            ) -> #type_name #ty_generics {
+                match rng.random_range(0..#variant_count) {
+                    #(#match_arms,)*
+                    _ => unreachable!(),
+                }
+            }
+        }
+    })
 }
 
 #[cfg(feature = "frozen-abi")]
@@ -311,8 +479,8 @@ pub fn derive_abi_enum_visitor(item: TokenStream) -> TokenStream {
 fn quote_for_test(
     test_mod_ident: &Ident,
     type_name: &Ident,
-    expected_api_digest: Option<&str>,
-    expected_abi_digest: Option<&str>,
+    expected_api_digest: Option<&Expr>,
+    expected_abi_digest: Option<&Expr>,
     abi_serializer: AbiSerializer,
 ) -> TokenStream2 {
     let test_api = if let Some(expected_api_digest) = expected_api_digest {
@@ -397,8 +565,8 @@ fn test_mod_name(type_name: &Ident) -> Ident {
 #[cfg(feature = "frozen-abi")]
 fn frozen_abi_type_alias(
     input: ItemType,
-    expected_api_digest: Option<&str>,
-    expected_abi_digest: Option<&str>,
+    expected_api_digest: Option<&Expr>,
+    expected_abi_digest: Option<&Expr>,
     abi_serializer: AbiSerializer,
 ) -> TokenStream {
     let type_name = &input.ident;
@@ -419,8 +587,8 @@ fn frozen_abi_type_alias(
 #[cfg(feature = "frozen-abi")]
 fn frozen_abi_struct_type(
     input: ItemStruct,
-    expected_api_digest: Option<&str>,
-    expected_abi_digest: Option<&str>,
+    expected_api_digest: Option<&Expr>,
+    expected_abi_digest: Option<&Expr>,
     abi_serializer: AbiSerializer,
 ) -> TokenStream {
     let type_name = &input.ident;
@@ -487,8 +655,8 @@ fn quote_sample_variant(
 #[cfg(feature = "frozen-abi")]
 fn frozen_abi_enum_type(
     input: ItemEnum,
-    expected_api_digest: Option<&str>,
-    expected_abi_digest: Option<&str>,
+    expected_api_digest: Option<&Expr>,
+    expected_abi_digest: Option<&Expr>,
     abi_serializer: AbiSerializer,
 ) -> TokenStream {
     let type_name = &input.ident;
@@ -509,16 +677,16 @@ fn frozen_abi_enum_type(
 #[cfg(feature = "frozen-abi")]
 #[proc_macro_attribute]
 pub fn frozen_abi(attrs: TokenStream, item: TokenStream) -> TokenStream {
-    let mut api_expected_digest: Option<String> = None;
-    let mut abi_expected_digest: Option<String> = None;
+    let mut api_expected_digest: Option<Expr> = None;
+    let mut abi_expected_digest: Option<Expr> = None;
     let mut abi_serializer = AbiSerializer::Bincode;
 
     let attrs_parser = syn::meta::parser(|meta| {
         if meta.path.is_ident("digest") || meta.path.is_ident("api_digest") {
-            api_expected_digest = Some(meta.value()?.parse::<LitStr>()?.value());
+            api_expected_digest = Some(meta.value()?.parse::<Expr>()?);
             Ok(())
         } else if meta.path.is_ident("abi_digest") {
-            abi_expected_digest = Some(meta.value()?.parse::<LitStr>()?.value());
+            abi_expected_digest = Some(meta.value()?.parse::<Expr>()?);
             Ok(())
         } else if meta.path.is_ident("abi_serializer") {
             abi_serializer = match meta.value()?.parse::<LitStr>()?.value().as_str() {
@@ -550,20 +718,20 @@ pub fn frozen_abi(attrs: TokenStream, item: TokenStream) -> TokenStream {
     match item {
         Item::Struct(input) => frozen_abi_struct_type(
             input,
-            api_expected_digest.as_deref(),
-            abi_expected_digest.as_deref(),
+            api_expected_digest.as_ref(),
+            abi_expected_digest.as_ref(),
             abi_serializer,
         ),
         Item::Enum(input) => frozen_abi_enum_type(
             input,
-            api_expected_digest.as_deref(),
-            abi_expected_digest.as_deref(),
+            api_expected_digest.as_ref(),
+            abi_expected_digest.as_ref(),
             abi_serializer,
         ),
         Item::Type(input) => frozen_abi_type_alias(
             input,
-            api_expected_digest.as_deref(),
-            abi_expected_digest.as_deref(),
+            api_expected_digest.as_ref(),
+            abi_expected_digest.as_ref(),
             abi_serializer,
         ),
         _ => Error::new_spanned(
