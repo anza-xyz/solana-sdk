@@ -45,7 +45,7 @@ fn create_bench_data(size: usize) -> BenchData {
     }
 }
 
-fn signature_data(data: &BenchData) -> impl Iterator<Item = (&Signature, &[u8], &[u8])> {
+fn signature_data(data: &BenchData) -> impl ExactSizeIterator<Item = (&Signature, &[u8], &[u8])> {
     data.signatures
         .iter()
         .zip(data.pubkeys.iter())
