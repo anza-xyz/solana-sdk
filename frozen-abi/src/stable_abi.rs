@@ -85,7 +85,7 @@ mod tests {
                     }
                 }
             }
-        };
+        }
     }
 
     linked_stable_abi_pair!(
@@ -123,5 +123,129 @@ mod tests {
                 d: rng.random(),
             }
         }
+    }
+
+    // Verify stable abi sample derive (all fields with rand distribution)
+    #[derive(wincode::SchemaWrite)]
+    #[cfg_attr(
+        feature = "frozen-abi",
+        derive(
+            solana_frozen_abi_macro::StableAbi,
+            solana_frozen_abi_macro::StableAbiSample
+        ),
+        solana_frozen_abi_macro::frozen_abi(
+            abi_digest = "AgNkEpErnFBuy7iTAEUUAC1fbvokEkhbsfFnx4DtXAvY",
+            abi_serializer = "wincode",
+        )
+    )]
+    struct TestStableAbiSampleSimple {
+        a: u64,
+        b: bool,
+        c: [u8; 32],
+        d: (u8, u8),
+    }
+
+    #[derive(wincode::SchemaWrite)]
+    #[cfg_attr(
+        feature = "frozen-abi",
+        derive(
+            solana_frozen_abi_macro::StableAbi,
+            solana_frozen_abi_macro::StableAbiSample
+        ),
+        solana_frozen_abi_macro::frozen_abi(
+            abi_digest = "CuEDjcfdYbKAoxSV9QeQDv9K71mKgitE28CwvB4PAM3S",
+            abi_serializer = "wincode",
+        )
+    )]
+    enum TestStableAbiSampleEnumSimple {
+        A,
+        B(u64),
+        C(u8, u16, u32, u64),
+        D(f64),
+    }
+
+    #[derive(wincode::SchemaWrite)]
+    #[cfg_attr(
+        feature = "frozen-abi",
+        derive(
+            solana_frozen_abi_macro::StableAbi,
+            solana_frozen_abi_macro::StableAbiSample
+        ),
+        solana_frozen_abi_macro::frozen_abi(
+            abi_digest = "2XwyJT2T6oDWtStC8n9EfDMk8wHBExsX4AoBS5uRf74u",
+            abi_serializer = "wincode",
+        )
+    )]
+    enum TestStableAbiSampleEnumNamed {
+        A,
+        B { a: u64, b: bool },
+    }
+
+    // Verify stable abi sample derive (fields mixed, mostly without implementation of rand distribution)
+    #[derive(wincode::SchemaWrite)]
+    #[cfg_attr(
+        feature = "frozen-abi",
+        derive(
+            solana_frozen_abi_macro::StableAbi,
+            solana_frozen_abi_macro::StableAbiSample
+        ),
+        solana_frozen_abi_macro::frozen_abi(
+            abi_digest = "EVb5Tgy4rZzifSr6cE8HX3K8Zy6w9PD9hamvo3G9Ue7D",
+            abi_serializer = "wincode",
+        )
+    )]
+    struct TestStableAbiSampleOverride {
+        #[stable_abi_sample(with = "rng.random::<[bool; 4]>().to_vec()")]
+        a: Vec<bool>,
+        #[stable_abi_sample(
+            with = "{ let mut m = std::collections::HashMap::new(); m.insert(rng.random(), rng.random()); m }"
+        )]
+        b: std::collections::HashMap<u64, bool>,
+        #[stable_abi_sample(with = "rng.random::<u64>()")]
+        c: u64,
+        d: u16,
+    }
+
+    #[derive(wincode::SchemaWrite)]
+    #[cfg_attr(
+        feature = "frozen-abi",
+        derive(
+            solana_frozen_abi_macro::StableAbi,
+            solana_frozen_abi_macro::StableAbiSample
+        ),
+        solana_frozen_abi_macro::frozen_abi(
+            abi_digest = "DTzLXmgVsieme1R1gFBF3NBckeeXfqR7hrkiMyWXUK7M",
+            abi_serializer = "wincode",
+        )
+    )]
+    enum TestStableAbiSampleEnumOverride {
+        A,
+        B(u64),
+        C(#[stable_abi_sample(with = "rng.random::<[bool; 4]>().to_vec()")] Vec<bool>),
+    }
+
+    #[derive(wincode::SchemaWrite)]
+    #[cfg_attr(
+        feature = "frozen-abi",
+        derive(
+            solana_frozen_abi_macro::StableAbi,
+            solana_frozen_abi_macro::StableAbiSample
+        ),
+        solana_frozen_abi_macro::frozen_abi(
+            abi_digest = "NDiMpkrAEM4QN3GkELuBzxdCwCtVz6gp3pjFuiGtTWD",
+            abi_serializer = "wincode",
+        )
+    )]
+    enum TestStableAbiSampleEnumNamedOverride {
+        A,
+        B {
+            a: u64,
+            b: bool,
+        },
+        C {
+            #[stable_abi_sample(with = "rng.random::<[bool; 4]>().to_vec()")]
+            a: Vec<bool>,
+            b: u16,
+        },
     }
 }
