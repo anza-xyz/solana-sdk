@@ -791,7 +791,7 @@ mod tests {
             .verify_signature(&id_sig_proj, test_message)
             .is_err());
 
-        // Batch verification with an identity public key must fail
+        // Aggregate screening with an identity public key must fail
         let pubkey_affine: PubkeyAffine = *keypair.public;
         let id_pubkey_affine: PubkeyAffine = id_pubkey_proj.try_as_affine().unwrap();
 
@@ -829,7 +829,7 @@ mod tests {
                 messages.into_iter()
             )
             .is_err(),
-            "Batch distinct verification containing an identity public key must fail"
+            "Aggregate screening containing an identity public key must fail"
         );
     }
 
