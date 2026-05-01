@@ -57,7 +57,7 @@ target="bpfel-unknown-none"
 # These features require alloc
 exclude_features_no_alloc="alloc,borsh,curve25519,serde,slice-cpi"
 # These features never work on upstream BPF
-exclude_features="atomic,bincode,default,dev-context-only-utils,frozen-abi,rand,std,verify"
+exclude_features="atomic,batch-verify,bincode,default,dev-context-only-utils,frozen-abi,parallel,rand,std,verify"
 
 ./cargo nightly hack check \
   -Zbuild-std=core \

@@ -18,8 +18,10 @@ rustdoc-args = ["--cfg=docsrs"]
 [features]
 default = ["std", "alloc"]
 alloc = ["wincode?/alloc"]
+batch-verify = ["alloc", "verify", "ed25519-dalek/batch"]
 bytemuck = ["dep:bytemuck", "dep:bytemuck_derive"]
 frozen-abi = ["dep:solana-frozen-abi", "dep:solana-frozen-abi-macro", "std"]
+parallel = ["std", "batch-verify", "dep:rayon"]
 rand = ["dep:rand"]
 serde = ["dep:serde", "dep:serde_derive", "dep:serde-big-array"]
 std = ["alloc", "serde?/std", "wincode?/std"]
@@ -32,6 +34,7 @@ bytemuck_derive = { workspace = true, optional = true }
 ed25519-dalek = { workspace = true, optional = true }
 five8 = { workspace = true }
 rand = { workspace = true, optional = true }
+rayon = { workspace = true, optional = true }
 serde = { workspace = true, optional = true }
 serde-big-array = { workspace = true, optional = true }
 serde_derive = { workspace = true, optional = true }
@@ -43,8 +46,9 @@ wincode = { workspace = true, optional = true }
 [dev-dependencies]
 bincode = { workspace = true }
 bs58 = { workspace = true, features = ["std"] }
+criterion = { workspace = true }
 curve25519-dalek = { workspace = true }
-ed25519-dalek = { workspace = true }
+ed25519-dalek = { workspace = true, features = ["batch"] }
 serde_derive = { workspace = true }
 serde_json = { workspace = true }
 solana-pubkey = { workspace = true, features = ["std"] }
@@ -53,3 +57,8 @@ solana-signature = { path = ".", features = ["serde"] }
 
 [lints]
 workspace = true
+
+[[bench]]
+name = "verify"
+harness = false
+required-features = ["batch-verify"]
