@@ -12,6 +12,8 @@ use wincode::{SchemaRead, SchemaWrite};
 use {
     alloc::string::ToString,
     borsh::{BorshDeserialize, BorshSchema, BorshSerialize},
+    core::mem::{align_of, size_of},
+    core::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Rem, RemAssign, Sub, SubAssign},
 };
 
 /// The standard `bool` is not naturally zero-copy, define an unaligned replacement.
@@ -58,15 +60,82 @@ impl From<Bool> for bool {
 /// Simple macro for implementing conversion functions between unaligned
 /// integers and standard integers.
 ///
-/// The standard integer types can cause alignment issues when placed in a
-/// `bytemuck::Pod`, so these replacements are usable in all bytemuck `Pod`
-/// types.
+/// When using standard integer types in a struct, it mgith be required
+/// to add padding to match their alignment requirements. Unaligned types
+/// avoid this since their alignment requirement is `1`.
 #[macro_export]
 macro_rules! impl_int_conversion {
     ($P:ty, $I:ty) => {
+        const _: () = assert!(align_of::<$P>() == 1);
+        const _: () = assert!(size_of::<$P>() == size_of::<$I>());
+
         impl $P {
+            #[inline(always)]
             pub const fn from_primitive(n: $I) -> Self {
                 Self(n.to_le_bytes())
+            }
+
+            #[inline(always)]
+            pub fn checked_add(self, rhs: impl Into<$I>) -> Option<Self> {
+                let s: $I = self.into();
+                let other: $I = rhs.into();
+                s.checked_add(other).map(Self::from)
+            }
+
+            #[inline(always)]
+            pub fn checked_div(self, rhs: impl Into<$I>) -> Option<Self> {
+                let s: $I = self.into();
+                let other: $I = rhs.into();
+                s.checked_div(other).map(Self::from)
+            }
+
+            #[inline(always)]
+            pub fn checked_mul(self, rhs: impl Into<$I>) -> Option<Self> {
+                let s: $I = self.into();
+                let other: $I = rhs.into();
+                s.checked_mul(other).map(Self::from)
+            }
+
+            #[inline(always)]
+            pub fn checked_rem(self, rhs: impl Into<$I>) -> Option<Self> {
+                let s: $I = self.into();
+                let other: $I = rhs.into();
+                s.checked_rem(other).map(Self::from)
+            }
+
+            #[inline(always)]
+            pub fn checked_sub(self, rhs: impl Into<$I>) -> Option<Self> {
+                let s: $I = self.into();
+                let other: $I = rhs.into();
+                s.checked_sub(other).map(Self::from)
+            }
+
+            #[inline(always)]
+            pub fn saturating_add(self, rhs: impl Into<$I>) -> Self {
+                let s: $I = self.into();
+                let other: $I = rhs.into();
+                Self::from(s.saturating_add(other))
+            }
+
+            #[inline(always)]
+            pub fn saturating_div(self, rhs: impl Into<$I>) -> Self {
+                let s: $I = self.into();
+                let other: $I = rhs.into();
+                Self::from(s.saturating_div(other))
+            }
+
+            #[inline(always)]
+            pub fn saturating_mul(self, rhs: impl Into<$I>) -> Self {
+                let s: $I = self.into();
+                let other: $I = rhs.into();
+                Self::from(s.saturating_mul(other))
+            }
+
+            #[inline(always)]
+            pub fn saturating_sub(self, rhs: impl Into<$I>) -> Self {
+                let s: $I = self.into();
+                let other: $I = rhs.into();
+                Self::from(s.saturating_sub(other))
             }
         }
         impl From<$I> for $P {
@@ -77,6 +146,86 @@ macro_rules! impl_int_conversion {
         impl From<$P> for $I {
             fn from(unaligned: $P) -> Self {
                 Self::from_le_bytes(unaligned.0)
+            }
+        }
+        impl<T: Into<$I>> Add<T> for $P {
+            type Output = Self;
+
+            #[inline(always)]
+            fn add(self, rhs: T) -> Self {
+                let s: $I = self.into();
+                let other: $I = rhs.into();
+                Self::from(s + other)
+            }
+        }
+        impl<T: Into<$I>> Div<T> for $P {
+            type Output = Self;
+
+            #[inline(always)]
+            fn div(self, rhs: T) -> Self {
+                let s: $I = self.into();
+                let other: $I = rhs.into();
+                Self::from(s / other)
+            }
+        }
+        impl<T: Into<$I>> Mul<T> for $P {
+            type Output = Self;
+
+            #[inline(always)]
+            fn mul(self, rhs: T) -> Self {
+                let s: $I = self.into();
+                let other: $I = rhs.into();
+                Self::from(s * other)
+            }
+        }
+        impl<T: Into<$I>> Rem<T> for $P {
+            type Output = Self;
+
+            #[inline(always)]
+            fn rem(self, rhs: T) -> Self {
+                let s: $I = self.into();
+                let other: $I = rhs.into();
+                Self::from(s % other)
+            }
+        }
+        impl<T: Into<$I>> Sub<T> for $P {
+            type Output = Self;
+
+            #[inline(always)]
+            fn sub(self, rhs: T) -> Self {
+                let s: $I = self.into();
+                let other: $I = rhs.into();
+                Self::from(s - other)
+            }
+        }
+        impl<T: Into<$I>> AddAssign<T> for $P {
+            #[inline(always)]
+            fn add_assign(&mut self, rhs: T) {
+                *self = *self + rhs;
+            }
+        }
+        impl<T: Into<$I>> DivAssign<T> for $P {
+            #[inline(always)]
+            fn div_assign(&mut self, rhs: T) {
+                *self = *self / rhs;
+            }
+        }
+        impl<T: Into<$I>> MulAssign<T> for $P {
+            #[inline(always)]
+            fn mul_assign(&mut self, rhs: T) {
+                *self = *self * rhs;
+            }
+        }
+        impl<T: Into<$I>> RemAssign<T> for $P {
+            #[inline(always)]
+            fn rem_assign(&mut self, rhs: T) {
+                *self = *self % rhs;
+            }
+        }
+        impl<T: Into<$I>> SubAssign<T> for $P {
+            #[inline(always)]
+            fn sub_assign(&mut self, rhs: T) {
+                *self = *self - rhs;
             }
         }
     };
