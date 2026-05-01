@@ -235,18 +235,19 @@ fn ethereum_fast_aggregate_verify_vectors() {
 }
 
 #[test]
-fn ethereum_batch_verify_vectors() {
+fn ethereum_aggregate_screening_compatibility_vectors() {
+    // Ethereum calls this fixture suite `batch_verify`. In this crate, the matching
+    // `verify_distinct` APIs are aggregate screening checks: they verify the aggregate
+    // relation for the supplied key/message/signature set and do not provide RLC-style
+    // weighted batch verification or per-signer validity guarantees.
     for path in json_files("batch_verify") {
         let case = load_case(&path);
         let input = &case["input"];
         let expected = case["output"].as_bool().unwrap();
         let case_id = path.file_stem().unwrap().to_str().unwrap();
 
-        // Our current batch API intentionally omits RLC-style weighting and relies on
-        // upstream PoP guarantees instead. Ethereum's negative `batch_verify` vectors
-        // include stricter semantics that target weighted batch verification, so this
-        // compatibility test only asserts the positive cases that `verify_distinct`
-        // is expected to support.
+        // Ethereum's negative vectors include stricter semantics than aggregate
+        // screening supports, so this compatibility test only asserts positive cases.
         if !expected {
             continue;
         }

@@ -15,6 +15,9 @@ ARCHIVE_URL = (
     f"https://github.com/ethereum/bls12-381-tests/releases/download/{VERSION}/"
     "bls_tests_json.tar.gz"
 )
+# These are upstream Ethereum fixture directory names. The `batch_verify` suite
+# name is retained for compatibility; it does not describe this crate's
+# `verify_distinct` aggregate-screening API.
 REQUIRED_DIRS = (
     "aggregate",
     "aggregate_verify",
