@@ -9,7 +9,11 @@ use rayon::prelude::*;
 
 /// A trait that provides verification methods to any convertible signature type.
 pub trait VerifiableSignature: AsSignatureAffine + Sized {
-    /// Verify the signature against any convertible public key type and a message.
+    /// Verify the signature against a public key type that implements `VerifySignature`.
+    ///
+    /// This follows the same convention as `VerifySignature`: crate-provided public key
+    /// verification is exposed through PoP-verified wrappers, while downstream
+    /// implementations are an explicit extension point.
     fn verify<P: VerifySignature>(&self, pubkey: &P, message: &[u8]) -> Result<(), BlsError> {
         pubkey.verify_signature(self, message)
     }
@@ -61,7 +65,7 @@ impl SignatureProjective {
         let aggregate_pubkey = PubkeyProjective::aggregate(public_keys)?;
         let aggregate_signature = SignatureProjective::aggregate(signatures)?;
 
-        // This is safe because AggregatePubkey implements VerifySignature!
+        // AggregatePubkey is the crate-provided aggregate wrapper implementing VerifySignature.
         aggregate_pubkey.verify_signature_prepared(&aggregate_signature, prepared_hashed_message)
     }
 
