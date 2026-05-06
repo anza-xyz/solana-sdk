@@ -1,38 +1,25 @@
 #![cfg_attr(docsrs, feature(doc_cfg))]
 
-pub const BIGINT_ENDIANNESS_BE: u64 = 0;
-pub const BIGINT_ENDIANNESS_LE: u64 = 1;
-pub const BIGINT_MODEXP_MAX_BYTES: u64 = 512;
+pub const BIG_MOD_EXP_ENDIANNESS_BE: u64 = 0;
+pub const BIG_MOD_EXP_ENDIANNESS_LE: u64 = 1;
+pub const BIG_MOD_EXP_MAX_BYTES: u64 = 512;
 
-/// Endianness of bigint inputs and result.
+/// Endianness of big integer inputs and result.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 #[repr(u64)]
 pub enum Endianness {
-    BigEndian = BIGINT_ENDIANNESS_BE,
-    LittleEndian = BIGINT_ENDIANNESS_LE,
+    BigEndian = BIG_MOD_EXP_ENDIANNESS_BE,
+    LittleEndian = BIG_MOD_EXP_ENDIANNESS_LE,
 }
 
 impl From<Endianness> for u64 {
     fn from(endianness: Endianness) -> Self {
-        match endianness {
-            Endianness::BigEndian => BIGINT_ENDIANNESS_BE,
-            Endianness::LittleEndian => BIGINT_ENDIANNESS_LE,
-        }
+        endianness as u64
     }
 }
 
 #[repr(C)]
 pub struct BigModExpParams {
-    pub base: *const u8,
-    pub base_len: u64,
-    pub exponent: *const u8,
-    pub exponent_len: u64,
-    pub modulus: *const u8,
-    pub modulus_len: u64,
-}
-
-#[repr(C)]
-pub struct BigIntModExpParams {
     pub base_addr: u64,
     pub base_len: u64,
     pub exponent_addr: u64,
@@ -43,16 +30,11 @@ pub struct BigIntModExpParams {
     pub result_len: u64,
 }
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub enum BigIntModExpError {
-    InvalidLength,
-}
-
 /// Big integer modular exponentiation.
 ///
 /// Inputs and output are encoded using `endianness`. The returned value is
 /// padded to exactly `modulus.len()` bytes.
-pub fn bigint_modexp(
+pub fn big_mod_exp_with_endianness(
     base: &[u8],
     exponent: &[u8],
     modulus: &[u8],
@@ -103,7 +85,7 @@ pub fn bigint_modexp(
     {
         let mut return_value = vec![0_u8; modulus.len()];
 
-        let param = BigIntModExpParams {
+        let param = BigModExpParams {
             base_addr: base.as_ptr() as u64,
             base_len: base.len() as u64,
             exponent_addr: exponent.as_ptr() as u64,
@@ -115,12 +97,12 @@ pub fn bigint_modexp(
         };
 
         let result = unsafe {
-            solana_define_syscall::definitions::sol_bigint_modexp(
+            solana_define_syscall::definitions::sol_big_mod_exp(
                 endianness.into(),
                 &param as *const _ as *const u8,
             )
         };
-        assert_eq!(result, 0, "sol_bigint_modexp failed");
+        assert_eq!(result, 0, "sol_big_mod_exp failed");
 
         return_value
     }
@@ -129,66 +111,10 @@ pub fn bigint_modexp(
 /// Big-endian big integer modular exponentiation.
 ///
 /// This is the compatibility wrapper for the original `solana-big-mod-exp`
-/// API. Prefer [`bigint_modexp`] when little-endian support is needed.
+/// API. Prefer [`big_mod_exp_with_endianness`] when little-endian support is
+/// needed.
 pub fn big_mod_exp(base: &[u8], exponent: &[u8], modulus: &[u8]) -> Vec<u8> {
-    bigint_modexp(base, exponent, modulus, Endianness::BigEndian)
-}
-
-fn eip_198_length(input: &[u8], offset: usize) -> Result<u64, BigIntModExpError> {
-    let mut word = [0u8; 32];
-    if let Some(bytes) = input.get(offset..) {
-        let copy_len = bytes.len().min(word.len());
-        word[..copy_len].copy_from_slice(&bytes[..copy_len]);
-    }
-
-    if word[..24].iter().any(|byte| *byte != 0) {
-        return Err(BigIntModExpError::InvalidLength);
-    }
-
-    let mut length_bytes = [0u8; 8];
-    length_bytes.copy_from_slice(&word[24..]);
-    let length = u64::from_be_bytes(length_bytes);
-    if length > BIGINT_MODEXP_MAX_BYTES {
-        return Err(BigIntModExpError::InvalidLength);
-    }
-
-    Ok(length)
-}
-
-fn eip_198_bytes(input: &[u8], offset: usize, len: u64) -> Vec<u8> {
-    let len = len as usize;
-    let mut bytes = vec![0u8; len];
-    if let Some(input) = input.get(offset..) {
-        let copy_len = input.len().min(len);
-        bytes[..copy_len].copy_from_slice(&input[..copy_len]);
-    }
-    bytes
-}
-
-/// Ethereum EIP-198-compatible big-endian modular exponentiation.
-///
-/// This helper parses the packed EIP-198 input format and evaluates it through
-/// the native Solana ModExp helper. Missing input bytes are right-padded with
-/// zeroes, and bytes after the declared operands are ignored.
-pub fn eip_198_modexp(input: &[u8]) -> Result<Vec<u8>, BigIntModExpError> {
-    let base_len = eip_198_length(input, 0)?;
-    let exponent_len = eip_198_length(input, 32)?;
-    let modulus_len = eip_198_length(input, 64)?;
-
-    let base_offset = 96;
-    let exponent_offset = base_offset + base_len as usize;
-    let modulus_offset = exponent_offset + exponent_len as usize;
-
-    let base = eip_198_bytes(input, base_offset, base_len);
-    let exponent = eip_198_bytes(input, exponent_offset, exponent_len);
-    let modulus = eip_198_bytes(input, modulus_offset, modulus_len);
-
-    Ok(bigint_modexp(
-        &base,
-        &exponent,
-        &modulus,
-        Endianness::BigEndian,
-    ))
+    big_mod_exp_with_endianness(base, exponent, modulus, Endianness::BigEndian)
 }
 
 #[cfg(test)]
@@ -220,7 +146,7 @@ mod tests {
     }
 
     #[test]
-    fn bigint_modexp_eip_198_test() {
+    fn big_mod_exp_large_exponent_test() {
         let base = [0x03];
         let exponent = array_bytes::hex2bytes_unchecked(
             "fffffffffffffffffffffffffffffffffffffffffffffffffffffffefffffc2e",
@@ -229,30 +155,30 @@ mod tests {
             "fffffffffffffffffffffffffffffffffffffffffffffffffffffffefffffc2f",
         );
 
-        let result = bigint_modexp(&base, &exponent, &modulus, Endianness::BigEndian);
+        let result = big_mod_exp_with_endianness(&base, &exponent, &modulus, Endianness::BigEndian);
         let mut expected = vec![0; 32];
         expected[31] = 1;
         assert_eq!(result, expected);
     }
 
     #[test]
-    fn bigint_modexp_empty_inputs_test() {
+    fn big_mod_exp_empty_inputs_test() {
         assert_eq!(
-            bigint_modexp(&[], &[], &[0x02], Endianness::BigEndian),
+            big_mod_exp_with_endianness(&[], &[], &[0x02], Endianness::BigEndian),
             vec![0x01]
         );
         assert_eq!(
-            bigint_modexp(&[], &[], &[0x00], Endianness::BigEndian),
+            big_mod_exp_with_endianness(&[], &[], &[0x00], Endianness::BigEndian),
             vec![0x00]
         );
         assert_eq!(
-            bigint_modexp(&[], &[], &[], Endianness::BigEndian),
+            big_mod_exp_with_endianness(&[], &[], &[], Endianness::BigEndian),
             Vec::<u8>::new()
         );
     }
 
     #[test]
-    fn bigint_modexp_little_endian_test() {
+    fn big_mod_exp_little_endian_test() {
         let base_be = [0x01, 0x02];
         let exponent_be = [0x03];
         let modulus_be = [0x10, 0x01];
@@ -264,8 +190,9 @@ mod tests {
         exponent_le.reverse();
         modulus_le.reverse();
 
-        let result_be = bigint_modexp(&base_be, &exponent_be, &modulus_be, Endianness::BigEndian);
-        let mut result_le = bigint_modexp(
+        let result_be =
+            big_mod_exp_with_endianness(&base_be, &exponent_be, &modulus_be, Endianness::BigEndian);
+        let mut result_le = big_mod_exp_with_endianness(
             &base_le,
             &exponent_le,
             &modulus_le,
@@ -274,53 +201,5 @@ mod tests {
         result_le.reverse();
 
         assert_eq!(result_be, result_le);
-    }
-
-    #[test]
-    fn eip_198_modexp_test() {
-        let base = [0x03];
-        let exponent = array_bytes::hex2bytes_unchecked(
-            "fffffffffffffffffffffffffffffffffffffffffffffffffffffffefffffc2e",
-        );
-        let modulus = array_bytes::hex2bytes_unchecked(
-            "fffffffffffffffffffffffffffffffffffffffffffffffffffffffefffffc2f",
-        );
-
-        let mut input = vec![0u8; 96];
-        input[31] = base.len() as u8;
-        input[63] = exponent.len() as u8;
-        input[95] = modulus.len() as u8;
-        input.extend(base);
-        input.extend(exponent);
-        input.extend(modulus);
-        input.extend([0xff; 8]);
-
-        let result = eip_198_modexp(&input).unwrap();
-        let mut expected = vec![0; 32];
-        expected[31] = 1;
-        assert_eq!(result, expected);
-    }
-
-    #[test]
-    fn eip_198_modexp_right_padding_test() {
-        let mut input = vec![0u8; 96];
-        input[31] = 1;
-        input[63] = 1;
-        input[95] = 1;
-        input.push(5);
-
-        assert_eq!(eip_198_modexp(&input).unwrap(), vec![0]);
-    }
-
-    #[test]
-    fn eip_198_modexp_rejects_lengths_over_syscall_limit_test() {
-        let mut input = vec![0u8; 96];
-        input[30] = 2;
-        input[31] = 1;
-
-        assert_eq!(
-            eip_198_modexp(&input),
-            Err(BigIntModExpError::InvalidLength)
-        );
     }
 }
