@@ -10,6 +10,8 @@ use core::{
     fmt,
     str::{from_utf8_unchecked, FromStr},
 };
+#[cfg(any(test, feature = "batch-verify"))]
+use curve25519_dalek::{edwards::CompressedEdwardsY, scalar::Scalar};
 #[cfg(any(test, feature = "alloc"))]
 extern crate alloc;
 #[cfg(feature = "std")]
@@ -42,6 +44,29 @@ fn verify_individual<'a>(mut signature_data: impl Iterator<Item = SignatureData<
     signature_data.all(|(signature, pubkey, message)| signature.verify(pubkey, message))
 }
 
+// Dalek's batch verification does not perform the same malleability checks as `verify_strict()`
+// So we need to perform those checks ourselves before pushing the signatures, pubkeys, and messages
+// into the batch verification inputs.
+//
+// TODO: once we switch to solana-ed25519, we can remove this function.
+#[cfg(any(test, feature = "batch-verify"))]
+fn passes_strict_batch_verification_prechecks(
+    signature: &ed25519_dalek::Signature,
+    pubkey: &ed25519_dalek::VerifyingKey,
+) -> bool {
+    if Option::<Scalar>::from(Scalar::from_canonical_bytes(*signature.s_bytes())).is_none() {
+        return false;
+    }
+
+    // `verify_batch` checks the batch equation; these are the extra
+    // malleability checks performed by `verify_strict`.
+    let Some(signature_r) = CompressedEdwardsY(*signature.r_bytes()).decompress() else {
+        return false;
+    };
+
+    !signature_r.is_small_order() && !pubkey.is_weak()
+}
+
 #[cfg(any(test, feature = "batch-verify"))]
 fn push_batch_verification_inputs<'a>(
     (signature, pubkey_bytes, message): SignatureData<'a>,
@@ -55,6 +80,9 @@ fn push_batch_verification_inputs<'a>(
     let Ok(pubkey) = ed25519_dalek::VerifyingKey::try_from(pubkey_bytes) else {
         return false;
     };
+    if !passes_strict_batch_verification_prechecks(&signature, &pubkey) {
+        return false;
+    }
 
     message_bytes.push(message);
     parsed_signatures.push(signature);
@@ -479,6 +507,40 @@ mod tests {
             &signatures,
             &pubkeys,
             &bad_messages,
+        )));
+    }
+
+    #[test]
+    fn test_batch_verify_rejects_non_strict_valid_signatures() {
+        let mut signature = [0; SIGNATURE_BYTES];
+        signature[0] = 1;
+        let signatures = [Signature::from(signature); 9];
+        let mut pubkey = [0; 32];
+        pubkey[0] = 1;
+        let pubkeys = [pubkey; 9];
+        let messages: [Vec<u8>; 9] = core::array::from_fn(|_| b"message".to_vec());
+        let message_bytes = messages
+            .iter()
+            .map(|message| message.as_slice())
+            .collect::<Vec<_>>();
+        let parsed_signatures = signatures
+            .iter()
+            .map(|signature| ed25519_dalek::Signature::try_from(signature.0.as_slice()).unwrap())
+            .collect::<Vec<_>>();
+        let parsed_pubkeys = pubkeys
+            .iter()
+            .map(|pubkey| ed25519_dalek::VerifyingKey::try_from(pubkey.as_slice()).unwrap())
+            .collect::<Vec<_>>();
+
+        assert!(
+            ed25519_dalek::verify_batch(&message_bytes, &parsed_signatures, &parsed_pubkeys)
+                .is_ok()
+        );
+        assert!(!signatures[0].verify(&pubkeys[0], &messages[0]));
+        assert!(!Signature::batch_verify(batch_verify_items(
+            &signatures,
+            &pubkeys,
+            &messages,
         )));
     }
 

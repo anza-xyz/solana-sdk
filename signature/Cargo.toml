@@ -18,7 +18,7 @@ rustdoc-args = ["--cfg=docsrs"]
 [features]
 default = ["std", "alloc"]
 alloc = ["wincode?/alloc"]
-batch-verify = ["alloc", "verify", "ed25519-dalek/batch"]
+batch-verify = ["alloc", "verify", "dep:curve25519-dalek", "ed25519-dalek/batch"]
 bytemuck = ["dep:bytemuck", "dep:bytemuck_derive"]
 frozen-abi = ["dep:solana-frozen-abi", "dep:solana-frozen-abi-macro", "std"]
 parallel = ["std", "batch-verify", "dep:rayon"]
@@ -31,6 +31,7 @@ wincode = ["dep:wincode"]
 [dependencies]
 bytemuck = { workspace = true, optional = true }
 bytemuck_derive = { workspace = true, optional = true }
+curve25519-dalek = { workspace = true, optional = true }
 ed25519-dalek = { workspace = true, optional = true }
 five8 = { workspace = true }
 rand = { workspace = true, optional = true }
