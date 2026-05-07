@@ -1,0 +1,110 @@
+name: Check no_std
+
+on:
+  push:
+    branches:
+      - 'master'
+      - 'maintenance/**'
+  pull_request:
+    branches:
+      - 'master'
+      - 'maintenance/**'
+
+env:
+  NO_STD_PACKAGES: >-
+    [
+      "solana-account-view",
+      "solana-address",
+      "solana-blake3-hasher",
+      "solana-clock",
+      "solana-cluster-type",
+      "solana-commitment-config",
+      "solana-define-syscall",
+      "solana-epoch-info",
+      "solana-epoch-rewards",
+      "solana-epoch-schedule",
+      "solana-epoch-stake",
+      "solana-fee-calculator",
+      "solana-hash",
+      "solana-instruction-view",
+      "solana-keccak-hasher",
+      "solana-msg",
+      "solana-nullable",
+      "solana-program-error",
+      "solana-program-log",
+      "solana-program-log-macro",
+      "solana-program-memory",
+      "solana-program-option",
+      "solana-program-pack",
+      "solana-pubkey",
+      "solana-rent",
+      "solana-sanitize",
+      "solana-sdk-ids",
+      "solana-sha256-hasher",
+      "solana-signature",
+      "solana-sysvar-id",
+      "solana-zero-copy"
+    ]
+  NO_STD_ALLOC_PACKAGES: >-
+    [
+      "solana-account-info",
+      "solana-borsh",
+      "solana-curve25519",
+      "solana-instruction"
+    ]
+  NO_STD_INCOMPATIBLE_FEATURES: >-
+    [
+      "#all/atomic",
+      "#all/batch-verify",
+      "#all/bincode",
+      "#all/default",
+      "#all/dev-context-only-utils",
+      "#all/frozen-abi",
+      "#all/parallel",
+      "#all/rand",
+      "#all/std",
+      "#all/verify"
+    ]
+  NO_STD_ALLOC_FEATURES: >-
+    [
+      "#all/alloc",
+      "#all/borsh",
+      "#all/curve25519",
+      "#all/serde",
+      "#all/slice-cpi"
+    ]
+
+jobs:
+  set_env:
+    name: Set variables to be used in strategy definitions in reusable workflow
+    runs-on: ubuntu-latest
+    outputs:
+      NO_STD_PACKAGES: ${{ steps.compute.outputs.NO_STD_PACKAGES }}
+      NO_STD_ALLOC_PACKAGES: ${{ steps.compute.outputs.NO_STD_ALLOC_PACKAGES }}
+      NO_STD_INCOMPATIBLE_FEATURES: ${{ steps.compute.outputs.NO_STD_INCOMPATIBLE_FEATURES }}
+      NO_STD_ALLOC_FEATURES: ${{ steps.compute.outputs.NO_STD_ALLOC_FEATURES }}
+      RUST_TOOLCHAIN_NIGHTLY: ${{ steps.compute.outputs.RUST_TOOLCHAIN_NIGHTLY }}
+    steps:
+      - name: Git Checkout
+        uses: actions/checkout@v4
+
+      - name: Compute variables
+        id: compute
+        shell: bash
+        run: |
+          echo 'NO_STD_PACKAGES=${{ env.NO_STD_PACKAGES }}' >> $GITHUB_OUTPUT
+          echo 'NO_STD_ALLOC_PACKAGES=${{ env.NO_STD_ALLOC_PACKAGES }}' >> $GITHUB_OUTPUT
+          echo 'NO_STD_INCOMPATIBLE_FEATURES=${{ env.NO_STD_INCOMPATIBLE_FEATURES }}' >> $GITHUB_OUTPUT
+          echo 'NO_STD_ALLOC_FEATURES=${{ env.NO_STD_ALLOC_FEATURES }}' >> $GITHUB_OUTPUT
+          source ./scripts/rust-version.sh
+          echo "RUST_TOOLCHAIN_NIGHTLY=$rust_nightly" >> "$GITHUB_OUTPUT"
+
+  main:
+    needs: set_env
+    uses: solana-program/actions/.github/workflows/main.yml@main
+    with:
+      no-std-toolchain: ${{ needs.set_env.outputs.RUST_TOOLCHAIN_NIGHTLY }}
+      no-std-packages: ${{ needs.set_env.outputs.NO_STD_PACKAGES }}
+      no-std-alloc-packages: ${{ needs.set_env.outputs.NO_STD_ALLOC_PACKAGES }}
+      no-std-incompatible-features: ${{ needs.set_env.outputs.NO_STD_INCOMPATIBLE_FEATURES }}
+      no-std-alloc-features: ${{ needs.set_env.outputs.NO_STD_ALLOC_FEATURES }}
