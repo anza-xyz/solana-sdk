@@ -1,11 +1,12 @@
 #![cfg_attr(docsrs, feature(doc_cfg))]
+
 #[repr(C)]
 pub struct BigModExpParams {
-    pub base: *const u8,
+    pub base: u64,
     pub base_len: u64,
-    pub exponent: *const u8,
+    pub exponent: u64,
     pub exponent_len: u64,
-    pub modulus: *const u8,
+    pub modulus: u64,
     pub modulus_len: u64,
 }
 
@@ -39,11 +40,11 @@ pub fn big_mod_exp(base: &[u8], exponent: &[u8], modulus: &[u8]) -> Vec<u8> {
         let mut return_value = vec![0_u8; modulus.len()];
 
         let param = BigModExpParams {
-            base: base as *const _ as *const u8,
+            base: base.as_ptr().expose_provenance() as u64,
             base_len: base.len() as u64,
-            exponent: exponent as *const _ as *const u8,
+            exponent: exponent.as_ptr().expose_provenance() as u64,
             exponent_len: exponent.len() as u64,
-            modulus: modulus as *const _ as *const u8,
+            modulus: modulus.as_ptr().expose_provenance() as u64,
             modulus_len: modulus.len() as u64,
         };
         unsafe {
