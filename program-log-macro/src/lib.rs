@@ -102,14 +102,6 @@ impl Parse for LogCuUsageArgs {
         if input.peek(Token![crate]) {
             input.parse::<Token![crate]>()?;
             input.parse::<Token![=]>()?;
-
-            let crate_path = input.parse::<Path>()?;
-
-            if !input.is_empty() {
-                return Err(input.error("unexpected tokens after `crate = ...`"));
-            }
-
-            return Ok(Self { crate_path });
         }
 
         // Support for standalone path.
