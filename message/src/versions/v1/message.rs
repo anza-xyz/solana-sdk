@@ -391,6 +391,12 @@ impl Message {
         crate::is_program_id_write_demoted(i, &self.account_keys, &self.instructions)
     }
 
+    /// Serialize this message with the V1 version prefix byte.
+    #[cfg(feature = "wincode")]
+    pub fn serialize(&self) -> Vec<u8> {
+        wincode::serialize(&(crate::v1::V1_PREFIX, self)).unwrap()
+    }
+
     /// Calculate the serialized size of the message in bytes.
     #[allow(clippy::arithmetic_side_effects)]
     #[inline(always)]

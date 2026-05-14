@@ -272,7 +272,7 @@ impl SanitizedTransaction {
         match &self.message {
             SanitizedMessage::Legacy(legacy_message) => legacy_message.message.serialize(),
             SanitizedMessage::V0(loaded_msg) => loaded_msg.message.serialize(),
-            SanitizedMessage::V1(cached_msg) => v1::serialize(&cached_msg.message),
+            SanitizedMessage::V1(cached_msg) => cached_msg.message.serialize(),
         }
     }
 
@@ -327,6 +327,7 @@ impl SanitizedTransaction {
 mod tests {
     use {
         super::*,
+        solana_instruction::{AccountMeta, Instruction},
         solana_keypair::Keypair,
         solana_message::{MessageHeader, SimpleAddressLoader},
         solana_signer::Signer,
@@ -452,5 +453,35 @@ mod tests {
             )
             .is_ok());
         }
+    }
+
+    #[test]
+    fn test_verify_v1_message_data_includes_prefix() {
+        let payer = Keypair::new();
+        let program_id = Address::new_unique();
+        let instruction = Instruction::new_with_bytes(
+            program_id,
+            &[1, 2, 3],
+            vec![AccountMeta::new(payer.pubkey(), true)],
+        );
+        let message =
+            v1::Message::try_compile(&payer.pubkey(), &[instruction], Hash::new_unique()).unwrap();
+        let versioned_tx =
+            VersionedTransaction::try_new(VersionedMessage::V1(message), &[&payer]).unwrap();
+
+        let sanitized = SanitizedTransaction::try_create(
+            versioned_tx,
+            MessageHash::Compute,
+            None,
+            SimpleAddressLoader::Disabled,
+            &HashSet::default(),
+        )
+        .unwrap();
+
+        // The signed bytes must begin with the V1 version prefix.
+        let signed_bytes = sanitized.message_data();
+        assert_eq!(signed_bytes[0], solana_message::v1::V1_PREFIX);
+
+        sanitized.verify().unwrap();
     }
 }
