@@ -52,9 +52,15 @@ struct LogArgs {
 
 impl Parse for LogArgs {
     fn parse(input: ParseStream) -> syn::Result<Self> {
-        let crate_path = input.parse::<Path>()?;
-        // Parse the comma after the crat path.
-        input.parse::<Token![,]>()?;
+        // Optional crate path.
+        let crate_path = if input.peek(LitStr) || input.peek(LitInt) {
+            parse_str::<Path>(PROGRAM_LOG_PACKAGE_NAME)?
+        } else {
+            let crate_path = input.parse::<Path>()?;
+            // Parse the comma after the crate path.
+            input.parse::<Token![,]>()?;
+            crate_path
+        };
 
         // Optional buffer length.
         let buffer_len = if input.peek(LitInt) {
@@ -124,7 +130,7 @@ impl Parse for LogCuUsageArgs {
 ///
 /// # Arguments
 ///
-/// - `crate_path`: The path to the crate where the `Logger` struct is defined. This is a required argument.
+/// - `crate_path`: The path to the crate where the `Logger` struct is defined. This is an optional argument.
 /// - `buffer_len`: The length of the buffer to use for the logger (default to `200`). This is an optional argument.
 /// - `format_string`: The literal string to log. This string can contain placeholders `{}` to be replaced by the arguments.
 /// - `args`: The arguments to replace the placeholders in the format string. The arguments must implement the `Log` trait.
@@ -345,9 +351,39 @@ pub fn log_cu_usage(attr: TokenStream, item: TokenStream) -> TokenStream {
 #[cfg(test)]
 mod tests {
     use {
-        super::LogCuUsageArgs,
+        super::{LogArgs, LogCuUsageArgs},
         syn::{parse_quote, parse_str, Path},
     };
+
+    #[test]
+    fn log_default_crate_path() {
+        let args = parse_str::<LogArgs>("\"a simple log\"").unwrap();
+        let expected: Path = parse_quote!(::solana_program_log);
+        assert_eq!(args.crate_path, expected);
+    }
+
+    #[test]
+    fn log_default_crate_path_with_buffer_len() {
+        let args = parse_str::<LogArgs>("500, \"a simple log\"").unwrap();
+        let expected: Path = parse_quote!(::solana_program_log);
+        assert_eq!(args.crate_path, expected);
+        assert_eq!(args.buffer_len.base10_digits(), "500");
+    }
+
+    #[test]
+    fn log_with_crate_path() {
+        let args = parse_str::<LogArgs>("mylog, \"a simple log\"").unwrap();
+        let expected: Path = parse_quote!(mylog);
+        assert_eq!(args.crate_path, expected);
+    }
+
+    #[test]
+    fn log_with_crate_path_and_buffer_len() {
+        let args = parse_str::<LogArgs>("mylog, 500, \"a simple log\"").unwrap();
+        let expected: Path = parse_quote!(mylog);
+        assert_eq!(args.crate_path, expected);
+        assert_eq!(args.buffer_len.base10_digits(), "500");
+    }
 
     #[test]
     fn log_cu_usage() {
