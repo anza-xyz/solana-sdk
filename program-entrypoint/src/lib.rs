@@ -8,7 +8,7 @@ use {
     solana_pubkey::Pubkey,
     std::{
         alloc::Layout,
-        mem::{size_of, MaybeUninit},
+        mem::{align_of, size_of, MaybeUninit},
         ptr::null_mut,
         slice::{from_raw_parts, from_raw_parts_mut},
     },
@@ -311,6 +311,7 @@ impl BumpAllocator {
     /// # Safety
     /// As long as BumpAllocator or any of its allocations are alive,
     /// writing into or deallocating the arena will cause UB.
+    /// The arena's start address must be aligned for `usize`.
     ///
     /// Integer arithmetic in this global allocator implementation is safe when
     /// operating on the prescribed `HEAP_START_ADDRESS` and `HEAP_LENGTH`. Any
@@ -318,9 +319,13 @@ impl BumpAllocator {
     #[inline]
     #[allow(clippy::arithmetic_side_effects)]
     pub unsafe fn new(arena: &mut [u8]) -> Self {
-        debug_assert!(
+        assert!(
             arena.len() > size_of::<usize>(),
             "Arena should be larger than usize"
+        );
+        assert!(
+            (arena.as_mut_ptr() as usize) % align_of::<usize>() == 0,
+            "Arena should be usize-aligned"
         );
 
         // create a pointer to the start of the arena
@@ -340,11 +345,17 @@ impl BumpAllocator {
     /// # Safety
     /// This is unsafe in most situations, unless you are totally sure that the
     /// provided start address and length can be written to by the allocator,
-    /// and that the memory will be usable for the lifespan of the allocator.
+    /// that the memory will be usable for the lifespan of the allocator, and
+    /// that `start` is aligned for `usize`.
     ///
     /// For Solana on-chain programs, a certain address range is reserved, so
     /// the allocator can be given those addresses.
+    #[allow(clippy::arithmetic_side_effects)]
     pub const unsafe fn with_fixed_address_range(start: usize, len: usize) -> Self {
+        assert!(
+            start % align_of::<usize>() == 0,
+            "Start address should be usize-aligned"
+        );
         Self { start, len }
     }
 }
@@ -618,5 +629,28 @@ mod test {
             assert_ne!(ptr, null_mut());
             assert_eq!(0, ptr.align_offset(size_of::<u64>()));
         }
+    }
+
+    #[test]
+    #[should_panic(expected = "Arena should be usize-aligned")]
+    fn test_bump_allocator_rejects_unaligned_arena() {
+        #[repr(align(8))]
+        struct AlignedHeap([u8; 128]);
+
+        let mut heap = AlignedHeap([0; 128]);
+        unsafe { BumpAllocator::new(&mut heap.0[1..]) };
+    }
+
+    #[test]
+    #[should_panic(expected = "Arena should be larger than usize")]
+    fn test_bump_allocator_rejects_short_arena() {
+        let mut heap = [0u8; size_of::<usize>()];
+        unsafe { BumpAllocator::new(&mut heap) };
+    }
+
+    #[test]
+    #[should_panic(expected = "Start address should be usize-aligned")]
+    fn test_bump_allocator_rejects_unaligned_fixed_address_range() {
+        unsafe { BumpAllocator::with_fixed_address_range(1, 128) };
     }
 }
