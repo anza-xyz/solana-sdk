@@ -560,4 +560,214 @@ mod tests {
             assert_eq!(&value, zero_copy_ref);
         }
     }
+
+    #[derive(Clone, Copy, Debug)]
+    enum ArithmeticMethod {
+        CheckedAdd,
+        CheckedDiv,
+        CheckedMul,
+        CheckedRem,
+        CheckedSub,
+        SaturatingAdd,
+        SaturatingDiv,
+        SaturatingMul,
+        SaturatingSub,
+        Add,
+        Div,
+        Mul,
+        Rem,
+        Sub,
+        AddAssign,
+        DivAssign,
+        MulAssign,
+        RemAssign,
+        SubAssign,
+        PartialEq,
+        PartialOrd,
+    }
+
+    macro_rules! test_arithmetic_methods {
+        ($test_name:ident, $UnalignedType:ty, $PrimitiveType:ty, $min:expr, $max:expr) => {
+            #[test_case::test_case(ArithmeticMethod::CheckedAdd ; "checked_add")]
+            #[test_case::test_case(ArithmeticMethod::CheckedDiv ; "checked_div")]
+            #[test_case::test_case(ArithmeticMethod::CheckedMul ; "checked_mul")]
+            #[test_case::test_case(ArithmeticMethod::CheckedRem ; "checked_rem")]
+            #[test_case::test_case(ArithmeticMethod::CheckedSub ; "checked_sub")]
+            #[test_case::test_case(ArithmeticMethod::SaturatingAdd ; "saturating_add")]
+            #[test_case::test_case(ArithmeticMethod::SaturatingDiv ; "saturating_div")]
+            #[test_case::test_case(ArithmeticMethod::SaturatingMul ; "saturating_mul")]
+            #[test_case::test_case(ArithmeticMethod::SaturatingSub ; "saturating_sub")]
+            #[test_case::test_case(ArithmeticMethod::Add ; "add")]
+            #[test_case::test_case(ArithmeticMethod::Div ; "div")]
+            #[test_case::test_case(ArithmeticMethod::Mul ; "mul")]
+            #[test_case::test_case(ArithmeticMethod::Rem ; "rem")]
+            #[test_case::test_case(ArithmeticMethod::Sub ; "sub")]
+            #[test_case::test_case(ArithmeticMethod::AddAssign ; "add_assign")]
+            #[test_case::test_case(ArithmeticMethod::DivAssign ; "div_assign")]
+            #[test_case::test_case(ArithmeticMethod::MulAssign ; "mul_assign")]
+            #[test_case::test_case(ArithmeticMethod::RemAssign ; "rem_assign")]
+            #[test_case::test_case(ArithmeticMethod::SubAssign ; "sub_assign")]
+            #[test_case::test_case(ArithmeticMethod::PartialEq ; "partial_eq")]
+            #[test_case::test_case(ArithmeticMethod::PartialOrd ; "partial_ord")]
+            fn $test_name(method: ArithmeticMethod) {
+                let min = <$UnalignedType>::from_primitive($min);
+                let max = <$UnalignedType>::from_primitive($max);
+                let zero = 0 as $PrimitiveType;
+                let one = 1 as $PrimitiveType;
+                let two = 2 as $PrimitiveType;
+                let twenty_one = 21 as $PrimitiveType;
+                let forty = 40 as $PrimitiveType;
+                let forty_one = 41 as $PrimitiveType;
+                let forty_two = 42 as $PrimitiveType;
+                let forty_three = 43 as $PrimitiveType;
+                let forty_four = 44 as $PrimitiveType;
+                let eighty_four = 84 as $PrimitiveType;
+
+                match method {
+                    ArithmeticMethod::CheckedAdd => {
+                        assert_eq!(max.checked_add(one), None);
+                        assert_eq!(
+                            <$UnalignedType>::from_primitive(forty).checked_add(one),
+                            Some(<$UnalignedType>::from_primitive(forty_one))
+                        );
+                    }
+                    ArithmeticMethod::CheckedDiv => {
+                        assert_eq!(
+                            <$UnalignedType>::from_primitive(eighty_four).checked_div(two),
+                            Some(<$UnalignedType>::from_primitive(forty_two))
+                        );
+                    }
+                    ArithmeticMethod::CheckedMul => {
+                        assert_eq!(max.checked_mul(two), None);
+                        assert_eq!(
+                            <$UnalignedType>::from_primitive(forty_two).checked_mul(two),
+                            Some(<$UnalignedType>::from_primitive(eighty_four))
+                        );
+                    }
+                    ArithmeticMethod::CheckedRem => {
+                        assert_eq!(
+                            <$UnalignedType>::from_primitive(forty_four).checked_rem(forty_three),
+                            Some(<$UnalignedType>::from_primitive(one))
+                        );
+                    }
+                    ArithmeticMethod::CheckedSub => {
+                        assert_eq!(min.checked_sub(one), None);
+                        assert_eq!(
+                            max.checked_sub(max),
+                            Some(<$UnalignedType>::from_primitive(zero))
+                        );
+                    }
+                    ArithmeticMethod::SaturatingAdd => {
+                        assert_eq!(max.saturating_add(one), max);
+                        assert_eq!(
+                            <$UnalignedType>::from_primitive(zero).saturating_add(one),
+                            <$UnalignedType>::from_primitive(one)
+                        );
+                    }
+                    ArithmeticMethod::SaturatingDiv => {
+                        assert_eq!(
+                            <$UnalignedType>::from_primitive(eighty_four).saturating_div(two),
+                            <$UnalignedType>::from_primitive(forty_two)
+                        );
+                    }
+                    ArithmeticMethod::SaturatingMul => {
+                        assert_eq!(max.saturating_mul(two), max);
+                    }
+                    ArithmeticMethod::SaturatingSub => {
+                        assert_eq!(min.saturating_sub(one), min);
+                    }
+                    ArithmeticMethod::Add => {
+                        assert_eq!(
+                            <$UnalignedType>::from_primitive(forty) + two,
+                            <$UnalignedType>::from_primitive(forty_two)
+                        );
+                    }
+                    ArithmeticMethod::Div => {
+                        assert_eq!(
+                            <$UnalignedType>::from_primitive(eighty_four) / two,
+                            <$UnalignedType>::from_primitive(forty_two)
+                        );
+                    }
+                    ArithmeticMethod::Mul => {
+                        assert_eq!(
+                            <$UnalignedType>::from_primitive(twenty_one) * two,
+                            <$UnalignedType>::from_primitive(forty_two)
+                        );
+                    }
+                    ArithmeticMethod::Rem => {
+                        assert_eq!(
+                            <$UnalignedType>::from_primitive(forty_four) % forty_three,
+                            <$UnalignedType>::from_primitive(one)
+                        );
+                    }
+                    ArithmeticMethod::Sub => {
+                        assert_eq!(
+                            <$UnalignedType>::from_primitive(forty_four) - two,
+                            <$UnalignedType>::from_primitive(forty_two)
+                        );
+                    }
+                    ArithmeticMethod::AddAssign => {
+                        let mut value = <$UnalignedType>::from_primitive(forty);
+                        value += two;
+                        assert_eq!(value, <$UnalignedType>::from_primitive(forty_two));
+                    }
+                    ArithmeticMethod::DivAssign => {
+                        let mut value = <$UnalignedType>::from_primitive(eighty_four);
+                        value /= two;
+                        assert_eq!(value, <$UnalignedType>::from_primitive(forty_two));
+                    }
+                    ArithmeticMethod::MulAssign => {
+                        let mut value = <$UnalignedType>::from_primitive(twenty_one);
+                        value *= two;
+                        assert_eq!(value, <$UnalignedType>::from_primitive(forty_two));
+                    }
+                    ArithmeticMethod::RemAssign => {
+                        let mut value = <$UnalignedType>::from_primitive(forty_four);
+                        value %= forty_three;
+                        assert_eq!(value, <$UnalignedType>::from_primitive(one));
+                    }
+                    ArithmeticMethod::SubAssign => {
+                        let mut value = <$UnalignedType>::from_primitive(forty_four);
+                        value -= two;
+                        assert_eq!(value, <$UnalignedType>::from_primitive(forty_two));
+                    }
+                    ArithmeticMethod::PartialEq => {
+                        assert_eq!(<$UnalignedType>::from_primitive(forty_two), forty_two);
+                        assert_eq!(
+                            <$UnalignedType>::from_primitive(forty_two),
+                            <$UnalignedType>::from_primitive(forty_two)
+                        );
+                        assert_ne!(<$UnalignedType>::from_primitive(forty_two), forty_three);
+                        assert_ne!(min, max);
+                    }
+                    ArithmeticMethod::PartialOrd => {
+                        assert!(
+                            <$UnalignedType>::from_primitive(forty_one)
+                                < <$UnalignedType>::from_primitive(forty_two)
+                        );
+                        assert!(<$UnalignedType>::from_primitive(forty_three) > forty_two);
+                        assert!(max > min);
+                        assert_eq!(
+                            <$UnalignedType>::from_primitive(forty_two).partial_cmp(&forty_two),
+                            Some(Ordering::Equal)
+                        );
+                    }
+                }
+            }
+        };
+    }
+
+    test_arithmetic_methods!(test_arithmetic_methods_u16, U16, u16, u16::MIN, u16::MAX);
+    test_arithmetic_methods!(test_arithmetic_methods_i16, I16, i16, i16::MIN, i16::MAX);
+    test_arithmetic_methods!(test_arithmetic_methods_u32, U32, u32, u32::MIN, u32::MAX);
+    test_arithmetic_methods!(test_arithmetic_methods_u64, U64, u64, u64::MIN, u64::MAX);
+    test_arithmetic_methods!(test_arithmetic_methods_i64, I64, i64, i64::MIN, i64::MAX);
+    #[cfg(not(target_arch = "bpf"))]
+    test_arithmetic_methods!(
+        test_arithmetic_methods_u128,
+        U128,
+        u128,
+        u128::MIN,
+        u128::MAX
+    );
 }
