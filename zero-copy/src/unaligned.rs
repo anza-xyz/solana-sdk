@@ -4,6 +4,11 @@
 
 #[cfg(feature = "bytemuck")]
 use bytemuck_derive::{Pod, Zeroable};
+use core::{
+    cmp::{Ordering, PartialEq, PartialOrd},
+    mem::{align_of, size_of},
+    ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Rem, RemAssign, Sub, SubAssign},
+};
 #[cfg(feature = "serde")]
 use serde_derive::{Deserialize, Serialize};
 #[cfg(feature = "wincode")]
@@ -12,8 +17,6 @@ use wincode::{SchemaRead, SchemaWrite};
 use {
     alloc::string::ToString,
     borsh::{BorshDeserialize, BorshSchema, BorshSerialize},
-    core::mem::{align_of, size_of},
-    core::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Rem, RemAssign, Sub, SubAssign},
 };
 
 /// The standard `bool` is not naturally zero-copy, define an unaligned replacement.
@@ -228,6 +231,22 @@ macro_rules! impl_int_conversion {
                 *self = *self - rhs;
             }
         }
+        impl<T: Into<$I> + Copy> PartialEq<T> for $P {
+            #[inline(always)]
+            fn eq(&self, other: &T) -> bool {
+                let s: $I = (*self).into();
+                let other: $I = (*other).into();
+                s == other
+            }
+        }
+        impl<T: Into<$I> + Copy> PartialOrd<T> for $P {
+            #[inline(always)]
+            fn partial_cmp(&self, other: &T) -> Option<Ordering> {
+                let s: $I = (*self).into();
+                let other: $I = (*other).into();
+                s.partial_cmp(&other)
+            }
+        }
     };
 }
 
@@ -237,7 +256,7 @@ macro_rules! impl_int_conversion {
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "serde", serde(from = "u16", into = "u16"))]
 #[cfg_attr(feature = "bytemuck", derive(Pod, Zeroable))]
-#[derive(Clone, Copy, Debug, Default, PartialEq)]
+#[derive(Clone, Copy, Debug, Default)]
 #[repr(transparent)]
 pub struct U16(pub [u8; 2]);
 impl_int_conversion!(U16, u16);
@@ -248,7 +267,7 @@ impl_int_conversion!(U16, u16);
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "serde", serde(from = "i16", into = "i16"))]
 #[cfg_attr(feature = "bytemuck", derive(Pod, Zeroable))]
-#[derive(Clone, Copy, Debug, Default, PartialEq)]
+#[derive(Clone, Copy, Debug, Default)]
 #[repr(transparent)]
 pub struct I16(pub [u8; 2]);
 impl_int_conversion!(I16, i16);
@@ -263,7 +282,7 @@ impl_int_conversion!(I16, i16);
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "serde", serde(from = "u32", into = "u32"))]
 #[cfg_attr(feature = "bytemuck", derive(Pod, Zeroable))]
-#[derive(Clone, Copy, Debug, Default, PartialEq)]
+#[derive(Clone, Copy, Debug, Default)]
 #[repr(transparent)]
 pub struct U32(pub [u8; 4]);
 impl_int_conversion!(U32, u32);
@@ -278,7 +297,7 @@ impl_int_conversion!(U32, u32);
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "serde", serde(from = "u64", into = "u64"))]
 #[cfg_attr(feature = "bytemuck", derive(Pod, Zeroable))]
-#[derive(Clone, Copy, Debug, Default, PartialEq)]
+#[derive(Clone, Copy, Debug, Default)]
 #[repr(transparent)]
 pub struct U64(pub [u8; 8]);
 impl_int_conversion!(U64, u64);
@@ -289,7 +308,7 @@ impl_int_conversion!(U64, u64);
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "serde", serde(from = "i64", into = "i64"))]
 #[cfg_attr(feature = "bytemuck", derive(Pod, Zeroable))]
-#[derive(Clone, Copy, Debug, Default, PartialEq)]
+#[derive(Clone, Copy, Debug, Default)]
 #[repr(transparent)]
 pub struct I64([u8; 8]);
 impl_int_conversion!(I64, i64);
@@ -305,7 +324,7 @@ impl_int_conversion!(I64, i64);
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "serde", serde(from = "u128", into = "u128"))]
 #[cfg_attr(feature = "bytemuck", derive(Pod, Zeroable))]
-#[derive(Clone, Copy, Debug, Default, PartialEq)]
+#[derive(Clone, Copy, Debug, Default)]
 #[repr(transparent)]
 pub struct U128(pub [u8; 16]);
 #[cfg(not(target_arch = "bpf"))]
