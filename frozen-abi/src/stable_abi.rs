@@ -1,17 +1,118 @@
-use rand::{distr::StandardUniform, Rng, RngCore};
+use {
+    core::{array, num::NonZero},
+    rand::{Rng, RngCore},
+};
 
 pub trait StableAbi: Sized {
-    fn random(rng: &mut impl RngCore) -> Self
-    where
-        StandardUniform: rand::distr::Distribution<Self>,
-    {
-        rng.random::<Self>()
+    fn random(rng: &mut (impl RngCore + ?Sized)) -> Self;
+}
+
+macro_rules! impl_stable_abi_via_standard_uniform {
+    ($($t:ty),* $(,)?) => {
+        $(
+            impl StableAbi for $t {
+                fn random(rng: &mut (impl RngCore + ?Sized)) -> Self {
+                    rng.random::<Self>()
+                }
+            }
+        )*
+    };
+}
+
+macro_rules! impl_stable_abi_via_size_of_from_bytes {
+    ($from_bytes:ident, $($t:ty),* $(,)?) => {
+        $(
+            impl StableAbi for $t {
+                fn random(rng: &mut (impl RngCore + ?Sized)) -> Self {
+                    Self::$from_bytes(rng.random::<[u8; core::mem::size_of::<Self>()]>())
+                }
+            }
+        )*
+    };
+}
+
+macro_rules! impl_stable_abi_for_tuples {
+    ($(($($t:ident),+ $(,)?)),* $(,)?) => {
+        $(
+            impl<$($t),+> StableAbi for ($($t,)+)
+            where
+                $($t: StableAbi),+
+            {
+                fn random(rng: &mut (impl RngCore + ?Sized)) -> Self {
+                    ($($t::random(rng),)+)
+                }
+            }
+        )*
+    };
+}
+
+impl_stable_abi_via_standard_uniform!(
+    u8,
+    u16,
+    u32,
+    u64,
+    u128,
+    i8,
+    i16,
+    i32,
+    i64,
+    i128,
+    f32,
+    f64,
+    bool,
+    char,
+    NonZero<u8>,
+    NonZero<u16>,
+    NonZero<u32>,
+    NonZero<u64>,
+    NonZero<u128>,
+    NonZero<i8>,
+    NonZero<i16>,
+    NonZero<i32>,
+    NonZero<i64>,
+    NonZero<i128>,
+);
+impl_stable_abi_via_size_of_from_bytes!(from_le_bytes, usize);
+impl_stable_abi_via_size_of_from_bytes!(from_le_bytes, isize);
+impl_stable_abi_for_tuples!(
+    (A),
+    (A, B),
+    (A, B, C),
+    (A, B, C, D),
+    (A, B, C, D, E),
+    (A, B, C, D, E, F),
+    (A, B, C, D, E, F, G),
+    (A, B, C, D, E, F, G, H),
+    (A, B, C, D, E, F, G, H, I),
+    (A, B, C, D, E, F, G, H, I, J),
+    (A, B, C, D, E, F, G, H, I, J, K),
+    (A, B, C, D, E, F, G, H, I, J, K, L),
+);
+
+impl<T, const N: usize> StableAbi for [T; N]
+where
+    T: StableAbi,
+{
+    fn random(rng: &mut (impl RngCore + ?Sized)) -> Self {
+        array::from_fn(|_| T::random(rng))
+    }
+}
+
+impl<T> StableAbi for Option<T>
+where
+    T: StableAbi,
+{
+    fn random(rng: &mut (impl RngCore + ?Sized)) -> Self {
+        rng.random::<bool>().then(|| T::random(rng))
     }
 }
 
 #[cfg(all(test, feature = "frozen-abi"))]
 mod tests {
-    use std::collections::{BTreeMap, VecDeque};
+    use {
+        core::num::NonZero,
+        std::collections::{BTreeMap, VecDeque},
+    };
 
     // Keep the bincode and wincode test fixtures structurally identical so their
     // derived `test_abi_digest` checks enforce one shared ABI digest across serializers.
@@ -352,5 +453,77 @@ mod tests {
         )]
         a: Vec<(u16, u8)>,
         b: bool,
+    }
+
+    type AliasUsize = usize;
+    type AliasIsize = isize;
+
+    // do not remove the constraint as the expected abi_digest was calculated 64 bit little endian
+    #[cfg(target_pointer_width = "64")]
+    #[derive(Debug, wincode::SchemaWrite)]
+    #[cfg_attr(
+        feature = "frozen-abi",
+        derive(
+            solana_frozen_abi_macro::StableAbi,
+            solana_frozen_abi_macro::StableAbiSample
+        ),
+        solana_frozen_abi_macro::frozen_abi(
+            abi_digest = "Yfy4agydqEFuudgHJ497PHPNjbSmEDywbjRuQExv8mV",
+            abi_serializer = "wincode",
+        )
+    )]
+    struct TestPlatformDependent {
+        a: usize,
+        b: AliasUsize,
+        c: Option<usize>,
+        d: Option<AliasUsize>,
+        e: isize,
+        f: AliasIsize,
+        g: Option<AliasIsize>,
+    }
+
+    #[derive(Debug, wincode::SchemaWrite)]
+    #[cfg_attr(
+        feature = "frozen-abi",
+        derive(
+            solana_frozen_abi_macro::StableAbi,
+            solana_frozen_abi_macro::StableAbiSample
+        ),
+        solana_frozen_abi_macro::frozen_abi(
+            abi_digest = "B4hSLevsio8KgQrkzAiQefJ181pYLbKS8qdvtjhy6LGz",
+            abi_serializer = "wincode",
+        )
+    )]
+    struct TestTuples {
+        a: u8,
+        b: (u8, u8),
+        c: (u8, u8, u8),
+        d: (u8, u8, u8, u8),
+        e: (u8, u8, u8, u8, u8),
+        f: (u8, u8, u8, u8, u8, u8),
+        g: (u8, u8, u8, u8, u8, u8, u8),
+        h: (u8, u8, u8, u8, u8, u8, u8, u8),
+        i: (u8, u8, u8, u8, u8, u8, u8, u8, u8),
+        j: (u8, u8, u8, u8, u8, u8, u8, u8, u8, u8),
+        k: (u8, u8, u8, u8, u8, u8, u8, u8, u8, u8, u8),
+        l: (u8, u8, u8, u8, u8, u8, u8, u8, u8, u8, u8, u8),
+    }
+
+    #[derive(Debug, wincode::SchemaWrite)]
+    #[cfg_attr(
+        feature = "frozen-abi",
+        derive(
+            solana_frozen_abi_macro::StableAbi,
+            solana_frozen_abi_macro::StableAbiSample
+        ),
+        solana_frozen_abi_macro::frozen_abi(
+            abi_digest = "58FbcqrJoX4TQC3i9eMUxc6fqPBqbzwxZ5ZkNyUYQYzR",
+            abi_serializer = "wincode",
+        )
+    )]
+    struct TestNonZero {
+        a: NonZero<u32>,
+        b: Option<NonZero<u8>>,
+        c: NonZero<i16>,
     }
 }

@@ -29,7 +29,11 @@
 //! Deriving `StableAbi` adds:
 //!
 //! ```rust,ignore
-//! impl ::solana_frozen_abi::stable_abi::StableAbi for MyType {}
+//! impl ::solana_frozen_abi::stable_abi::StableAbi for MyType {
+//!     fn random(rng: &mut (impl ::solana_frozen_abi::rand::RngCore + ?Sized)) -> Self {
+//!         ::solana_frozen_abi::rand::Rng::random::<Self>(rng)
+//!     }
+//! }
 //! ```
 //!
 //! The `StableAbi::random()` default implementation calls `rng.random::<MyType>()`, so your type
