@@ -124,6 +124,10 @@ macro_rules! impl_int_conversion {
             pub fn saturating_div(self, rhs: impl Into<$I>) -> Self {
                 let s: $I = self.into();
                 let other: $I = rhs.into();
+                #[allow(
+                    clippy::arithmetic_side_effects,
+                    reason = "saturating_div follows primitive integer behavior and panics on division by zero"
+                )]
                 Self::from(s.saturating_div(other))
             }
 
@@ -158,6 +162,10 @@ macro_rules! impl_int_conversion {
             fn add(self, rhs: T) -> Self {
                 let s: $I = self.into();
                 let other: $I = rhs.into();
+                #[allow(
+                    clippy::arithmetic_side_effects,
+                    reason = "add follows primitive integer behavior and wraps on overflow"
+                )]
                 Self::from(s + other)
             }
         }
@@ -168,6 +176,10 @@ macro_rules! impl_int_conversion {
             fn div(self, rhs: T) -> Self {
                 let s: $I = self.into();
                 let other: $I = rhs.into();
+                #[allow(
+                    clippy::arithmetic_side_effects,
+                    reason = "div follows primitive integer behavior and panics on division by zero"
+                )]
                 Self::from(s / other)
             }
         }
@@ -178,6 +190,10 @@ macro_rules! impl_int_conversion {
             fn mul(self, rhs: T) -> Self {
                 let s: $I = self.into();
                 let other: $I = rhs.into();
+                #[allow(
+                    clippy::arithmetic_side_effects,
+                    reason = "mul follows primitive integer behavior and wraps on overflow"
+                )]
                 Self::from(s * other)
             }
         }
@@ -188,6 +204,10 @@ macro_rules! impl_int_conversion {
             fn rem(self, rhs: T) -> Self {
                 let s: $I = self.into();
                 let other: $I = rhs.into();
+                #[allow(
+                    clippy::arithmetic_side_effects,
+                    reason = "rem follows primitive integer behavior and panics on division by zero"
+                )]
                 Self::from(s % other)
             }
         }
@@ -198,34 +218,58 @@ macro_rules! impl_int_conversion {
             fn sub(self, rhs: T) -> Self {
                 let s: $I = self.into();
                 let other: $I = rhs.into();
+                #[allow(
+                    clippy::arithmetic_side_effects,
+                    reason = "sub follows primitive integer behavior and wraps on overflow"
+                )]
                 Self::from(s - other)
             }
         }
         impl<T: Into<$I>> AddAssign<T> for $P {
+            #[allow(
+                clippy::arithmetic_side_effects,
+                reason = "add_assign follows primitive integer behavior and wraps on overflow"
+            )]
             #[inline(always)]
             fn add_assign(&mut self, rhs: T) {
                 *self = *self + rhs;
             }
         }
         impl<T: Into<$I>> DivAssign<T> for $P {
+            #[allow(
+                clippy::arithmetic_side_effects,
+                reason = "div_assign follows primitive integer behavior and panics on division by zero"
+            )]
             #[inline(always)]
             fn div_assign(&mut self, rhs: T) {
                 *self = *self / rhs;
             }
         }
         impl<T: Into<$I>> MulAssign<T> for $P {
+            #[allow(
+                clippy::arithmetic_side_effects,
+                reason = "mul_assign follows primitive integer behavior and wraps on overflow"
+            )]
             #[inline(always)]
             fn mul_assign(&mut self, rhs: T) {
                 *self = *self * rhs;
             }
         }
         impl<T: Into<$I>> RemAssign<T> for $P {
+            #[allow(
+                clippy::arithmetic_side_effects,
+                reason = "rem_assign follows primitive integer behavior and panics on division by zero"
+            )]
             #[inline(always)]
             fn rem_assign(&mut self, rhs: T) {
                 *self = *self % rhs;
             }
         }
         impl<T: Into<$I>> SubAssign<T> for $P {
+            #[allow(
+                clippy::arithmetic_side_effects,
+                reason = "sub_assign follows primitive integer behavior and wraps on overflow"
+            )]
             #[inline(always)]
             fn sub_assign(&mut self, rhs: T) {
                 *self = *self - rhs;
@@ -609,6 +653,7 @@ mod tests {
             #[test_case::test_case(ArithmeticMethod::SubAssign ; "sub_assign")]
             #[test_case::test_case(ArithmeticMethod::PartialEq ; "partial_eq")]
             #[test_case::test_case(ArithmeticMethod::PartialOrd ; "partial_ord")]
+            #[allow(clippy::arithmetic_side_effects)]
             fn $test_name(method: ArithmeticMethod) {
                 let min = <$UnalignedType>::from_primitive($min);
                 let max = <$UnalignedType>::from_primitive($max);
