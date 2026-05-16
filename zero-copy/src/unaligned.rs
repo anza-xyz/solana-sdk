@@ -4,11 +4,7 @@
 
 #[cfg(feature = "bytemuck")]
 use bytemuck_derive::{Pod, Zeroable};
-use core::{
-    cmp::{Ordering, PartialEq, PartialOrd},
-    mem::{align_of, size_of},
-    ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Rem, RemAssign, Sub, SubAssign},
-};
+use core::cmp::PartialEq;
 #[cfg(feature = "serde")]
 use serde_derive::{Deserialize, Serialize};
 #[cfg(feature = "wincode")]
@@ -63,14 +59,14 @@ impl From<Bool> for bool {
 /// Simple macro for implementing conversion functions between unaligned
 /// integers and standard integers.
 ///
-/// When using standard integer types in a struct, it mgith be required
+/// When using standard integer types in a struct, it might be required
 /// to add padding to match their alignment requirements. Unaligned types
 /// avoid this since their alignment requirement is `1`.
 #[macro_export]
 macro_rules! impl_int_conversion {
     ($P:ty, $I:ty) => {
-        const _: () = assert!(align_of::<$P>() == 1);
-        const _: () = assert!(size_of::<$P>() == size_of::<$I>());
+        const _: () = assert!(core::mem::align_of::<$P>() == 1);
+        const _: () = assert!(core::mem::size_of::<$P>() == core::mem::size_of::<$I>());
 
         impl $P {
             #[inline(always)]
@@ -155,11 +151,24 @@ macro_rules! impl_int_conversion {
                 Self::from_le_bytes(unaligned.0)
             }
         }
-        impl<T: Into<$I>> Add<T> for $P {
+        impl core::ops::Add<$I> for $P {
             type Output = Self;
 
             #[inline(always)]
-            fn add(self, rhs: T) -> Self {
+            fn add(self, rhs: $I) -> Self {
+                let s: $I = self.into();
+                #[allow(
+                    clippy::arithmetic_side_effects,
+                    reason = "add follows primitive integer behavior and wraps on overflow"
+                )]
+                Self::from(s + rhs)
+            }
+        }
+         impl core::ops::Add<$P> for $P {
+            type Output = Self;
+
+            #[inline(always)]
+            fn add(self, rhs: $P) -> Self {
                 let s: $I = self.into();
                 let other: $I = rhs.into();
                 #[allow(
@@ -169,11 +178,24 @@ macro_rules! impl_int_conversion {
                 Self::from(s + other)
             }
         }
-        impl<T: Into<$I>> Div<T> for $P {
+        impl core::ops::Div<$I> for $P {
             type Output = Self;
 
             #[inline(always)]
-            fn div(self, rhs: T) -> Self {
+            fn div(self, rhs: $I) -> Self {
+                let s: $I = self.into();
+                #[allow(
+                    clippy::arithmetic_side_effects,
+                    reason = "div follows primitive integer behavior and panics on division by zero"
+                )]
+                Self::from(s / rhs)
+            }
+        }
+        impl core::ops::Div<$P> for $P {
+            type Output = Self;
+
+            #[inline(always)]
+            fn div(self, rhs: $P) -> Self {
                 let s: $I = self.into();
                 let other: $I = rhs.into();
                 #[allow(
@@ -183,11 +205,24 @@ macro_rules! impl_int_conversion {
                 Self::from(s / other)
             }
         }
-        impl<T: Into<$I>> Mul<T> for $P {
+        impl core::ops::Mul<$I> for $P {
             type Output = Self;
 
             #[inline(always)]
-            fn mul(self, rhs: T) -> Self {
+            fn mul(self, rhs: $I) -> Self {
+                let s: $I = self.into();
+                #[allow(
+                    clippy::arithmetic_side_effects,
+                    reason = "mul follows primitive integer behavior and wraps on overflow"
+                )]
+                Self::from(s * rhs)
+            }
+        }
+        impl core::ops::Mul<$P> for $P {
+            type Output = Self;
+
+            #[inline(always)]
+            fn mul(self, rhs: $P) -> Self {
                 let s: $I = self.into();
                 let other: $I = rhs.into();
                 #[allow(
@@ -197,11 +232,24 @@ macro_rules! impl_int_conversion {
                 Self::from(s * other)
             }
         }
-        impl<T: Into<$I>> Rem<T> for $P {
+        impl core::ops::Rem<$I> for $P {
             type Output = Self;
 
             #[inline(always)]
-            fn rem(self, rhs: T) -> Self {
+            fn rem(self, rhs: $I) -> Self {
+                let s: $I = self.into();
+                #[allow(
+                    clippy::arithmetic_side_effects,
+                    reason = "rem follows primitive integer behavior and panics on division by zero"
+                )]
+                Self::from(s % rhs)
+            }
+        }
+        impl core::ops::Rem<$P> for $P {
+            type Output = Self;
+
+            #[inline(always)]
+            fn rem(self, rhs: $P) -> Self {
                 let s: $I = self.into();
                 let other: $I = rhs.into();
                 #[allow(
@@ -211,11 +259,24 @@ macro_rules! impl_int_conversion {
                 Self::from(s % other)
             }
         }
-        impl<T: Into<$I>> Sub<T> for $P {
+        impl core::ops::Sub<$I> for $P {
             type Output = Self;
 
             #[inline(always)]
-            fn sub(self, rhs: T) -> Self {
+            fn sub(self, rhs: $I) -> Self {
+                let s: $I = self.into();
+                #[allow(
+                    clippy::arithmetic_side_effects,
+                    reason = "sub follows primitive integer behavior and wraps on overflow"
+                )]
+                Self::from(s - rhs)
+            }
+        }
+        impl core::ops::Sub<$P> for $P {
+            type Output = Self;
+
+            #[inline(always)]
+            fn sub(self, rhs: $P) -> Self {
                 let s: $I = self.into();
                 let other: $I = rhs.into();
                 #[allow(
@@ -225,70 +286,132 @@ macro_rules! impl_int_conversion {
                 Self::from(s - other)
             }
         }
-        impl<T: Into<$I>> AddAssign<T> for $P {
+        impl core::ops::AddAssign<$I> for $P {
             #[allow(
                 clippy::arithmetic_side_effects,
                 reason = "add_assign follows primitive integer behavior and wraps on overflow"
             )]
             #[inline(always)]
-            fn add_assign(&mut self, rhs: T) {
+            fn add_assign(&mut self, rhs: $I) {
                 *self = *self + rhs;
             }
         }
-        impl<T: Into<$I>> DivAssign<T> for $P {
+        impl core::ops::AddAssign<$P> for $P {
+            #[allow(
+                clippy::arithmetic_side_effects,
+                reason = "add_assign follows primitive integer behavior and wraps on overflow"
+            )]
+            #[inline(always)]
+            fn add_assign(&mut self, rhs: $P) {
+                *self = *self + rhs;
+            }
+        }
+        impl core::ops::DivAssign<$I> for $P {
             #[allow(
                 clippy::arithmetic_side_effects,
                 reason = "div_assign follows primitive integer behavior and panics on division by zero"
             )]
             #[inline(always)]
-            fn div_assign(&mut self, rhs: T) {
+            fn div_assign(&mut self, rhs: $I) {
                 *self = *self / rhs;
             }
         }
-        impl<T: Into<$I>> MulAssign<T> for $P {
+        impl core::ops::DivAssign<$P> for $P {
+            #[allow(
+                clippy::arithmetic_side_effects,
+                reason = "div_assign follows primitive integer behavior and panics on division by zero"
+            )]
+            #[inline(always)]
+            fn div_assign(&mut self, rhs: $P) {
+                *self = *self / rhs;
+            }
+        }
+        impl core::ops::MulAssign<$I> for $P {
             #[allow(
                 clippy::arithmetic_side_effects,
                 reason = "mul_assign follows primitive integer behavior and wraps on overflow"
             )]
             #[inline(always)]
-            fn mul_assign(&mut self, rhs: T) {
+            fn mul_assign(&mut self, rhs: $I) {
                 *self = *self * rhs;
             }
         }
-        impl<T: Into<$I>> RemAssign<T> for $P {
+        impl core::ops::MulAssign<$P> for $P {
+            #[allow(
+                clippy::arithmetic_side_effects,
+                reason = "mul_assign follows primitive integer behavior and wraps on overflow"
+            )]
+            #[inline(always)]
+            fn mul_assign(&mut self, rhs: $P) {
+                *self = *self * rhs;
+            }
+        }
+        impl core::ops::RemAssign<$I> for $P {
             #[allow(
                 clippy::arithmetic_side_effects,
                 reason = "rem_assign follows primitive integer behavior and panics on division by zero"
             )]
             #[inline(always)]
-            fn rem_assign(&mut self, rhs: T) {
+            fn rem_assign(&mut self, rhs: $I) {
                 *self = *self % rhs;
             }
         }
-        impl<T: Into<$I>> SubAssign<T> for $P {
+        impl core::ops::RemAssign<$P> for $P {
+            #[allow(
+                clippy::arithmetic_side_effects,
+                reason = "rem_assign follows primitive integer behavior and panics on division by zero"
+            )]
+            #[inline(always)]
+            fn rem_assign(&mut self, rhs: $P) {
+                *self = *self % rhs;
+            }
+        }
+        impl core::ops::SubAssign<$I> for $P {
             #[allow(
                 clippy::arithmetic_side_effects,
                 reason = "sub_assign follows primitive integer behavior and wraps on overflow"
             )]
             #[inline(always)]
-            fn sub_assign(&mut self, rhs: T) {
+            fn sub_assign(&mut self, rhs: $I) {
                 *self = *self - rhs;
             }
         }
-        impl<T: Into<$I> + Copy> PartialEq<T> for $P {
+        impl core::ops::SubAssign<$P> for $P {
+            #[allow(
+                clippy::arithmetic_side_effects,
+                reason = "sub_assign follows primitive integer behavior and wraps on overflow"
+            )]
             #[inline(always)]
-            fn eq(&self, other: &T) -> bool {
-                let s: $I = (*self).into();
-                let other: $I = (*other).into();
-                s == other
+            fn sub_assign(&mut self, rhs: $P) {
+                *self = *self - rhs;
             }
         }
-        impl<T: Into<$I> + Copy> PartialOrd<T> for $P {
+        impl core::cmp::PartialEq<$I> for $P {
             #[inline(always)]
-            fn partial_cmp(&self, other: &T) -> Option<Ordering> {
+            fn eq(&self, other: &$I) -> bool {
                 let s: $I = (*self).into();
-                let other: $I = (*other).into();
-                s.partial_cmp(&other)
+                s == *other
+            }
+        }
+        impl core::cmp::PartialEq<$P> for $I {
+            #[inline(always)]
+            fn eq(&self, other: &$P) -> bool {
+                let o: $I = (*other).into();
+                *self == o
+            }
+        }
+        impl core::cmp::PartialOrd<$I> for $P {
+            #[inline(always)]
+            fn partial_cmp(&self, other: &$I) -> Option<core::cmp::Ordering> {
+                let s: $I = (*self).into();
+                s.partial_cmp(other)
+            }
+        }
+        impl core::cmp::PartialOrd<$P> for $I {
+            #[inline(always)]
+            fn partial_cmp(&self, other: &$P) -> Option<core::cmp::Ordering> {
+                let o: $I = (*other).into();
+                self.partial_cmp(&o)
             }
         }
     };
@@ -300,7 +423,7 @@ macro_rules! impl_int_conversion {
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "serde", serde(from = "u16", into = "u16"))]
 #[cfg_attr(feature = "bytemuck", derive(Pod, Zeroable))]
-#[derive(Clone, Copy, Debug, Default)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, PartialOrd)]
 #[repr(transparent)]
 pub struct U16(pub [u8; 2]);
 impl_int_conversion!(U16, u16);
@@ -311,7 +434,7 @@ impl_int_conversion!(U16, u16);
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "serde", serde(from = "i16", into = "i16"))]
 #[cfg_attr(feature = "bytemuck", derive(Pod, Zeroable))]
-#[derive(Clone, Copy, Debug, Default)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, PartialOrd)]
 #[repr(transparent)]
 pub struct I16(pub [u8; 2]);
 impl_int_conversion!(I16, i16);
@@ -326,7 +449,7 @@ impl_int_conversion!(I16, i16);
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "serde", serde(from = "u32", into = "u32"))]
 #[cfg_attr(feature = "bytemuck", derive(Pod, Zeroable))]
-#[derive(Clone, Copy, Debug, Default)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, PartialOrd)]
 #[repr(transparent)]
 pub struct U32(pub [u8; 4]);
 impl_int_conversion!(U32, u32);
@@ -341,7 +464,7 @@ impl_int_conversion!(U32, u32);
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "serde", serde(from = "u64", into = "u64"))]
 #[cfg_attr(feature = "bytemuck", derive(Pod, Zeroable))]
-#[derive(Clone, Copy, Debug, Default)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, PartialOrd)]
 #[repr(transparent)]
 pub struct U64(pub [u8; 8]);
 impl_int_conversion!(U64, u64);
@@ -352,7 +475,7 @@ impl_int_conversion!(U64, u64);
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "serde", serde(from = "i64", into = "i64"))]
 #[cfg_attr(feature = "bytemuck", derive(Pod, Zeroable))]
-#[derive(Clone, Copy, Debug, Default)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, PartialOrd)]
 #[repr(transparent)]
 pub struct I64([u8; 8]);
 impl_int_conversion!(I64, i64);
@@ -368,7 +491,7 @@ impl_int_conversion!(I64, i64);
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "serde", serde(from = "u128", into = "u128"))]
 #[cfg_attr(feature = "bytemuck", derive(Pod, Zeroable))]
-#[derive(Clone, Copy, Debug, Default)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, PartialOrd)]
 #[repr(transparent)]
 pub struct U128(pub [u8; 16]);
 #[cfg(not(target_arch = "bpf"))]
@@ -681,6 +804,10 @@ mod tests {
                             <$UnalignedType>::from_primitive(eighty_four).checked_div(two),
                             Some(<$UnalignedType>::from_primitive(forty_two))
                         );
+                        assert_eq!(
+                            <$UnalignedType>::from_primitive(eighty_four).checked_div(zero),
+                            None
+                        );
                     }
                     ArithmeticMethod::CheckedMul => {
                         assert_eq!(max.checked_mul(two), None);
@@ -794,7 +921,7 @@ mod tests {
                         assert!(max > min);
                         assert_eq!(
                             <$UnalignedType>::from_primitive(forty_two).partial_cmp(&forty_two),
-                            Some(Ordering::Equal)
+                            Some(core::cmp::Ordering::Equal)
                         );
                     }
                 }
