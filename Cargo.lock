@@ -3614,6 +3614,7 @@ dependencies = [
  "solana-sdk-ids",
  "solana-sdk-macro",
  "solana-sysvar-id",
+ "wincode",
 ]
 
 [[package]]
