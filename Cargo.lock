@@ -4597,6 +4597,7 @@ dependencies = [
  "solana-sdk-ids",
  "solana-sha256-hasher",
  "solana-sysvar-id",
+ "wincode",
 ]
 
 [[package]]

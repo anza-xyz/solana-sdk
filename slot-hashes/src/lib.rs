@@ -40,6 +40,7 @@ pub type SlotHash = (u64, Hash);
     feature = "serde",
     derive(serde_derive::Deserialize, serde_derive::Serialize)
 )]
+#[cfg_attr(feature = "wincode", derive(wincode::SchemaWrite, wincode::SchemaRead))]
 #[derive(PartialEq, Eq, Debug, Default)]
 pub struct SlotHashes(Vec<SlotHash>);
 
