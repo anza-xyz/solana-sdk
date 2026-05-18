@@ -20,6 +20,7 @@ use bv::{BitVec, BitsMut};
     feature = "serde",
     derive(serde_derive::Deserialize, serde_derive::Serialize)
 )]
+#[cfg_attr(feature = "wincode", derive(wincode::SchemaWrite, wincode::SchemaRead))]
 #[derive(Clone, PartialEq, Eq)]
 pub struct SlotHistory {
     pub bits: BitVec<u64>,
