@@ -1,11 +1,11 @@
 //! Helpers for reading and writing bytes.
 
-#![cfg_attr(not(feature = "std"), no_std)]
+#![no_std]
 #![cfg_attr(docsrs, feature(doc_cfg))]
 #![allow(clippy::arithmetic_side_effects)]
 
 extern crate alloc;
-#[cfg(test)]
+#[cfg(feature = "std")]
 extern crate std;
 
 use {alloc::vec::Vec, solana_pubkey::Pubkey, solana_sanitize::SanitizeError};
