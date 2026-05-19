@@ -48,6 +48,7 @@ no_std_alloc_crates=(
   -p solana-borsh
   -p solana-curve25519
   -p solana-instruction
+  -p solana-instructions-sysvar
   -p solana-serialize-utils
 )
 

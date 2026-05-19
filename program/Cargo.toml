@@ -79,7 +79,7 @@ solana-rent = { workspace = true, features = ["serde", "sysvar"] }
 solana-sdk-ids = { workspace = true }
 solana-secp256k1-recover = { workspace = true }
 solana-serde-varint = { workspace = true }
-solana-serialize-utils = { workspace = true }
+solana-serialize-utils = { workspace = true, features = ["std"] }
 solana-sha256-hasher = { workspace = true, features = ["sha2"] }
 solana-short-vec = { workspace = true }
 solana-slot-hashes = { workspace = true, features = ["serde", "sysvar"] }
