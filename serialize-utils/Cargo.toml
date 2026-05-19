@@ -12,6 +12,10 @@ edition = { workspace = true }
 [package.metadata.docs.rs]
 targets = ["x86_64-unknown-linux-gnu"]
 
+[features]
+default = ["std"]
+std = []
+
 [dependencies]
 solana-instruction-error = { workspace = true }
 solana-pubkey = { workspace = true, default-features = false }

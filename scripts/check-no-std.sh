@@ -48,6 +48,7 @@ no_std_alloc_crates=(
   -p solana-borsh
   -p solana-curve25519
   -p solana-instruction
+  -p solana-serialize-utils
 )
 
 # Use the upstream BPF target, which doesn't support std, to make sure that our

@@ -1,9 +1,16 @@
 //! Helpers for reading and writing bytes.
 
+#![cfg_attr(not(feature = "std"), no_std)]
 #![cfg_attr(docsrs, feature(doc_cfg))]
 #![allow(clippy::arithmetic_side_effects)]
-use {solana_pubkey::Pubkey, solana_sanitize::SanitizeError};
 
+extern crate alloc;
+#[cfg(test)]
+extern crate std;
+
+use {alloc::vec::Vec, solana_pubkey::Pubkey, solana_sanitize::SanitizeError};
+
+#[cfg(feature = "std")]
 pub mod cursor;
 
 pub fn append_u16(buf: &mut Vec<u8>, data: u16) {
@@ -36,7 +43,7 @@ pub fn read_u8(current: &mut usize, data: &[u8]) -> Result<u8, SanitizeError> {
 }
 
 pub fn read_pubkey(current: &mut usize, data: &[u8]) -> Result<Pubkey, SanitizeError> {
-    let len = std::mem::size_of::<Pubkey>();
+    let len = core::mem::size_of::<Pubkey>();
     if data.len() < *current + len {
         return Err(SanitizeError::IndexOutOfBounds);
     }
