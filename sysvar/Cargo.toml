@@ -32,6 +32,20 @@ serde = [
     "solana-slot-hashes/serde",
     "solana-slot-history/serde",
 ]
+wincode = [
+    "dep:wincode",
+    "wincode/alloc",
+    "solana-clock/wincode",
+    "solana-epoch-rewards/wincode",
+    "solana-epoch-schedule/wincode",
+    "solana-fee-calculator/wincode",
+    "solana-hash/wincode",
+    "solana-last-restart-slot/wincode",
+    "solana-pubkey/wincode",
+    "solana-rent/wincode",
+    "solana-slot-hashes/wincode",
+    "solana-slot-history/wincode",
+]
 
 [dependencies]
 bincode = { workspace = true, optional = true }
@@ -58,6 +72,7 @@ solana-sdk-macro = { workspace = true }
 solana-slot-hashes = { workspace = true, features = ["sysvar"] }
 solana-slot-history = { workspace = true, features = ["sysvar"] }
 solana-sysvar-id = { workspace = true }
+wincode = { workspace = true, optional = true }
 
 [target.'cfg(not(target_os = "solana"))'.dependencies]
 base64 = { workspace = true }

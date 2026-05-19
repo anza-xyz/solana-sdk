@@ -4715,6 +4715,7 @@ dependencies = [
  "solana-sysvar",
  "solana-sysvar-id",
  "test-case",
+ "wincode",
 ]
 
 [[package]]
