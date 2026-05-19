@@ -3639,7 +3639,7 @@ dependencies = [
 [[package]]
 name = "solana-ed25519"
 version = "0.1.0"
-source = "git+https://github.com/anza-xyz/cryptography#154b58b3f4021d23268ade5264defd187f0b55a2"
+source = "git+https://github.com/anza-xyz/cryptography?branch=master#154b58b3f4021d23268ade5264defd187f0b55a2"
 dependencies = [
  "cfg-if",
  "cpufeatures 0.2.17",
