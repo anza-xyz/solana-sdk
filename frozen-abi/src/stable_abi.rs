@@ -114,89 +114,70 @@ mod tests {
         std::collections::{BTreeMap, VecDeque},
     };
 
-    // Keep the bincode and wincode test fixtures structurally identical so their
-    // derived `test_abi_digest` checks enforce one shared ABI digest across serializers.
-    #[rustfmt::skip]
-    macro_rules! linked_stable_abi_pair {
-        (
-            api_digest_wincode = $api_wincode:literal,
-            api_digest_bincode = $api_bincode:literal,
-            abi_digest = $abi:literal,
-        ) => {
-            #[derive(Debug, serde_derive::Serialize, wincode::SchemaWrite)]
-            #[cfg_attr(
+    const ABI_SHARED_WINCODE_VS_BINCODE: &str = "AgNkEpErnFBuy7iTAEUUAC1fbvokEkhbsfFnx4DtXAvY";
+    const API_WINCODE: &str = "2cJjhqi4hsJ3Y5HeT8fYE6YzDPdWnKAmbVHcw75rG1ky";
+    const API_BINCODE: &str = "ARDLdidYVUVVNNHgHx1Uf8Ec2dDdDyYAzNsAtm4oB494";
+    #[derive(Debug, serde_derive::Serialize, wincode::SchemaWrite)]
+    #[cfg_attr(
                 feature = "frozen-abi",
                 derive(
                     solana_frozen_abi_macro::AbiExample,
                     solana_frozen_abi_macro::StableAbi
                 ),
                 solana_frozen_abi_macro::frozen_abi(
-                    api_digest = $api_wincode,
-                    abi_digest = $abi,
+                    api_digest = API_WINCODE,
+                    abi_digest = ABI_SHARED_WINCODE_VS_BINCODE,
                     abi_serializer = "wincode",
                 )
             )]
-            struct TestStructWincode {
-                a: u64,
-                b: bool,
-                c: [u8; 32],
-                d: (u8, u8),
-            }
+    struct TestStructWincode {
+        a: u64,
+        b: bool,
+        c: [u8; 32],
+        d: (u8, u8),
+    }
 
-            impl crate::rand::distr::Distribution<TestStructWincode>
-                for crate::rand::distr::StandardUniform
-            {
-                fn sample<R: crate::rand::Rng + ?Sized>(&self, rng: &mut R) -> TestStructWincode {
-                    TestStructWincode {
-                        a: rng.random(),
-                        b: rng.random(),
-                        c: rng.random(),
-                        d: rng.random(),
-                    }
-                }
+    impl crate::rand::distr::Distribution<TestStructWincode> for crate::rand::distr::StandardUniform {
+        fn sample<R: crate::rand::Rng + ?Sized>(&self, rng: &mut R) -> TestStructWincode {
+            TestStructWincode {
+                a: rng.random(),
+                b: rng.random(),
+                c: rng.random(),
+                d: rng.random(),
             }
+        }
+    }
 
-            #[derive(Debug, serde_derive::Serialize)]
-            #[cfg_attr(
+    #[derive(Debug, serde_derive::Serialize)]
+    #[cfg_attr(
                 feature = "frozen-abi",
                 derive(
                     solana_frozen_abi_macro::AbiExample,
                     solana_frozen_abi_macro::StableAbi
                 ),
                 solana_frozen_abi_macro::frozen_abi(
-                    api_digest = $api_bincode,
-                    abi_digest = $abi,
+                    api_digest = API_BINCODE,
+                    abi_digest = ABI_SHARED_WINCODE_VS_BINCODE,
                     abi_serializer = "bincode",
                 )
             )]
-            struct TestStructBincode {
-                a: u64,
-                b: bool,
-                c: [u8; 32],
-                d: (u8, u8),
-            }
-
-            impl crate::rand::distr::Distribution<TestStructBincode>
-                for crate::rand::distr::StandardUniform
-            {
-                fn sample<R: crate::rand::Rng + ?Sized>(&self, rng: &mut R) -> TestStructBincode {
-                    TestStructBincode {
-                        a: rng.random(),
-                        b: rng.random(),
-                        c: rng.random(),
-                        d: rng.random(),
-                    }
-                }
-            }
-        };
+    struct TestStructBincode {
+        a: u64,
+        b: bool,
+        c: [u8; 32],
+        d: (u8, u8),
     }
 
-    linked_stable_abi_pair!(
-        api_digest_wincode = "2cJjhqi4hsJ3Y5HeT8fYE6YzDPdWnKAmbVHcw75rG1ky",
-        api_digest_bincode = "ARDLdidYVUVVNNHgHx1Uf8Ec2dDdDyYAzNsAtm4oB494",
-        // shared by bincode and wincode
-        abi_digest = "AgNkEpErnFBuy7iTAEUUAC1fbvokEkhbsfFnx4DtXAvY",
-    );
+    impl crate::rand::distr::Distribution<TestStructBincode> for crate::rand::distr::StandardUniform {
+        fn sample<R: crate::rand::Rng + ?Sized>(&self, rng: &mut R) -> TestStructBincode {
+            TestStructBincode {
+                a: rng.random(),
+                b: rng.random(),
+                c: rng.random(),
+                d: rng.random(),
+            }
+        }
+    }
 
     // Verify abi_digest-only: no API digest, should still run ABI test.
     #[derive(wincode::SchemaWrite)]
