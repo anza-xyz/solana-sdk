@@ -588,6 +588,7 @@ unsafe impl<C: ConfigCore> SchemaWrite<C> for Message {
 /// Serialize the message.
 #[cfg(feature = "wincode")]
 #[inline]
+#[deprecated(since = "4.1.2", note = "use `Message::serialize` instead")]
 pub fn serialize(message: &Message) -> Vec<u8> {
     wincode::serialize(message).unwrap()
 }
@@ -1233,7 +1234,7 @@ mod tests {
         ];
 
         for message in &test_cases {
-            assert_eq!(message.size(), serialize(message).len());
+            assert_eq!(message.size(), wincode::serialize(message).unwrap().len());
         }
     }
 
@@ -1255,7 +1256,7 @@ mod tests {
             .build()
             .unwrap();
 
-        let bytes = serialize(&message);
+        let bytes = wincode::serialize(&message).unwrap();
 
         // Build expected bytes manually per SIMD-0385
         //
@@ -1298,7 +1299,7 @@ mod tests {
             .build()
             .unwrap();
 
-        let bytes = serialize(&message);
+        let bytes = wincode::serialize(&message).unwrap();
 
         let mut expected = vec![1, 0, 0];
         // ConfigMask: priority fee (bits 0,1) + CU limit (bit 2) = 0b111 = 7
@@ -1337,7 +1338,7 @@ mod tests {
             .build()
             .unwrap();
 
-        let serialized = serialize(&message);
+        let serialized = wincode::serialize(&message).unwrap();
         let deserialized = deserialize(&serialized).unwrap();
         assert_eq!(message.config, deserialized.config);
     }
