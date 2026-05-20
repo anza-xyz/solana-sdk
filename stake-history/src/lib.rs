@@ -44,6 +44,30 @@ impl StakeHistoryEntry {
             ..Self::default()
         }
     }
+
+    pub fn checked_add(self, rhs: StakeHistoryEntry) -> Option<Self> {
+        Some(Self {
+            effective: self.effective.checked_add(rhs.effective)?,
+            activating: self.activating.checked_add(rhs.activating)?,
+            deactivating: self.deactivating.checked_add(rhs.deactivating)?,
+        })
+    }
+
+    pub fn wrapping_add(self, rhs: StakeHistoryEntry) -> Self {
+        Self {
+            effective: self.effective.wrapping_add(rhs.effective),
+            activating: self.activating.wrapping_add(rhs.activating),
+            deactivating: self.deactivating.wrapping_add(rhs.deactivating),
+        }
+    }
+
+    pub fn saturating_add(self, rhs: StakeHistoryEntry) -> Self {
+        Self {
+            effective: self.effective.saturating_add(rhs.effective),
+            activating: self.activating.saturating_add(rhs.activating),
+            deactivating: self.deactivating.saturating_add(rhs.deactivating),
+        }
+    }
 }
 
 impl std::ops::Add for StakeHistoryEntry {
