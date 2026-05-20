@@ -4,6 +4,12 @@
 
 #[cfg(feature = "frozen-abi")]
 use solana_frozen_abi_macro::AbiExample;
+#[cfg(feature = "wincode")]
+use wincode::{
+    config::{self, Configuration},
+    io::Cursor,
+    SchemaRead, SchemaWrite,
+};
 #[cfg(feature = "bincode")]
 use {
     bincode::{Options, Result},
@@ -31,6 +37,14 @@ static_assertions::const_assert_eq!(PACKET_DATA_SIZE, 1232);
 ///   40 bytes is the size of the IPv6 header
 ///   8 bytes is the size of the fragment header
 pub const PACKET_DATA_SIZE: usize = 1280 - 40 - 8;
+
+// Remaining generics default to BincodeLen / LittleEndian / FixInt / u32 tags,
+// matching bincode's wire format so wincode output is byte-identical.
+#[cfg(feature = "wincode")]
+type PacketWincodeConfig = Configuration<true, PACKET_DATA_SIZE>;
+#[cfg(feature = "wincode")]
+const PACKET_WINCODE_CONFIG: PacketWincodeConfig =
+    Configuration::default().with_preallocation_size_limit::<PACKET_DATA_SIZE>();
 
 #[cfg(feature = "bincode")]
 pub trait Encode {
@@ -212,6 +226,47 @@ impl Packet {
             .reject_trailing_bytes()
             .deserialize(bytes)
     }
+
+    #[cfg(feature = "wincode")]
+    pub fn from_wincode_data<T>(dest: Option<&SocketAddr>, data: &T) -> wincode::WriteResult<Self>
+    where
+        T: SchemaWrite<PacketWincodeConfig, Src = T> + ?Sized,
+    {
+        let mut packet = Self::default();
+        Self::populate_wincode_packet(&mut packet, dest, data)?;
+        Ok(packet)
+    }
+
+    #[cfg(feature = "wincode")]
+    pub fn populate_wincode_packet<T>(
+        &mut self,
+        dest: Option<&SocketAddr>,
+        data: &T,
+    ) -> wincode::WriteResult<()>
+    where
+        T: SchemaWrite<PacketWincodeConfig, Src = T> + ?Sized,
+    {
+        debug_assert!(!self.meta.discard());
+        let mut wr = Cursor::new(self.buffer_mut());
+        config::serialize_into(&mut wr, data, PACKET_WINCODE_CONFIG)?;
+        self.meta.size = wr.position();
+        if let Some(dest) = dest {
+            self.meta.set_socket_addr(dest);
+        }
+        Ok(())
+    }
+
+    #[cfg(feature = "wincode")]
+    pub fn wincode_deserialize_slice<'de, T, I>(&'de self, index: I) -> wincode::ReadResult<T>
+    where
+        T: SchemaRead<'de, PacketWincodeConfig, Dst = T>,
+        I: SliceIndex<[u8], Output = [u8]>,
+    {
+        let bytes = self
+            .data(index)
+            .ok_or(wincode::ReadError::Custom("invalid packet slice"))?;
+        config::deserialize_exact(bytes, PACKET_WINCODE_CONFIG)
+    }
 }
 
 impl fmt::Debug for Packet {
@@ -389,6 +444,66 @@ mod tests {
             p.deserialize_slice::<u32, _>(4..5)
                 .map_err(|e| e.to_string()),
             Err("the size limit has been reached".to_string()),
+        );
+    }
+
+    #[cfg(feature = "wincode")]
+    #[test]
+    fn test_wincode_deserialize_slice() {
+        let p = Packet::from_wincode_data(None, &u32::MAX).unwrap();
+        assert_eq!(
+            p.meta().size,
+            wincode::serialized_size(&u32::MAX).unwrap() as usize
+        );
+        assert_eq!(p.wincode_deserialize_slice(..).ok(), Some(u32::MAX));
+        assert_eq!(p.wincode_deserialize_slice(0..4).ok(), Some(u32::MAX));
+        assert_eq!(
+            p.wincode_deserialize_slice::<u16, _>(0..4)
+                .map_err(|e| e.to_string()),
+            Err("Trailing bytes remain after deserialization".to_string()),
+        );
+        assert_eq!(
+            p.wincode_deserialize_slice::<u32, _>(0..0)
+                .map_err(|e| e.to_string()),
+            Err("Attempting to read 4 bytes".to_string()),
+        );
+        assert_eq!(
+            p.wincode_deserialize_slice::<u32, _>(0..1)
+                .map_err(|e| e.to_string()),
+            Err("Attempting to read 4 bytes".to_string()),
+        );
+        assert_eq!(
+            p.wincode_deserialize_slice::<u32, _>(0..5)
+                .map_err(|e| e.to_string()),
+            Err("Custom error: invalid packet slice".to_string()),
+        );
+        #[allow(clippy::reversed_empty_ranges)]
+        let reversed_empty_range = 4..0;
+        assert_eq!(
+            p.wincode_deserialize_slice::<u32, _>(reversed_empty_range)
+                .map_err(|e| e.to_string()),
+            Err("Custom error: invalid packet slice".to_string()),
+        );
+        assert_eq!(
+            p.wincode_deserialize_slice::<u32, _>(4..5)
+                .map_err(|e| e.to_string()),
+            Err("Custom error: invalid packet slice".to_string()),
+        );
+    }
+
+    #[cfg(all(feature = "bincode", feature = "wincode"))]
+    #[test]
+    fn test_wincode_packet_matches_bincode_packet() {
+        let dest = SocketAddr::new(IpAddr::V4(Ipv4Addr::LOCALHOST), 8000);
+        let value = (u32::MAX, true, [7u8; 32]);
+        let bincode_packet = Packet::from_data(Some(&dest), value).unwrap();
+        let wincode_packet = Packet::from_wincode_data(Some(&dest), &value).unwrap();
+
+        assert_eq!(bincode_packet.meta(), wincode_packet.meta());
+        assert_eq!(bincode_packet.data(..), wincode_packet.data(..));
+        assert_eq!(
+            wincode_packet.wincode_deserialize_slice(..).ok(),
+            Some(value)
         );
     }
 

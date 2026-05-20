@@ -4113,6 +4113,7 @@ dependencies = [
  "solana-packet",
  "solana-pubkey",
  "static_assertions",
+ "wincode",
 ]
 
 [[package]]
@@ -5501,9 +5502,9 @@ dependencies = [
 
 [[package]]
 name = "wincode"
-version = "0.5.0"
+version = "0.5.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b32acb3b7c291af87820e4339459a2c61c24fd13be8809aab2464aed6decf376"
+checksum = "37095eb18dd6254c66217edc61a29d83d51f8818de8a2ffe88e4584ad73fb5f9"
 dependencies = [
  "bv",
  "pastey",
@@ -5515,9 +5516,9 @@ dependencies = [
 
 [[package]]
 name = "wincode-derive"
-version = "0.4.3"
+version = "0.4.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fca057fc9a13dd19cdb64ef558635d43c42667c0afa1ae7915ea1fa66993fd1a"
+checksum = "e262d55d1261f31e2cfe49cc6385a421d14d99faa0526bbe3cc1bda0d3005c62"
 dependencies = [
  "darling 0.21.3",
  "proc-macro2",
