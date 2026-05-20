@@ -35,6 +35,7 @@ no_std_crates=(
   -p solana-rent
   -p solana-sanitize
   -p solana-sdk-ids
+  -p solana-secp256k1-program
   -p solana-sha256-hasher
   -p solana-signature
   -p solana-sysvar-id

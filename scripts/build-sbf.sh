@@ -16,7 +16,6 @@ build_sbf_excludes=(
   --exclude solana-presigner
   --exclude solana-sdk-wasm-js
   --exclude solana-sdk-wasm-js-tests
-  --exclude solana-secp256k1-program
   --exclude solana-secp256r1-program
   --exclude solana-system-transaction
   --exclude solana-system-wasm-js

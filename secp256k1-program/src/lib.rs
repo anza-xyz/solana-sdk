@@ -1,4 +1,5 @@
 #![cfg_attr(docsrs, feature(doc_cfg))]
+#![cfg_attr(any(target_os = "solana", target_arch = "bpf"), no_std)]
 //! Instructions for the [secp256k1 native program][np].
 //!
 //! [np]: https://docs.solanalabs.com/runtime/programs#secp256k1-program
@@ -117,12 +118,16 @@
 //! - 0 or more bytes of arbitrary data, which may contain signatures,
 //!   messages or Ethereum addresses.
 //!
-//! The signature offset structure is defined by [`SecpSignatureOffsets`],
-//! and can be serialized to the correct format with [`bincode::serialize_into`].
-//! Note that the bincode format may not be stable,
-//! and callers should ensure they use the same version of `bincode` as the Solana SDK.
-//! This data structure is not provided to Solana programs,
-//! which are expected to interpret the signature offsets manually.
+//! The signature offset structure is defined by [`SecpSignatureOffsets`].
+//! Host clients can serialize it to the correct format with
+//! [`bincode::serialize_into`] by enabling the `bincode` feature. Note that the
+//! bincode format may not be stable, and callers should ensure they use the
+//! same version of `bincode` as the Solana SDK.
+//!
+//! Solana programs can use this crate for the offset structure and layout
+//! constants, but should still parse the 11-byte little-endian wire format
+//! explicitly. [`SecpSignatureOffsets`] is not a packed view of the instruction
+//! data bytes.
 //!
 //! [`bincode::serialize_into`]: https://docs.rs/bincode/1.3.3/bincode/fn.serialize_into.html
 //!
@@ -788,8 +793,12 @@
 
 #[cfg(feature = "serde")]
 use serde_derive::{Deserialize, Serialize};
-#[cfg(feature = "bincode")]
+#[cfg(all(
+    feature = "bincode",
+    not(any(target_os = "solana", target_arch = "bpf"))
+))]
 use solana_instruction::Instruction;
+#[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
 use {digest::Digest, solana_signature::error::Error};
 
 pub const SECP256K1_PUBKEY_SIZE: usize = 64;
@@ -825,6 +834,7 @@ pub struct SecpSignatureOffsets {
 }
 
 /// Signs a message from the given private key bytes
+#[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
 pub fn sign_message(
     priv_key_bytes: &[u8; SECP256K1_PRIVATE_KEY_SIZE],
     message: &[u8],
@@ -842,7 +852,10 @@ pub fn sign_message(
     Ok((signature.to_bytes().into(), recovery_id.to_byte()))
 }
 
-#[cfg(feature = "bincode")]
+#[cfg(all(
+    feature = "bincode",
+    not(any(target_os = "solana", target_arch = "bpf"))
+))]
 pub fn new_secp256k1_instruction_with_signature(
     message_arr: &[u8],
     signature: &[u8; SIGNATURE_SERIALIZED_SIZE],
@@ -893,6 +906,7 @@ pub fn new_secp256k1_instruction_with_signature(
 }
 
 /// Creates an Ethereum address from a secp256k1 public key.
+#[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
 pub fn eth_address_from_pubkey(
     pubkey: &[u8; SECP256K1_PUBKEY_SIZE],
 ) -> [u8; HASHED_PUBKEY_SERIALIZED_SIZE] {
