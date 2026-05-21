@@ -386,6 +386,14 @@ macro_rules! impl_int_conversion {
                 *self = *self - rhs;
             }
         }
+        impl core::cmp::PartialOrd<$P> for $P {
+            #[inline(always)]
+            fn partial_cmp(&self, other: &$P) -> Option<core::cmp::Ordering> {
+                let s: $I = (*self).into();
+                let o: $I = (*other).into();
+                s.partial_cmp(&o)
+            }
+        }
     };
 }
 
@@ -721,6 +729,7 @@ mod tests {
         MulAssign,
         RemAssign,
         SubAssign,
+        PartialOrd,
     }
 
     macro_rules! test_arithmetic_methods {
@@ -744,6 +753,7 @@ mod tests {
             #[test_case::test_case(ArithmeticMethod::MulAssign ; "mul_assign")]
             #[test_case::test_case(ArithmeticMethod::RemAssign ; "rem_assign")]
             #[test_case::test_case(ArithmeticMethod::SubAssign ; "sub_assign")]
+            #[test_case::test_case(ArithmeticMethod::PartialOrd ; "partial_ord")]
             #[allow(clippy::arithmetic_side_effects)]
             fn $test_name(method: ArithmeticMethod) {
                 let min = <$UnalignedType>::from_primitive($min);
@@ -870,6 +880,13 @@ mod tests {
                         let mut value = <$UnalignedType>::from_primitive(forty_four);
                         value -= two;
                         assert_eq!(value, <$UnalignedType>::from_primitive(forty_two));
+                    }
+                    ArithmeticMethod::PartialOrd => {
+                        assert!(
+                            <$UnalignedType>::from_primitive(forty_one)
+                                < <$UnalignedType>::from_primitive(forty_two)
+                        );
+                        assert!(max > min);
                     }
                 }
             }
