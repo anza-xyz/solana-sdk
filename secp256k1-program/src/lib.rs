@@ -799,7 +799,7 @@ use serde_derive::{Deserialize, Serialize};
 ))]
 use solana_instruction::Instruction;
 #[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
-use {digest::Digest, solana_signature::error::Error};
+use solana_signature::error::Error;
 
 pub const SECP256K1_PUBKEY_SIZE: usize = 64;
 pub const SECP256K1_PRIVATE_KEY_SIZE: usize = 32;
@@ -841,11 +841,7 @@ pub fn sign_message(
 ) -> Result<([u8; SIGNATURE_SERIALIZED_SIZE], u8), Error> {
     let priv_key = k256::ecdsa::SigningKey::from_slice(priv_key_bytes)
         .map_err(|e| Error::from_source(format!("{e}")))?;
-    let mut hasher = sha3::Keccak256::new();
-    hasher.update(message);
-    let message_hash = hasher.finalize();
-    let mut message_hash_arr = [0u8; 32];
-    message_hash_arr.copy_from_slice(message_hash.as_slice());
+    let message_hash_arr = solana_keccak_hasher::hash(message).to_bytes();
     let (signature, recovery_id) = priv_key
         .sign_prehash_recoverable(&message_hash_arr)
         .map_err(|e| Error::from_source(format!("{e}")))?;
@@ -906,12 +902,37 @@ pub fn new_secp256k1_instruction_with_signature(
 }
 
 /// Creates an Ethereum address from a secp256k1 public key.
-#[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
 pub fn eth_address_from_pubkey(
     pubkey: &[u8; SECP256K1_PUBKEY_SIZE],
 ) -> [u8; HASHED_PUBKEY_SERIALIZED_SIZE] {
+    let pubkey_hash = solana_keccak_hasher::hash(pubkey);
+    let address_offset = solana_keccak_hasher::HASH_BYTES - HASHED_PUBKEY_SERIALIZED_SIZE;
     let mut addr = [0u8; HASHED_PUBKEY_SERIALIZED_SIZE];
-    addr.copy_from_slice(&sha3::Keccak256::digest(pubkey)[12..]);
-    assert_eq!(addr.len(), HASHED_PUBKEY_SERIALIZED_SIZE);
+    addr.copy_from_slice(&pubkey_hash.as_bytes()[address_offset..]);
     addr
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_eth_address_from_pubkey() {
+        // Secp256k1 generator
+        let pubkey = [
+            0x79, 0xbe, 0x66, 0x7e, 0xf9, 0xdc, 0xbb, 0xac, 0x55, 0xa0, 0x62, 0x95, 0xce, 0x87,
+            0x0b, 0x07, 0x02, 0x9b, 0xfc, 0xdb, 0x2d, 0xce, 0x28, 0xd9, 0x59, 0xf2, 0x81, 0x5b,
+            0x16, 0xf8, 0x17, 0x98, 0x48, 0x3a, 0xda, 0x77, 0x26, 0xa3, 0xc4, 0x65, 0x5d, 0xa4,
+            0xfb, 0xfc, 0x0e, 0x11, 0x08, 0xa8, 0xfd, 0x17, 0xb4, 0x48, 0xa6, 0x85, 0x54, 0x19,
+            0x9c, 0x47, 0xd0, 0x8f, 0xfb, 0x10, 0xd4, 0xb8,
+        ];
+        // keccak256(pubkey)[12..32] = 0x7e5f4552091a69125d5dfcb7b8c2659029395bdf
+        assert_eq!(
+            eth_address_from_pubkey(&pubkey),
+            [
+                0x7e, 0x5f, 0x45, 0x52, 0x09, 0x1a, 0x69, 0x12, 0x5d, 0x5d, 0xfc, 0xb7, 0xb8, 0xc2,
+                0x65, 0x90, 0x29, 0x39, 0x5b, 0xdf,
+            ]
+        );
+    }
 }

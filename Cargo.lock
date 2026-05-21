@@ -4397,13 +4397,11 @@ version = "3.0.1"
 dependencies = [
  "anyhow",
  "bincode",
- "digest",
  "hex",
  "k256",
  "rand 0.8.5",
  "serde",
  "serde_derive",
- "sha3",
  "solana-account-info",
  "solana-example-mocks",
  "solana-instruction",
