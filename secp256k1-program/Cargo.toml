@@ -20,9 +20,9 @@ dev-context-only-utils = ["bincode"]
 serde = ["dep:serde", "dep:serde_derive"]
 
 [dependencies]
-solana-keccak-hasher = { workspace = true, features = ["sha3"] }
 serde = { workspace = true, optional = true }
 serde_derive = { workspace = true, optional = true }
+solana-keccak-hasher = { workspace = true, features = ["sha3"] }
 
 [target.'cfg(not(any(target_os = "solana", target_arch = "bpf")))'.dependencies]
 bincode = { workspace = true, optional = true }
