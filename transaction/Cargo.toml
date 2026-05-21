@@ -71,7 +71,6 @@ solana-hash = { workspace = true, features = ["atomic"] }
 solana-instruction = { workspace = true, features = ["borsh"] }
 solana-keypair = { workspace = true }
 solana-nonce = { workspace = true }
-solana-packet = { workspace = true }
 solana-presigner = { workspace = true }
 solana-pubkey = { workspace = true, features = ["rand"] }
 solana-sha256-hasher = { workspace = true, features = ["sha2"] }
