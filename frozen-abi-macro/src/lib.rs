@@ -51,7 +51,10 @@ pub fn derive_stable_abi(item: TokenStream) -> TokenStream {
     let expanded = quote! {
         #[automatically_derived]
         impl #impl_generics ::solana_frozen_abi::stable_abi::StableAbi for #ident #ty_generics #where_clause {
-            fn random(rng: &mut (impl ::solana_frozen_abi::rand::RngCore + ?Sized)) -> Self {
+            fn random_with_context(
+                rng: &mut (impl ::solana_frozen_abi::rand::RngCore + ?Sized),
+                _ctx: (),
+            ) -> Self {
                 ::solana_frozen_abi::rand::Rng::random::<Self>(rng)
             }
         }
@@ -140,8 +143,15 @@ fn filter_allow_attrs(attrs: &mut Vec<Attribute>) {
 }
 
 #[cfg(feature = "frozen-abi")]
-fn parse_stable_abi_sample_override(field: &syn::Field) -> Result<Option<TokenStream2>, Error> {
-    let mut override_expr: Option<TokenStream2> = None;
+struct StableAbiSampleOptions {
+    with_expr: Option<TokenStream2>,
+    max_len: Option<usize>,
+}
+
+#[cfg(feature = "frozen-abi")]
+fn parse_stable_abi_sample_options(field: &syn::Field) -> Result<StableAbiSampleOptions, Error> {
+    let mut with_expr: Option<TokenStream2> = None;
+    let mut max_len: Option<usize> = None;
     for attr in &field.attrs {
         if !attr.path().is_ident("stable_abi_sample") {
             continue;
@@ -149,33 +159,64 @@ fn parse_stable_abi_sample_override(field: &syn::Field) -> Result<Option<TokenSt
         attr.parse_nested_meta(|meta| {
             if meta.path.is_ident("with") {
                 // reject duplicate `with` on the same field
-                if override_expr.is_some() {
+                if with_expr.is_some() {
                     return Err(meta.error("duplicate `with` in `#[stable_abi_sample(...)]`"));
                 }
                 let value = meta.value()?.parse::<LitStr>()?;
                 let expr = value.parse::<Expr>().map_err(|err| {
                     Error::new(value.span(), format!("invalid `with` expression: {err}"))
                 })?;
-                override_expr = Some(quote! { #expr });
+                with_expr = Some(quote! { #expr });
+                Ok(())
+            } else if meta.path.is_ident("max_len") {
+                // reject duplicate `max_len` on the same field
+                if max_len.is_some() {
+                    return Err(meta.error("duplicate `max_len` in `#[stable_abi_sample(...)]`"));
+                }
+                let value = meta.value()?.parse::<syn::LitInt>()?;
+                let parsed_max_len = value
+                    .base10_parse::<usize>()
+                    .map_err(|err| Error::new(value.span(), format!("invalid `max_len` value: {err}")))?;
+                max_len = Some(parsed_max_len);
                 Ok(())
             } else {
-                Err(meta.error("unsupported `stable_abi_sample` option; expected `with = \"...\"`"))
+                Err(meta.error(
+                    "unsupported `stable_abi_sample` option; expected `with = \"...\"` or `max_len = N`",
+                ))
             }
         })?;
     }
-    Ok(override_expr)
+    if with_expr.is_some() && max_len.is_some() {
+        return Err(Error::new_spanned(
+            field,
+            "cannot combine `with` and `max_len` in `#[stable_abi_sample(...)]`",
+        ));
+    }
+    Ok(StableAbiSampleOptions { with_expr, max_len })
 }
 
 #[cfg(feature = "frozen-abi")]
 fn stable_abi_sample_field_expr(field: &syn::Field) -> Result<TokenStream2, Error> {
-    Ok(match parse_stable_abi_sample_override(field)? {
-        Some(expr) => expr,
-        None => {
-            let ty = &field.ty;
+    let options = parse_stable_abi_sample_options(field)?;
+    let ty = &field.ty;
+    Ok(match (options.with_expr, options.max_len) {
+        (Some(expr), None) => expr,
+        (None, Some(max_len)) => quote! {
+            {
+                let max_len: usize = #max_len;
+                let len = rng.random_range(0..=max_len);
+                <#ty as ::solana_frozen_abi::stable_abi::StableAbi<::solana_frozen_abi::stable_abi::MaxLen>>::random_with_context(
+                    rng,
+                    ::solana_frozen_abi::stable_abi::MaxLen(len),
+                )
+            }
+        },
+        (None, None) => {
             quote! {
-                <#ty as ::solana_frozen_abi::stable_abi::StableAbi>::random(rng)
+                <#ty as ::solana_frozen_abi::stable_abi::StableAbi>::random_with_context(rng, ())
             }
         }
+        (Some(_), Some(_)) => unreachable!("`with` and `max_len` are mutually exclusive"),
     })
 }
 
@@ -546,7 +587,7 @@ fn quote_for_test(
                 let mut digester = ::solana_frozen_abi::hash::Hasher::default();
 
                 for _ in 0..10_000 {
-                    let val = <#type_name>::random(&mut rng);
+                    let val = <#type_name>::random_with_context(&mut rng, ());
                     digester.hash(&#abi_serialize_expr);
                 }
                 assert_eq!(#expected_abi_digest, ::std::format!("{}", digester.result()), "ABI layout has changed!");

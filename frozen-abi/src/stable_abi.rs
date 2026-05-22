@@ -1,17 +1,24 @@
 use {
     core::{array, num::NonZero},
     rand::{Rng, RngCore},
+    std::{
+        collections::{BTreeMap, HashMap, VecDeque},
+        hash::Hash,
+    },
 };
 
-pub trait StableAbi: Sized {
-    fn random(rng: &mut (impl RngCore + ?Sized)) -> Self;
+#[derive(Clone, Copy)]
+pub struct MaxLen(pub usize);
+
+pub trait StableAbi<Ctx = ()>: Sized {
+    fn random_with_context(rng: &mut (impl RngCore + ?Sized), ctx: Ctx) -> Self;
 }
 
 macro_rules! impl_stable_abi_via_standard_uniform {
     ($($t:ty),* $(,)?) => {
         $(
-            impl StableAbi for $t {
-                fn random(rng: &mut (impl RngCore + ?Sized)) -> Self {
+            impl<Ctx> StableAbi<Ctx> for $t {
+                fn random_with_context(rng: &mut (impl RngCore + ?Sized), _ctx: Ctx) -> Self {
                     rng.random::<Self>()
                 }
             }
@@ -23,7 +30,7 @@ macro_rules! impl_stable_abi_via_size_of_from_bytes {
     ($from_bytes:ident, $($t:ty),* $(,)?) => {
         $(
             impl StableAbi for $t {
-                fn random(rng: &mut (impl RngCore + ?Sized)) -> Self {
+                fn random_with_context(rng: &mut (impl RngCore + ?Sized), _ctx: ()) -> Self {
                     Self::$from_bytes(rng.random::<[u8; core::mem::size_of::<Self>()]>())
                 }
             }
@@ -34,12 +41,13 @@ macro_rules! impl_stable_abi_via_size_of_from_bytes {
 macro_rules! impl_stable_abi_for_tuples {
     ($(($($t:ident),+ $(,)?)),* $(,)?) => {
         $(
-            impl<$($t),+> StableAbi for ($($t,)+)
+            impl<$($t),+, Ctx> StableAbi<Ctx> for ($($t,)+)
             where
-                $($t: StableAbi),+
+                $($t: StableAbi),+,
+                Ctx: Copy,
             {
-                fn random(rng: &mut (impl RngCore + ?Sized)) -> Self {
-                    ($($t::random(rng),)+)
+                fn random_with_context(rng: &mut (impl RngCore + ?Sized), _ctx: Ctx) -> Self {
+                    ($($t::random_with_context(rng, ()),)+)
                 }
             }
         )*
@@ -93,8 +101,8 @@ impl<T, const N: usize> StableAbi for [T; N]
 where
     T: StableAbi,
 {
-    fn random(rng: &mut (impl RngCore + ?Sized)) -> Self {
-        array::from_fn(|_| T::random(rng))
+    fn random_with_context(rng: &mut (impl RngCore + ?Sized), _ctx: ()) -> Self {
+        array::from_fn(|_| T::random_with_context(rng, ()))
     }
 }
 
@@ -102,16 +110,108 @@ impl<T> StableAbi for Option<T>
 where
     T: StableAbi,
 {
-    fn random(rng: &mut (impl RngCore + ?Sized)) -> Self {
-        rng.random::<bool>().then(|| T::random(rng))
+    fn random_with_context(rng: &mut (impl RngCore + ?Sized), _ctx: ()) -> Self {
+        rng.random::<bool>().then(|| T::random_with_context(rng, ()))
     }
 }
+
+impl<K, V> StableAbi for HashMap<K, V>
+where
+    K: StableAbi + Eq + Hash,
+    V: StableAbi,
+{
+    fn random_with_context(rng: &mut (impl RngCore + ?Sized), _ctx: ()) -> Self {
+        // keep one element to mitigate iteration order differences
+        HashMap::from_iter([(K::random_with_context(rng, ()), V::random_with_context(rng, ()))])
+    }
+}
+
+impl<T> StableAbi for Vec<T>
+where
+    T: StableAbi,
+{
+    fn random_with_context(rng: &mut (impl RngCore + ?Sized), _ctx: ()) -> Self {
+        (0..(rng.random::<u8>() % 4) as usize)
+            .map(|_| T::random_with_context(rng, ()))
+            .collect()
+    }
+}
+
+impl<T> StableAbi<MaxLen> for Vec<T>
+where
+    T: StableAbi,
+{
+    fn random_with_context(rng: &mut (impl RngCore + ?Sized), ctx: MaxLen) -> Self {
+        (0..ctx.0)
+            .map(|_| T::random_with_context(rng, ()))
+            .collect()
+    }
+}
+
+
+impl<T> StableAbi for VecDeque<T>
+where
+    T: StableAbi,
+{
+    fn random_with_context(rng: &mut (impl RngCore + ?Sized), _ctx: ()) -> Self {
+        (0..(rng.random::<u8>() % 4) as usize)
+            .map(|_| T::random_with_context(rng, ()))
+            .collect()
+    }
+}
+
+impl<T> StableAbi<MaxLen> for VecDeque<T>
+where
+    T: StableAbi,
+{
+    fn random_with_context(rng: &mut (impl RngCore + ?Sized), ctx: MaxLen) -> Self {
+        (0..ctx.0)
+            .map(|_| T::random_with_context(rng, ()))
+            .collect()
+    }
+}
+
+impl<K, V> StableAbi for BTreeMap<K, V>
+where
+    K: StableAbi + Ord,
+    V: StableAbi,
+{
+    fn random_with_context(rng: &mut (impl RngCore + ?Sized), _ctx: ()) -> Self {
+        (0..(rng.random::<u8>() % 4) as usize)
+            .map(|_| {
+                (
+                    K::random_with_context(rng, ()),
+                    V::random_with_context(rng, ()),
+                )
+            })
+            .collect()
+    }
+}
+
+impl<K, V> StableAbi<MaxLen> for BTreeMap<K, V>
+where
+    K: StableAbi + Ord,
+    V: StableAbi,
+{
+    fn random_with_context(rng: &mut (impl RngCore + ?Sized), ctx: MaxLen) -> Self {
+        (0..ctx.0)
+            .map(|_| {
+                (
+                    K::random_with_context(rng, ()),
+                    V::random_with_context(rng, ()),
+                )
+            })
+            .collect()
+    }
+}
+
+
 
 #[cfg(all(test, feature = "frozen-abi"))]
 mod tests {
     use {
         core::num::NonZero,
-        std::collections::{BTreeMap, VecDeque},
+        std::collections::{BTreeMap, HashMap, VecDeque},
     };
 
     const ABI_SHARED_WINCODE_VS_BINCODE: &str = "AgNkEpErnFBuy7iTAEUUAC1fbvokEkhbsfFnx4DtXAvY";
@@ -506,5 +606,73 @@ mod tests {
         a: NonZero<u32>,
         b: Option<NonZero<u8>>,
         c: NonZero<i16>,
+    }
+
+    type AliasVec = Vec<(u8, u16, u32, u64)>;
+    type AliasHashMap = HashMap<u8, u128>;
+    type AliasVecDeque = VecDeque<i16>;
+
+    #[derive(Debug, wincode::SchemaWrite)]
+    #[cfg_attr(
+        feature = "frozen-abi",
+        derive(
+            solana_frozen_abi_macro::StableAbi,
+            solana_frozen_abi_macro::StableAbiSample
+        ),
+        solana_frozen_abi_macro::frozen_abi(
+            abi_digest = "C3meZWvphg8HYZhUsUBDo7gFKUNtw7YaHGiwYgM4pRoN",
+            abi_serializer = "wincode",
+        )
+    )]
+    struct TestCollectionsDerive {
+        a: Vec<u8>,
+        b: Option<Vec<u8>>,
+        c: AliasVec,
+        d: HashMap<u8, char>,
+        e: AliasHashMap,
+        f: Option<HashMap<u16, i64>>,
+        g: VecDeque<char>,
+        h: Option<VecDeque<bool>>,
+        i: AliasVecDeque,
+    }
+
+    #[derive(Debug, wincode::SchemaWrite)]
+    #[cfg_attr(
+        feature = "frozen-abi",
+        derive(
+            solana_frozen_abi_macro::StableAbi,
+            solana_frozen_abi_macro::StableAbiSample
+        ),
+        solana_frozen_abi_macro::frozen_abi(
+            abi_digest = "2dEpE1RqDYHc1EjJ3ikaWURoF5hq8fUMfhhRDTxSCWFK",
+            abi_serializer = "wincode",
+        )
+    )]
+    struct TestStableAbiSampleSizeAttribute {
+        #[stable_abi_sample(max_len = 1)]
+        a: Vec<u16>,
+        #[stable_abi_sample(max_len = 254)]
+        b: Vec<u8>,
+        #[stable_abi_sample(max_len = 255)]
+        c: Vec<u64>,
+        #[stable_abi_sample(max_len = 0)]
+        d: Vec<i32>,
+        e: Vec<i32>,
+        #[stable_abi_sample(with = "vec![1,2,3]")]
+        f: Vec<i32>,
+        #[stable_abi_sample(
+            with = "(0..rng.random::<u16>() % 4).map(|i| (((i << 8) + rng.random::<u8>() as u16), rng.random())).collect()"
+        )]
+        g: Vec<(u16, u8)>,
+        h: VecDeque<(i16, u8)>,
+        #[stable_abi_sample(max_len = 1)]
+        i: VecDeque<(i16, u8)>,
+        j: HashMap<u8, Option<u16>>,
+        k: HashMap<u8, Option<i8>>,
+        l: [u8; 8],
+        m: Option<[u8; 8]>,
+        n: BTreeMap<u8, i16>,
+        o: Option<BTreeMap<u8, i16>>,
+        p: Vec<Vec<u8>>
     }
 }
