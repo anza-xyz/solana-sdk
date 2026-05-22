@@ -2,7 +2,7 @@
 use rayon::prelude::*;
 use {
     criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion},
-    ed25519_dalek::Signer,
+    curve25519::ed_sigs::SigningKey,
     solana_signature::Signature,
     std::vec::Vec,
 };
@@ -22,7 +22,7 @@ fn create_bench_data(size: usize) -> BenchData {
             let key_index_bytes = key_index.to_le_bytes();
             let mut bytes = [0; 32];
             bytes[..key_index_bytes.len()].copy_from_slice(&key_index_bytes);
-            ed25519_dalek::SigningKey::from_bytes(&bytes)
+            SigningKey::from_bytes(&bytes)
         })
         .collect();
     let messages: Vec<_> = (0..size)
@@ -35,7 +35,7 @@ fn create_bench_data(size: usize) -> BenchData {
         .collect();
     let pubkeys = signing_keys
         .iter()
-        .map(|signing_key| signing_key.verifying_key().to_bytes())
+        .map(|signing_key| signing_key.verification_key().into())
         .collect();
 
     BenchData {
