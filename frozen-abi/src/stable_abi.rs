@@ -3,7 +3,7 @@ use {
     rand::{Rng, RngCore},
     std::{
         collections::{BTreeMap, BTreeSet, HashMap, HashSet, VecDeque},
-        hash::Hash,
+        hash::{BuildHasher, Hash},
     },
 };
 
@@ -179,15 +179,16 @@ where
 
 // keep at most one element to mitigate iteration order differences
 impl_stable_abi_via_default_ctx! {
-    impl[K, V] for HashMap<K, V>,
+    impl[K, V, S] for HashMap<K, V, S>,
     default = SequenceLenRange { min: 0, max: 1 },
-    where { K: StableAbi + Eq + Hash, V: StableAbi },
+    where { K: StableAbi + Eq + Hash, V: StableAbi, S: BuildHasher + Default },
 }
 
-impl<K, V> StableAbiWithContext<SequenceLenRange> for HashMap<K, V>
+impl<K, V, S> StableAbiWithContext<SequenceLenRange> for HashMap<K, V, S>
 where
     K: StableAbiWithContext + Eq + Hash,
     V: StableAbiWithContext,
+    S: BuildHasher + Default,
 {
     fn random_with_context(rng: &mut (impl RngCore + ?Sized), ctx: SequenceLenRange) -> Self {
         let len = rng.random_range(ctx.min..=ctx.max);
@@ -203,21 +204,22 @@ where
 }
 
 impl_with_context_via! {
-    impl[K, V] for HashMap<K, V>,
+    impl[K, V, S] for HashMap<K, V, S>,
     SequenceLenMax as ctx => SequenceLenRange { min: 0, max: ctx.0 },
-    where { K: StableAbiWithContext + Eq + Hash, V: StableAbiWithContext },
+    where { K: StableAbiWithContext + Eq + Hash, V: StableAbiWithContext, S: BuildHasher + Default },
 }
 
 // keep at most one element to mitigate iteration order differences
 impl_stable_abi_via_default_ctx! {
-    impl[T] for HashSet<T>,
+    impl[T, S] for HashSet<T, S>,
     default = SequenceLenRange { min: 0, max: 1 },
-    where { T: StableAbi + Eq + Hash },
+    where { T: StableAbi + Eq + Hash, S: BuildHasher + Default },
 }
 
-impl<T> StableAbiWithContext<SequenceLenRange> for HashSet<T>
+impl<T, S> StableAbiWithContext<SequenceLenRange> for HashSet<T, S>
 where
     T: StableAbiWithContext + Eq + Hash,
+    S: BuildHasher + Default,
 {
     fn random_with_context(rng: &mut (impl RngCore + ?Sized), ctx: SequenceLenRange) -> Self {
         let len = rng.random_range(ctx.min..=ctx.max);
@@ -228,9 +230,9 @@ where
 }
 
 impl_with_context_via! {
-    impl[T] for HashSet<T>,
+    impl[T, S] for HashSet<T, S>,
     SequenceLenMax as ctx => SequenceLenRange { min: 0, max: ctx.0 },
-    where { T: StableAbiWithContext + Eq + Hash },
+    where { T: StableAbiWithContext + Eq + Hash, S: BuildHasher + Default },
 }
 
 impl_stable_abi_via_default_ctx! {
