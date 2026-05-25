@@ -14,7 +14,7 @@
 //!
 //! The macro would generate the `test_abi_digest` test that verifies binary layout stability:
 //! - Initializes a deterministic random number generator with fixed seed
-//! - Generates 10_000 instances of the type via `StableAbi::random_with_context(..., ())`
+//! - Generates 10_000 instances of the type
 //! - Serializes each instance
 //! - Hashes all serialized bytes together
 //! - Compares the resulting hash against the provided in `abi_digest` attribute
@@ -30,17 +30,13 @@
 //!
 //! ```rust,ignore
 //! impl ::solana_frozen_abi::stable_abi::StableAbi for MyType {
-//!     fn random_with_context(
-//!         rng: &mut (impl ::solana_frozen_abi::rand::RngCore + ?Sized),
-//!         _ctx: (),
-//!     ) -> Self {
+//!     fn random(rng: &mut (impl ::solana_frozen_abi::rand::RngCore + ?Sized)) -> Self {
 //!         ::solana_frozen_abi::rand::Rng::random::<Self>(rng)
 //!     }
 //! }
 //! ```
 //!
-//! The derived `StableAbi::random_with_context(..., ())` implementation calls
-//! `rng.random::<MyType>()`, so your type
+//! The `StableAbi::random()` default implementation calls `rng.random::<MyType>()`, so your type
 //! also needs `Distribution<MyType> for StandardUniform`.
 //!
 //! There are two ways to provide it:
@@ -48,7 +44,7 @@
 //! 1. Derive `StableAbiSample`
 //!
 //! `StableAbiSample` auto-generates `Distribution<MyType> for StandardUniform` and, by default,
-//! samples each field via `<FieldTy as StableAbi>::random_with_context(rng, ())`.
+//! tries to sample each field via `rng.random()`.
 //!
 //! ```rust,ignore
 //! #[derive(StableAbi, StableAbiSample)]
@@ -62,7 +58,7 @@
 //! ```
 //!
 //! Field override is optional and only needed for fields that cannot be sampled with plain
-//! `StableAbi::random_with_context(rng, ())`, or when you want a specific shape.
+//! `rng.random()` (for example `Vec<_>` or `HashMap<_, _>`), or when you want a specific shape.
 //!
 //! `StableAbiSample` also supports a size-bound helper for context-aware collections:
 //!
@@ -80,9 +76,8 @@
 //! ```
 //!
 //! `max_len = N` picks a deterministic random length in range `0..=N` and then delegates to
-//! `StableAbi<MaxLen>::random_with_context(...)`.
-//! This works for field types that implement `StableAbi<MaxLen>` (currently `Vec`, `VecDeque`,
-//! and `BTreeMap`).
+//! `StableAbiWithContext<MaxLen>::random_with_context(...)`.
+//! This works for field types that implement `StableAbiWithContext<MaxLen>`
 //!
 //! ```rust,ignore
 //! #[derive(StableAbi, StableAbiSample)]
@@ -136,8 +131,8 @@
 //!    and `u64`). These cases are still covered by `AbiExample`
 //! 2. The implementor must ensure a consistent order of `rng.random()` calls in case of manual implementation
 //!    or with overrides, as any change to these will result in different hash
-//! 3. For collection types with non deterministic ordering (e.g., `HashMap`), generated defaults
-//!    keep one element to mitigate iteration order differences
+//! 3. For collection types with non deterministic ordering (e.g., `HashMap`), it is recommended
+//!    to insert only one item to avoid false positives caused by iteration order differences
 
 #![allow(incomplete_features)]
 #![cfg_attr(docsrs, feature(doc_cfg))]

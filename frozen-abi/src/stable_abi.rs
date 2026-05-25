@@ -10,15 +10,28 @@ use {
 #[derive(Clone, Copy)]
 pub struct MaxLen(pub usize);
 
-pub trait StableAbi<Ctx = ()>: Sized {
+pub trait StableAbi: Sized {
+    fn random(rng: &mut (impl RngCore + ?Sized)) -> Self;
+}
+
+pub trait StableAbiWithContext<Ctx = ()>: Sized {
     fn random_with_context(rng: &mut (impl RngCore + ?Sized), ctx: Ctx) -> Self;
+}
+
+impl<T> StableAbiWithContext<()> for T
+where
+    T: StableAbi,
+{
+    fn random_with_context(rng: &mut (impl RngCore + ?Sized), _ctx: ()) -> Self {
+        T::random(rng)
+    }
 }
 
 macro_rules! impl_stable_abi_via_standard_uniform {
     ($($t:ty),* $(,)?) => {
         $(
-            impl<Ctx> StableAbi<Ctx> for $t {
-                fn random_with_context(rng: &mut (impl RngCore + ?Sized), _ctx: Ctx) -> Self {
+            impl StableAbi for $t {
+                fn random(rng: &mut (impl RngCore + ?Sized)) -> Self {
                     rng.random::<Self>()
                 }
             }
@@ -30,7 +43,7 @@ macro_rules! impl_stable_abi_via_size_of_from_bytes {
     ($from_bytes:ident, $($t:ty),* $(,)?) => {
         $(
             impl StableAbi for $t {
-                fn random_with_context(rng: &mut (impl RngCore + ?Sized), _ctx: ()) -> Self {
+                fn random(rng: &mut (impl RngCore + ?Sized)) -> Self {
                     Self::$from_bytes(rng.random::<[u8; core::mem::size_of::<Self>()]>())
                 }
             }
@@ -41,13 +54,12 @@ macro_rules! impl_stable_abi_via_size_of_from_bytes {
 macro_rules! impl_stable_abi_for_tuples {
     ($(($($t:ident),+ $(,)?)),* $(,)?) => {
         $(
-            impl<$($t),+, Ctx> StableAbi<Ctx> for ($($t,)+)
+            impl<$($t),+> StableAbi for ($($t,)+)
             where
                 $($t: StableAbi),+,
-                Ctx: Copy,
             {
-                fn random_with_context(rng: &mut (impl RngCore + ?Sized), _ctx: Ctx) -> Self {
-                    ($($t::random_with_context(rng, ()),)+)
+                fn random(rng: &mut (impl RngCore + ?Sized)) -> Self {
+                    ($($t::random(rng),)+)
                 }
             }
         )*
@@ -101,8 +113,8 @@ impl<T, const N: usize> StableAbi for [T; N]
 where
     T: StableAbi,
 {
-    fn random_with_context(rng: &mut (impl RngCore + ?Sized), _ctx: ()) -> Self {
-        array::from_fn(|_| T::random_with_context(rng, ()))
+    fn random(rng: &mut (impl RngCore + ?Sized)) -> Self {
+        array::from_fn(|_| T::random(rng))
     }
 }
 
@@ -110,8 +122,8 @@ impl<T> StableAbi for Option<T>
 where
     T: StableAbi,
 {
-    fn random_with_context(rng: &mut (impl RngCore + ?Sized), _ctx: ()) -> Self {
-        rng.random::<bool>().then(|| T::random_with_context(rng, ()))
+    fn random(rng: &mut (impl RngCore + ?Sized)) -> Self {
+        rng.random::<bool>().then(|| T::random(rng))
     }
 }
 
@@ -120,9 +132,9 @@ where
     K: StableAbi + Eq + Hash,
     V: StableAbi,
 {
-    fn random_with_context(rng: &mut (impl RngCore + ?Sized), _ctx: ()) -> Self {
+    fn random(rng: &mut (impl RngCore + ?Sized)) -> Self {
         // keep one element to mitigate iteration order differences
-        HashMap::from_iter([(K::random_with_context(rng, ()), V::random_with_context(rng, ()))])
+        HashMap::from_iter([(K::random(rng), V::random(rng))])
     }
 }
 
@@ -130,16 +142,16 @@ impl<T> StableAbi for Vec<T>
 where
     T: StableAbi,
 {
-    fn random_with_context(rng: &mut (impl RngCore + ?Sized), _ctx: ()) -> Self {
+    fn random(rng: &mut (impl RngCore + ?Sized)) -> Self {
         (0..(rng.random::<u8>() % 4) as usize)
-            .map(|_| T::random_with_context(rng, ()))
+            .map(|_| T::random(rng))
             .collect()
     }
 }
 
-impl<T> StableAbi<MaxLen> for Vec<T>
+impl<T> StableAbiWithContext<MaxLen> for Vec<T>
 where
-    T: StableAbi,
+    T: StableAbiWithContext,
 {
     fn random_with_context(rng: &mut (impl RngCore + ?Sized), ctx: MaxLen) -> Self {
         (0..ctx.0)
@@ -148,21 +160,20 @@ where
     }
 }
 
-
 impl<T> StableAbi for VecDeque<T>
 where
     T: StableAbi,
 {
-    fn random_with_context(rng: &mut (impl RngCore + ?Sized), _ctx: ()) -> Self {
+    fn random(rng: &mut (impl RngCore + ?Sized)) -> Self {
         (0..(rng.random::<u8>() % 4) as usize)
-            .map(|_| T::random_with_context(rng, ()))
+            .map(|_| T::random(rng))
             .collect()
     }
 }
 
-impl<T> StableAbi<MaxLen> for VecDeque<T>
+impl<T> StableAbiWithContext<MaxLen> for VecDeque<T>
 where
-    T: StableAbi,
+    T: StableAbiWithContext,
 {
     fn random_with_context(rng: &mut (impl RngCore + ?Sized), ctx: MaxLen) -> Self {
         (0..ctx.0)
@@ -176,22 +187,17 @@ where
     K: StableAbi + Ord,
     V: StableAbi,
 {
-    fn random_with_context(rng: &mut (impl RngCore + ?Sized), _ctx: ()) -> Self {
+    fn random(rng: &mut (impl RngCore + ?Sized)) -> Self {
         (0..(rng.random::<u8>() % 4) as usize)
-            .map(|_| {
-                (
-                    K::random_with_context(rng, ()),
-                    V::random_with_context(rng, ()),
-                )
-            })
+            .map(|_| (K::random(rng), V::random(rng)))
             .collect()
     }
 }
 
-impl<K, V> StableAbi<MaxLen> for BTreeMap<K, V>
+impl<K, V> StableAbiWithContext<MaxLen> for BTreeMap<K, V>
 where
-    K: StableAbi + Ord,
-    V: StableAbi,
+    K: StableAbiWithContext + Ord,
+    V: StableAbiWithContext,
 {
     fn random_with_context(rng: &mut (impl RngCore + ?Sized), ctx: MaxLen) -> Self {
         (0..ctx.0)
@@ -204,8 +210,6 @@ where
             .collect()
     }
 }
-
-
 
 #[cfg(all(test, feature = "frozen-abi"))]
 mod tests {
@@ -673,6 +677,6 @@ mod tests {
         m: Option<[u8; 8]>,
         n: BTreeMap<u8, i16>,
         o: Option<BTreeMap<u8, i16>>,
-        p: Vec<Vec<u8>>
+        p: Vec<Vec<u8>>,
     }
 }

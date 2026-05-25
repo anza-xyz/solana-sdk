@@ -51,10 +51,7 @@ pub fn derive_stable_abi(item: TokenStream) -> TokenStream {
     let expanded = quote! {
         #[automatically_derived]
         impl #impl_generics ::solana_frozen_abi::stable_abi::StableAbi for #ident #ty_generics #where_clause {
-            fn random_with_context(
-                rng: &mut (impl ::solana_frozen_abi::rand::RngCore + ?Sized),
-                _ctx: (),
-            ) -> Self {
+            fn random(rng: &mut (impl ::solana_frozen_abi::rand::RngCore + ?Sized)) -> Self {
                 ::solana_frozen_abi::rand::Rng::random::<Self>(rng)
             }
         }
@@ -205,7 +202,7 @@ fn stable_abi_sample_field_expr(field: &syn::Field) -> Result<TokenStream2, Erro
             {
                 let max_len: usize = #max_len;
                 let len = rng.random_range(0..=max_len);
-                <#ty as ::solana_frozen_abi::stable_abi::StableAbi<::solana_frozen_abi::stable_abi::MaxLen>>::random_with_context(
+                <#ty as ::solana_frozen_abi::stable_abi::StableAbiWithContext<::solana_frozen_abi::stable_abi::MaxLen>>::random_with_context(
                     rng,
                     ::solana_frozen_abi::stable_abi::MaxLen(len),
                 )
@@ -213,7 +210,7 @@ fn stable_abi_sample_field_expr(field: &syn::Field) -> Result<TokenStream2, Erro
         },
         (None, None) => {
             quote! {
-                <#ty as ::solana_frozen_abi::stable_abi::StableAbi>::random_with_context(rng, ())
+                <#ty as ::solana_frozen_abi::stable_abi::StableAbi>::random(rng)
             }
         }
         (Some(_), Some(_)) => unreachable!("`with` and `max_len` are mutually exclusive"),
@@ -587,7 +584,7 @@ fn quote_for_test(
                 let mut digester = ::solana_frozen_abi::hash::Hasher::default();
 
                 for _ in 0..10_000 {
-                    let val = <#type_name>::random_with_context(&mut rng, ());
+                    let val = <#type_name>::random(&mut rng);
                     digester.hash(&#abi_serialize_expr);
                 }
                 assert_eq!(#expected_abi_digest, ::std::format!("{}", digester.result()), "ABI layout has changed!");
