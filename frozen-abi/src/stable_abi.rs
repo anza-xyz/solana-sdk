@@ -7,8 +7,26 @@ use {
     },
 };
 
-#[derive(Clone, Copy)]
-pub struct MaxLen(pub usize);
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub struct LenRange {
+    min: usize,
+    max: usize
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct MaxLen(LenRange);
+
+impl From<usize> for MaxLen {
+    fn from(max: usize) -> Self {
+        MaxLen(LenRange{min: 0, max})
+    }
+}
+
+impl From<MaxLen> for LenRange {
+    fn from(max: MaxLen) -> Self {
+        max.0
+    }
+}
 
 pub trait StableAbi: Sized {
     fn random(rng: &mut (impl RngCore + ?Sized)) -> Self;
@@ -149,12 +167,12 @@ where
     }
 }
 
-impl<T> StableAbiWithContext<MaxLen> for Vec<T>
+impl<T> StableAbiWithContext<LenRange> for Vec<T>
 where
     T: StableAbiWithContext,
 {
-    fn random_with_context(rng: &mut (impl RngCore + ?Sized), ctx: MaxLen) -> Self {
-        (0..ctx.0)
+    fn random_with_context(rng: &mut (impl RngCore + ?Sized), ctx: LenRange) -> Self {
+        (ctx.min..ctx.max)
             .map(|_| T::random_with_context(rng, ()))
             .collect()
     }
@@ -171,12 +189,12 @@ where
     }
 }
 
-impl<T> StableAbiWithContext<MaxLen> for VecDeque<T>
+impl<T> StableAbiWithContext<LenRange> for VecDeque<T>
 where
     T: StableAbiWithContext,
 {
-    fn random_with_context(rng: &mut (impl RngCore + ?Sized), ctx: MaxLen) -> Self {
-        (0..ctx.0)
+    fn random_with_context(rng: &mut (impl RngCore + ?Sized), ctx: LenRange) -> Self {
+        (ctx.min..ctx.max)
             .map(|_| T::random_with_context(rng, ()))
             .collect()
     }
@@ -194,13 +212,13 @@ where
     }
 }
 
-impl<K, V> StableAbiWithContext<MaxLen> for BTreeMap<K, V>
+impl<K, V> StableAbiWithContext<LenRange> for BTreeMap<K, V>
 where
     K: StableAbiWithContext + Ord,
     V: StableAbiWithContext,
 {
-    fn random_with_context(rng: &mut (impl RngCore + ?Sized), ctx: MaxLen) -> Self {
-        (0..ctx.0)
+    fn random_with_context(rng: &mut (impl RngCore + ?Sized), ctx: LenRange) -> Self {
+        (ctx.min..ctx.max)
             .map(|_| {
                 (
                     K::random_with_context(rng, ()),

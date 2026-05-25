@@ -202,9 +202,11 @@ fn stable_abi_sample_field_expr(field: &syn::Field) -> Result<TokenStream2, Erro
             {
                 let max_len: usize = #max_len;
                 let len = rng.random_range(0..=max_len);
-                <#ty as ::solana_frozen_abi::stable_abi::StableAbiWithContext<::solana_frozen_abi::stable_abi::MaxLen>>::random_with_context(
+                <#ty as ::solana_frozen_abi::stable_abi::StableAbiWithContext<::solana_frozen_abi::stable_abi::LenRange>>::random_with_context(
                     rng,
-                    ::solana_frozen_abi::stable_abi::MaxLen(len),
+                    ::solana_frozen_abi::stable_abi::LenRange::from(
+                        ::solana_frozen_abi::stable_abi::MaxLen::from(len),
+                    ),
                 )
             }
         },

@@ -76,8 +76,8 @@
 //! ```
 //!
 //! `max_len = N` picks a deterministic random length in range `0..=N` and then delegates to
-//! `StableAbiWithContext<MaxLen>::random_with_context(...)`.
-//! This works for field types that implement `StableAbiWithContext<MaxLen>`
+//! `StableAbiWithContext<LenRange>::random_with_context(...)`.
+//! This works for field types that implement `StableAbiWithContext<LenRange>`
 //!
 //! ```rust,ignore
 //! #[derive(StableAbi, StableAbiSample)]
