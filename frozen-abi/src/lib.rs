@@ -63,8 +63,24 @@
 //! Field override is optional and only needed for fields that cannot be sampled with plain
 //! `rng.random()` (for example `Vec<_>` or `HashMap<_, _>`), or when you want a specific shape.
 //!
-//! `StableAbiSample` supports passing explicit context to context-aware types via
-//! `ctx = <expr>`, forwarded to `StableAbi::random_with_context(...)`.
+//! `StableAbiSample` also supports passing an explicit context to context-aware types:
+//!
+//! ```rust,ignore
+//! #[derive(StableAbi, StableAbiSample)]
+//! #[frozen_abi(abi_digest = "...")]
+//! struct MyTypeWithCtx {
+//!     #[stable_abi_sample(ctx = SequenceLenMax(32))]
+//!     a: Vec<u8>,
+//!     #[stable_abi_sample(ctx = SequenceLenMax(8))]
+//!     b: std::collections::VecDeque<u16>,
+//!     #[stable_abi_sample(ctx = SequenceLenRange { min: 1, max: 4 })]
+//!     c: std::collections::BTreeMap<u8, u16>,
+//! }
+//! ```
+//!
+//! `ctx = <expr>` evaluates the given expression and forwards it as the context to
+//! `StableAbi::random_with_context(...)`. The expression's type must match a
+//! context type the field's type implements (e.g. `SequenceLenMax` or `SequenceLenRange` for collections).
 //!
 //! ```rust,ignore
 //! #[derive(StableAbi, StableAbiSample)]

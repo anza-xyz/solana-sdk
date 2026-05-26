@@ -1,8 +1,18 @@
 use {
-    crate::stable_abi::StableAbi,
+    crate::stable_abi::{
+        context::{impl_with_context_via, SequenceLenMax, SequenceLenRange},
+        StableAbi,
+    },
     core::{array, num::NonZero},
     rand::{Rng, RngCore},
+    std::{
+        collections::{BTreeMap, BTreeSet, HashMap, HashSet, VecDeque},
+        hash::{BuildHasher, Hash},
+    },
 };
+
+const DEFAULT_COLLECTION_MAX_SAMPLE_LEN: usize = 5;
+const DEFAULT_COLLECTION_MAX_SAMPLE_LEN_NON_DETERMINISTIC_ORDER: usize = 1;
 
 macro_rules! impl_stable_abi_via_standard_uniform {
     ($($t:ty),* $(,)?) => {
@@ -104,11 +114,154 @@ where
     }
 }
 
+// keep at most one element to mitigate iteration order differences
+impl_with_context_via! {
+    impl<K, V, S> StableAbi<()> for HashMap<K, V, S>
+    where { K: StableAbi + Eq + Hash, V: StableAbi, S: BuildHasher + Default },
+    |_| SequenceLenRange::new(0..=DEFAULT_COLLECTION_MAX_SAMPLE_LEN_NON_DETERMINISTIC_ORDER),
+}
+
+impl<K, V, S> StableAbi<SequenceLenRange> for HashMap<K, V, S>
+where
+    K: StableAbi + Eq + Hash,
+    V: StableAbi,
+    S: BuildHasher + Default,
+{
+    fn random_with_context(rng: &mut (impl RngCore + ?Sized), ctx: SequenceLenRange) -> Self {
+        let len = rng.random_range(ctx.min..=ctx.max);
+        (0..len).map(|_| (K::random(rng), V::random(rng))).collect()
+    }
+}
+
+impl_with_context_via! {
+    impl<K, V, S> StableAbi<SequenceLenMax> for HashMap<K, V, S>
+    where { K: StableAbi + Eq + Hash, V: StableAbi, S: BuildHasher + Default },
+    |ctx| SequenceLenRange::from(ctx),
+}
+
+// keep at most one element to mitigate iteration order differences
+impl_with_context_via! {
+    impl<T, S> StableAbi<()> for HashSet<T, S>
+    where { T: StableAbi + Eq + Hash, S: BuildHasher + Default },
+    |_| SequenceLenRange::new(0..=DEFAULT_COLLECTION_MAX_SAMPLE_LEN_NON_DETERMINISTIC_ORDER),
+}
+
+impl<T, S> StableAbi<SequenceLenRange> for HashSet<T, S>
+where
+    T: StableAbi + Eq + Hash,
+    S: BuildHasher + Default,
+{
+    fn random_with_context(rng: &mut (impl RngCore + ?Sized), ctx: SequenceLenRange) -> Self {
+        let len = rng.random_range(ctx.min..=ctx.max);
+        (0..len).map(|_| T::random(rng)).collect()
+    }
+}
+
+impl_with_context_via! {
+    impl<T, S> StableAbi<SequenceLenMax> for HashSet<T, S>
+    where { T: StableAbi + Eq + Hash, S: BuildHasher + Default },
+    |ctx| SequenceLenRange::from(ctx),
+}
+
+impl_with_context_via! {
+    impl<T> StableAbi<()> for Vec<T>
+    where { T: StableAbi },
+    |_| SequenceLenRange::new(0..=DEFAULT_COLLECTION_MAX_SAMPLE_LEN),
+}
+
+impl<T> StableAbi<SequenceLenRange> for Vec<T>
+where
+    T: StableAbi,
+{
+    fn random_with_context(rng: &mut (impl RngCore + ?Sized), ctx: SequenceLenRange) -> Self {
+        let len = rng.random_range(ctx.min..=ctx.max);
+        (0..len).map(|_| T::random(rng)).collect()
+    }
+}
+
+impl_with_context_via! {
+    impl<T> StableAbi<SequenceLenMax> for Vec<T>
+    where { T: StableAbi },
+    |ctx| SequenceLenRange::from(ctx),
+}
+
+impl_with_context_via! {
+    impl<T> StableAbi<()> for VecDeque<T>
+    where { T: StableAbi },
+    |_| SequenceLenRange::new(0..=DEFAULT_COLLECTION_MAX_SAMPLE_LEN),
+}
+
+impl<T> StableAbi<SequenceLenRange> for VecDeque<T>
+where
+    T: StableAbi,
+{
+    fn random_with_context(rng: &mut (impl RngCore + ?Sized), ctx: SequenceLenRange) -> Self {
+        let len = rng.random_range(ctx.min..=ctx.max);
+        (0..len).map(|_| T::random(rng)).collect()
+    }
+}
+
+impl_with_context_via! {
+    impl<T> StableAbi<SequenceLenMax> for VecDeque<T>
+    where { T: StableAbi },
+    |ctx| SequenceLenRange::from(ctx),
+}
+
+impl_with_context_via! {
+    impl<K, V> StableAbi<()> for BTreeMap<K, V>
+    where { K: StableAbi + Ord, V: StableAbi },
+    |_| SequenceLenRange::new(0..DEFAULT_COLLECTION_MAX_SAMPLE_LEN),
+}
+
+impl<K, V> StableAbi<SequenceLenRange> for BTreeMap<K, V>
+where
+    K: StableAbi + Ord,
+    V: StableAbi,
+{
+    fn random_with_context(rng: &mut (impl RngCore + ?Sized), ctx: SequenceLenRange) -> Self {
+        let len = rng.random_range(ctx.min..=ctx.max);
+        (0..len).map(|_| (K::random(rng), V::random(rng))).collect()
+    }
+}
+
+impl_with_context_via! {
+    impl<K, V> StableAbi<SequenceLenMax> for BTreeMap<K, V>
+    where { K: StableAbi + Ord, V: StableAbi },
+    |ctx| SequenceLenRange::from(ctx),
+}
+
+impl_with_context_via! {
+    impl<T> StableAbi<()> for BTreeSet<T>
+    where { T: StableAbi + Ord },
+    |_| SequenceLenRange::new(0..=DEFAULT_COLLECTION_MAX_SAMPLE_LEN),
+}
+
+impl<T> StableAbi<SequenceLenRange> for BTreeSet<T>
+where
+    T: StableAbi + Ord,
+{
+    fn random_with_context(rng: &mut (impl RngCore + ?Sized), ctx: SequenceLenRange) -> Self {
+        let len = rng.random_range(ctx.min..=ctx.max);
+        (0..len).map(|_| T::random(rng)).collect()
+    }
+}
+
+impl_with_context_via! {
+    impl<T> StableAbi<SequenceLenMax> for BTreeSet<T>
+    where { T: StableAbi + Ord },
+    |ctx| SequenceLenRange::from(ctx),
+}
+
+impl StableAbi for () {
+    fn random_with_context(_rng: &mut (impl RngCore + ?Sized), _ctx: ()) -> Self {}
+}
+
 #[cfg(all(test, feature = "frozen-abi"))]
 mod tests {
     use {
+        crate::stable_abi::context::{SequenceLenMax, SequenceLenRange},
         core::num::NonZero,
-        std::collections::{BTreeMap, VecDeque},
+        std::collections::{BTreeMap, BTreeSet, HashMap, HashSet, VecDeque},
     };
 
     const ABI_SHARED_WINCODE_VS_BINCODE: &str = "AgNkEpErnFBuy7iTAEUUAC1fbvokEkhbsfFnx4DtXAvY";
@@ -281,9 +434,7 @@ mod tests {
         )]
         a: Vec<bool>,
         // Keep a single entry so HashMap iteration order cannot affect the digest.
-        #[stable_abi_sample(
-            with = "std::collections::HashMap::from_iter([(rng.random(), rng.random())])"
-        )]
+        #[stable_abi_sample(with = "HashMap::from_iter([(rng.random(), rng.random())])")]
         b: std::collections::HashMap<u64, bool>,
         #[stable_abi_sample(with = "rng.random::<u64>()")]
         c: u64,
@@ -528,4 +679,164 @@ mod tests {
         #[stable_abi_sample(with = "rng.random::<u8>()")]
         a: u8,
     });
+
+    type AliasVec = Vec<(u8, u16, u32, u64)>;
+    type AliasHashMap = HashMap<u8, u128>;
+    type AliasVecDeque = VecDeque<i16>;
+
+    #[derive(Debug, wincode::SchemaWrite)]
+    #[cfg_attr(
+        feature = "frozen-abi",
+        derive(
+            solana_frozen_abi_macro::StableAbi,
+            solana_frozen_abi_macro::StableAbiSample
+        ),
+        solana_frozen_abi_macro::frozen_abi(
+            abi_digest = "hsD1Hmwbrwnfw4rdiBospgofHtJTftbN9vHUGXf7N2t",
+            abi_serializer = "wincode",
+        )
+    )]
+    struct TestCollectionsDerive {
+        a: Vec<u8>,
+        b: Option<Vec<u8>>,
+        c: AliasVec,
+        d: HashMap<u8, char>,
+        e: AliasHashMap,
+        f: Option<HashMap<u16, i64>>,
+        g: VecDeque<char>,
+        h: Option<VecDeque<bool>>,
+        i: AliasVecDeque,
+    }
+
+    macro_rules! impl_sequence_sample_test_types {
+        (
+            digests = [$(
+                $abi_digest:expr => [$(
+                    struct $struct_name:ident { $($body:tt)* }
+                ),+ $(,)?]
+            ),+ $(,)?]
+        ) => {
+            mod sequence_sample_test_types {
+                macro_rules! test_types {
+                    ($derive:path, $serializer:literal) => {
+                        $($(
+                            #[derive($derive)]
+                            #[cfg_attr(
+                                feature = "frozen-abi",
+                                derive(
+                                    solana_frozen_abi_macro::StableAbi,
+                                    solana_frozen_abi_macro::StableAbiSample
+                                ),
+                                solana_frozen_abi_macro::frozen_abi(
+                                    abi_digest = $abi_digest,
+                                    abi_serializer = $serializer,
+                                )
+                            )]
+                            struct $struct_name { $($body)* }
+                        )+)+
+                    };
+                }
+                mod wincode {use super::super::*; test_types!(wincode::SchemaWrite, "wincode");}
+                mod bincode {use super::super::*; test_types!(serde_derive::Serialize, "bincode");}
+            }
+        };
+    }
+
+    impl_sequence_sample_test_types!(
+        digests = [
+            "762V1KB6NRDroyHo31bjg7gwX9nx8QqHCP9EJ3Y7nLGE" => [
+                struct MultiElementsWith {
+                    #[stable_abi_sample(
+                        with = "(0..rng.random_range(0..=5)).map(|_| rng.random()).collect()"
+                    )]
+                    a: Vec<u8>,
+                },
+                struct MultiElementsVec {
+                    #[stable_abi_sample(ctx = SequenceLenMax(5))]
+                    a: Vec<u8>,
+                },
+                struct MultiElementsVecDefault {
+                    a: Vec<u8>,
+                },
+                struct MultiElementsVecDeque {
+                    #[stable_abi_sample(ctx = SequenceLenMax(5))]
+                    a: VecDeque<u8>,
+                },
+            ],
+            "7dXyMka1Z72sENE9vva8vmE65F7y6kXZKQ2DHu9aTWyz" => [
+                struct UpToOneElementWith {
+                    #[stable_abi_sample(
+                        with = "(0..rng.random_range(0..=1)).map(|_| rng.random()).collect()"
+                    )]
+                    a: Vec<u8>,
+                },
+                struct UpToOneElementVec {
+                    #[stable_abi_sample(ctx = SequenceLenMax(1))]
+                    a: Vec<u8>,
+                },
+                struct UpToOneElementBTreeSet {
+                    #[stable_abi_sample(ctx = SequenceLenMax(1))]
+                    a: BTreeSet<u8>,
+                },
+                struct UpToOneElementHashMap {
+                    #[stable_abi_sample(ctx = SequenceLenMax(1))]
+                    a: HashMap<u8, ()>,
+                },
+                struct UpToOneElementHashMapDefault {
+                    a: HashMap<u8, ()>,
+                },
+                struct UpToOneElementHashSet {
+                    #[stable_abi_sample(ctx = SequenceLenMax(1))]
+                    a: HashSet<u8>,
+                },
+                struct UpToOneElementHashSetDefault {
+                    a: HashSet<u8>,
+                },
+                struct UpToOneElementBTreeMap {
+                    #[stable_abi_sample(ctx = SequenceLenMax(1))]
+                    a: BTreeMap<u8, ()>,
+                },
+            ],
+            "Du8dTBApdeSxYTQVprkbMGvc5dLgCfUKKZ2z63qqr5Bj" => [
+                struct UpToOneKeyValueHashMapWith {
+                    #[stable_abi_sample(
+                        with = "(0..rng.random_range(0..=1)).map(|_| (rng.random(), rng.random())).collect()"
+                    )]
+                    a: HashMap<u8, u16>,
+                },
+                struct UpToOneKeyValueVec {
+                    #[stable_abi_sample(ctx = SequenceLenMax(1))]
+                    a: Vec<(u8, u16)>,
+                },
+                struct UpToOneKeyValueHashMap {
+                    #[stable_abi_sample(ctx = SequenceLenMax(1))]
+                    a: HashMap<u8, u16>,
+                },
+                struct UpToOneKeyValueBTreeMap {
+                    #[stable_abi_sample(ctx = SequenceLenMax(1))]
+                    a: BTreeMap<u8, u16>,
+                },
+            ],
+            "57dywdByMU7XcWbsfnXY5ChZdqne57zjJCn7uEjDKGNc" => [
+                struct UpToOneKeyValueHashMapWithRange {
+                    #[stable_abi_sample(
+                        with = "(0..rng.random_range(1..=1)).map(|_| (rng.random(), rng.random())).collect()"
+                    )]
+                    a: HashMap<u8, u16>,
+                },
+                struct UpToOneKeyValueVecRange {
+                    #[stable_abi_sample(ctx = SequenceLenRange::new(1..=1))]
+                    a: Vec<(u8, u16)>,
+                },
+                struct UpToOneKeyValueHashMapRange {
+                    #[stable_abi_sample(ctx = SequenceLenRange::new(1..=1))]
+                    a: HashMap<u8, u16>,
+                },
+                struct UpToOneKeyValueBTreeMapRange {
+                    #[stable_abi_sample(ctx = SequenceLenRange::new(1..=1))]
+                    a: BTreeMap<u8, u16>,
+                },
+            ],
+        ]
+    );
 }

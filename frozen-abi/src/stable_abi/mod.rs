@@ -1,5 +1,6 @@
 use rand::RngCore;
 
+pub mod context;
 mod impls;
 
 pub trait StableAbi<Ctx = ()>: Sized {
