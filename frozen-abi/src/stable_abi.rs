@@ -37,15 +37,6 @@ pub trait StableAbiWithContext<Ctx = ()>: Sized {
     fn random_with_context(rng: &mut (impl RngCore + ?Sized), ctx: Ctx) -> Self;
 }
 
-impl<T> StableAbiWithContext<()> for T
-where
-    T: StableAbi,
-{
-    fn random_with_context(rng: &mut (impl RngCore + ?Sized), _ctx: ()) -> Self {
-        T::random(rng)
-    }
-}
-
 macro_rules! impl_stable_abi_via_standard_uniform {
     ($($t:ty),* $(,)?) => {
         $(
@@ -186,19 +177,14 @@ impl_stable_abi_via_default_ctx! {
 
 impl<K, V, S> StableAbiWithContext<SequenceLenRange> for HashMap<K, V, S>
 where
-    K: StableAbiWithContext + Eq + Hash,
-    V: StableAbiWithContext,
+    K: StableAbi + Eq + Hash,
+    V: StableAbi,
     S: BuildHasher + Default,
 {
     fn random_with_context(rng: &mut (impl RngCore + ?Sized), ctx: SequenceLenRange) -> Self {
         let len = rng.random_range(ctx.min..=ctx.max);
         (0..len)
-            .map(|_| {
-                (
-                    K::random_with_context(rng, ()),
-                    V::random_with_context(rng, ()),
-                )
-            })
+            .map(|_| (K::random(rng), V::random(rng)))
             .collect()
     }
 }
@@ -206,7 +192,7 @@ where
 impl_with_context_via! {
     impl[K, V, S] for HashMap<K, V, S>,
     SequenceLenMax as ctx => SequenceLenRange { min: 0, max: ctx.0 },
-    where { K: StableAbiWithContext + Eq + Hash, V: StableAbiWithContext, S: BuildHasher + Default },
+    where { K: StableAbi + Eq + Hash, V: StableAbi, S: BuildHasher + Default },
 }
 
 // keep at most one element to mitigate iteration order differences
@@ -218,21 +204,19 @@ impl_stable_abi_via_default_ctx! {
 
 impl<T, S> StableAbiWithContext<SequenceLenRange> for HashSet<T, S>
 where
-    T: StableAbiWithContext + Eq + Hash,
+    T: StableAbi + Eq + Hash,
     S: BuildHasher + Default,
 {
     fn random_with_context(rng: &mut (impl RngCore + ?Sized), ctx: SequenceLenRange) -> Self {
         let len = rng.random_range(ctx.min..=ctx.max);
-        (0..len)
-            .map(|_| T::random_with_context(rng, ()))
-            .collect()
+        (0..len).map(|_| T::random(rng)).collect()
     }
 }
 
 impl_with_context_via! {
     impl[T, S] for HashSet<T, S>,
     SequenceLenMax as ctx => SequenceLenRange { min: 0, max: ctx.0 },
-    where { T: StableAbiWithContext + Eq + Hash, S: BuildHasher + Default },
+    where { T: StableAbi + Eq + Hash, S: BuildHasher + Default },
 }
 
 impl_stable_abi_via_default_ctx! {
@@ -243,20 +227,18 @@ impl_stable_abi_via_default_ctx! {
 
 impl<T> StableAbiWithContext<SequenceLenRange> for Vec<T>
 where
-    T: StableAbiWithContext,
+    T: StableAbi,
 {
     fn random_with_context(rng: &mut (impl RngCore + ?Sized), ctx: SequenceLenRange) -> Self {
         let len = rng.random_range(ctx.min..=ctx.max);
-        (0..len)
-            .map(|_| T::random_with_context(rng, ()))
-            .collect()
+        (0..len).map(|_| T::random(rng)).collect()
     }
 }
 
 impl_with_context_via! {
     impl[T] for Vec<T>,
     SequenceLenMax as ctx => SequenceLenRange { min: 0, max: ctx.0 },
-    where { T: StableAbiWithContext },
+    where { T: StableAbi },
 }
 
 impl_stable_abi_via_default_ctx! {
@@ -267,20 +249,18 @@ impl_stable_abi_via_default_ctx! {
 
 impl<T> StableAbiWithContext<SequenceLenRange> for VecDeque<T>
 where
-    T: StableAbiWithContext,
+    T: StableAbi,
 {
     fn random_with_context(rng: &mut (impl RngCore + ?Sized), ctx: SequenceLenRange) -> Self {
         let len = rng.random_range(ctx.min..=ctx.max);
-        (0..len)
-            .map(|_| T::random_with_context(rng, ()))
-            .collect()
+        (0..len).map(|_| T::random(rng)).collect()
     }
 }
 
 impl_with_context_via! {
     impl[T] for VecDeque<T>,
     SequenceLenMax as ctx => SequenceLenRange { min: 0, max: ctx.0 },
-    where { T: StableAbiWithContext },
+    where { T: StableAbi },
 }
 
 impl_stable_abi_via_default_ctx! {
@@ -291,18 +271,13 @@ impl_stable_abi_via_default_ctx! {
 
 impl<K, V> StableAbiWithContext<SequenceLenRange> for BTreeMap<K, V>
 where
-    K: StableAbiWithContext + Ord,
-    V: StableAbiWithContext,
+    K: StableAbi + Ord,
+    V: StableAbi,
 {
     fn random_with_context(rng: &mut (impl RngCore + ?Sized), ctx: SequenceLenRange) -> Self {
         let len = rng.random_range(ctx.min..=ctx.max);
         (0..len)
-            .map(|_| {
-                (
-                    K::random_with_context(rng, ()),
-                    V::random_with_context(rng, ()),
-                )
-            })
+            .map(|_| (K::random(rng), V::random(rng)))
             .collect()
     }
 }
@@ -310,7 +285,7 @@ where
 impl_with_context_via! {
     impl[K, V] for BTreeMap<K, V>,
     SequenceLenMax as ctx => SequenceLenRange { min: 0, max: ctx.0 },
-    where { K: StableAbiWithContext + Ord, V: StableAbiWithContext },
+    where { K: StableAbi + Ord, V: StableAbi },
 }
 
 impl_stable_abi_via_default_ctx! {
@@ -321,20 +296,18 @@ impl_stable_abi_via_default_ctx! {
 
 impl<T> StableAbiWithContext<SequenceLenRange> for BTreeSet<T>
 where
-    T: StableAbiWithContext + Ord,
+    T: StableAbi + Ord,
 {
     fn random_with_context(rng: &mut (impl RngCore + ?Sized), ctx: SequenceLenRange) -> Self {
         let len = rng.random_range(ctx.min..=ctx.max);
-        (0..len)
-            .map(|_| T::random_with_context(rng, ()))
-            .collect()
+        (0..len).map(|_| T::random(rng)).collect()
     }
 }
 
 impl_with_context_via! {
     impl[T] for BTreeSet<T>,
     SequenceLenMax as ctx => SequenceLenRange { min: 0, max: ctx.0 },
-    where { T: StableAbiWithContext + Ord },
+    where { T: StableAbi + Ord },
 }
 
 #[cfg(all(test, feature = "frozen-abi"))]
