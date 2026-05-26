@@ -51,7 +51,10 @@ pub fn derive_stable_abi(item: TokenStream) -> TokenStream {
     let expanded = quote! {
         #[automatically_derived]
         impl #impl_generics ::solana_frozen_abi::stable_abi::StableAbi for #ident #ty_generics #where_clause {
-            fn random(rng: &mut (impl ::solana_frozen_abi::rand::RngCore + ?Sized)) -> Self {
+            fn random_with_context(
+                rng: &mut (impl ::solana_frozen_abi::rand::RngCore + ?Sized),
+                _ctx: (),
+            ) -> Self {
                 ::solana_frozen_abi::rand::Rng::random::<Self>(rng)
             }
         }
@@ -140,8 +143,15 @@ fn filter_allow_attrs(attrs: &mut Vec<Attribute>) {
 }
 
 #[cfg(feature = "frozen-abi")]
-fn parse_stable_abi_sample_override(field: &syn::Field) -> Result<Option<TokenStream2>, Error> {
-    let mut override_expr: Option<TokenStream2> = None;
+struct StableAbiSampleOptions {
+    with_expr: Option<TokenStream2>,
+    ctx_expr: Option<TokenStream2>,
+}
+
+#[cfg(feature = "frozen-abi")]
+fn parse_stable_abi_sample_options(field: &syn::Field) -> Result<StableAbiSampleOptions, Error> {
+    let mut with_expr: Option<TokenStream2> = None;
+    let mut ctx_expr: Option<TokenStream2> = None;
     for attr in &field.attrs {
         if !attr.path().is_ident("stable_abi_sample") {
             continue;
@@ -149,33 +159,60 @@ fn parse_stable_abi_sample_override(field: &syn::Field) -> Result<Option<TokenSt
         attr.parse_nested_meta(|meta| {
             if meta.path.is_ident("with") {
                 // reject duplicate `with` on the same field
-                if override_expr.is_some() {
+                if with_expr.is_some() {
                     return Err(meta.error("duplicate `with` in `#[stable_abi_sample(...)]`"));
                 }
                 let value = meta.value()?.parse::<LitStr>()?;
                 let expr = value.parse::<Expr>().map_err(|err| {
                     Error::new(value.span(), format!("invalid `with` expression: {err}"))
                 })?;
-                override_expr = Some(quote! { #expr });
+                with_expr = Some(quote! { #expr });
+                Ok(())
+            } else if meta.path.is_ident("ctx") {
+                // reject duplicate `ctx` on the same field
+                if ctx_expr.is_some() {
+                    return Err(meta.error("duplicate `ctx` in `#[stable_abi_sample(...)]`"));
+                }
+                let expr = meta.value()?.parse::<Expr>()?;
+                ctx_expr = Some(quote! { #expr });
                 Ok(())
             } else {
-                Err(meta.error("unsupported `stable_abi_sample` option; expected `with = \"...\"`"))
+                Err(meta.error(
+                    "unsupported `stable_abi_sample` option; expected `with = \"...\"` or `ctx = <expr>`",
+                ))
             }
         })?;
     }
-    Ok(override_expr)
+    if with_expr.is_some() && ctx_expr.is_some() {
+        return Err(Error::new_spanned(
+            field,
+            "cannot combine `with` and `ctx` in `#[stable_abi_sample(...)]`",
+        ));
+    }
+    Ok(StableAbiSampleOptions {
+        with_expr,
+        ctx_expr,
+    })
 }
 
 #[cfg(feature = "frozen-abi")]
 fn stable_abi_sample_field_expr(field: &syn::Field) -> Result<TokenStream2, Error> {
-    Ok(match parse_stable_abi_sample_override(field)? {
-        Some(expr) => expr,
-        None => {
-            let ty = &field.ty;
+    let options = parse_stable_abi_sample_options(field)?;
+    let ty = &field.ty;
+    Ok(match (options.with_expr, options.ctx_expr) {
+        (Some(expr), None) => expr,
+        (None, Some(ctx_expr)) => quote! {
+            <#ty as ::solana_frozen_abi::stable_abi::StableAbi<_>>::random_with_context(
+                rng,
+                #ctx_expr,
+            )
+        },
+        (None, None) => {
             quote! {
                 <#ty as ::solana_frozen_abi::stable_abi::StableAbi>::random(rng)
             }
         }
+        (Some(_), Some(_)) => unreachable!("`with` and `ctx` are mutually exclusive"),
     })
 }
 

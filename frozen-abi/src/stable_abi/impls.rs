@@ -8,8 +8,8 @@ macro_rules! impl_stable_abi_via_standard_uniform {
     ($($t:ty),* $(,)?) => {
         $(
             impl StableAbi for $t {
-                fn random(rng: &mut (impl RngCore + ?Sized)) -> Self {
-                    rng.random::<Self>()
+                fn random_with_context(rng: &mut (impl RngCore + ?Sized), _ctx: ()) -> Self {
+                    rng.random()
                 }
             }
         )*
@@ -20,8 +20,8 @@ macro_rules! impl_stable_abi_via_size_of_from_bytes {
     ($from_bytes:ident, $($t:ty),* $(,)?) => {
         $(
             impl StableAbi for $t {
-                fn random(rng: &mut (impl RngCore + ?Sized)) -> Self {
-                    Self::$from_bytes(rng.random::<[u8; core::mem::size_of::<Self>()]>())
+                fn random_with_context(rng: &mut (impl RngCore + ?Sized), _ctx: ()) -> Self {
+                    Self::$from_bytes(rng.random())
                 }
             }
         )*
@@ -33,9 +33,9 @@ macro_rules! impl_stable_abi_for_tuples {
         $(
             impl<$($t),+> StableAbi for ($($t,)+)
             where
-                $($t: StableAbi),+
+                $($t: StableAbi),+,
             {
-                fn random(rng: &mut (impl RngCore + ?Sized)) -> Self {
+                fn random_with_context(rng: &mut (impl RngCore + ?Sized), _ctx: ()) -> Self {
                     ($($t::random(rng),)+)
                 }
             }
@@ -90,7 +90,7 @@ impl<T, const N: usize> StableAbi for [T; N]
 where
     T: StableAbi,
 {
-    fn random(rng: &mut (impl RngCore + ?Sized)) -> Self {
+    fn random_with_context(rng: &mut (impl RngCore + ?Sized), _ctx: ()) -> Self {
         array::from_fn(|_| T::random(rng))
     }
 }
@@ -99,7 +99,7 @@ impl<T> StableAbi for Option<T>
 where
     T: StableAbi,
 {
-    fn random(rng: &mut (impl RngCore + ?Sized)) -> Self {
+    fn random_with_context(rng: &mut (impl RngCore + ?Sized), _ctx: ()) -> Self {
         rng.random::<bool>().then(|| T::random(rng))
     }
 }

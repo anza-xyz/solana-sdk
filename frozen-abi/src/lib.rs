@@ -14,7 +14,7 @@
 //!
 //! The macro would generate the `test_abi_digest` test that verifies binary layout stability:
 //! - Initializes a deterministic random number generator with fixed seed
-//! - Generates 10_000 instances of the type via `StableAbi::random()`
+//! - Generates 10_000 instances of the type
 //! - Serializes each instance
 //! - Hashes all serialized bytes together
 //! - Compares the resulting hash against the provided in `abi_digest` attribute
@@ -30,7 +30,10 @@
 //!
 //! ```rust,ignore
 //! impl ::solana_frozen_abi::stable_abi::StableAbi for MyType {
-//!     fn random(rng: &mut (impl ::solana_frozen_abi::rand::RngCore + ?Sized)) -> Self {
+//!     fn random_with_context(
+//!         rng: &mut (impl ::solana_frozen_abi::rand::RngCore + ?Sized),
+//!         _ctx: (),
+//!     ) -> Self {
 //!         ::solana_frozen_abi::rand::Rng::random::<Self>(rng)
 //!     }
 //! }
@@ -59,6 +62,9 @@
 //!
 //! Field override is optional and only needed for fields that cannot be sampled with plain
 //! `rng.random()` (for example `Vec<_>` or `HashMap<_, _>`), or when you want a specific shape.
+//!
+//! `StableAbiSample` supports passing explicit context to context-aware types via
+//! `ctx = <expr>`, forwarded to `StableAbi::random_with_context(...)`.
 //!
 //! ```rust,ignore
 //! #[derive(StableAbi, StableAbiSample)]
