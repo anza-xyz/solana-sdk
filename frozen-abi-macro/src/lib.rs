@@ -142,13 +142,13 @@ fn filter_allow_attrs(attrs: &mut Vec<Attribute>) {
 #[cfg(feature = "frozen-abi")]
 struct StableAbiSampleOptions {
     with_expr: Option<TokenStream2>,
-    max_len: Option<usize>,
+    ctx_expr: Option<TokenStream2>,
 }
 
 #[cfg(feature = "frozen-abi")]
 fn parse_stable_abi_sample_options(field: &syn::Field) -> Result<StableAbiSampleOptions, Error> {
     let mut with_expr: Option<TokenStream2> = None;
-    let mut max_len: Option<usize> = None;
+    let mut ctx_expr: Option<TokenStream2> = None;
     for attr in &field.attrs {
         if !attr.path().is_ident("stable_abi_sample") {
             continue;
@@ -165,57 +165,48 @@ fn parse_stable_abi_sample_options(field: &syn::Field) -> Result<StableAbiSample
                 })?;
                 with_expr = Some(quote! { #expr });
                 Ok(())
-            } else if meta.path.is_ident("max_len") {
-                // reject duplicate `max_len` on the same field
-                if max_len.is_some() {
-                    return Err(meta.error("duplicate `max_len` in `#[stable_abi_sample(...)]`"));
+            } else if meta.path.is_ident("ctx") {
+                // reject duplicate `ctx` on the same field
+                if ctx_expr.is_some() {
+                    return Err(meta.error("duplicate `ctx` in `#[stable_abi_sample(...)]`"));
                 }
-                let value = meta.value()?.parse::<syn::LitInt>()?;
-                let parsed_max_len = value
-                    .base10_parse::<usize>()
-                    .map_err(|err| Error::new(value.span(), format!("invalid `max_len` value: {err}")))?;
-                max_len = Some(parsed_max_len);
+                let expr = meta.value()?.parse::<Expr>()?;
+                ctx_expr = Some(quote! { #expr });
                 Ok(())
             } else {
                 Err(meta.error(
-                    "unsupported `stable_abi_sample` option; expected `with = \"...\"` or `max_len = N`",
+                    "unsupported `stable_abi_sample` option; expected `with = \"...\"` or `ctx = <expr>`",
                 ))
             }
         })?;
     }
-    if with_expr.is_some() && max_len.is_some() {
+    if with_expr.is_some() && ctx_expr.is_some() {
         return Err(Error::new_spanned(
             field,
-            "cannot combine `with` and `max_len` in `#[stable_abi_sample(...)]`",
+            "cannot combine `with` and `ctx` in `#[stable_abi_sample(...)]`",
         ));
     }
-    Ok(StableAbiSampleOptions { with_expr, max_len })
+    Ok(StableAbiSampleOptions { with_expr, ctx_expr })
 }
 
 #[cfg(feature = "frozen-abi")]
 fn stable_abi_sample_field_expr(field: &syn::Field) -> Result<TokenStream2, Error> {
     let options = parse_stable_abi_sample_options(field)?;
     let ty = &field.ty;
-    Ok(match (options.with_expr, options.max_len) {
+    Ok(match (options.with_expr, options.ctx_expr) {
         (Some(expr), None) => expr,
-        (None, Some(max_len)) => quote! {
-            {
-                let max_len: usize = #max_len;
-                let len = rng.random_range(0..=max_len);
-                <#ty as ::solana_frozen_abi::stable_abi::StableAbiWithContext<::solana_frozen_abi::stable_abi::LenRange>>::random_with_context(
-                    rng,
-                    ::solana_frozen_abi::stable_abi::LenRange::from(
-                        ::solana_frozen_abi::stable_abi::MaxLen::from(len),
-                    ),
-                )
-            }
+        (None, Some(ctx_expr)) => quote! {
+            <#ty as ::solana_frozen_abi::stable_abi::StableAbiWithContext<_>>::random_with_context(
+                rng,
+                #ctx_expr,
+            )
         },
         (None, None) => {
             quote! {
                 <#ty as ::solana_frozen_abi::stable_abi::StableAbi>::random(rng)
             }
         }
-        (Some(_), Some(_)) => unreachable!("`with` and `max_len` are mutually exclusive"),
+        (Some(_), Some(_)) => unreachable!("`with` and `ctx` are mutually exclusive"),
     })
 }
 
