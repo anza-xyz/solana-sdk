@@ -51,7 +51,10 @@ pub fn derive_stable_abi(item: TokenStream) -> TokenStream {
     let expanded = quote! {
         #[automatically_derived]
         impl #impl_generics ::solana_frozen_abi::stable_abi::StableAbi for #ident #ty_generics #where_clause {
-            fn random(rng: &mut (impl ::solana_frozen_abi::rand::RngCore + ?Sized)) -> Self {
+            fn random_with_context(
+                rng: &mut (impl ::solana_frozen_abi::rand::RngCore + ?Sized),
+                _ctx: (),
+            ) -> Self {
                 ::solana_frozen_abi::rand::Rng::random::<Self>(rng)
             }
         }
@@ -196,7 +199,7 @@ fn stable_abi_sample_field_expr(field: &syn::Field) -> Result<TokenStream2, Erro
     Ok(match (options.with_expr, options.ctx_expr) {
         (Some(expr), None) => expr,
         (None, Some(ctx_expr)) => quote! {
-            <#ty as ::solana_frozen_abi::stable_abi::StableAbiWithContext<_>>::random_with_context(
+            <#ty as ::solana_frozen_abi::stable_abi::StableAbi<_>>::random_with_context(
                 rng,
                 #ctx_expr,
             )

@@ -7,7 +7,7 @@ use {
     },
 };
 
-/// Context for `StableAbiWithContext` impls on sequence-like collections
+/// Context for `StableAbi<...>` impls on sequence-like collections
 /// (`Vec`, `VecDeque`, `HashMap`, `BTreeMap`) that bounds the sampled length
 /// to an inclusive range `min..=max`.
 ///
@@ -21,7 +21,7 @@ pub struct SequenceLenRange {
     max: usize
 }
 
-/// Context for `StableAbiWithContext` impls on sequence-like collections
+/// Context for `StableAbi<...>` impls on sequence-like collections
 /// that caps the sampled length at `0..=N`.
 ///
 /// Equivalent to `SequenceLenRange { min: 0, max: N }`; the per-collection
@@ -29,20 +29,23 @@ pub struct SequenceLenRange {
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct SequenceLenMax(pub usize);
 
-pub trait StableAbi: Sized {
-    fn random(rng: &mut (impl RngCore + ?Sized)) -> Self;
-}
-
-pub trait StableAbiWithContext<Ctx = ()>: Sized {
+pub trait StableAbi<Ctx = ()>: Sized {
     fn random_with_context(rng: &mut (impl RngCore + ?Sized), ctx: Ctx) -> Self;
+
+    fn random(rng: &mut (impl RngCore + ?Sized)) -> Self
+    where
+        Ctx: Default,
+    {
+        Self::random_with_context(rng, Ctx::default())
+    }
 }
 
 macro_rules! impl_stable_abi_via_standard_uniform {
     ($($t:ty),* $(,)?) => {
         $(
             impl StableAbi for $t {
-                fn random(rng: &mut (impl RngCore + ?Sized)) -> Self {
-                    rng.random::<Self>()
+                fn random_with_context(rng: &mut (impl RngCore + ?Sized), _ctx: ()) -> Self {
+                    rng.random()
                 }
             }
         )*
@@ -53,8 +56,8 @@ macro_rules! impl_stable_abi_via_size_of_from_bytes {
     ($from_bytes:ident, $($t:ty),* $(,)?) => {
         $(
             impl StableAbi for $t {
-                fn random(rng: &mut (impl RngCore + ?Sized)) -> Self {
-                    Self::$from_bytes(rng.random::<[u8; core::mem::size_of::<Self>()]>())
+                fn random_with_context(rng: &mut (impl RngCore + ?Sized), _ctx: ()) -> Self {
+                    Self::$from_bytes(rng.random())
                 }
             }
         )*
@@ -68,7 +71,7 @@ macro_rules! impl_stable_abi_for_tuples {
             where
                 $($t: StableAbi),+,
             {
-                fn random(rng: &mut (impl RngCore + ?Sized)) -> Self {
+                fn random_with_context(rng: &mut (impl RngCore + ?Sized), _ctx: ()) -> Self {
                     ($($t::random(rng),)+)
                 }
             }
@@ -83,7 +86,7 @@ macro_rules! impl_stable_abi_via_default_ctx {
         where { $($wc:tt)* } $(,)?
     ) => {
         impl<$($g)*> StableAbi for $self_ty where $($wc)* {
-            fn random(rng: &mut (impl RngCore + ?Sized)) -> Self {
+            fn random_with_context(rng: &mut (impl RngCore + ?Sized), _ctx: ()) -> Self {
                 Self::random_with_context(rng, $default)
             }
         }
@@ -96,7 +99,7 @@ macro_rules! impl_with_context_via {
         $new_ctx:ty as $bind:ident => $convert:expr,
         where { $($wc:tt)* } $(,)?
     ) => {
-        impl<$($g)*> StableAbiWithContext<$new_ctx> for $self_ty where $($wc)* {
+        impl<$($g)*> StableAbi<$new_ctx> for $self_ty where $($wc)* {
             fn random_with_context(
                 rng: &mut (impl RngCore + ?Sized),
                 $bind: $new_ctx,
@@ -154,7 +157,7 @@ impl<T, const N: usize> StableAbi for [T; N]
 where
     T: StableAbi,
 {
-    fn random(rng: &mut (impl RngCore + ?Sized)) -> Self {
+    fn random_with_context(rng: &mut (impl RngCore + ?Sized), _ctx: ()) -> Self {
         array::from_fn(|_| T::random(rng))
     }
 }
@@ -163,7 +166,7 @@ impl<T> StableAbi for Option<T>
 where
     T: StableAbi,
 {
-    fn random(rng: &mut (impl RngCore + ?Sized)) -> Self {
+    fn random_with_context(rng: &mut (impl RngCore + ?Sized), _ctx: ()) -> Self {
         rng.random::<bool>().then(|| T::random(rng))
     }
 }
@@ -175,7 +178,7 @@ impl_stable_abi_via_default_ctx! {
     where { K: StableAbi + Eq + Hash, V: StableAbi, S: BuildHasher + Default },
 }
 
-impl<K, V, S> StableAbiWithContext<SequenceLenRange> for HashMap<K, V, S>
+impl<K, V, S> StableAbi<SequenceLenRange> for HashMap<K, V, S>
 where
     K: StableAbi + Eq + Hash,
     V: StableAbi,
@@ -202,7 +205,7 @@ impl_stable_abi_via_default_ctx! {
     where { T: StableAbi + Eq + Hash, S: BuildHasher + Default },
 }
 
-impl<T, S> StableAbiWithContext<SequenceLenRange> for HashSet<T, S>
+impl<T, S> StableAbi<SequenceLenRange> for HashSet<T, S>
 where
     T: StableAbi + Eq + Hash,
     S: BuildHasher + Default,
@@ -225,7 +228,7 @@ impl_stable_abi_via_default_ctx! {
     where { T: StableAbi },
 }
 
-impl<T> StableAbiWithContext<SequenceLenRange> for Vec<T>
+impl<T> StableAbi<SequenceLenRange> for Vec<T>
 where
     T: StableAbi,
 {
@@ -247,7 +250,7 @@ impl_stable_abi_via_default_ctx! {
     where { T: StableAbi },
 }
 
-impl<T> StableAbiWithContext<SequenceLenRange> for VecDeque<T>
+impl<T> StableAbi<SequenceLenRange> for VecDeque<T>
 where
     T: StableAbi,
 {
@@ -269,7 +272,7 @@ impl_stable_abi_via_default_ctx! {
     where { K: StableAbi + Ord, V: StableAbi },
 }
 
-impl<K, V> StableAbiWithContext<SequenceLenRange> for BTreeMap<K, V>
+impl<K, V> StableAbi<SequenceLenRange> for BTreeMap<K, V>
 where
     K: StableAbi + Ord,
     V: StableAbi,
@@ -294,7 +297,7 @@ impl_stable_abi_via_default_ctx! {
     where { T: StableAbi + Ord },
 }
 
-impl<T> StableAbiWithContext<SequenceLenRange> for BTreeSet<T>
+impl<T> StableAbi<SequenceLenRange> for BTreeSet<T>
 where
     T: StableAbi + Ord,
 {
@@ -313,7 +316,7 @@ impl_with_context_via! {
 #[cfg(all(test, feature = "frozen-abi"))]
 mod tests {
     use {
-        super::SequenceLenMax,
+        super::{SequenceLenMax, SequenceLenRange},
         core::num::NonZero,
         std::collections::{BTreeMap, HashMap, VecDeque},
     };
@@ -769,7 +772,7 @@ mod tests {
         )]
         g: Vec<(u16, u8)>,
         h: VecDeque<(i16, u8)>,
-        #[stable_abi_sample(ctx = SequenceLenMax(1))]
+        #[stable_abi_sample(ctx = SequenceLenRange { min: 0, max: 1 })]
         i: VecDeque<(i16, u8)>,
         j: HashMap<u8, Option<u16>>,
         k: HashMap<u8, Option<i8>>,
