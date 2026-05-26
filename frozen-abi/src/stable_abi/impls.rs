@@ -1,5 +1,5 @@
 use {
-    super::{SequenceLenMax, SequenceLenRange, StableAbi},
+    crate::stable_abi::{StableAbi, context::{SequenceLenMax, SequenceLenRange}},
     core::{array, num::NonZero},
     rand::{Rng, RngCore},
     std::{
