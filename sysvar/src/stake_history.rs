@@ -44,7 +44,10 @@
 //! ```
 
 use {
-    crate::stake_history::{StakeHistory, StakeHistoryEntry, StakeHistoryGetEntry, MAX_ENTRIES},
+    crate::stake_history::{
+        StakeHistory, StakeHistoryEntry, StakeHistoryGetEntry, EPOCH_AND_ENTRY_SERIALIZED_SIZE,
+        MAX_ENTRIES,
+    },
     solana_clock::Epoch,
     solana_sysvar::{get_sysvar, Sysvar},
     solana_sysvar_id::declare_sysvar_id,
@@ -57,9 +60,6 @@ impl Sysvar for StakeHistory {}
 // we do not provide Default because this requires the real current epoch
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct StakeHistorySysvar(pub Epoch);
-
-// precompute so we can statically allocate buffer
-const EPOCH_AND_ENTRY_SERIALIZED_SIZE: u64 = 32;
 
 impl StakeHistoryGetEntry for StakeHistorySysvar {
     fn get_entry(&self, target_epoch: Epoch) -> Option<StakeHistoryEntry> {
@@ -80,15 +80,15 @@ impl StakeHistoryGetEntry for StakeHistorySysvar {
 
         // offset is the number of bytes to our desired entry, including eight for vector length
         let offset = epoch_delta
-            .checked_mul(EPOCH_AND_ENTRY_SERIALIZED_SIZE)?
+            .checked_mul(EPOCH_AND_ENTRY_SERIALIZED_SIZE as u64)?
             .checked_add(std::mem::size_of::<u64>() as u64)?;
 
-        let mut entry_buf = [0; EPOCH_AND_ENTRY_SERIALIZED_SIZE as usize];
+        let mut entry_buf = [0; EPOCH_AND_ENTRY_SERIALIZED_SIZE];
         let result = get_sysvar(
             &mut entry_buf,
             &id(),
             offset,
-            EPOCH_AND_ENTRY_SERIALIZED_SIZE,
+            EPOCH_AND_ENTRY_SERIALIZED_SIZE as u64,
         );
 
         match result {
@@ -147,6 +147,8 @@ mod tests {
 
     #[test]
     fn test_size_of() {
+        use crate::stake_history::SIZE;
+
         let mut stake_history = StakeHistory::default();
         for i in 0..MAX_ENTRIES as u64 {
             stake_history.add(
@@ -160,7 +162,7 @@ mod tests {
 
         assert_eq!(
             bincode::serialized_size(&stake_history).unwrap() as usize,
-            size_of::<u64>() + MAX_ENTRIES * EPOCH_AND_ENTRY_SERIALIZED_SIZE as usize
+            SIZE,
         );
 
         let stake_history_inner: Vec<(Epoch, StakeHistoryEntry)> =
@@ -168,8 +170,8 @@ mod tests {
         let epoch_entry = stake_history_inner.into_iter().next().unwrap();
 
         assert_eq!(
-            bincode::serialized_size(&epoch_entry).unwrap(),
-            EPOCH_AND_ENTRY_SERIALIZED_SIZE
+            bincode::serialized_size(&epoch_entry).unwrap() as usize,
+            EPOCH_AND_ENTRY_SERIALIZED_SIZE,
         );
     }
 
