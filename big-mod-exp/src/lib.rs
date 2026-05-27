@@ -1,120 +1,94 @@
 #![cfg_attr(docsrs, feature(doc_cfg))]
 
-pub const BIG_MOD_EXP_ENDIANNESS_BE: u64 = 0;
-pub const BIG_MOD_EXP_ENDIANNESS_LE: u64 = 1;
 pub const BIG_MOD_EXP_MAX_BYTES: u64 = 512;
-
-/// Endianness of big integer inputs and result.
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-#[repr(u64)]
-pub enum Endianness {
-    BigEndian = BIG_MOD_EXP_ENDIANNESS_BE,
-    LittleEndian = BIG_MOD_EXP_ENDIANNESS_LE,
-}
-
-impl From<Endianness> for u64 {
-    fn from(endianness: Endianness) -> Self {
-        endianness as u64
-    }
-}
-
-#[repr(C)]
-pub struct BigModExpParams {
-    pub base_addr: u64,
-    pub base_len: u64,
-    pub exponent_addr: u64,
-    pub exponent_len: u64,
-    pub modulus_addr: u64,
-    pub modulus_len: u64,
-    pub result_addr: u64,
-    pub result_len: u64,
-}
+pub const BIG_MOD_EXP_BASE_CU: u64 = 422;
+pub const BIG_MOD_EXP_CU_DIVISOR: u64 = 189;
+pub const BIG_MOD_EXP_MIN_EXPONENT_LENGTH: u64 = 75;
 
 /// Big integer modular exponentiation.
 ///
-/// Inputs and output are encoded using `endianness`. The returned value is
-/// padded to exactly `modulus.len()` bytes.
-pub fn big_mod_exp_with_endianness(
-    base: &[u8],
-    exponent: &[u8],
-    modulus: &[u8],
-    endianness: Endianness,
-) -> Vec<u8> {
+/// Inputs and output are little-endian unsigned integers. The returned value is
+/// padded to exactly `modulus.len()` bytes with trailing zeroes.
+pub fn big_mod_exp(base: &[u8], exponent: &[u8], modulus: &[u8]) -> Vec<u8> {
+    validate_inputs(base, exponent, modulus);
+    let base = pad_base_to_modulus_len(base, modulus.len());
+
     #[cfg(not(target_os = "solana"))]
     {
-        use {
-            num_bigint::BigUint,
-            num_traits::{One, Zero},
-        };
+        use num_bigint::BigUint;
 
         let modulus_len = modulus.len();
-        let (base, exponent, modulus) = match endianness {
-            Endianness::BigEndian => (
-                BigUint::from_bytes_be(base),
-                BigUint::from_bytes_be(exponent),
-                BigUint::from_bytes_be(modulus),
-            ),
-            Endianness::LittleEndian => (
-                BigUint::from_bytes_le(base),
-                BigUint::from_bytes_le(exponent),
-                BigUint::from_bytes_le(modulus),
-            ),
-        };
-
-        if modulus.is_zero() || modulus.is_one() {
-            return vec![0_u8; modulus_len];
-        }
+        let base = BigUint::from_bytes_le(&base);
+        let exponent = BigUint::from_bytes_le(exponent);
+        let modulus = BigUint::from_bytes_le(modulus);
 
         let ret_int = base.modpow(&exponent, &modulus);
-        match endianness {
-            Endianness::BigEndian => {
-                let ret_int = ret_int.to_bytes_be();
-                let mut return_value = vec![0_u8; modulus_len.saturating_sub(ret_int.len())];
-                return_value.extend(ret_int);
-                return_value
-            }
-            Endianness::LittleEndian => {
-                let mut return_value = ret_int.to_bytes_le();
-                return_value.resize(modulus_len, 0);
-                return_value
-            }
-        }
+        let mut return_value = ret_int.to_bytes_le();
+        return_value.resize(modulus_len, 0);
+        return_value
     }
 
     #[cfg(target_os = "solana")]
     {
         let mut return_value = vec![0_u8; modulus.len()];
-
-        let param = BigModExpParams {
-            base_addr: base.as_ptr() as u64,
-            base_len: base.len() as u64,
-            exponent_addr: exponent.as_ptr() as u64,
-            exponent_len: exponent.len() as u64,
-            modulus_addr: modulus.as_ptr() as u64,
-            modulus_len: modulus.len() as u64,
-            result_addr: return_value.as_mut_ptr() as u64,
-            result_len: return_value.len() as u64,
-        };
-
-        let result = unsafe {
+        unsafe {
             solana_define_syscall::definitions::sol_big_mod_exp(
-                endianness.into(),
-                &param as *const _ as *const u8,
+                base.as_ptr(),
+                base.len() as u64,
+                exponent.as_ptr(),
+                exponent.len() as u64,
+                modulus.as_ptr(),
+                modulus.len() as u64,
+                return_value.as_mut_ptr(),
             )
         };
-        assert_eq!(result, 0, "sol_big_mod_exp failed");
-
         return_value
     }
 }
 
-/// Big-endian big integer modular exponentiation.
-///
-/// This is the compatibility wrapper for the original `solana-big-mod-exp`
-/// API. Prefer [`big_mod_exp_with_endianness`] when little-endian support is
-/// needed.
-pub fn big_mod_exp(base: &[u8], exponent: &[u8], modulus: &[u8]) -> Vec<u8> {
-    big_mod_exp_with_endianness(base, exponent, modulus, Endianness::BigEndian)
+fn validate_inputs(base: &[u8], exponent: &[u8], modulus: &[u8]) {
+    let max_len = BIG_MOD_EXP_MAX_BYTES as usize;
+
+    assert!(
+        base.len() <= max_len,
+        "base length exceeds BIG_MOD_EXP_MAX_BYTES"
+    );
+    assert!(
+        exponent.len() <= max_len,
+        "exponent length exceeds BIG_MOD_EXP_MAX_BYTES"
+    );
+    assert!(
+        modulus.len() <= max_len,
+        "modulus length exceeds BIG_MOD_EXP_MAX_BYTES"
+    );
+    assert!(!modulus.is_empty(), "modulus length must be nonzero");
+    assert!(
+        base.len() <= modulus.len(),
+        "base length must not exceed modulus length"
+    );
+    assert!(!is_zero_or_one(modulus), "modulus must be greater than one");
+    assert!(is_odd(modulus), "modulus must be odd");
+}
+
+fn pad_base_to_modulus_len(base: &[u8], modulus_len: usize) -> Vec<u8> {
+    let mut padded_base = vec![0; modulus_len];
+    padded_base[..base.len()].copy_from_slice(base);
+    padded_base
+}
+
+fn is_zero_or_one(input: &[u8]) -> bool {
+    input.iter().all(|byte| *byte == 0) || is_one(input)
+}
+
+fn is_one(input: &[u8]) -> bool {
+    input.iter().enumerate().all(|(index, byte)| {
+        let is_least_significant_byte = index == 0;
+        matches!((is_least_significant_byte, *byte), (true, 1) | (false, 0))
+    })
+}
+
+fn is_odd(input: &[u8]) -> bool {
+    input[0] & 1 == 1
 }
 
 #[cfg(test)]
@@ -122,84 +96,86 @@ mod tests {
     use super::*;
 
     #[test]
-    fn big_mod_exp_test() {
-        #[derive(serde_derive::Deserialize)]
-        #[serde(rename_all = "PascalCase")]
-        struct TestCase {
-            base: String,
-            exponent: String,
-            modulus: String,
-            expected: String,
-        }
-
-        let test_data = include_str!("../tests/data/big_mod_exp_cases.json");
-
-        let test_cases: Vec<TestCase> = serde_json::from_str(test_data).unwrap();
-        test_cases.iter().for_each(|test| {
-            let base = array_bytes::hex2bytes_unchecked(&test.base);
-            let exponent = array_bytes::hex2bytes_unchecked(&test.exponent);
-            let modulus = array_bytes::hex2bytes_unchecked(&test.modulus);
-            let expected = array_bytes::hex2bytes_unchecked(&test.expected);
-            let result = big_mod_exp(base.as_slice(), exponent.as_slice(), modulus.as_slice());
-            assert_eq!(result, expected);
-        });
+    fn big_mod_exp_basic_test() {
+        let result = big_mod_exp(&[0x05], &[0x02], &[0x07]);
+        assert_eq!(result, vec![0x04]);
     }
 
     #[test]
     fn big_mod_exp_large_exponent_test() {
         let base = [0x03];
         let exponent = array_bytes::hex2bytes_unchecked(
-            "fffffffffffffffffffffffffffffffffffffffffffffffffffffffefffffc2e",
+            "2efcfffffeffffffffffffffffffffffffffffffffffffffffffffffffffffff",
         );
         let modulus = array_bytes::hex2bytes_unchecked(
-            "fffffffffffffffffffffffffffffffffffffffffffffffffffffffefffffc2f",
+            "2ffcfffffeffffffffffffffffffffffffffffffffffffffffffffffffffffff",
         );
 
-        let result = big_mod_exp_with_endianness(&base, &exponent, &modulus, Endianness::BigEndian);
+        let result = big_mod_exp(&base, &exponent, &modulus);
         let mut expected = vec![0; 32];
-        expected[31] = 1;
+        expected[0] = 1;
         assert_eq!(result, expected);
     }
 
     #[test]
-    fn big_mod_exp_empty_inputs_test() {
-        assert_eq!(
-            big_mod_exp_with_endianness(&[], &[], &[0x02], Endianness::BigEndian),
-            vec![0x01]
+    fn big_mod_exp_eip_198_little_endian_test() {
+        let base = array_bytes::hex2bytes_unchecked(
+            "0300000000000000000000000000000000000000000000000000000000000000",
         );
-        assert_eq!(
-            big_mod_exp_with_endianness(&[], &[], &[0x00], Endianness::BigEndian),
-            vec![0x00]
+        let exponent = array_bytes::hex2bytes_unchecked(
+            "2efcfffffeffffffffffffffffffffffffffffffffffffffffffffffffffffff",
         );
+        let modulus = array_bytes::hex2bytes_unchecked(
+            "2ffcfffffeffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+        );
+        let result = big_mod_exp(&base, &exponent, &modulus);
+        let mut expected = vec![0; 32];
+        expected[0] = 1;
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn big_mod_exp_empty_exponent_test() {
+        assert_eq!(big_mod_exp(&[], &[], &[0x03]), vec![0x01]);
+    }
+
+    #[test]
+    fn big_mod_exp_output_padding_test() {
         assert_eq!(
-            big_mod_exp_with_endianness(&[], &[], &[], Endianness::BigEndian),
-            Vec::<u8>::new()
+            big_mod_exp(&[0x02], &[0x02], &[0x07, 0x00]),
+            vec![0x04, 0x00]
         );
     }
 
     #[test]
-    fn big_mod_exp_little_endian_test() {
-        let base_be = [0x01, 0x02];
-        let exponent_be = [0x03];
-        let modulus_be = [0x10, 0x01];
-
-        let mut base_le = base_be;
-        let mut exponent_le = exponent_be;
-        let mut modulus_le = modulus_be;
-        base_le.reverse();
-        exponent_le.reverse();
-        modulus_le.reverse();
-
-        let result_be =
-            big_mod_exp_with_endianness(&base_be, &exponent_be, &modulus_be, Endianness::BigEndian);
-        let mut result_le = big_mod_exp_with_endianness(
-            &base_le,
-            &exponent_le,
-            &modulus_le,
-            Endianness::LittleEndian,
+    fn big_mod_exp_base_padding_test() {
+        assert_eq!(
+            big_mod_exp(&[0x02], &[0x03], &[0x07, 0x00]),
+            big_mod_exp(&[0x02, 0x00], &[0x03], &[0x07, 0x00])
         );
-        result_le.reverse();
+    }
 
-        assert_eq!(result_be, result_le);
+    #[test]
+    #[should_panic(expected = "modulus length must be nonzero")]
+    fn big_mod_exp_empty_modulus_panics() {
+        big_mod_exp(&[], &[], &[]);
+    }
+
+    #[test]
+    #[should_panic(expected = "modulus must be greater than one")]
+    fn big_mod_exp_zero_modulus_panics() {
+        big_mod_exp(&[0x00], &[], &[0x00]);
+    }
+
+    #[test]
+    #[should_panic(expected = "modulus must be greater than one")]
+    fn big_mod_exp_one_modulus_panics() {
+        big_mod_exp(&[0x00], &[], &[0x01]);
+    }
+
+    #[test]
+    #[should_panic(expected = "modulus must be odd")]
+    fn big_mod_exp_even_modulus_panics() {
+        big_mod_exp(&[0x00], &[], &[0x02]);
     }
 }

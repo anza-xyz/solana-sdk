@@ -1,6 +1,5 @@
 use {
     criterion::{black_box, criterion_group, criterion_main, Criterion},
-    serde::Deserialize,
     solana_big_mod_exp::big_mod_exp,
 };
 
@@ -15,41 +14,6 @@ const SIMD_0529_MODULUS_BUCKETS: [(&str, usize); 9] = [
     ("1025..=2048 bits", 256),
     ("2049..=4096 bits", 512),
 ];
-
-#[derive(Deserialize, Debug)]
-struct BenchmarkData {
-    exp_3_and_65537: BitSizeGroup,
-    variable_exponents: VariableBitSizeGroup,
-}
-
-#[derive(Deserialize, Debug)]
-struct BitSizeGroup {
-    bits_512: BaseModSet,
-    bits_1024: BaseModSet,
-    bits_2048: BaseModSet,
-    bits_4096: BaseModSet,
-}
-
-#[derive(Deserialize, Debug)]
-struct BaseModSet {
-    base: Vec<u8>,
-    modulus_odd: Vec<u8>,
-}
-
-#[derive(Deserialize, Debug)]
-struct VariableBitSizeGroup {
-    bits_512: VariableSet,
-    bits_1024: VariableSet,
-    bits_2048: VariableSet,
-    bits_4096: VariableSet,
-}
-
-#[derive(Deserialize, Debug)]
-struct VariableSet {
-    base: Vec<u8>,
-    modulus: Vec<u8>,
-    exponent: Vec<u8>,
-}
 
 struct BucketSet {
     base: Vec<u8>,
@@ -71,15 +35,15 @@ fn deterministic_bytes(len: usize, seed: u64) -> Vec<u8> {
 
 fn simd_0529_bucket_set(modulus_len: usize) -> BucketSet {
     let mut base = deterministic_bytes(modulus_len, modulus_len as u64);
-    base[0] |= 0x80;
+    *base.last_mut().expect("modulus buckets are non-empty") |= 0x80;
 
     // Dense, maximum-length exponents exercise the slower valid cases called
     // out by SIMD-0529 for the corresponding modulus size.
     let exponent = vec![0xff; modulus_len];
 
     let mut modulus = deterministic_bytes(modulus_len, (modulus_len as u64).reverse_bits());
-    modulus[0] |= 0x80;
-    *modulus.last_mut().expect("modulus buckets are non-empty") |= 1;
+    modulus[0] |= 1;
+    *modulus.last_mut().expect("modulus buckets are non-empty") |= 0x80;
 
     BucketSet {
         base,
@@ -89,30 +53,27 @@ fn simd_0529_bucket_set(modulus_len: usize) -> BucketSet {
 }
 
 fn all_benches(c: &mut Criterion) {
-    let data_str = include_str!("data/benchmark_constants.json");
-    let data: BenchmarkData =
-        serde_json::from_str(data_str).expect("Failed to parse benchmark data");
-
     // --- Benchmark Group for Exponent 3 ---
     let mut group_exp_3 = c.benchmark_group("Exponent 3");
     let exponent_3 = [3u8];
-    let const_exp_data = &data.exp_3_and_65537;
 
     group_exp_3.bench_function("512 bits odd", |b| {
+        let set = simd_0529_bucket_set(64);
         b.iter(|| {
             black_box(big_mod_exp(
-                &const_exp_data.bits_512.base,
-                &exponent_3,
-                &const_exp_data.bits_512.modulus_odd,
+                black_box(&set.base),
+                black_box(&exponent_3),
+                black_box(&set.modulus),
             ))
         })
     });
     group_exp_3.bench_function("1024 bits odd", |b| {
+        let set = simd_0529_bucket_set(128);
         b.iter(|| {
             black_box(big_mod_exp(
-                &const_exp_data.bits_1024.base,
-                &exponent_3,
-                &const_exp_data.bits_1024.modulus_odd,
+                black_box(&set.base),
+                black_box(&exponent_3),
+                black_box(&set.modulus),
             ))
         })
     });
@@ -123,20 +84,22 @@ fn all_benches(c: &mut Criterion) {
     let exponent_65537 = [1, 0, 1];
 
     group_exp_65537.bench_function("2048 bits odd", |b| {
+        let set = simd_0529_bucket_set(256);
         b.iter(|| {
             black_box(big_mod_exp(
-                &const_exp_data.bits_2048.base,
-                &exponent_65537,
-                &const_exp_data.bits_2048.modulus_odd,
+                black_box(&set.base),
+                black_box(&exponent_65537),
+                black_box(&set.modulus),
             ))
         })
     });
     group_exp_65537.bench_function("4096 bits odd", |b| {
+        let set = simd_0529_bucket_set(512);
         b.iter(|| {
             black_box(big_mod_exp(
-                &const_exp_data.bits_4096.base,
-                &exponent_65537,
-                &const_exp_data.bits_4096.modulus_odd,
+                black_box(&set.base),
+                black_box(&exponent_65537),
+                black_box(&set.modulus),
             ))
         })
     });
@@ -144,41 +107,44 @@ fn all_benches(c: &mut Criterion) {
 
     // --- Benchmark Group for Variable Exponents ---
     let mut group_variable = c.benchmark_group("Variable Exponents");
-    let var_exp_data = &data.variable_exponents;
 
     group_variable.bench_function("512-bit exp, 512-bit mod", |b| {
+        let set = simd_0529_bucket_set(64);
         b.iter(|| {
             black_box(big_mod_exp(
-                &var_exp_data.bits_512.base,
-                &var_exp_data.bits_512.exponent,
-                &var_exp_data.bits_512.modulus,
+                black_box(&set.base),
+                black_box(&set.exponent),
+                black_box(&set.modulus),
             ))
         })
     });
     group_variable.bench_function("1024-bit exp, 1024-bit mod", |b| {
+        let set = simd_0529_bucket_set(128);
         b.iter(|| {
             black_box(big_mod_exp(
-                &var_exp_data.bits_1024.base,
-                &var_exp_data.bits_1024.exponent,
-                &var_exp_data.bits_1024.modulus,
+                black_box(&set.base),
+                black_box(&set.exponent),
+                black_box(&set.modulus),
             ))
         })
     });
     group_variable.bench_function("2048-bit exp, 2048-bit mod", |b| {
+        let set = simd_0529_bucket_set(256);
         b.iter(|| {
             black_box(big_mod_exp(
-                &var_exp_data.bits_2048.base,
-                &var_exp_data.bits_2048.exponent,
-                &var_exp_data.bits_2048.modulus,
+                black_box(&set.base),
+                black_box(&set.exponent),
+                black_box(&set.modulus),
             ))
         })
     });
     group_variable.bench_function("4096-bit exp, 4096-bit mod", |b| {
+        let set = simd_0529_bucket_set(512);
         b.iter(|| {
             black_box(big_mod_exp(
-                &var_exp_data.bits_4096.base,
-                &var_exp_data.bits_4096.exponent,
-                &var_exp_data.bits_4096.modulus,
+                black_box(&set.base),
+                black_box(&set.exponent),
+                black_box(&set.modulus),
             ))
         })
     });
