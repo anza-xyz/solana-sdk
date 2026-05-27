@@ -71,12 +71,33 @@ fn rsa_65537_exponent() -> Vec<u8> {
 }
 
 fn mult_complexity(x: u64) -> u64 {
+    let x_squared = x.checked_mul(x).expect("modulus length square fits in u64");
     if x <= 64 {
-        x.saturating_mul(x)
+        x_squared
     } else if x <= 1024 {
-        x.saturating_mul(x) / 4 + 96 * x - 3072
+        x_squared
+            .checked_div(4)
+            .expect("divisor is nonzero")
+            .checked_add(
+                96_u64
+                    .checked_mul(x)
+                    .expect("linear complexity term fits in u64"),
+            )
+            .expect("complexity terms fit in u64")
+            .checked_sub(3_072)
+            .expect("complexity offset is valid for this branch")
     } else {
-        x.saturating_mul(x) / 16 + 480 * x - 199_680
+        x_squared
+            .checked_div(16)
+            .expect("divisor is nonzero")
+            .checked_add(
+                480_u64
+                    .checked_mul(x)
+                    .expect("linear complexity term fits in u64"),
+            )
+            .expect("complexity terms fit in u64")
+            .checked_sub(199_680)
+            .expect("complexity offset is valid for this branch")
     }
 }
 
@@ -86,7 +107,17 @@ fn highest_set_bit_index_le(bytes: &[u8]) -> Option<u64> {
         .enumerate()
         .rev()
         .find_map(|(byte_index, byte)| {
-            (*byte != 0).then(|| byte_index as u64 * 8 + u64::from(7 - byte.leading_zeros()))
+            (*byte != 0).then(|| {
+                let byte_bit_offset = (byte_index as u64)
+                    .checked_mul(8)
+                    .expect("byte index bit offset fits in u64");
+                let bit_index_in_byte = 7_u32
+                    .checked_sub(byte.leading_zeros())
+                    .expect("nonzero byte leading zeros are at most 7");
+                byte_bit_offset
+                    .checked_add(u64::from(bit_index_in_byte))
+                    .expect("highest set bit index fits in u64")
+            })
         })
 }
 
@@ -94,17 +125,28 @@ fn adjusted_exponent_length(exponent: &[u8]) -> u64 {
     if exponent.len() <= 32 {
         highest_set_bit_index_le(exponent).unwrap_or(0)
     } else {
-        let most_significant_32_bytes = &exponent[exponent.len() - 32..];
-        8 * (exponent.len() as u64 - 32)
-            + highest_set_bit_index_le(most_significant_32_bytes).unwrap_or(0)
+        let trailing_bytes = exponent
+            .len()
+            .checked_sub(32)
+            .expect("exponent length is greater than 32");
+        let most_significant_32_bytes = &exponent[trailing_bytes..];
+        (trailing_bytes as u64)
+            .checked_mul(8)
+            .expect("trailing byte bit length fits in u64")
+            .checked_add(highest_set_bit_index_le(most_significant_32_bytes).unwrap_or(0))
+            .expect("adjusted exponent length fits in u64")
     }
 }
 
 fn compute_units(modulus_len: usize, exponent: &[u8]) -> u64 {
     let effective_exponent_length =
         adjusted_exponent_length(exponent).max(BIG_MOD_EXP_MIN_EXPONENT_LENGTH);
-    let operation_complexity = mult_complexity(modulus_len as u64) * effective_exponent_length;
-    BIG_MOD_EXP_BASE_CU + operation_complexity.div_ceil(BIG_MOD_EXP_CU_DIVISOR)
+    let operation_complexity = mult_complexity(modulus_len as u64)
+        .checked_mul(effective_exponent_length)
+        .expect("operation complexity fits in u64");
+    BIG_MOD_EXP_BASE_CU
+        .checked_add(operation_complexity.div_ceil(BIG_MOD_EXP_CU_DIVISOR))
+        .expect("compute unit cost fits in u64")
 }
 
 fn bench_label(case_name: &str, size_name: &str, case: &BenchCase) -> String {
