@@ -35,6 +35,7 @@ no_std_crates=(
   -p solana-rent
   -p solana-sanitize
   -p solana-sdk-ids
+  -p solana-secp256k1-program
   -p solana-sha256-hasher
   -p solana-signature
   -p solana-sysvar-id
@@ -48,6 +49,8 @@ no_std_alloc_crates=(
   -p solana-borsh
   -p solana-curve25519
   -p solana-instruction
+  -p solana-instructions-sysvar
+  -p solana-serialize-utils
 )
 
 # Use the upstream BPF target, which doesn't support std, to make sure that our
@@ -57,7 +60,7 @@ target="bpfel-unknown-none"
 # These features require alloc
 exclude_features_no_alloc="alloc,borsh,curve25519,serde,slice-cpi"
 # These features never work on upstream BPF
-exclude_features="atomic,bincode,default,dev-context-only-utils,frozen-abi,rand,std,verify"
+exclude_features="atomic,batch-verify,bincode,default,dev-context-only-utils,frozen-abi,parallel,rand,std,verify"
 
 ./cargo nightly hack check \
   -Zbuild-std=core \

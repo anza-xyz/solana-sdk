@@ -2,7 +2,7 @@
 name = "solana-curve25519"
 description = "Solana Curve25519 Syscalls"
 documentation = "https://docs.rs/solana-curve25519"
-version = "4.0.0"
+version = "4.0.1"
 authors = { workspace = true }
 repository = { workspace = true }
 homepage = { workspace = true }

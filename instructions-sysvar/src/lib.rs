@@ -29,23 +29,27 @@
 
 #![cfg_attr(docsrs, feature(doc_cfg))]
 #![allow(clippy::arithmetic_side_effects)]
+#![no_std]
+
+extern crate alloc;
 
 #[cfg(feature = "dev-context-only-utils")]
 use qualifier_attr::qualifiers;
 pub use solana_sdk_ids::sysvar::instructions::{check_id, id, ID};
-#[cfg(not(target_os = "solana"))]
 use {
-    bitflags::bitflags,
-    solana_instruction::BorrowedInstruction,
-    solana_serialize_utils::{append_slice, append_u16, append_u8},
-};
-use {
+    alloc::vec::Vec,
     solana_account_info::AccountInfo,
     solana_instruction::{AccountMeta, Instruction},
     solana_instruction_error::InstructionError,
     solana_program_error::ProgramError,
     solana_sanitize::SanitizeError,
     solana_serialize_utils::{read_pubkey, read_slice, read_u16, read_u8},
+};
+#[cfg(not(target_os = "solana"))]
+use {
+    bitflags::bitflags,
+    solana_instruction::BorrowedInstruction,
+    solana_serialize_utils::{append_slice, append_u16, append_u8},
 };
 
 /// Instructions sysvar, dummy type.
@@ -297,6 +301,7 @@ pub fn get_instruction_relative(
 mod tests {
     use {
         super::*,
+        alloc::vec,
         solana_account_info::AccountInfo,
         solana_address::Address,
         solana_instruction::{AccountMeta, BorrowedAccountMeta, BorrowedInstruction, Instruction},

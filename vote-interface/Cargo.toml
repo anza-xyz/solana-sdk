@@ -63,12 +63,12 @@ solana-pubkey = { workspace = true }
 solana-rent = { workspace = true }
 solana-sdk-ids = { workspace = true }
 solana-serde-varint = { workspace = true, optional = true }
-solana-serialize-utils = { workspace = true, optional = true }
+solana-serialize-utils = { workspace = true, optional = true, features = ["std"] }
 solana-short-vec = { workspace = true, optional = true }
 solana-system-interface = { workspace = true, features = ["bincode"], optional = true }
 
 [target.'cfg(target_os = "solana")'.dependencies]
-solana-serialize-utils = { workspace = true }
+solana-serialize-utils = { workspace = true, features = ["std"] }
 
 [dev-dependencies]
 itertools = { workspace = true }

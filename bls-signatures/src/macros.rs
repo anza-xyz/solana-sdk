@@ -559,6 +559,8 @@ macro_rules! impl_unchecked_conversions {
 macro_rules! impl_pubkey_wrapper_delegations {
     ($wrapper:ident) => {
         #[cfg(not(target_os = "solana"))]
+        // `VerifySignature` remains public, but this crate only implements it for
+        // wrappers whose construction represents the PoP-verified safety boundary.
         impl<T: AsPubkeyAffine + ?Sized> VerifySignature for $wrapper<T> {}
 
         #[cfg(not(target_os = "solana"))]

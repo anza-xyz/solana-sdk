@@ -652,8 +652,8 @@ mod tests {
 
             let message = builder.build().unwrap();
 
-            // Serialize V1 to raw bytes.
-            let bytes = v1::serialize(&message);
+            // Serialize V1 to raw bytes (without the version prefix).
+            let bytes = wincode::serialize(&message).unwrap();
             // Deserialize from raw bytes.
             let parsed = v1::deserialize(&bytes).unwrap();
 

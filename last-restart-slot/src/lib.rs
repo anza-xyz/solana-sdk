@@ -11,6 +11,7 @@ use solana_sdk_macro::CloneZeroed;
     feature = "serde",
     derive(serde_derive::Deserialize, serde_derive::Serialize)
 )]
+#[cfg_attr(feature = "wincode", derive(wincode::SchemaWrite, wincode::SchemaRead))]
 #[derive(Debug, CloneZeroed, PartialEq, Eq, Default)]
 pub struct LastRestartSlot {
     /// The last restart `Slot`.

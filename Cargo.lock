@@ -1192,6 +1192,7 @@ checksum = "4a3daa8e81a3963a60642bcc1f90a670680bd4a77535faa384e9d1c79d620871"
 dependencies = [
  "curve25519-dalek",
  "ed25519",
+ "merlin",
  "rand_core 0.6.4",
  "serde",
  "sha2",
@@ -2149,6 +2150,18 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "488016bfae457b036d996092f6cb448677611ce4449e970ceaf42695203f218a"
 dependencies = [
  "autocfg",
+]
+
+[[package]]
+name = "merlin"
+version = "3.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "58c38e2799fc0978b65dfff8023ec7843e2330bb462f19198840b34b6582397d"
+dependencies = [
+ "byteorder",
+ "keccak",
+ "rand_core 0.6.4",
+ "zeroize",
 ]
 
 [[package]]
@@ -3481,7 +3494,7 @@ dependencies = [
 
 [[package]]
 name = "solana-clock"
-version = "3.0.1"
+version = "3.1.0"
 dependencies = [
  "serde",
  "serde_derive",
@@ -3490,6 +3503,7 @@ dependencies = [
  "solana-sdk-macro",
  "solana-sysvar-id",
  "static_assertions",
+ "wincode",
 ]
 
 [[package]]
@@ -3542,7 +3556,7 @@ dependencies = [
 
 [[package]]
 name = "solana-curve25519"
-version = "4.0.0"
+version = "4.0.1"
 dependencies = [
  "bytemuck",
  "bytemuck_derive",
@@ -3586,7 +3600,7 @@ dependencies = [
 
 [[package]]
 name = "solana-epoch-rewards"
-version = "3.0.1"
+version = "3.0.2"
 dependencies = [
  "serde",
  "serde_derive",
@@ -3597,6 +3611,7 @@ dependencies = [
  "solana-sdk-ids",
  "solana-sdk-macro",
  "solana-sysvar-id",
+ "wincode",
 ]
 
 [[package]]
@@ -3703,7 +3718,7 @@ dependencies = [
 
 [[package]]
 name = "solana-frozen-abi"
-version = "3.3.0"
+version = "3.4.0"
 dependencies = [
  "bincode",
  "bitflags",
@@ -3730,7 +3745,7 @@ dependencies = [
 
 [[package]]
 name = "solana-frozen-abi-macro"
-version = "3.3.0"
+version = "3.4.0"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -3869,7 +3884,7 @@ dependencies = [
 
 [[package]]
 name = "solana-instructions-sysvar"
-version = "3.0.0"
+version = "3.0.1"
 dependencies = [
  "bitflags",
  "qualifier_attr",
@@ -3878,7 +3893,6 @@ dependencies = [
  "solana-instruction",
  "solana-instruction-error",
  "solana-program-error",
- "solana-pubkey",
  "solana-sanitize",
  "solana-sdk-ids",
  "solana-serialize-utils",
@@ -3916,13 +3930,14 @@ dependencies = [
 
 [[package]]
 name = "solana-last-restart-slot"
-version = "3.0.0"
+version = "3.0.1"
 dependencies = [
  "serde",
  "serde_derive",
  "solana-sdk-ids",
  "solana-sdk-macro",
  "solana-sysvar-id",
+ "wincode",
 ]
 
 [[package]]
@@ -4031,7 +4046,7 @@ dependencies = [
 
 [[package]]
 name = "solana-nullable"
-version = "1.1.0"
+version = "1.1.1"
 dependencies = [
  "borsh",
  "bytemuck",
@@ -4207,7 +4222,7 @@ dependencies = [
 
 [[package]]
 name = "solana-program-log"
-version = "1.1.0"
+version = "1.2.0"
 dependencies = [
  "solana-define-syscall",
  "solana-program-log-macro",
@@ -4215,7 +4230,7 @@ dependencies = [
 
 [[package]]
 name = "solana-program-log-macro"
-version = "1.0.0"
+version = "1.1.0"
 dependencies = [
  "quote",
  "regex",
@@ -4378,13 +4393,11 @@ version = "3.0.1"
 dependencies = [
  "anyhow",
  "bincode",
- "digest",
  "hex",
  "k256",
  "rand 0.8.5",
  "serde",
  "serde_derive",
- "sha3",
  "solana-account-info",
  "solana-example-mocks",
  "solana-instruction",
@@ -4464,7 +4477,7 @@ dependencies = [
 
 [[package]]
 name = "solana-serialize-utils"
-version = "3.1.1"
+version = "3.1.2"
 dependencies = [
  "bincode",
  "borsh",
@@ -4530,10 +4543,12 @@ dependencies = [
  "bs58",
  "bytemuck",
  "bytemuck_derive",
+ "criterion",
  "curve25519-dalek",
  "ed25519-dalek",
  "five8",
  "rand 0.9.2",
+ "rayon",
  "serde",
  "serde-big-array",
  "serde_derive",
@@ -4570,7 +4585,7 @@ dependencies = [
 
 [[package]]
 name = "solana-slot-hashes"
-version = "3.0.1"
+version = "3.0.2"
 dependencies = [
  "serde",
  "serde_derive",
@@ -4578,17 +4593,19 @@ dependencies = [
  "solana-sdk-ids",
  "solana-sha256-hasher",
  "solana-sysvar-id",
+ "wincode",
 ]
 
 [[package]]
 name = "solana-slot-history"
-version = "3.0.0"
+version = "3.0.1"
 dependencies = [
  "bv",
  "serde",
  "serde_derive",
  "solana-sdk-ids",
  "solana-sysvar-id",
+ "wincode",
 ]
 
 [[package]]
@@ -4691,6 +4708,7 @@ dependencies = [
  "solana-sysvar",
  "solana-sysvar-id",
  "test-case",
+ "wincode",
 ]
 
 [[package]]
@@ -4807,7 +4825,7 @@ dependencies = [
 
 [[package]]
 name = "solana-zero-copy"
-version = "1.0.1"
+version = "1.1.1"
 dependencies = [
  "borsh",
  "bytemuck",
@@ -5480,6 +5498,7 @@ version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b32acb3b7c291af87820e4339459a2c61c24fd13be8809aab2464aed6decf376"
 dependencies = [
+ "bv",
  "pastey",
  "proc-macro2",
  "quote",

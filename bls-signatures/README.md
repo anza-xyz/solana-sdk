@@ -13,7 +13,7 @@ It is primarily intended for use in the Solana Alpenglow consensus protocol, but
 - **Aggregate Verification & Screening:** Optimized multi-miller loop algorithms for verifying aggregated signatures against shared messages (multisig) or screening multiple distinct-message signatures via aggregate relations.
 - Supports aggregate screening of distinct-message signature sets. Note that `verify_distinct` and its variants provide screening guarantees only and do not imply individual signature validity per signer. See the API documentation for details.
 - **Parallelization:** Optional `rayon` integration to speed up multi-scalar multiplications (MSMs) and heavy verification loops.
-- **Rogue-Key Attack Prevention:** Type-safe wrappers like `PopVerified` ensure that aggregation only occurs with keys that have proven their Proof of Possession.
+- **Rogue-Key Attack Prevention:** Crate-provided aggregation APIs require `PopVerified` keys, and crate-provided `VerifySignature` implementations are limited to PoP-verified wrappers.
 
 ---
 
@@ -118,7 +118,9 @@ A well-known vulnerability in BLS signature aggregation is the Rogue Key Attack.
 
 One mitigation is to require a Proof of Possession (PoP) from every participant. A PoP is a cryptographic proof that the creator of a public key actually controls the corresponding private key.
 
-To prevent accidental vulnerabilities and the aggregation of unverified keys, the aggregation and verification APIs strictly require the `PopVerified<T>` wrapper type. You cannot mathematically aggregate public keys in this crate without first proving you've verified their PoP.
+To prevent accidental vulnerabilities and the aggregation of unverified keys, the aggregation APIs require the `PopVerified<T>` wrapper type. You cannot mathematically aggregate public keys through this crate's aggregation APIs without first proving you've verified their PoP.
+
+For single-signature verification, `VerifySignature` remains a public extension trait. This crate only implements it for `PopVerified<T>` and aggregate public-key wrappers, not for its raw public key types. Downstream crates can still implement the trait for their own key wrappers; doing so is an explicit convention boundary, not a hard type-system guarantee from this crate. Avoid implementing `VerifySignature` for unverified key wrappers in code paths that rely on PoP validation, aggregation safety, signer attribution, rewards, or penalties.
 
 ```rust
 use solana_bls_signatures::{
@@ -137,8 +139,8 @@ let pop = keypair.proof_of_possession(None);
 // Assume we receive the raw public key bytes, signature, and PoP over the network
 let raw_pubkey: Pubkey = (*keypair.public).into();
 
-// ❌ THIS WILL FAIL TO COMPILE!
-// The type system prevents using unverified keys for signature verification.
+// ❌ THIS WILL FAIL TO COMPILE with this crate's raw public key types.
+// The crate does not implement `VerifySignature` for unverified raw public keys.
 // raw_pubkey.verify_signature(&signature, message).unwrap();
 
 // 3. Verify the PoP. Upon success, it returns a `PopVerified` wrapper,

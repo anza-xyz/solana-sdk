@@ -60,9 +60,16 @@ pub trait VerifyPop: AsPubkeyAffine + Sized {
 // Blanket implementation so any raw key can attempt to prove itself
 impl<T: AsPubkeyAffine> VerifyPop for T {}
 
-/// A trait that provides signature verification methods exclusively to safe public key types.
+/// A trait that provides signature verification methods to public-key-like types.
+///
+/// The crate-provided implementations are intentionally limited to `PopVerified<T>` and
+/// aggregate public-key wrappers, so raw public key types from this crate do not gain
+/// direct signature-verification methods before PoP verification. This trait remains public
+/// as an extension point for downstream key wrappers. Implementing it for an unverified key
+/// type opts out of the crate's PoP-verified usage convention and can reintroduce rogue-key
+/// risks in aggregation or signer-attribution flows.
 pub trait VerifySignature: AsPubkeyAffine {
-    /// Uses this safe public key to verify any convertible signature type.
+    /// Uses this public key to verify any convertible signature type.
     fn verify_signature<S: AsSignatureAffine>(
         &self,
         signature: &S,
@@ -72,7 +79,7 @@ pub trait VerifySignature: AsPubkeyAffine {
         self.verify_signature_pre_hashed(signature, &hashed_message)
     }
 
-    /// Uses this safe public key to verify any convertible signature type using a pre-hashed message.
+    /// Uses this public key to verify any convertible signature type using a pre-hashed message.
     fn verify_signature_pre_hashed<S: AsSignatureAffine>(
         &self,
         signature: &S,
@@ -82,7 +89,7 @@ pub trait VerifySignature: AsPubkeyAffine {
         self.verify_signature_prepared(signature, &prepared_hashed_message)
     }
 
-    /// Uses this safe public key to verify any convertible signature type using a prepared message.
+    /// Uses this public key to verify any convertible signature type using a prepared message.
     fn verify_signature_prepared<S: AsSignatureAffine>(
         &self,
         signature: &S,

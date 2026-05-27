@@ -45,6 +45,7 @@ impl_sysvar_id!(RecentBlockhashes);
 )]
 #[repr(C)]
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
+#[cfg_attr(feature = "wincode", derive(wincode::SchemaWrite, wincode::SchemaRead))]
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct Entry {
     pub blockhash: Hash,
@@ -96,6 +97,7 @@ impl PartialOrd for IterItem<'_> {
 )]
 #[repr(C)]
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
+#[cfg_attr(feature = "wincode", derive(wincode::SchemaWrite, wincode::SchemaRead))]
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct RecentBlockhashes(Vec<Entry>);
 

@@ -10,6 +10,7 @@ impl_sysvar_id!(Rewards);
 
 #[repr(C)]
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
+#[cfg_attr(feature = "wincode", derive(wincode::SchemaWrite, wincode::SchemaRead))]
 #[derive(Debug, Default, PartialEq)]
 pub struct Rewards {
     pub validator_point_value: f64,

@@ -168,9 +168,9 @@ fn bench_proof_of_possession(c: &mut Criterion) {
     });
 }
 
-// Benchmark for batch verification functions
-fn bench_batch_verification(c: &mut Criterion) {
-    let mut group = c.benchmark_group("batch_verify");
+// Benchmark for `verify_distinct` aggregate screening functions.
+fn bench_aggregate_screening(c: &mut Criterion) {
+    let mut group = c.benchmark_group("aggregate_screening");
 
     for num_validators in [64, 128, 256, 512, 1024, 2048].iter() {
         let keypairs: Vec<Keypair> = (0..*num_validators).map(|_| Keypair::new()).collect();
@@ -199,7 +199,7 @@ fn bench_batch_verification(c: &mut Criterion) {
             .collect();
 
         group.bench_function(
-            format!("{num_validators} sequential batch verification"),
+            format!("{num_validators} sequential aggregate screening"),
             |b| {
                 b.iter(|| {
                     SignatureProjective::verify_distinct(
@@ -213,7 +213,7 @@ fn bench_batch_verification(c: &mut Criterion) {
         );
 
         group.bench_function(
-            format!("{num_validators} sequential batch verification (pre-hashed)"),
+            format!("{num_validators} sequential aggregate screening (pre-hashed)"),
             |b| {
                 b.iter(|| {
                     SignatureProjective::verify_distinct_pre_hashed(
@@ -227,7 +227,7 @@ fn bench_batch_verification(c: &mut Criterion) {
         );
 
         group.bench_function(
-            format!("{num_validators} sequential batch verification (prepared)"),
+            format!("{num_validators} sequential aggregate screening (prepared)"),
             |b| {
                 b.iter(|| {
                     SignatureProjective::verify_distinct_prepared(
@@ -245,7 +245,7 @@ fn bench_batch_verification(c: &mut Criterion) {
             let message_refs: Vec<&[u8]> = messages.iter().map(|v| v.as_slice()).collect();
 
             group.bench_function(
-                format!("{num_validators} parallel batch verification"),
+                format!("{num_validators} parallel aggregate screening"),
                 |b| {
                     b.iter(|| {
                         SignatureProjective::par_verify_distinct(
@@ -268,6 +268,6 @@ criterion_group!(
     bench_aggregate,
     bench_key_generation,
     bench_proof_of_possession,
-    bench_batch_verification
+    bench_aggregate_screening
 );
 criterion_main!(benches);

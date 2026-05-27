@@ -4,6 +4,7 @@
 
 #[cfg(feature = "bytemuck")]
 use bytemuck_derive::{Pod, Zeroable};
+use core::cmp::PartialEq;
 #[cfg(feature = "serde")]
 use serde_derive::{Deserialize, Serialize};
 #[cfg(feature = "wincode")]
@@ -58,15 +59,86 @@ impl From<Bool> for bool {
 /// Simple macro for implementing conversion functions between unaligned
 /// integers and standard integers.
 ///
-/// The standard integer types can cause alignment issues when placed in a
-/// `bytemuck::Pod`, so these replacements are usable in all bytemuck `Pod`
-/// types.
+/// When using standard integer types in a struct, it might be required
+/// to add padding to match their alignment requirements. Unaligned types
+/// avoid this since their alignment requirement is `1`.
 #[macro_export]
 macro_rules! impl_int_conversion {
     ($P:ty, $I:ty) => {
+        const _: () = assert!(core::mem::align_of::<$P>() == 1);
+        const _: () = assert!(core::mem::size_of::<$P>() == core::mem::size_of::<$I>());
+
         impl $P {
+            #[inline(always)]
             pub const fn from_primitive(n: $I) -> Self {
                 Self(n.to_le_bytes())
+            }
+
+            #[inline(always)]
+            pub fn checked_add(self, rhs: impl Into<$I>) -> Option<Self> {
+                let s: $I = self.into();
+                let other: $I = rhs.into();
+                s.checked_add(other).map(Self::from)
+            }
+
+            #[inline(always)]
+            pub fn checked_div(self, rhs: impl Into<$I>) -> Option<Self> {
+                let s: $I = self.into();
+                let other: $I = rhs.into();
+                s.checked_div(other).map(Self::from)
+            }
+
+            #[inline(always)]
+            pub fn checked_mul(self, rhs: impl Into<$I>) -> Option<Self> {
+                let s: $I = self.into();
+                let other: $I = rhs.into();
+                s.checked_mul(other).map(Self::from)
+            }
+
+            #[inline(always)]
+            pub fn checked_rem(self, rhs: impl Into<$I>) -> Option<Self> {
+                let s: $I = self.into();
+                let other: $I = rhs.into();
+                s.checked_rem(other).map(Self::from)
+            }
+
+            #[inline(always)]
+            pub fn checked_sub(self, rhs: impl Into<$I>) -> Option<Self> {
+                let s: $I = self.into();
+                let other: $I = rhs.into();
+                s.checked_sub(other).map(Self::from)
+            }
+
+            #[inline(always)]
+            pub fn saturating_add(self, rhs: impl Into<$I>) -> Self {
+                let s: $I = self.into();
+                let other: $I = rhs.into();
+                Self::from(s.saturating_add(other))
+            }
+
+            #[inline(always)]
+            pub fn saturating_div(self, rhs: impl Into<$I>) -> Self {
+                let s: $I = self.into();
+                let other: $I = rhs.into();
+                #[allow(
+                    clippy::arithmetic_side_effects,
+                    reason = "saturating_div follows primitive integer behavior and panics on division by zero"
+                )]
+                Self::from(s.saturating_div(other))
+            }
+
+            #[inline(always)]
+            pub fn saturating_mul(self, rhs: impl Into<$I>) -> Self {
+                let s: $I = self.into();
+                let other: $I = rhs.into();
+                Self::from(s.saturating_mul(other))
+            }
+
+            #[inline(always)]
+            pub fn saturating_sub(self, rhs: impl Into<$I>) -> Self {
+                let s: $I = self.into();
+                let other: $I = rhs.into();
+                Self::from(s.saturating_sub(other))
             }
         }
         impl From<$I> for $P {
@@ -77,6 +149,249 @@ macro_rules! impl_int_conversion {
         impl From<$P> for $I {
             fn from(unaligned: $P) -> Self {
                 Self::from_le_bytes(unaligned.0)
+            }
+        }
+        impl core::ops::Add<$I> for $P {
+            type Output = Self;
+
+            #[inline(always)]
+            fn add(self, rhs: $I) -> Self {
+                let s: $I = self.into();
+                #[allow(
+                    clippy::arithmetic_side_effects,
+                    reason = "add follows primitive integer behavior and wraps on overflow"
+                )]
+                Self::from(s + rhs)
+            }
+        }
+         impl core::ops::Add<$P> for $P {
+            type Output = Self;
+
+            #[inline(always)]
+            fn add(self, rhs: $P) -> Self {
+                let s: $I = self.into();
+                let other: $I = rhs.into();
+                #[allow(
+                    clippy::arithmetic_side_effects,
+                    reason = "add follows primitive integer behavior and wraps on overflow"
+                )]
+                Self::from(s + other)
+            }
+        }
+        impl core::ops::Div<$I> for $P {
+            type Output = Self;
+
+            #[inline(always)]
+            fn div(self, rhs: $I) -> Self {
+                let s: $I = self.into();
+                #[allow(
+                    clippy::arithmetic_side_effects,
+                    reason = "div follows primitive integer behavior and panics on division by zero"
+                )]
+                Self::from(s / rhs)
+            }
+        }
+        impl core::ops::Div<$P> for $P {
+            type Output = Self;
+
+            #[inline(always)]
+            fn div(self, rhs: $P) -> Self {
+                let s: $I = self.into();
+                let other: $I = rhs.into();
+                #[allow(
+                    clippy::arithmetic_side_effects,
+                    reason = "div follows primitive integer behavior and panics on division by zero"
+                )]
+                Self::from(s / other)
+            }
+        }
+        impl core::ops::Mul<$I> for $P {
+            type Output = Self;
+
+            #[inline(always)]
+            fn mul(self, rhs: $I) -> Self {
+                let s: $I = self.into();
+                #[allow(
+                    clippy::arithmetic_side_effects,
+                    reason = "mul follows primitive integer behavior and wraps on overflow"
+                )]
+                Self::from(s * rhs)
+            }
+        }
+        impl core::ops::Mul<$P> for $P {
+            type Output = Self;
+
+            #[inline(always)]
+            fn mul(self, rhs: $P) -> Self {
+                let s: $I = self.into();
+                let other: $I = rhs.into();
+                #[allow(
+                    clippy::arithmetic_side_effects,
+                    reason = "mul follows primitive integer behavior and wraps on overflow"
+                )]
+                Self::from(s * other)
+            }
+        }
+        impl core::ops::Rem<$I> for $P {
+            type Output = Self;
+
+            #[inline(always)]
+            fn rem(self, rhs: $I) -> Self {
+                let s: $I = self.into();
+                #[allow(
+                    clippy::arithmetic_side_effects,
+                    reason = "rem follows primitive integer behavior and panics on division by zero"
+                )]
+                Self::from(s % rhs)
+            }
+        }
+        impl core::ops::Rem<$P> for $P {
+            type Output = Self;
+
+            #[inline(always)]
+            fn rem(self, rhs: $P) -> Self {
+                let s: $I = self.into();
+                let other: $I = rhs.into();
+                #[allow(
+                    clippy::arithmetic_side_effects,
+                    reason = "rem follows primitive integer behavior and panics on division by zero"
+                )]
+                Self::from(s % other)
+            }
+        }
+        impl core::ops::Sub<$I> for $P {
+            type Output = Self;
+
+            #[inline(always)]
+            fn sub(self, rhs: $I) -> Self {
+                let s: $I = self.into();
+                #[allow(
+                    clippy::arithmetic_side_effects,
+                    reason = "sub follows primitive integer behavior and wraps on overflow"
+                )]
+                Self::from(s - rhs)
+            }
+        }
+        impl core::ops::Sub<$P> for $P {
+            type Output = Self;
+
+            #[inline(always)]
+            fn sub(self, rhs: $P) -> Self {
+                let s: $I = self.into();
+                let other: $I = rhs.into();
+                #[allow(
+                    clippy::arithmetic_side_effects,
+                    reason = "sub follows primitive integer behavior and wraps on overflow"
+                )]
+                Self::from(s - other)
+            }
+        }
+        impl core::ops::AddAssign<$I> for $P {
+            #[allow(
+                clippy::arithmetic_side_effects,
+                reason = "add_assign follows primitive integer behavior and wraps on overflow"
+            )]
+            #[inline(always)]
+            fn add_assign(&mut self, rhs: $I) {
+                *self = *self + rhs;
+            }
+        }
+        impl core::ops::AddAssign<$P> for $P {
+            #[allow(
+                clippy::arithmetic_side_effects,
+                reason = "add_assign follows primitive integer behavior and wraps on overflow"
+            )]
+            #[inline(always)]
+            fn add_assign(&mut self, rhs: $P) {
+                *self = *self + rhs;
+            }
+        }
+        impl core::ops::DivAssign<$I> for $P {
+            #[allow(
+                clippy::arithmetic_side_effects,
+                reason = "div_assign follows primitive integer behavior and panics on division by zero"
+            )]
+            #[inline(always)]
+            fn div_assign(&mut self, rhs: $I) {
+                *self = *self / rhs;
+            }
+        }
+        impl core::ops::DivAssign<$P> for $P {
+            #[allow(
+                clippy::arithmetic_side_effects,
+                reason = "div_assign follows primitive integer behavior and panics on division by zero"
+            )]
+            #[inline(always)]
+            fn div_assign(&mut self, rhs: $P) {
+                *self = *self / rhs;
+            }
+        }
+        impl core::ops::MulAssign<$I> for $P {
+            #[allow(
+                clippy::arithmetic_side_effects,
+                reason = "mul_assign follows primitive integer behavior and wraps on overflow"
+            )]
+            #[inline(always)]
+            fn mul_assign(&mut self, rhs: $I) {
+                *self = *self * rhs;
+            }
+        }
+        impl core::ops::MulAssign<$P> for $P {
+            #[allow(
+                clippy::arithmetic_side_effects,
+                reason = "mul_assign follows primitive integer behavior and wraps on overflow"
+            )]
+            #[inline(always)]
+            fn mul_assign(&mut self, rhs: $P) {
+                *self = *self * rhs;
+            }
+        }
+        impl core::ops::RemAssign<$I> for $P {
+            #[allow(
+                clippy::arithmetic_side_effects,
+                reason = "rem_assign follows primitive integer behavior and panics on division by zero"
+            )]
+            #[inline(always)]
+            fn rem_assign(&mut self, rhs: $I) {
+                *self = *self % rhs;
+            }
+        }
+        impl core::ops::RemAssign<$P> for $P {
+            #[allow(
+                clippy::arithmetic_side_effects,
+                reason = "rem_assign follows primitive integer behavior and panics on division by zero"
+            )]
+            #[inline(always)]
+            fn rem_assign(&mut self, rhs: $P) {
+                *self = *self % rhs;
+            }
+        }
+        impl core::ops::SubAssign<$I> for $P {
+            #[allow(
+                clippy::arithmetic_side_effects,
+                reason = "sub_assign follows primitive integer behavior and wraps on overflow"
+            )]
+            #[inline(always)]
+            fn sub_assign(&mut self, rhs: $I) {
+                *self = *self - rhs;
+            }
+        }
+        impl core::ops::SubAssign<$P> for $P {
+            #[allow(
+                clippy::arithmetic_side_effects,
+                reason = "sub_assign follows primitive integer behavior and wraps on overflow"
+            )]
+            #[inline(always)]
+            fn sub_assign(&mut self, rhs: $P) {
+                *self = *self - rhs;
+            }
+        }
+        impl core::cmp::PartialOrd<$P> for $P {
+            #[inline(always)]
+            fn partial_cmp(&self, other: &$P) -> Option<core::cmp::Ordering> {
+                let s: $I = (*self).into();
+                let o: $I = (*other).into();
+                s.partial_cmp(&o)
             }
         }
     };
@@ -392,4 +707,203 @@ mod tests {
             assert_eq!(&value, zero_copy_ref);
         }
     }
+
+    #[derive(Clone, Copy, Debug)]
+    enum ArithmeticMethod {
+        CheckedAdd,
+        CheckedDiv,
+        CheckedMul,
+        CheckedRem,
+        CheckedSub,
+        SaturatingAdd,
+        SaturatingDiv,
+        SaturatingMul,
+        SaturatingSub,
+        Add,
+        Div,
+        Mul,
+        Rem,
+        Sub,
+        AddAssign,
+        DivAssign,
+        MulAssign,
+        RemAssign,
+        SubAssign,
+        PartialOrd,
+    }
+
+    macro_rules! test_arithmetic_methods {
+        ($test_name:ident, $UnalignedType:ty, $PrimitiveType:ty, $min:expr, $max:expr) => {
+            #[test_case::test_case(ArithmeticMethod::CheckedAdd ; "checked_add")]
+            #[test_case::test_case(ArithmeticMethod::CheckedDiv ; "checked_div")]
+            #[test_case::test_case(ArithmeticMethod::CheckedMul ; "checked_mul")]
+            #[test_case::test_case(ArithmeticMethod::CheckedRem ; "checked_rem")]
+            #[test_case::test_case(ArithmeticMethod::CheckedSub ; "checked_sub")]
+            #[test_case::test_case(ArithmeticMethod::SaturatingAdd ; "saturating_add")]
+            #[test_case::test_case(ArithmeticMethod::SaturatingDiv ; "saturating_div")]
+            #[test_case::test_case(ArithmeticMethod::SaturatingMul ; "saturating_mul")]
+            #[test_case::test_case(ArithmeticMethod::SaturatingSub ; "saturating_sub")]
+            #[test_case::test_case(ArithmeticMethod::Add ; "add")]
+            #[test_case::test_case(ArithmeticMethod::Div ; "div")]
+            #[test_case::test_case(ArithmeticMethod::Mul ; "mul")]
+            #[test_case::test_case(ArithmeticMethod::Rem ; "rem")]
+            #[test_case::test_case(ArithmeticMethod::Sub ; "sub")]
+            #[test_case::test_case(ArithmeticMethod::AddAssign ; "add_assign")]
+            #[test_case::test_case(ArithmeticMethod::DivAssign ; "div_assign")]
+            #[test_case::test_case(ArithmeticMethod::MulAssign ; "mul_assign")]
+            #[test_case::test_case(ArithmeticMethod::RemAssign ; "rem_assign")]
+            #[test_case::test_case(ArithmeticMethod::SubAssign ; "sub_assign")]
+            #[test_case::test_case(ArithmeticMethod::PartialOrd ; "partial_ord")]
+            #[allow(clippy::arithmetic_side_effects)]
+            fn $test_name(method: ArithmeticMethod) {
+                let min = <$UnalignedType>::from_primitive($min);
+                let max = <$UnalignedType>::from_primitive($max);
+                let zero = 0 as $PrimitiveType;
+                let one = 1 as $PrimitiveType;
+                let two = 2 as $PrimitiveType;
+                let twenty_one = 21 as $PrimitiveType;
+                let forty = 40 as $PrimitiveType;
+                let forty_one = 41 as $PrimitiveType;
+                let forty_two = 42 as $PrimitiveType;
+                let forty_three = 43 as $PrimitiveType;
+                let forty_four = 44 as $PrimitiveType;
+                let eighty_four = 84 as $PrimitiveType;
+
+                match method {
+                    ArithmeticMethod::CheckedAdd => {
+                        assert_eq!(max.checked_add(one), None);
+                        assert_eq!(
+                            <$UnalignedType>::from_primitive(forty).checked_add(one),
+                            Some(<$UnalignedType>::from_primitive(forty_one))
+                        );
+                    }
+                    ArithmeticMethod::CheckedDiv => {
+                        assert_eq!(
+                            <$UnalignedType>::from_primitive(eighty_four).checked_div(two),
+                            Some(<$UnalignedType>::from_primitive(forty_two))
+                        );
+                        assert_eq!(
+                            <$UnalignedType>::from_primitive(eighty_four).checked_div(zero),
+                            None
+                        );
+                    }
+                    ArithmeticMethod::CheckedMul => {
+                        assert_eq!(max.checked_mul(two), None);
+                        assert_eq!(
+                            <$UnalignedType>::from_primitive(forty_two).checked_mul(two),
+                            Some(<$UnalignedType>::from_primitive(eighty_four))
+                        );
+                    }
+                    ArithmeticMethod::CheckedRem => {
+                        assert_eq!(
+                            <$UnalignedType>::from_primitive(forty_four).checked_rem(forty_three),
+                            Some(<$UnalignedType>::from_primitive(one))
+                        );
+                    }
+                    ArithmeticMethod::CheckedSub => {
+                        assert_eq!(min.checked_sub(one), None);
+                        assert_eq!(
+                            max.checked_sub(max),
+                            Some(<$UnalignedType>::from_primitive(zero))
+                        );
+                    }
+                    ArithmeticMethod::SaturatingAdd => {
+                        assert_eq!(max.saturating_add(one), max);
+                        assert_eq!(
+                            <$UnalignedType>::from_primitive(zero).saturating_add(one),
+                            <$UnalignedType>::from_primitive(one)
+                        );
+                    }
+                    ArithmeticMethod::SaturatingDiv => {
+                        assert_eq!(
+                            <$UnalignedType>::from_primitive(eighty_four).saturating_div(two),
+                            <$UnalignedType>::from_primitive(forty_two)
+                        );
+                    }
+                    ArithmeticMethod::SaturatingMul => {
+                        assert_eq!(max.saturating_mul(two), max);
+                    }
+                    ArithmeticMethod::SaturatingSub => {
+                        assert_eq!(min.saturating_sub(one), min);
+                    }
+                    ArithmeticMethod::Add => {
+                        assert_eq!(
+                            <$UnalignedType>::from_primitive(forty) + two,
+                            <$UnalignedType>::from_primitive(forty_two)
+                        );
+                    }
+                    ArithmeticMethod::Div => {
+                        assert_eq!(
+                            <$UnalignedType>::from_primitive(eighty_four) / two,
+                            <$UnalignedType>::from_primitive(forty_two)
+                        );
+                    }
+                    ArithmeticMethod::Mul => {
+                        assert_eq!(
+                            <$UnalignedType>::from_primitive(twenty_one) * two,
+                            <$UnalignedType>::from_primitive(forty_two)
+                        );
+                    }
+                    ArithmeticMethod::Rem => {
+                        assert_eq!(
+                            <$UnalignedType>::from_primitive(forty_four) % forty_three,
+                            <$UnalignedType>::from_primitive(one)
+                        );
+                    }
+                    ArithmeticMethod::Sub => {
+                        assert_eq!(
+                            <$UnalignedType>::from_primitive(forty_four) - two,
+                            <$UnalignedType>::from_primitive(forty_two)
+                        );
+                    }
+                    ArithmeticMethod::AddAssign => {
+                        let mut value = <$UnalignedType>::from_primitive(forty);
+                        value += two;
+                        assert_eq!(value, <$UnalignedType>::from_primitive(forty_two));
+                    }
+                    ArithmeticMethod::DivAssign => {
+                        let mut value = <$UnalignedType>::from_primitive(eighty_four);
+                        value /= two;
+                        assert_eq!(value, <$UnalignedType>::from_primitive(forty_two));
+                    }
+                    ArithmeticMethod::MulAssign => {
+                        let mut value = <$UnalignedType>::from_primitive(twenty_one);
+                        value *= two;
+                        assert_eq!(value, <$UnalignedType>::from_primitive(forty_two));
+                    }
+                    ArithmeticMethod::RemAssign => {
+                        let mut value = <$UnalignedType>::from_primitive(forty_four);
+                        value %= forty_three;
+                        assert_eq!(value, <$UnalignedType>::from_primitive(one));
+                    }
+                    ArithmeticMethod::SubAssign => {
+                        let mut value = <$UnalignedType>::from_primitive(forty_four);
+                        value -= two;
+                        assert_eq!(value, <$UnalignedType>::from_primitive(forty_two));
+                    }
+                    ArithmeticMethod::PartialOrd => {
+                        assert!(
+                            <$UnalignedType>::from_primitive(forty_one)
+                                < <$UnalignedType>::from_primitive(forty_two)
+                        );
+                        assert!(max > min);
+                    }
+                }
+            }
+        };
+    }
+
+    test_arithmetic_methods!(test_arithmetic_methods_u16, U16, u16, u16::MIN, u16::MAX);
+    test_arithmetic_methods!(test_arithmetic_methods_i16, I16, i16, i16::MIN, i16::MAX);
+    test_arithmetic_methods!(test_arithmetic_methods_u32, U32, u32, u32::MIN, u32::MAX);
+    test_arithmetic_methods!(test_arithmetic_methods_u64, U64, u64, u64::MIN, u64::MAX);
+    test_arithmetic_methods!(test_arithmetic_methods_i64, I64, i64, i64::MIN, i64::MAX);
+    #[cfg(not(target_arch = "bpf"))]
+    test_arithmetic_methods!(
+        test_arithmetic_methods_u128,
+        U128,
+        u128,
+        u128::MIN,
+        u128::MAX
+    );
 }
