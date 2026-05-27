@@ -9,16 +9,24 @@ pub const BIG_MOD_EXP_MIN_EXPONENT_LENGTH: u64 = 75;
 ///
 /// Inputs and output are little-endian unsigned integers. The returned value is
 /// padded to exactly `modulus.len()` bytes with trailing zeroes.
+///
+/// # Panics
+///
+/// Panics if any operand is longer than [`BIG_MOD_EXP_MAX_BYTES`], if `modulus`
+/// is empty, zero, one, or even, or if `base.len()` is greater than
+/// `modulus.len()`.
 pub fn big_mod_exp(base: &[u8], exponent: &[u8], modulus: &[u8]) -> Vec<u8> {
     validate_inputs(base, exponent, modulus);
-    let base = pad_base_to_modulus_len(base, modulus.len());
+    let padded_base =
+        (base.len() < modulus.len()).then(|| pad_base_to_modulus_len(base, modulus.len()));
+    let base = padded_base.as_deref().unwrap_or(base);
 
     #[cfg(not(target_os = "solana"))]
     {
         use num_bigint::BigUint;
 
         let modulus_len = modulus.len();
-        let base = BigUint::from_bytes_le(&base);
+        let base = BigUint::from_bytes_le(base);
         let exponent = BigUint::from_bytes_le(exponent);
         let modulus = BigUint::from_bytes_le(modulus);
 
@@ -156,6 +164,18 @@ mod tests {
     }
 
     #[test]
+    fn big_mod_exp_max_length_inputs_test() {
+        let max_len = BIG_MOD_EXP_MAX_BYTES as usize;
+        let base = vec![0xff; max_len];
+        let exponent = vec![0; max_len];
+        let modulus = vec![0xff; max_len];
+
+        let mut expected = vec![0; max_len];
+        expected[0] = 1;
+        assert_eq!(big_mod_exp(&base, &exponent, &modulus), expected);
+    }
+
+    #[test]
     #[should_panic(expected = "modulus length must be nonzero")]
     fn big_mod_exp_empty_modulus_panics() {
         big_mod_exp(&[], &[], &[]);
@@ -177,5 +197,40 @@ mod tests {
     #[should_panic(expected = "modulus must be odd")]
     fn big_mod_exp_even_modulus_panics() {
         big_mod_exp(&[0x00], &[], &[0x02]);
+    }
+
+    #[test]
+    #[should_panic(expected = "base length exceeds BIG_MOD_EXP_MAX_BYTES")]
+    fn big_mod_exp_base_too_long_panics() {
+        let base = vec![0; BIG_MOD_EXP_MAX_BYTES as usize + 1];
+        let modulus = vec![0xff; BIG_MOD_EXP_MAX_BYTES as usize];
+        big_mod_exp(&base, &[], &modulus);
+    }
+
+    #[test]
+    #[should_panic(expected = "exponent length exceeds BIG_MOD_EXP_MAX_BYTES")]
+    fn big_mod_exp_exponent_too_long_panics() {
+        let exponent = vec![0; BIG_MOD_EXP_MAX_BYTES as usize + 1];
+        big_mod_exp(&[], &exponent, &[0x03]);
+    }
+
+    #[test]
+    #[should_panic(expected = "modulus length exceeds BIG_MOD_EXP_MAX_BYTES")]
+    fn big_mod_exp_modulus_too_long_panics() {
+        let mut modulus = vec![0xff; BIG_MOD_EXP_MAX_BYTES as usize + 1];
+        modulus[0] |= 1;
+        big_mod_exp(&[], &[], &modulus);
+    }
+
+    #[test]
+    #[should_panic(expected = "base length must not exceed modulus length")]
+    fn big_mod_exp_base_longer_than_modulus_panics() {
+        big_mod_exp(&[0x00, 0x00], &[], &[0x03]);
+    }
+
+    #[test]
+    #[should_panic(expected = "modulus must be greater than one")]
+    fn big_mod_exp_multi_byte_one_modulus_panics() {
+        big_mod_exp(&[0x00], &[], &[0x01, 0x00]);
     }
 }
