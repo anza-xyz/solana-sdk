@@ -410,7 +410,7 @@ mod tests {
     )]
     struct TestEquivalentBTreeMapVsVecWincode {
         #[stable_abi_sample(
-            with = "(0..rng.random::<u16>() % 4).map(|i| (((i << 8) + rng.random::<u8>() as u16), rng.random())).collect()"
+            with = "(0..rng.random::<u16>() % 4).map(|i| (u16::from_be_bytes([i as u8, rng.random()]), rng.random())).collect()"
         )]
         a: BTreeMap<u16, u8>,
         b: bool,
@@ -427,7 +427,7 @@ mod tests {
     )]
     struct TestEquivalentBTreeMapVsVecBincode {
         #[stable_abi_sample(
-            with = "(0..rng.random::<u16>() % 4).map(|i| (((i << 8) + rng.random::<u8>() as u16), rng.random())).collect()"
+            with = "(0..rng.random::<u16>() % 4).map(|i| (u16::from_be_bytes([i as u8, rng.random()]), rng.random())).collect()"
         )]
         a: Vec<(u16, u8)>,
         b: bool,
