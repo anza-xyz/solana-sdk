@@ -504,4 +504,28 @@ mod tests {
         b: Option<NonZero<u8>>,
         c: NonZero<i16>,
     }
+
+    macro_rules! mk_stable_abi_sample_with_from_macro_rules {
+        ({ $($body:tt)* }) => {
+            #[derive(wincode::SchemaWrite)]
+            #[cfg_attr(
+                feature = "frozen-abi",
+                derive(
+                    solana_frozen_abi_macro::StableAbi,
+                    solana_frozen_abi_macro::StableAbiSample
+                ),
+                solana_frozen_abi_macro::frozen_abi(
+                    abi_digest = "33q22jGb8M6yo7fWeZvMoSUJBAoBEf4w2VQpjwXuHVXM",
+                    abi_serializer = "wincode",
+                )
+            )]
+            struct TestStableAbiSampleWithFromMacroRules {
+                $($body)*
+            }
+        };
+    }
+    mk_stable_abi_sample_with_from_macro_rules!({
+        #[stable_abi_sample(with = "rng.random::<u8>()")]
+        a: u8,
+    });
 }
