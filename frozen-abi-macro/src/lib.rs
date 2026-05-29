@@ -163,7 +163,7 @@ fn parse_stable_abi_sample_options(field: &syn::Field) -> Result<StableAbiSample
                     return Err(meta.error("duplicate `with` in `#[stable_abi_sample(...)]`"));
                 }
                 let value = meta.value()?.parse::<LitStr>()?;
-                let expr = value.parse::<Expr>().map_err(|err| {
+                let expr = syn::parse_str::<Expr>(&value.value()).map_err(|err| {
                     Error::new(value.span(), format!("invalid `with` expression: {err}"))
                 })?;
                 with_expr = Some(quote! { #expr });
