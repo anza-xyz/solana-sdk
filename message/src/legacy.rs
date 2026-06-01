@@ -15,16 +15,19 @@
 use serde_derive::{Deserialize, Serialize};
 #[cfg(feature = "frozen-abi")]
 use solana_frozen_abi_macro::{frozen_abi, AbiExample};
+#[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
+use std::collections::HashSet;
 use {
     crate::{
         compiled_instruction::CompiledInstruction, compiled_keys::CompiledKeys,
         inline_nonce::advance_nonce_account_instruction, MessageHeader,
     },
+    alloc::vec::Vec,
+    core::convert::TryFrom,
     solana_address::Address,
     solana_hash::Hash,
     solana_instruction::Instruction,
     solana_sanitize::{Sanitize, SanitizeError},
-    std::{collections::HashSet, convert::TryFrom},
 };
 #[cfg(feature = "wincode")]
 use {
@@ -137,7 +140,7 @@ unsafe impl<'de, C: Config> SchemaReadContext<'de, C, u8> for Message {
 }
 
 impl Sanitize for Message {
-    fn sanitize(&self) -> std::result::Result<(), SanitizeError> {
+    fn sanitize(&self) -> Result<(), SanitizeError> {
         // signing area and read-only non-signing area should not overlap
         if self.header.num_required_signatures as usize
             + self.header.num_readonly_unsigned_accounts as usize
@@ -548,6 +551,7 @@ impl Message {
 
     /// Returns true if the account at the specified index was requested to be
     /// writable. This method should not be used directly.
+    #[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
     pub(super) fn is_writable_index(&self, i: usize) -> bool {
         super::is_writable_index(i, self.header, &self.account_keys)
     }
@@ -558,6 +562,7 @@ impl Message {
     /// fetching the latest set of reserved account keys. If this method is
     /// called by the runtime, the latest set of reserved account keys must be
     /// passed.
+    #[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
     pub fn is_maybe_writable(
         &self,
         i: usize,
@@ -610,6 +615,7 @@ mod tests {
     use {
         super::*,
         crate::MESSAGE_HEADER_LENGTH,
+        alloc::vec,
         solana_instruction::AccountMeta,
         std::{collections::HashSet, str::FromStr},
     };

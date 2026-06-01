@@ -1,13 +1,15 @@
 #[cfg(feature = "serde")]
 use serde_derive::{Deserialize, Serialize};
+#[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
 use {
     crate::{v0, AccountKeys},
-    solana_address::Address,
     solana_sdk_ids::bpf_loader_upgradeable,
     std::{borrow::Cow, collections::HashSet},
 };
+use {alloc::vec::Vec, solana_address::Address};
 
 /// Combination of a version #0 message and its loaded addresses
+#[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct LoadedMessage<'a> {
     /// Message which loaded a collection of lookup table addresses
@@ -55,6 +57,7 @@ impl LoadedAddresses {
     }
 }
 
+#[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
 impl<'a> LoadedMessage<'a> {
     pub fn new(
         message: v0::Message,
@@ -91,7 +94,7 @@ impl<'a> LoadedMessage<'a> {
             .enumerate()
             .map(|(i, _key)| self.is_writable_internal(i, reserved_account_keys))
             .collect::<Vec<_>>();
-        let _ = std::mem::replace(
+        let _ = core::mem::replace(
             &mut self.is_writable_account_cache,
             is_writable_account_cache,
         );
@@ -189,6 +192,7 @@ mod tests {
     use {
         super::*,
         crate::{compiled_instruction::CompiledInstruction, MessageHeader},
+        alloc::vec,
         itertools::Itertools,
         solana_sdk_ids::{system_program, sysvar},
     };

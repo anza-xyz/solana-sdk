@@ -1,12 +1,15 @@
 use crate::{MessageHeader, MESSAGE_VERSION_PREFIX};
 
+#[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
 mod cached;
 mod config;
 mod error;
 mod message;
 
+#[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
+pub use cached::*;
 use solana_hash::Hash;
-pub use {cached::*, config::*, error::*, message::*};
+pub use {config::*, error::*, message::*};
 
 /// A type definition for an  instruction header:
 ///  - program_id_index

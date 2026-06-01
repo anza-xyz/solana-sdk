@@ -1,8 +1,9 @@
 use {
     crate::{compiled_instruction::CompiledInstruction, v0::LoadedAddresses, CompileError},
+    alloc::{collections::BTreeMap, vec::Vec},
+    core::{iter::zip, ops::Index},
     solana_address::Address,
     solana_instruction::Instruction,
-    std::{collections::BTreeMap, iter::zip, ops::Index},
 };
 
 /// Collection of static and dynamically loaded keys used to load accounts
@@ -150,7 +151,7 @@ impl PartialEq for AccountKeys<'_> {
 
 #[cfg(test)]
 mod tests {
-    use {super::*, solana_instruction::AccountMeta};
+    use {super::*, alloc::vec, solana_instruction::AccountMeta};
 
     fn test_account_keys() -> [Address; 6] {
         let key0 = Address::new_unique();

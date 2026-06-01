@@ -39,6 +39,8 @@ pub use self::tests::MessageBuilder;
 use serde_derive::{Deserialize, Serialize};
 #[cfg(feature = "frozen-abi")]
 use solana_frozen_abi_macro::AbiExample;
+#[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
+use std::collections::HashSet;
 #[cfg(feature = "wincode")]
 use {
     crate::v1::{InstructionHeader, FIXED_HEADER_SIZE},
@@ -61,12 +63,12 @@ use {
         },
         AccountKeys, CompileError, MessageHeader,
     },
+    alloc::{collections::BTreeSet, vec::Vec},
     core::mem::size_of,
     solana_address::Address,
     solana_hash::Hash,
     solana_instruction::Instruction,
     solana_sanitize::{Sanitize, SanitizeError},
-    std::collections::HashSet,
 };
 
 /// A V1 transaction message (SIMD-0385) supporting 4KB transactions with inline compute budget.
@@ -350,6 +352,7 @@ impl Message {
     ///
     /// This method should not be used directly.
     #[inline(always)]
+    #[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
     pub(crate) fn is_writable_index(&self, i: usize) -> bool {
         crate::is_writable_index(i, self.header, &self.account_keys)
     }
@@ -373,6 +376,7 @@ impl Message {
     /// Program accounts are demoted from writable to readonly, unless the upgradeable
     /// loader is present in which case they are left as writable since upgradeable
     /// programs need to be writable for upgrades.
+    #[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
     pub fn is_maybe_writable(
         &self,
         key_index: usize,
@@ -456,7 +460,7 @@ impl Message {
         }
 
         // no duplicate addresses
-        let unique_keys: HashSet<_> = self.account_keys.iter().collect();
+        let unique_keys: BTreeSet<_> = self.account_keys.iter().collect();
         if unique_keys.len() != num_account_keys {
             return Err(MessageError::DuplicateAddresses);
         }
@@ -702,7 +706,7 @@ pub fn deserialize(input: &[u8]) -> wincode::ReadResult<Message> {
 
 #[cfg(test)]
 mod tests {
-    use {super::*, solana_sdk_ids::bpf_loader_upgradeable};
+    use {super::*, alloc::vec, solana_sdk_ids::bpf_loader_upgradeable};
 
     /// Builder for constructing V1 messages.
     ///

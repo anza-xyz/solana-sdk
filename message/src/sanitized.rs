@@ -6,6 +6,7 @@ use {
         v1::CachedMessage,
         AccountKeys, AddressLoader, MessageHeader, SanitizedVersionedMessage, VersionedMessage,
     },
+    alloc::vec::Vec,
     solana_address::Address,
     solana_hash::Hash,
     solana_instruction::{BorrowedAccountMeta, BorrowedInstruction},
@@ -459,7 +460,7 @@ impl TransactionSignatureDetails {
 
 #[cfg(test)]
 mod tests {
-    use {super::*, crate::v0, std::collections::HashSet};
+    use {super::*, crate::v0, alloc::vec, std::collections::HashSet};
 
     #[test]
     fn test_try_from_legacy_message() {

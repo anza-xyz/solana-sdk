@@ -3985,7 +3985,6 @@ dependencies = [
  "blake3",
  "borsh",
  "itertools 0.12.1",
- "lazy_static",
  "proptest",
  "serde",
  "serde_derive",

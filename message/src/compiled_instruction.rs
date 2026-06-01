@@ -2,7 +2,7 @@
 use serde_derive::{Deserialize, Serialize};
 #[cfg(feature = "frozen-abi")]
 use solana_frozen_abi_macro::AbiExample;
-use {solana_address::Address, solana_sanitize::Sanitize};
+use {alloc::vec::Vec, solana_address::Address, solana_sanitize::Sanitize};
 #[cfg(feature = "wincode")]
 use {
     solana_short_vec::ShortU16,

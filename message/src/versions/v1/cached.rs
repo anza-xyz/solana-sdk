@@ -1,5 +1,6 @@
 use {
     crate::{v1::Message, AccountKeys},
+    alloc::vec::Vec,
     solana_address::Address,
     std::{borrow::Cow, collections::HashSet},
 };

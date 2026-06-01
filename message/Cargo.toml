@@ -44,19 +44,18 @@ wincode = [
 
 [dependencies]
 blake3 = { workspace = true, features = ["traits-preview"], optional = true }
-lazy_static = { workspace = true }
 serde = { workspace = true, optional = true }
 serde_derive = { workspace = true, optional = true }
 solana-address = { workspace = true }
 solana-frozen-abi = { workspace = true, optional = true }
 solana-frozen-abi-macro = { workspace = true, optional = true }
 solana-hash = { workspace = true, features = ["decode", "sanitize"] }
-solana-instruction = { workspace = true, features = ["std"] }
+solana-instruction = { workspace = true, default-features = false }
 solana-sanitize = { workspace = true }
 solana-sdk-ids = { workspace = true }
 solana-short-vec = { workspace = true, optional = true }
 solana-transaction-error = { workspace = true }
-wincode = { workspace = true, optional = true, features = ["std"] }
+wincode = { workspace = true, optional = true, features = ["alloc"] }
 
 [dev-dependencies]
 anyhow = { workspace = true }
