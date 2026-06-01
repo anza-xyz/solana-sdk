@@ -39,6 +39,7 @@ no_std_crates=(
   -p solana-sha256-hasher
   -p solana-signature
   -p solana-sysvar-id
+  -p solana-transaction-error
   -p solana-zero-copy
 )
 

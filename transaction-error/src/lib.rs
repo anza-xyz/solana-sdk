@@ -1,9 +1,15 @@
 #![cfg_attr(feature = "frozen-abi", feature(min_specialization))]
 #![cfg_attr(docsrs, feature(doc_cfg))]
+#![no_std]
 #[cfg(feature = "serde")]
 use serde_derive::{Deserialize, Serialize};
 #[cfg(feature = "frozen-abi")]
 use solana_frozen_abi_macro::{AbiEnumVisitor, AbiExample};
+#[cfg(any(
+    feature = "frozen-abi",
+    not(any(target_os = "solana", target_arch = "bpf"))
+))]
+extern crate std;
 use {core::fmt, solana_instruction_error::InstructionError, solana_sanitize::SanitizeError};
 
 pub type TransactionResult<T> = Result<T, TransactionError>;
@@ -357,15 +363,15 @@ impl From<SanitizeError> for SanitizeMessageError {
     }
 }
 
-#[cfg(not(target_os = "solana"))]
+#[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
 #[derive(Debug)]
 pub enum TransportError {
     IoError(std::io::Error),
     TransactionError(TransactionError),
-    Custom(String),
+    Custom(std::string::String),
 }
 
-#[cfg(not(target_os = "solana"))]
+#[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
 impl core::error::Error for TransportError {
     fn source(&self) -> Option<&(dyn core::error::Error + 'static)> {
         match self {
@@ -376,7 +382,7 @@ impl core::error::Error for TransportError {
     }
 }
 
-#[cfg(not(target_os = "solana"))]
+#[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
 impl fmt::Display for TransportError {
     fn fmt(&self, f: &mut fmt::Formatter) -> ::core::fmt::Result {
         match self {
@@ -389,21 +395,21 @@ impl fmt::Display for TransportError {
     }
 }
 
-#[cfg(not(target_os = "solana"))]
+#[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
 impl From<std::io::Error> for TransportError {
     fn from(e: std::io::Error) -> Self {
         TransportError::IoError(e)
     }
 }
 
-#[cfg(not(target_os = "solana"))]
+#[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
 impl From<TransactionError> for TransportError {
     fn from(e: TransactionError) -> Self {
         TransportError::TransactionError(e)
     }
 }
 
-#[cfg(not(target_os = "solana"))]
+#[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
 impl TransportError {
     pub fn unwrap(&self) -> TransactionError {
         if let TransportError::TransactionError(err) = self {
@@ -414,5 +420,5 @@ impl TransportError {
     }
 }
 
-#[cfg(not(target_os = "solana"))]
+#[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
 pub type TransportResult<T> = std::result::Result<T, TransportError>;
