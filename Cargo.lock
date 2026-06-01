@@ -4622,6 +4622,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "solana-svm-transaction"
+version = "4.0.1"
+dependencies = [
+ "solana-hash",
+ "solana-message",
+ "solana-nonce",
+ "solana-pubkey",
+ "solana-sdk-ids",
+ "solana-signature",
+ "solana-system-interface",
+ "solana-transaction",
+ "static_assertions",
+ "test-case",
+]
+
+[[package]]
 name = "solana-system-interface"
 version = "3.2.0"
 dependencies = [
