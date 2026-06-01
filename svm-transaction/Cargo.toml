@@ -2,7 +2,7 @@
 name = "solana-svm-transaction"
 description = "Solana SVM Transaction"
 documentation = "https://docs.rs/solana-svm-transaction"
-version = "4.0.1"
+version = "4.1.0"
 rust-version = { workspace = true }
 authors = { workspace = true }
 repository = { workspace = true }
