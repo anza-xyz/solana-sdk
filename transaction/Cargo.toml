@@ -16,6 +16,7 @@ all-features = true
 rustdoc-args = ["--cfg=docsrs"]
 
 [features]
+default = ["std"]
 blake3 = ["solana-message/blake3", "wincode"]
 dev-context-only-utils = ["blake3", "serde", "verify", "solana-hash/atomic"]
 frozen-abi = [
@@ -34,9 +35,9 @@ serde = [
     "solana-transaction-error/serde",
     "solana-short-vec/serde",
 ]
+std = ["dep:solana-signer", "solana-message/std"]
 verify = ["blake3", "solana-signature/verify"]
 wincode = [
-    "dep:solana-signer",
     "dep:wincode",
     "solana-short-vec/wincode",
     "solana-message/wincode",
@@ -52,7 +53,7 @@ solana-frozen-abi-macro = { workspace = true, optional = true, features = ["froz
 solana-hash = { workspace = true }
 solana-instruction = { workspace = true }
 solana-instruction-error = { workspace = true }
-solana-message = { workspace = true, features = ["std"] }
+solana-message = { workspace = true }
 solana-sanitize = { workspace = true }
 solana-sdk-ids = { workspace = true }
 solana-short-vec = { workspace = true, optional = true }

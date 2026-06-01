@@ -1,6 +1,7 @@
 use {
-    crate::versioned::VersionedTransaction, solana_message::SanitizedVersionedMessage,
-    solana_sanitize::SanitizeError, solana_signature::Signature,
+    crate::versioned::VersionedTransaction, alloc::vec::Vec,
+    solana_message::SanitizedVersionedMessage, solana_sanitize::SanitizeError,
+    solana_signature::Signature,
 };
 
 /// Wraps a sanitized `VersionedTransaction` to provide a safe API
@@ -42,6 +43,7 @@ impl SanitizedVersionedTransaction {
 mod tests {
     use {
         super::*,
+        alloc::vec,
         solana_hash::Hash,
         solana_message::{v0, VersionedMessage},
         solana_pubkey::Pubkey,

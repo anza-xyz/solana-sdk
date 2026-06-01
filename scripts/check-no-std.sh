@@ -54,6 +54,7 @@ no_std_alloc_crates=(
   -p solana-message
   -p solana-serialize-utils
   -p solana-short-vec
+  -p solana-transaction
 )
 
 # Use the upstream BPF target, which doesn't support std, to make sure that our

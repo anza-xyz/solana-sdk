@@ -1,5 +1,6 @@
 #![cfg_attr(feature = "frozen-abi", feature(min_specialization))]
 #![cfg_attr(docsrs, feature(doc_cfg))]
+#![no_std]
 //! Atomically-committed sequences of instructions.
 //!
 //! While [`Instruction`]s are the basic unit of computation in Solana, they are
@@ -110,8 +111,20 @@
 //! # Ok::<(), anyhow::Error>(())
 //! ```
 
+extern crate alloc;
+#[cfg(any(feature = "frozen-abi", feature = "std"))]
+extern crate std;
+
 #[cfg(feature = "frozen-abi")]
 use solana_frozen_abi_macro::{frozen_abi, AbiExample, StableAbi};
+#[cfg(all(feature = "wincode", feature = "std"))]
+pub use solana_signer::{signers::Signers, SignerError};
+use {
+    alloc::{vec, vec::Vec},
+    solana_message::inline_nonce::is_advance_nonce_instruction_data,
+    solana_sanitize::{Sanitize, SanitizeError},
+    solana_sdk_ids::system_program,
+};
 #[cfg(feature = "serde")]
 use {
     serde_derive::{Deserialize, Serialize},
@@ -129,16 +142,10 @@ pub use {
 pub use {
     solana_hash::Hash,
     solana_short_vec::ShortU16,
-    solana_signer::{signers::Signers, SignerError},
     wincode::{containers, SchemaRead, SchemaWrite},
 };
-use {
-    solana_message::inline_nonce::is_advance_nonce_instruction_data,
-    solana_sanitize::{Sanitize, SanitizeError},
-    solana_sdk_ids::system_program,
-    std::result,
-};
 
+#[cfg(feature = "std")]
 pub mod sanitized;
 pub mod simple_vote_transaction_checker;
 pub mod versioned;
@@ -214,7 +221,7 @@ impl solana_frozen_abi::rand::prelude::Distribution<Transaction>
 {
     fn sample<R: solana_frozen_abi::rand::Rng + ?Sized>(&self, rng: &mut R) -> Transaction {
         let signatures: Vec<Signature> = (0..rng.random_range(1..4))
-            .map(|_| Signature::from(std::array::from_fn(|_| rng.random::<u8>())))
+            .map(|_| Signature::from(core::array::from_fn(|_| rng.random::<u8>())))
             .collect();
         let accounts: Vec<AccountMeta> = (0..rng.random_range(1..6))
             .map(|_| AccountMeta {
@@ -242,7 +249,7 @@ impl solana_frozen_abi::rand::prelude::Distribution<Transaction>
 }
 
 impl Sanitize for Transaction {
-    fn sanitize(&self) -> result::Result<(), SanitizeError> {
+    fn sanitize(&self) -> Result<(), SanitizeError> {
         if self.message.header.num_required_signatures as usize > self.signatures.len() {
             return Err(SanitizeError::IndexOutOfBounds);
         }
@@ -396,7 +403,7 @@ impl Transaction {
     /// #
     /// # Ok::<(), anyhow::Error>(())
     /// ```
-    #[cfg(feature = "wincode")]
+    #[cfg(all(feature = "wincode", feature = "std"))]
     pub fn new<T: Signers + ?Sized>(
         from_keypairs: &T,
         message: Message,
@@ -550,7 +557,7 @@ impl Transaction {
     /// #
     /// # Ok::<(), anyhow::Error>(())
     /// ```
-    #[cfg(feature = "wincode")]
+    #[cfg(all(feature = "wincode", feature = "std"))]
     pub fn new_signed_with_payer<T: Signers + ?Sized>(
         instructions: &[Instruction],
         payer: Option<&Address>,
@@ -576,7 +583,7 @@ impl Transaction {
     ///
     /// Panics when signing fails. See [`Transaction::try_sign`] and for a full
     /// description of failure conditions.
-    #[cfg(feature = "wincode")]
+    #[cfg(all(feature = "wincode", feature = "std"))]
     pub fn new_with_compiled_instructions<T: Signers + ?Sized>(
         from_keypairs: &T,
         keys: &[Address],
@@ -756,7 +763,7 @@ impl Transaction {
     /// #
     /// # Ok::<(), anyhow::Error>(())
     /// ```
-    #[cfg(feature = "wincode")]
+    #[cfg(all(feature = "wincode", feature = "std"))]
     pub fn sign<T: Signers + ?Sized>(&mut self, keypairs: &T, recent_blockhash: Hash) {
         if let Err(e) = self.try_sign(keypairs, recent_blockhash) {
             panic!("Transaction::sign failed with error {e:?}");
@@ -783,7 +790,7 @@ impl Transaction {
     /// handle the error. See the documentation for
     /// [`Transaction::try_partial_sign`] for a full description of failure
     /// conditions.
-    #[cfg(feature = "wincode")]
+    #[cfg(all(feature = "wincode", feature = "std"))]
     pub fn partial_sign<T: Signers + ?Sized>(&mut self, keypairs: &T, recent_blockhash: Hash) {
         if let Err(e) = self.try_partial_sign(keypairs, recent_blockhash) {
             panic!("Transaction::partial_sign failed with error {e:?}");
@@ -803,7 +810,7 @@ impl Transaction {
     ///
     /// Panics if signing fails. Use [`Transaction::try_partial_sign_unchecked`]
     /// to handle the error.
-    #[cfg(feature = "wincode")]
+    #[cfg(all(feature = "wincode", feature = "std"))]
     pub fn partial_sign_unchecked<T: Signers + ?Sized>(
         &mut self,
         keypairs: &T,
@@ -896,12 +903,12 @@ impl Transaction {
     /// #
     /// # Ok::<(), anyhow::Error>(())
     /// ```
-    #[cfg(feature = "wincode")]
+    #[cfg(all(feature = "wincode", feature = "std"))]
     pub fn try_sign<T: Signers + ?Sized>(
         &mut self,
         keypairs: &T,
         recent_blockhash: Hash,
-    ) -> result::Result<(), SignerError> {
+    ) -> Result<(), SignerError> {
         self.try_partial_sign(keypairs, recent_blockhash)?;
 
         if !self.is_signed() {
@@ -960,12 +967,12 @@ impl Transaction {
     /// [`PresignerError::VerificationFailure`]: https://docs.rs/solana-signer/latest/solana_signer/enum.PresignerError.html#variant.WrongSize
     /// [`solana-remote-wallet`]: https://docs.rs/solana-remote-wallet/latest/
     /// [`RemoteKeypair`]: https://docs.rs/solana-remote-wallet/latest/solana_remote_wallet/remote_keypair/struct.RemoteKeypair.html
-    #[cfg(feature = "wincode")]
+    #[cfg(all(feature = "wincode", feature = "std"))]
     pub fn try_partial_sign<T: Signers + ?Sized>(
         &mut self,
         keypairs: &T,
         recent_blockhash: Hash,
-    ) -> result::Result<(), SignerError> {
+    ) -> Result<(), SignerError> {
         let positions: Vec<usize> = self
             .get_signing_keypair_positions(&keypairs.pubkeys())?
             .into_iter()
@@ -987,13 +994,13 @@ impl Transaction {
     /// # Errors
     ///
     /// Returns an error if signing fails.
-    #[cfg(feature = "wincode")]
+    #[cfg(all(feature = "wincode", feature = "std"))]
     pub fn try_partial_sign_unchecked<T: Signers + ?Sized>(
         &mut self,
         keypairs: &T,
         positions: Vec<usize>,
         recent_blockhash: Hash,
-    ) -> result::Result<(), SignerError> {
+    ) -> Result<(), SignerError> {
         // if you change the blockhash, you're re-signing...
         if recent_blockhash != self.message.recent_blockhash {
             self.message.recent_blockhash = recent_blockhash;
@@ -1150,14 +1157,15 @@ mod tests {
 
     use {
         super::*,
+        alloc::{boxed::Box, vec},
         bincode::{deserialize, serialize, serialized_size},
+        core::mem::size_of,
         solana_instruction::AccountMeta,
         solana_keypair::Keypair,
         solana_presigner::Presigner,
         solana_sha256_hasher::hash,
         solana_signer::Signer,
         solana_system_interface::instruction as system_instruction,
-        std::mem::size_of,
     };
 
     fn get_program_id(tx: &Transaction, instruction_index: usize) -> &Address {

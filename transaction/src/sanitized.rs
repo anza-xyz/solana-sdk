@@ -1,5 +1,6 @@
 use {
     crate::versioned::{sanitized::SanitizedVersionedTransaction, VersionedTransaction},
+    alloc::vec::Vec,
     solana_address::Address,
     solana_hash::Hash,
     solana_message::{
@@ -327,6 +328,7 @@ impl SanitizedTransaction {
 mod tests {
     use {
         super::*,
+        alloc::vec,
         solana_instruction::{AccountMeta, Instruction},
         solana_keypair::Keypair,
         solana_message::{MessageHeader, SimpleAddressLoader},

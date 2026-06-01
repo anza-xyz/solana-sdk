@@ -2,18 +2,23 @@
 
 use {
     crate::Transaction,
+    alloc::vec::Vec,
+    core::cmp::Ordering,
     solana_message::{inline_nonce::is_advance_nonce_instruction_data, VersionedMessage},
     solana_sanitize::SanitizeError,
     solana_sdk_ids::system_program,
     solana_signature::Signature,
-    std::cmp::Ordering,
+};
+#[cfg(all(feature = "wincode", feature = "std"))]
+use {
+    alloc::string::ToString,
+    solana_signer::{signers::Signers, SignerError},
 };
 #[cfg(feature = "wincode")]
 use {
     core::mem::MaybeUninit,
     solana_message::{v1::SIGNATURE_SIZE, MESSAGE_VERSION_PREFIX},
     solana_short_vec::ShortU16,
-    solana_signer::{signers::Signers, SignerError},
     wincode::{
         config::Config,
         containers, context,
@@ -86,11 +91,11 @@ impl From<Transaction> for VersionedTransaction {
 impl VersionedTransaction {
     /// Signs a versioned message and if successful, returns a signed
     /// transaction.
-    #[cfg(feature = "wincode")]
+    #[cfg(all(feature = "wincode", feature = "std"))]
     pub fn try_new<T: Signers + ?Sized>(
         message: VersionedMessage,
         keypairs: &T,
-    ) -> std::result::Result<Self, SignerError> {
+    ) -> Result<Self, SignerError> {
         let static_account_keys = message.static_account_keys();
         if static_account_keys.len() < message.header().num_required_signatures as usize {
             return Err(SignerError::InvalidInput("invalid message".to_string()));
@@ -115,7 +120,7 @@ impl VersionedTransaction {
                     .position(|key| key == signer_key)
                     .ok_or(SignerError::KeypairPubkeyMismatch)
             })
-            .collect::<std::result::Result<_, SignerError>>()?;
+            .collect::<Result<_, SignerError>>()?;
 
         let unordered_signatures = keypairs.try_sign_message(&message_data)?;
         let signatures: Vec<Signature> = signature_indexes
@@ -126,7 +131,7 @@ impl VersionedTransaction {
                     .copied()
                     .ok_or_else(|| SignerError::InvalidInput("invalid keypairs".to_string()))
             })
-            .collect::<std::result::Result<_, SignerError>>()?;
+            .collect::<Result<_, SignerError>>()?;
 
         Ok(Self {
             signatures,
@@ -134,13 +139,13 @@ impl VersionedTransaction {
         })
     }
 
-    pub fn sanitize(&self) -> std::result::Result<(), SanitizeError> {
+    pub fn sanitize(&self) -> Result<(), SanitizeError> {
         self.message.sanitize()?;
         self.sanitize_signatures()?;
         Ok(())
     }
 
-    pub(crate) fn sanitize_signatures(&self) -> std::result::Result<(), SanitizeError> {
+    pub(crate) fn sanitize_signatures(&self) -> Result<(), SanitizeError> {
         Self::sanitize_signatures_inner(
             usize::from(self.message.header().num_required_signatures),
             self.message.static_account_keys().len(),
@@ -152,7 +157,7 @@ impl VersionedTransaction {
         num_required_signatures: usize,
         num_static_account_keys: usize,
         num_signatures: usize,
-    ) -> std::result::Result<(), SanitizeError> {
+    ) -> Result<(), SanitizeError> {
         match num_required_signatures.cmp(&num_signatures) {
             Ordering::Greater => Err(SanitizeError::IndexOutOfBounds),
             Ordering::Less => Err(SanitizeError::InvalidValue),
@@ -362,6 +367,7 @@ unsafe impl<'de, C: Config> SchemaRead<'de, C> for VersionedTransaction {
 mod tests {
     use {
         super::*,
+        alloc::vec,
         solana_address::{Address, ADDRESS_BYTES},
         solana_hash::Hash,
         solana_instruction::{AccountMeta, Instruction},
