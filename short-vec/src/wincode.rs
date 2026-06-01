@@ -231,6 +231,7 @@ mod tests {
     use {
         super::*,
         crate::ShortU16,
+        alloc::vec::Vec,
         proptest::prelude::*,
         serde_derive::{Deserialize, Serialize},
         wincode::{containers, io::Cursor},

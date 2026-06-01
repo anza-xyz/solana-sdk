@@ -51,6 +51,7 @@ no_std_alloc_crates=(
   -p solana-instruction
   -p solana-instructions-sysvar
   -p solana-serialize-utils
+  -p solana-short-vec
 )
 
 # Use the upstream BPF target, which doesn't support std, to make sure that our
