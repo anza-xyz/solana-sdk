@@ -17,6 +17,7 @@ build_sbf_excludes=(
   --exclude solana-sdk-wasm-js
   --exclude solana-sdk-wasm-js-tests
   --exclude solana-secp256r1-program
+  --exclude solana-svm-transaction
   --exclude solana-system-transaction
   --exclude solana-system-wasm-js
   --exclude solana-transaction
