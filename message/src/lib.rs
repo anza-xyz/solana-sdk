@@ -40,42 +40,39 @@
 //! types continue to be exposed to Solana programs, for backwards compatibility
 //! reasons.
 
+extern crate alloc;
+#[cfg(any(feature = "frozen-abi", feature = "std"))]
+extern crate std;
+
+#[cfg(feature = "serde")]
+use serde_derive::{Deserialize, Serialize};
+#[cfg(feature = "frozen-abi")]
+use solana_frozen_abi_macro::AbiExample;
+#[cfg(feature = "std")]
+use std::collections::HashSet;
+#[cfg(feature = "wincode")]
+use wincode::{SchemaRead, SchemaWrite, UninitBuilder};
+use {
+    crate::compiled_instruction::CompiledInstruction, alloc::vec::Vec,
+    solana_sdk_ids::bpf_loader_upgradeable,
+};
+
+mod account_keys;
+
+#[cfg(feature = "std")]
+mod address_loader;
 pub mod compiled_instruction;
 mod compiled_keys;
 pub mod inline_nonce;
 pub mod inner_instruction;
 pub mod legacy;
-#[cfg(feature = "serde")]
-use serde_derive::{Deserialize, Serialize};
-#[cfg(feature = "frozen-abi")]
-use solana_frozen_abi_macro::AbiExample;
-#[cfg(feature = "wincode")]
-use wincode::{SchemaRead, SchemaWrite, UninitBuilder};
-extern crate alloc;
-#[cfg(any(
-    feature = "frozen-abi",
-    not(any(target_os = "solana", target_arch = "bpf"))
-))]
-extern crate std;
-
-#[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
-use std::collections::HashSet;
-use {alloc::vec::Vec, solana_sdk_ids::bpf_loader_upgradeable};
-
-mod account_keys;
-#[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
-#[path = ""]
-mod non_bpf_modules {
-    mod address_loader;
-    mod sanitized;
-
-    pub use {address_loader::*, sanitized::*};
-}
+#[cfg(feature = "std")]
+mod sanitized;
 mod versions;
-
-use crate::compiled_instruction::CompiledInstruction;
-#[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
-pub use non_bpf_modules::*;
+#[cfg(feature = "std")]
+pub use address_loader::*;
+#[cfg(feature = "std")]
+pub use sanitized::*;
 pub use {
     account_keys::*,
     compiled_keys::CompileError,
@@ -160,7 +157,7 @@ pub struct AddressLookupTableAccount {
 ///
 /// This method should not be used directly. It is used by Legacy and V1
 /// message types.
-#[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
+#[cfg(feature = "std")]
 #[inline(always)]
 fn is_writable_index(i: usize, header: MessageHeader, account_keys: &[Address]) -> bool {
     i < (header.num_required_signatures as usize)
@@ -173,7 +170,7 @@ fn is_writable_index(i: usize, header: MessageHeader, account_keys: &[Address]) 
 
 /// Returns true if the account at the specified index is in the optional
 /// reserved account keys set.
-#[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
+#[cfg(feature = "std")]
 #[inline(always)]
 fn is_account_maybe_reserved(
     i: usize,
@@ -223,7 +220,7 @@ fn is_upgradeable_loader_present(account_keys: &[Address]) -> bool {
 /// fetching the latest set of reserved account keys. If this method is
 /// called by the runtime, the latest set of reserved account keys must be
 /// passed.
-#[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
+#[cfg(feature = "std")]
 #[inline(always)]
 fn is_maybe_writable(
     i: usize,

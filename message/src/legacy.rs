@@ -15,7 +15,7 @@
 use serde_derive::{Deserialize, Serialize};
 #[cfg(feature = "frozen-abi")]
 use solana_frozen_abi_macro::{frozen_abi, AbiExample};
-#[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
+#[cfg(feature = "std")]
 use std::collections::HashSet;
 use {
     crate::{
@@ -475,14 +475,14 @@ impl Message {
     }
 
     /// Compute the blake3 hash of this transaction's message.
-    #[cfg(all(not(target_os = "solana"), feature = "wincode", feature = "blake3"))]
+    #[cfg(all(feature = "wincode", feature = "blake3"))]
     pub fn hash(&self) -> Hash {
         let message_bytes = self.serialize();
         Self::hash_raw_message(&message_bytes)
     }
 
     /// Compute the blake3 hash of a raw transaction message.
-    #[cfg(all(not(target_os = "solana"), feature = "blake3"))]
+    #[cfg(feature = "blake3")]
     pub fn hash_raw_message(message_bytes: &[u8]) -> Hash {
         use {blake3::traits::digest::Digest, solana_hash::HASH_BYTES};
         let mut hasher = blake3::Hasher::new();
@@ -551,7 +551,7 @@ impl Message {
 
     /// Returns true if the account at the specified index was requested to be
     /// writable. This method should not be used directly.
-    #[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
+    #[cfg(feature = "std")]
     pub(super) fn is_writable_index(&self, i: usize) -> bool {
         super::is_writable_index(i, self.header, &self.account_keys)
     }
@@ -562,7 +562,7 @@ impl Message {
     /// fetching the latest set of reserved account keys. If this method is
     /// called by the runtime, the latest set of reserved account keys must be
     /// passed.
-    #[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
+    #[cfg(feature = "std")]
     pub fn is_maybe_writable(
         &self,
         i: usize,

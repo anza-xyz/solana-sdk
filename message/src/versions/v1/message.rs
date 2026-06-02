@@ -39,7 +39,7 @@ pub use self::tests::MessageBuilder;
 use serde_derive::{Deserialize, Serialize};
 #[cfg(feature = "frozen-abi")]
 use solana_frozen_abi_macro::AbiExample;
-#[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
+#[cfg(feature = "std")]
 use std::collections::HashSet;
 #[cfg(feature = "wincode")]
 use {
@@ -354,7 +354,7 @@ impl Message {
     ///
     /// This method should not be used directly.
     #[inline(always)]
-    #[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
+    #[cfg(feature = "std")]
     pub(crate) fn is_writable_index(&self, i: usize) -> bool {
         crate::is_writable_index(i, self.header, &self.account_keys)
     }
@@ -378,7 +378,7 @@ impl Message {
     /// Program accounts are demoted from writable to readonly, unless the upgradeable
     /// loader is present in which case they are left as writable since upgradeable
     /// programs need to be writable for upgrades.
-    #[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
+    #[cfg(feature = "std")]
     pub fn is_maybe_writable(
         &self,
         key_index: usize,

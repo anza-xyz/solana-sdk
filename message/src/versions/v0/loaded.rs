@@ -1,16 +1,14 @@
 #[cfg(feature = "serde")]
 use serde_derive::{Deserialize, Serialize};
-#[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
 use {
-    crate::{v0, AccountKeys},
-    alloc::borrow::Cow,
-    solana_sdk_ids::bpf_loader_upgradeable,
-    std::collections::HashSet,
+    crate::v0,
+    alloc::{borrow::Cow, vec::Vec},
+    solana_address::Address,
 };
-use {alloc::vec::Vec, solana_address::Address};
+#[cfg(feature = "std")]
+use {crate::AccountKeys, solana_sdk_ids::bpf_loader_upgradeable, std::collections::HashSet};
 
 /// Combination of a version #0 message and its loaded addresses
-#[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct LoadedMessage<'a> {
     /// Message which loaded a collection of lookup table addresses
@@ -58,7 +56,7 @@ impl LoadedAddresses {
     }
 }
 
-#[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
+#[cfg(feature = "std")]
 impl<'a> LoadedMessage<'a> {
     pub fn new(
         message: v0::Message,

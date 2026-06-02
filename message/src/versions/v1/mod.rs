@@ -1,12 +1,12 @@
 use crate::{MessageHeader, MESSAGE_VERSION_PREFIX};
 
-#[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
+#[cfg(feature = "std")]
 mod cached;
 mod config;
 mod error;
 mod message;
 
-#[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
+#[cfg(feature = "std")]
 pub use cached::*;
 use solana_hash::Hash;
 pub use {config::*, error::*, message::*};

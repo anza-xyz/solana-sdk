@@ -1,10 +1,9 @@
-#[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
-use crate::{
-    v0::{LoadedAddresses, MessageAddressTableLookup},
-    AddressLookupTableAccount,
-};
 use {
-    crate::{inline_nonce::is_advance_nonce_instruction_data, MessageHeader},
+    crate::{
+        inline_nonce::is_advance_nonce_instruction_data,
+        v0::{LoadedAddresses, MessageAddressTableLookup},
+        AddressLookupTableAccount, MessageHeader,
+    },
     alloc::{collections::BTreeMap, vec::Vec},
     core::fmt,
     solana_address::Address,
@@ -19,7 +18,6 @@ pub(crate) struct CompiledKeys {
     key_meta_map: BTreeMap<Address, CompiledKeyMeta>,
 }
 
-#[cfg_attr(any(target_os = "solana", target_arch = "bpf"), allow(dead_code))]
 #[derive(PartialEq, Debug, Eq, Clone)]
 pub enum CompileError {
     AccountIndexOverflow,
@@ -139,7 +137,6 @@ impl CompiledKeys {
         Ok((header, static_account_keys))
     }
 
-    #[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
     pub(crate) fn try_extract_table_lookup(
         &mut self,
         lookup_table_account: &AddressLookupTableAccount,
@@ -171,7 +168,6 @@ impl CompiledKeys {
         )))
     }
 
-    #[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
     fn try_drain_keys_found_in_lookup_table(
         &mut self,
         lookup_table_addresses: &[Address],

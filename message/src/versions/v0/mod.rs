@@ -15,22 +15,19 @@ use serde_derive::{Deserialize, Serialize};
 #[cfg(feature = "frozen-abi")]
 use solana_frozen_abi_macro::AbiExample;
 use {
-    crate::{compiled_instruction::CompiledInstruction, MessageHeader},
+    crate::{
+        compiled_instruction::CompiledInstruction,
+        compiled_keys::{CompileError, CompiledKeys},
+        AccountKeys, AddressLookupTableAccount, MessageHeader,
+    },
     alloc::vec::Vec,
     solana_address::Address,
     solana_hash::Hash,
+    solana_instruction::Instruction,
     solana_sanitize::SanitizeError,
 };
-#[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
-use {
-    crate::{
-        compiled_keys::{CompileError, CompiledKeys},
-        AccountKeys, AddressLookupTableAccount,
-    },
-    solana_instruction::Instruction,
-    solana_sdk_ids::bpf_loader_upgradeable,
-    std::collections::HashSet,
-};
+#[cfg(feature = "std")]
+use {solana_sdk_ids::bpf_loader_upgradeable, std::collections::HashSet};
 #[cfg(feature = "wincode")]
 use {
     solana_short_vec::ShortU16,
@@ -298,7 +295,6 @@ impl Message {
     /// # create_tx_with_address_table_lookup(&client, instruction, address_lookup_table_key, &payer)?;
     /// # Ok::<(), anyhow::Error>(())
     /// ```
-    #[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
     pub fn try_compile(
         payer: &Address,
         instructions: &[Instruction],
@@ -351,7 +347,7 @@ impl Message {
 
     /// Returns true if the account at the specified index was requested to be
     /// writable.  This method should not be used directly.
-    #[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
+    #[cfg(feature = "std")]
     fn is_writable_index(&self, key_index: usize) -> bool {
         let header = &self.header;
         let num_account_keys = self.account_keys.len();
@@ -378,7 +374,7 @@ impl Message {
     }
 
     /// Returns true if any static account key is the bpf upgradeable loader
-    #[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
+    #[cfg(feature = "std")]
     fn is_upgradeable_loader_in_static_keys(&self) -> bool {
         self.account_keys
             .iter()
@@ -390,7 +386,7 @@ impl Message {
     /// so this should not be used by the runtime. The `reserved_account_keys`
     /// param is optional to allow clients to approximate writability without
     /// requiring fetching the latest set of reserved account keys.
-    #[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
+    #[cfg(feature = "std")]
     pub fn is_maybe_writable(
         &self,
         key_index: usize,
@@ -408,7 +404,7 @@ impl Message {
     /// Returns true if the account at the specified index is in the reserved
     /// account keys set. Before loading addresses, we can't detect reserved
     /// account keys properly so this shouldn't be used by the runtime.
-    #[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
+    #[cfg(feature = "std")]
     fn is_account_maybe_reserved(
         &self,
         key_index: usize,

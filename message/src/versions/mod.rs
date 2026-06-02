@@ -2,7 +2,7 @@
 use alloc::vec::Vec;
 #[cfg(feature = "frozen-abi")]
 use solana_frozen_abi_macro::{frozen_abi, AbiEnumVisitor, AbiExample};
-#[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
+#[cfg(feature = "std")]
 use std::collections::HashSet;
 use {
     crate::{
@@ -104,7 +104,7 @@ impl VersionedMessage {
     /// instructions in this message. Since dynamically loaded addresses can't
     /// have write locks demoted without loading addresses, this shouldn't be
     /// used in the runtime.
-    #[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
+    #[cfg(feature = "std")]
     pub fn is_maybe_writable(
         &self,
         index: usize,
