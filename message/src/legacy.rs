@@ -613,11 +613,8 @@ impl Message {
 #[cfg(test)]
 mod tests {
     use {
-        super::*,
-        crate::MESSAGE_HEADER_LENGTH,
-        alloc::vec,
-        solana_instruction::AccountMeta,
-        std::{collections::HashSet, str::FromStr},
+        super::*, crate::MESSAGE_HEADER_LENGTH, alloc::vec, core::str::FromStr,
+        solana_instruction::AccountMeta, std::collections::HashSet,
     };
 
     #[test]

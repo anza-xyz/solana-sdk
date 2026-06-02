@@ -220,7 +220,8 @@ impl Message {
     /// #     solana_signer,
     /// #     solana_keypair,
     /// # };
-    /// # use std::borrow::Cow;
+    /// # extern crate alloc;
+    /// # use alloc::borrow::Cow;
     /// # use solana_account::Account;
     /// use anyhow::Result;
     /// use solana_address_lookup_table_interface::state::{AddressLookupTable, LookupTableMeta};
@@ -241,7 +242,7 @@ impl Message {
     /// #             pub fn try_new(
     /// #                 message: VersionedMessage,
     /// #                 _keypairs: &[&Keypair],
-    /// #             ) -> std::result::Result<Self, solana_example_mocks::solana_signer::SignerError> {
+    /// #             ) -> core::result::Result<Self, solana_example_mocks::solana_signer::SignerError> {
     /// #                 Ok(VersionedTransaction {
     /// #                     message,
     /// #                 })

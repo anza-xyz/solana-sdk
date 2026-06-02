@@ -3,8 +3,9 @@ use serde_derive::{Deserialize, Serialize};
 #[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
 use {
     crate::{v0, AccountKeys},
+    alloc::borrow::Cow,
     solana_sdk_ids::bpf_loader_upgradeable,
-    std::{borrow::Cow, collections::HashSet},
+    std::collections::HashSet,
 };
 use {alloc::vec::Vec, solana_address::Address};
 

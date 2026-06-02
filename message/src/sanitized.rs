@@ -6,14 +6,16 @@ use {
         v1::CachedMessage,
         AccountKeys, AddressLoader, MessageHeader, SanitizedVersionedMessage, VersionedMessage,
     },
+    alloc::borrow::Cow,
     alloc::vec::Vec,
+    core::convert::TryFrom,
     solana_address::Address,
     solana_hash::Hash,
     solana_instruction::{BorrowedAccountMeta, BorrowedInstruction},
     solana_sanitize::Sanitize,
     solana_sdk_ids::{ed25519_program, secp256k1_program, secp256r1_program},
     solana_transaction_error::SanitizeMessageError,
-    std::{borrow::Cow, collections::HashSet, convert::TryFrom},
+    std::collections::HashSet,
 };
 
 // inlined to avoid solana_nonce dep
