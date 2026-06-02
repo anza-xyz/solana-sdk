@@ -81,6 +81,7 @@ impl StakeHistoryEntry {
     }
 }
 
+// TODO: Remove once we are comfortable with adding breaking changes.
 impl std::ops::Add for StakeHistoryEntry {
     type Output = StakeHistoryEntry;
     fn add(self, rhs: StakeHistoryEntry) -> Self::Output {
