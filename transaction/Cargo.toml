@@ -52,7 +52,7 @@ solana-frozen-abi-macro = { workspace = true, optional = true, features = ["froz
 solana-hash = { workspace = true }
 solana-instruction = { workspace = true }
 solana-instruction-error = { workspace = true }
-solana-message = { workspace = true }
+solana-message = { workspace = true, features = ["std"] }
 solana-sanitize = { workspace = true }
 solana-sdk-ids = { workspace = true }
 solana-short-vec = { workspace = true, optional = true }

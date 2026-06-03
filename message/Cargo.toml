@@ -36,7 +36,7 @@ serde = [
     "solana-hash/serde",
     "solana-short-vec/serde",
 ]
-std = ["solana-instruction/std", "wincode?/std"]
+std = []
 wincode = [
     "dep:wincode",
     "solana-short-vec/wincode",
@@ -52,7 +52,7 @@ solana-address = { workspace = true }
 solana-frozen-abi = { workspace = true, optional = true }
 solana-frozen-abi-macro = { workspace = true, optional = true }
 solana-hash = { workspace = true, features = ["decode", "sanitize"] }
-solana-instruction = { workspace = true, default-features = false }
+solana-instruction = { workspace = true }
 solana-sanitize = { workspace = true }
 solana-sdk-ids = { workspace = true }
 solana-short-vec = { workspace = true, optional = true }
