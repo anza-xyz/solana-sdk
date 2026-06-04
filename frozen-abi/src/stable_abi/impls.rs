@@ -839,4 +839,50 @@ mod tests {
             ],
         ]
     );
+
+    const ARRAY_LEN: usize = 1;
+    #[derive(wincode::SchemaWrite)]
+    #[cfg_attr(
+        feature = "frozen-abi",
+        derive(
+            solana_frozen_abi_macro::StableAbi,
+            solana_frozen_abi_macro::StableAbiSample
+        )
+    )]
+    pub struct TestGenericArrayWrapper<I> {
+        a: [I; ARRAY_LEN],
+    }
+
+    #[derive(wincode::SchemaWrite)]
+    #[cfg_attr(
+        feature = "frozen-abi",
+        derive(
+            solana_frozen_abi_macro::StableAbi,
+            solana_frozen_abi_macro::StableAbiSample
+        )
+    )]
+    pub struct TestGenericArrayWrapperMore<I, T> {
+        a: [I; ARRAY_LEN],
+        b: [T; ARRAY_LEN],
+        c: Option<(I, T)>,
+    }
+
+    type More = (bool, u64, usize, Option<usize>);
+
+    #[derive(wincode::SchemaWrite)]
+    #[cfg_attr(
+        feature = "frozen-abi",
+        derive(
+            solana_frozen_abi_macro::StableAbi,
+            solana_frozen_abi_macro::StableAbiSample
+        ),
+        solana_frozen_abi_macro::frozen_abi(
+            abi_digest = "z3Tk2mbrbe6j266gAp6Eo9D9Z5NgvxFQRVHvyJEubrv",
+            abi_serializer = "wincode"
+        )
+    )]
+    struct TestNestedGenericBounds {
+        a: TestGenericArrayWrapper<([u8; 32], u64, u64)>,
+        b: TestGenericArrayWrapperMore<([u8; 32], u64, u64), More>,
+    }
 }

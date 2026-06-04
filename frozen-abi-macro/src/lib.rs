@@ -33,11 +33,11 @@ pub fn derive_stable_abi(_item: TokenStream) -> TokenStream {
 #[proc_macro_derive(StableAbi)]
 pub fn derive_stable_abi(item: TokenStream) -> TokenStream {
     let item = parse_macro_input!(item as Item);
-    let (ident, generics) = match &item {
-        Item::Struct(s) => (&s.ident, &s.generics),
-        Item::Enum(e) => (&e.ident, &e.generics),
-        Item::Type(t) => (&t.ident, &t.generics),
-        _ => {
+    let (ident, generics) = match item {
+        Item::Struct(s) => (s.ident, s.generics),
+        Item::Enum(e) => (e.ident, e.generics),
+        Item::Type(t) => (t.ident, t.generics),
+        item => {
             return Error::new_spanned(
                 item,
                 "StableAbi can only be derived for struct, enum, or type alias",
@@ -46,6 +46,7 @@ pub fn derive_stable_abi(item: TokenStream) -> TokenStream {
             .into();
         }
     };
+    let generics = add_stable_abi_type_param_bounds(generics);
     let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
 
     let expanded = quote! {
@@ -217,9 +218,21 @@ fn stable_abi_sample_field_expr(field: &syn::Field) -> Result<TokenStream2, Erro
 }
 
 #[cfg(feature = "frozen-abi")]
+fn add_stable_abi_type_param_bounds(mut generics: syn::Generics) -> syn::Generics {
+    generics.type_params_mut().for_each(|type_param| {
+        type_param.bounds.push(syn::parse_quote!(
+            ::solana_frozen_abi::stable_abi::StableAbi
+        ));
+    });
+    generics
+}
+
+#[cfg(feature = "frozen-abi")]
 fn derive_stable_abi_sample_struct_type(input: ItemStruct) -> Result<TokenStream2, Error> {
     let type_name = &input.ident;
-    let (impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
+    let generics = add_stable_abi_type_param_bounds(input.generics);
+
+    let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
     let turbofish = ty_generics.as_turbofish();
     let sample_expr = match &input.fields {
         Fields::Named(named_fields) => {
@@ -297,7 +310,9 @@ fn stable_abi_sample_enum_variant_expr(
 fn derive_stable_abi_sample_enum_type(input: ItemEnum) -> Result<TokenStream2, Error> {
     let type_name = &input.ident;
     let variants = &input.variants;
-    let (impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
+    let generics = add_stable_abi_type_param_bounds(input.generics);
+
+    let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
     let variant_count = variants.len();
     let match_arms = variants
         .iter()
