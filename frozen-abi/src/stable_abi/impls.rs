@@ -3,11 +3,14 @@ use {
         context::{impl_with_context_via, SequenceLenMax, SequenceLenRange},
         StableAbi,
     },
-    core::{array, num::NonZero},
+    core::{array, marker::PhantomData, num::NonZero},
     rand::{Rng, RngCore},
     std::{
         collections::{BTreeMap, BTreeSet, HashMap, HashSet, VecDeque},
         hash::{BuildHasher, Hash},
+        net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr, SocketAddrV4, SocketAddrV6},
+        rc::Rc,
+        sync::Arc,
     },
 };
 
@@ -254,6 +257,95 @@ impl_with_context_via! {
 
 impl StableAbi for () {
     fn random_with_context(_rng: &mut (impl RngCore + ?Sized), _ctx: ()) -> Self {}
+}
+
+impl<T> StableAbi for PhantomData<T> {
+    fn random_with_context(_rng: &mut (impl RngCore + ?Sized), _ctx: ()) -> Self {
+        PhantomData
+    }
+}
+
+// Smart pointers serialize transparently as their pointee, so forward the
+// context to the inner type and wrap the result.
+macro_rules! impl_stable_abi_for_pointer {
+    ($($ptr:ident),* $(,)?) => {
+        $(
+            impl<Ctx, T> StableAbi<Ctx> for $ptr<T>
+            where
+                T: StableAbi<Ctx>,
+            {
+                fn random_with_context(rng: &mut (impl RngCore + ?Sized), ctx: Ctx) -> Self {
+                    $ptr::new(T::random_with_context(rng, ctx))
+                }
+            }
+        )*
+    };
+}
+impl_stable_abi_for_pointer!(Box, Rc, Arc);
+
+impl<T, E> StableAbi for Result<T, E>
+where
+    T: StableAbi,
+    E: StableAbi,
+{
+    fn random_with_context(rng: &mut (impl RngCore + ?Sized), _ctx: ()) -> Self {
+        if rng.random::<bool>() {
+            Ok(T::random(rng))
+        } else {
+            Err(E::random(rng))
+        }
+    }
+}
+
+impl StableAbi for Ipv4Addr {
+    fn random_with_context(rng: &mut (impl RngCore + ?Sized), _ctx: ()) -> Self {
+        Ipv4Addr::from(rng.random::<u32>())
+    }
+}
+
+impl StableAbi for Ipv6Addr {
+    fn random_with_context(rng: &mut (impl RngCore + ?Sized), _ctx: ()) -> Self {
+        Ipv6Addr::from(rng.random::<u128>())
+    }
+}
+
+impl StableAbi for IpAddr {
+    fn random_with_context(rng: &mut (impl RngCore + ?Sized), _ctx: ()) -> Self {
+        if rng.random::<bool>() {
+            IpAddr::V4(Ipv4Addr::random(rng))
+        } else {
+            IpAddr::V6(Ipv6Addr::random(rng))
+        }
+    }
+}
+
+impl StableAbi for SocketAddrV4 {
+    fn random_with_context(rng: &mut (impl RngCore + ?Sized), _ctx: ()) -> Self {
+        SocketAddrV4::new(Ipv4Addr::random(rng), rng.random())
+    }
+}
+
+impl StableAbi for SocketAddrV6 {
+    fn random_with_context(rng: &mut (impl RngCore + ?Sized), _ctx: ()) -> Self {
+        // `flowinfo` and `scope_id` are sampled randomly too: this asserts that
+        // serializers agree on (and consistently ignore) them.
+        SocketAddrV6::new(
+            Ipv6Addr::random(rng),
+            rng.random(),
+            rng.random(),
+            rng.random(),
+        )
+    }
+}
+
+impl StableAbi for SocketAddr {
+    fn random_with_context(rng: &mut (impl RngCore + ?Sized), _ctx: ()) -> Self {
+        if rng.random::<bool>() {
+            SocketAddr::V4(SocketAddrV4::random(rng))
+        } else {
+            SocketAddr::V6(SocketAddrV6::random(rng))
+        }
+    }
 }
 
 #[cfg(all(test, feature = "frozen-abi"))]
@@ -654,6 +746,47 @@ mod tests {
         a: NonZero<u32>,
         b: Option<NonZero<u8>>,
         c: NonZero<i16>,
+    }
+
+    #[derive(Debug, wincode::SchemaWrite)]
+    #[cfg_attr(
+        feature = "frozen-abi",
+        derive(
+            solana_frozen_abi_macro::StableAbi,
+            solana_frozen_abi_macro::StableAbiSample
+        ),
+        solana_frozen_abi_macro::frozen_abi(
+            abi_digest = "2Qrf3xihSoFBSv49eVXhw2vkHDmfDfwfTKArszJuhKmz",
+            abi_serializer = "wincode",
+        )
+    )]
+    struct TestWrapContainers {
+        a: Box<u64>,
+        b: std::rc::Rc<u32>,
+        c: std::sync::Arc<(u8, u16)>,
+        d: std::marker::PhantomData<u64>,
+        e: Result<u64, bool>,
+    }
+
+    #[derive(Debug, wincode::SchemaWrite)]
+    #[cfg_attr(
+        feature = "frozen-abi",
+        derive(
+            solana_frozen_abi_macro::StableAbi,
+            solana_frozen_abi_macro::StableAbiSample
+        ),
+        solana_frozen_abi_macro::frozen_abi(
+            abi_digest = "ENF1otBEp2hAgjwMZoQmgB46JroZMEwwRDKYsCJxapHQ",
+            abi_serializer = "wincode",
+        )
+    )]
+    struct TestNet {
+        a: std::net::Ipv4Addr,
+        b: std::net::Ipv6Addr,
+        c: std::net::IpAddr,
+        d: std::net::SocketAddrV4,
+        e: std::net::SocketAddrV6,
+        f: std::net::SocketAddr,
     }
 
     macro_rules! mk_stable_abi_sample_with_from_macro_rules {
