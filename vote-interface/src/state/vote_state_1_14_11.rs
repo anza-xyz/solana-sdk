@@ -1,14 +1,19 @@
 use super::*;
 #[cfg(feature = "dev-context-only-utils")]
 use arbitrary::Arbitrary;
+#[cfg(feature = "frozen-abi")]
+use solana_frozen_abi_macro::{frozen_abi, AbiExample, StableAbi, StableAbiSample};
 
 // Offset used for VoteState version 1_14_11
 const DEFAULT_PRIOR_VOTERS_OFFSET: usize = 82;
 
 #[cfg_attr(
     feature = "frozen-abi",
-    solana_frozen_abi_macro::frozen_abi(digest = "2rjXSWaNeAdoUNJDC5otC7NPR1qXHvLMuAs5faE4DPEt"),
-    derive(solana_frozen_abi_macro::AbiExample)
+    frozen_abi(
+        api_digest = "2rjXSWaNeAdoUNJDC5otC7NPR1qXHvLMuAs5faE4DPEt",
+        abi_digest = "AiZEyXQnygp5KQWY9godna9h8fZQ7nFPJvdvkuNkyAWc"
+    ),
+    derive(AbiExample, StableAbi, StableAbiSample)
 )]
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[derive(Debug, Default, PartialEq, Eq, Clone)]

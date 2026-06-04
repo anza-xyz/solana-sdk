@@ -5,7 +5,7 @@ use arbitrary::Arbitrary;
 #[cfg(feature = "serde")]
 use serde_derive::{Deserialize, Serialize};
 #[cfg(feature = "frozen-abi")]
-use solana_frozen_abi_macro::AbiExample;
+use solana_frozen_abi_macro::{AbiExample, StableAbi, StableAbiSample};
 use {
     crate::authorized_voters::AuthorizedVoters,
     solana_clock::{Epoch, Slot, UnixTimestamp},
@@ -49,7 +49,7 @@ pub const VOTE_CREDITS_GRACE_SLOTS: u8 = 2;
 // Maximum number of credits to award for a vote; this number of credits is awarded to votes on slots that land within the grace period. After that grace period, vote credits are reduced.
 pub const VOTE_CREDITS_MAXIMUM_PER_SLOT: u8 = 16;
 
-#[cfg_attr(feature = "frozen-abi", derive(AbiExample))]
+#[cfg_attr(feature = "frozen-abi", derive(AbiExample, StableAbi, StableAbiSample))]
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[derive(Default, Debug, PartialEq, Eq, Copy, Clone)]
 #[cfg_attr(feature = "dev-context-only-utils", derive(Arbitrary))]
@@ -102,7 +102,7 @@ impl Lockout {
     }
 }
 
-#[cfg_attr(feature = "frozen-abi", derive(AbiExample))]
+#[cfg_attr(feature = "frozen-abi", derive(AbiExample, StableAbi, StableAbiSample))]
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[derive(Default, Debug, PartialEq, Eq, Copy, Clone)]
 #[cfg_attr(feature = "dev-context-only-utils", derive(Arbitrary))]
@@ -139,7 +139,7 @@ impl From<Lockout> for LandedVote {
     }
 }
 
-#[cfg_attr(feature = "frozen-abi", derive(AbiExample))]
+#[cfg_attr(feature = "frozen-abi", derive(AbiExample, StableAbi, StableAbiSample))]
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[derive(Debug, Default, PartialEq, Eq, Clone)]
 #[cfg_attr(feature = "dev-context-only-utils", derive(Arbitrary))]
@@ -152,7 +152,7 @@ pub struct BlockTimestamp {
 const MAX_ITEMS: usize = 32;
 
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
-#[cfg_attr(feature = "frozen-abi", derive(AbiExample))]
+#[cfg_attr(feature = "frozen-abi", derive(AbiExample, StableAbi, StableAbiSample))]
 #[derive(Debug, PartialEq, Eq, Clone)]
 #[cfg_attr(feature = "dev-context-only-utils", derive(Arbitrary))]
 pub struct CircBuf<I> {
@@ -210,7 +210,7 @@ pub mod serde_compact_vote_state_update {
         solana_serde_varint as serde_varint, solana_short_vec as short_vec,
     };
 
-    #[cfg_attr(feature = "frozen-abi", derive(AbiExample))]
+    #[cfg_attr(feature = "frozen-abi", derive(AbiExample, StableAbi, StableAbiSample))]
     #[derive(serde_derive::Deserialize, serde_derive::Serialize)]
     struct LockoutOffset {
         #[serde(with = "serde_varint")]
@@ -306,7 +306,7 @@ pub mod serde_tower_sync {
         solana_serde_varint as serde_varint, solana_short_vec as short_vec,
     };
 
-    #[cfg_attr(feature = "frozen-abi", derive(AbiExample))]
+    #[cfg_attr(feature = "frozen-abi", derive(AbiExample, StableAbi, StableAbiSample))]
     #[derive(serde_derive::Deserialize, serde_derive::Serialize)]
     struct LockoutOffset {
         #[serde(with = "serde_varint")]

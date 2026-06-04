@@ -1,5 +1,5 @@
 #[cfg(feature = "frozen-abi")]
-use solana_frozen_abi_macro::{frozen_abi, AbiExample};
+use solana_frozen_abi_macro::{frozen_abi, AbiExample, StableAbi, StableAbiSample};
 use {
     crate::state::{
         Lockout, BLS_PROOF_OF_POSSESSION_COMPRESSED_SIZE, BLS_PUBLIC_KEY_COMPRESSED_SIZE,
@@ -18,8 +18,11 @@ use {
 
 #[cfg_attr(
     feature = "frozen-abi",
-    frozen_abi(digest = "GvUzgtcxhKVVxPAjSntXGPqjLZK5ovgZzCiUP1tDpB9q"),
-    derive(AbiExample)
+    frozen_abi(
+        api_digest = "GvUzgtcxhKVVxPAjSntXGPqjLZK5ovgZzCiUP1tDpB9q",
+        abi_digest = "6kXER3mQxF3R1Th74tQFGfYUWJfBakNZZVyU4rTrNEek"
+    ),
+    derive(AbiExample, StableAbi, StableAbiSample)
 )]
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[derive(Default, Debug, PartialEq, Eq, Clone)]
@@ -48,8 +51,11 @@ impl Vote {
 
 #[cfg_attr(
     feature = "frozen-abi",
-    frozen_abi(digest = "CxyuwbaEdzP7jDCZyxjgQvLGXadBUZF3LoUvbSpQ6tYN"),
-    derive(AbiExample)
+    frozen_abi(
+        api_digest = "CxyuwbaEdzP7jDCZyxjgQvLGXadBUZF3LoUvbSpQ6tYN",
+        abi_digest = "CAZasoggS6VYsJWdWf9tWUmqXjmCe1iCa1s1szSkcV3q"
+    ),
+    derive(AbiExample, StableAbi, StableAbiSample)
 )]
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[derive(Default, Debug, PartialEq, Eq, Clone)]
@@ -102,8 +108,11 @@ impl VoteStateUpdate {
 
 #[cfg_attr(
     feature = "frozen-abi",
-    frozen_abi(digest = "6UDiQMH4wbNwkMHosPMtekMYu2Qa6CHPZ2ymK4mc6FGu"),
-    derive(AbiExample)
+    frozen_abi(
+        api_digest = "6UDiQMH4wbNwkMHosPMtekMYu2Qa6CHPZ2ymK4mc6FGu",
+        abi_digest = "AFc7BWoFERboQDSN7VmXqXu7MoV3TwksgKoabdarYycF"
+    ),
+    derive(AbiExample, StableAbi, StableAbiSample)
 )]
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[derive(Default, Debug, PartialEq, Eq, Clone)]

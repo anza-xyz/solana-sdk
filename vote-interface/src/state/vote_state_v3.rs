@@ -7,7 +7,7 @@ use arbitrary::Arbitrary;
 #[cfg(feature = "serde")]
 use serde_derive::{Deserialize, Serialize};
 #[cfg(feature = "frozen-abi")]
-use solana_frozen_abi_macro::{frozen_abi, AbiExample};
+use solana_frozen_abi_macro::{frozen_abi, AbiExample, StableAbi, StableAbiSample};
 #[cfg(any(target_os = "solana", feature = "bincode"))]
 use solana_instruction_error::InstructionError;
 use {
@@ -21,8 +21,11 @@ use {
 
 #[cfg_attr(
     feature = "frozen-abi",
-    frozen_abi(digest = "pZqasQc6duzMYzpzU7eriHH9cMXmubuUP4NmCrkWZjt"),
-    derive(AbiExample)
+    frozen_abi(
+        api_digest = "pZqasQc6duzMYzpzU7eriHH9cMXmubuUP4NmCrkWZjt",
+        abi_digest = "6xrS3B1cUyFYdPAwavAQ4DKpGTWsdoV4fkaGfiEBRmtQ"
+    ),
+    derive(AbiExample, StableAbi, StableAbiSample)
 )]
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[derive(Debug, Default, PartialEq, Eq, Clone)]
