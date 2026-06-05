@@ -125,12 +125,8 @@ impl AbiSerializer {
 
     fn serialize_expr(self) -> TokenStream2 {
         match self {
-            Self::Bincode => {
-                quote! { ::solana_frozen_abi::bincode::serialize(&val).unwrap() }
-            }
-            Self::Wincode => {
-                quote! { ::solana_frozen_abi::wincode::serialize(&val).unwrap() }
-            }
+            Self::Bincode => quote! { ::solana_frozen_abi::bincode },
+            Self::Wincode => quote! { ::solana_frozen_abi::wincode },
         }
     }
 }
@@ -170,6 +166,26 @@ fn parse_abi_serializers(expr: &Expr) -> Result<Vec<AbiSerializer>, Error> {
                 .collect()
         }
         expr => Ok(vec![AbiSerializer::from_lit_str(lit_str(expr)?)?]),
+    }
+}
+
+#[cfg(feature = "frozen-abi")]
+enum RoundtripTest {
+    No,
+    WireOnly,
+    EqAndWire,
+}
+
+#[cfg(feature = "frozen-abi")]
+fn parse_roundtrip_test(value: Option<&LitStr>) -> Result<RoundtripTest, Error> {
+    match value {
+        None => Ok(RoundtripTest::WireOnly),
+        Some(value) => match value.value().as_str() {
+            "no" => Ok(RoundtripTest::No),
+            "wire_only" => Ok(RoundtripTest::WireOnly),
+            "eq_and_wire" => Ok(RoundtripTest::EqAndWire),
+            _ => Err(Error::new_spanned(value, "unsupported `test_roundtrip` value; expected \"no\", \"wire_only\", or \"eq_and_wire\"")),
+        },
     }
 }
 
@@ -616,6 +632,7 @@ fn quote_for_test(
     expected_api_digest: Option<&Expr>,
     expected_abi_digest: Option<&Expr>,
     abi_serializers: &[AbiSerializer],
+    roundtrip_test: RoundtripTest,
 ) -> TokenStream2 {
     let test_api = if let Some(expected_api_digest) = expected_api_digest {
         quote! {
@@ -660,6 +677,46 @@ fn quote_for_test(
                 Span::call_site(),
             );
             let abi_serialize_expr = abi_serializer.serialize_expr();
+            let test_roundtrip = match roundtrip_test {
+                RoundtripTest::No => TokenStream2::new(),
+                RoundtripTest::WireOnly | RoundtripTest::EqAndWire => {
+                    let test_roundtrip_eq = match roundtrip_test {
+                        RoundtripTest::EqAndWire => quote! {
+                            assert!(
+                                val == roundtrip_val,
+                                "deserializing serialized {} should preserve value",
+                                roundtrip_type_name
+                            );
+                        },
+                        _ => TokenStream2::new(),
+                    };
+                    quote! {
+                        let roundtrip_type_name = ::std::any::type_name::<#type_name>();
+                        let roundtrip_val: #type_name =
+                            #abi_serialize_expr::deserialize::<#type_name>(&bytes).expect(
+                                ::std::concat!(
+                                    "must deserialize serialized ",
+                                    ::std::stringify!(#type_name)
+                                )
+                            );
+
+                        #test_roundtrip_eq
+
+                        let roundtrip_bytes = #abi_serialize_expr::serialize(&roundtrip_val).expect(
+                            ::std::concat!(
+                                "must re-serialize ",
+                                ::std::stringify!(#type_name)
+                            )
+                        );
+                        assert_eq!(
+                            bytes,
+                            roundtrip_bytes,
+                            "re-serializing deserialized {} should match bytes",
+                            roundtrip_type_name
+                        );
+                    }
+                }
+            };
             quote! {
                 #[test]
                 fn #test_fn_name() {
@@ -672,7 +729,12 @@ fn quote_for_test(
 
                     for _ in 0..10_000 {
                         let val = <#type_name>::random(&mut rng);
-                        digester.hash(&#abi_serialize_expr);
+                        let bytes = #abi_serialize_expr::serialize(&val)
+                            .expect("must serialize");
+
+                        #test_roundtrip
+
+                        digester.hash(&bytes);
                     }
                     assert_eq!(#expected_abi_digest, ::std::format!("{}", digester.result()), "ABI layout has changed!");
                 }
@@ -704,6 +766,7 @@ fn frozen_abi_type_alias(
     expected_api_digest: Option<&Expr>,
     expected_abi_digest: Option<&Expr>,
     abi_serializers: &[AbiSerializer],
+    roundtrip_test: RoundtripTest,
 ) -> TokenStream {
     let type_name = &input.ident;
     let test = quote_for_test(
@@ -712,6 +775,7 @@ fn frozen_abi_type_alias(
         expected_api_digest,
         expected_abi_digest,
         abi_serializers,
+        roundtrip_test,
     );
     let result = quote! {
         #input
@@ -726,6 +790,7 @@ fn frozen_abi_struct_type(
     expected_api_digest: Option<&Expr>,
     expected_abi_digest: Option<&Expr>,
     abi_serializers: &[AbiSerializer],
+    roundtrip_test: RoundtripTest,
 ) -> TokenStream {
     let type_name = &input.ident;
     let test = quote_for_test(
@@ -734,6 +799,7 @@ fn frozen_abi_struct_type(
         expected_api_digest,
         expected_abi_digest,
         abi_serializers,
+        roundtrip_test,
     );
     let result = quote! {
         #input
@@ -794,6 +860,7 @@ fn frozen_abi_enum_type(
     expected_api_digest: Option<&Expr>,
     expected_abi_digest: Option<&Expr>,
     abi_serializers: &[AbiSerializer],
+    roundtrip_test: RoundtripTest,
 ) -> TokenStream {
     let type_name = &input.ident;
     let test = quote_for_test(
@@ -802,6 +869,7 @@ fn frozen_abi_enum_type(
         expected_api_digest,
         expected_abi_digest,
         abi_serializers,
+        roundtrip_test,
     );
     let result = quote! {
         #input
@@ -816,6 +884,7 @@ pub fn frozen_abi(attrs: TokenStream, item: TokenStream) -> TokenStream {
     let mut api_expected_digest: Option<Expr> = None;
     let mut abi_expected_digest: Option<Expr> = None;
     let mut abi_serializers = vec![AbiSerializer::Bincode];
+    let mut test_roundtrip: Option<LitStr> = None;
 
     let attrs_parser = syn::meta::parser(|meta| {
         if meta.path.is_ident("digest") || meta.path.is_ident("api_digest") {
@@ -826,6 +895,9 @@ pub fn frozen_abi(attrs: TokenStream, item: TokenStream) -> TokenStream {
             Ok(())
         } else if meta.path.is_ident("abi_serializer") {
             abi_serializers = parse_abi_serializers(&meta.value()?.parse::<Expr>()?)?;
+            Ok(())
+        } else if meta.path.is_ident("test_roundtrip") {
+            test_roundtrip = Some(meta.value()?.parse::<LitStr>()?);
             Ok(())
         } else {
             Err(meta.error("unsupported \"frozen_abi\" property"))
@@ -842,6 +914,11 @@ pub fn frozen_abi(attrs: TokenStream, item: TokenStream) -> TokenStream {
         .into();
     }
 
+    let roundtrip_test = match parse_roundtrip_test(test_roundtrip.as_ref()) {
+        Ok(roundtrip_test) => roundtrip_test,
+        Err(error) => return error.to_compile_error().into(),
+    };
+
     let item = parse_macro_input!(item as Item);
     match item {
         Item::Struct(input) => frozen_abi_struct_type(
@@ -849,18 +926,21 @@ pub fn frozen_abi(attrs: TokenStream, item: TokenStream) -> TokenStream {
             api_expected_digest.as_ref(),
             abi_expected_digest.as_ref(),
             &abi_serializers,
+            roundtrip_test,
         ),
         Item::Enum(input) => frozen_abi_enum_type(
             input,
             api_expected_digest.as_ref(),
             abi_expected_digest.as_ref(),
             &abi_serializers,
+            roundtrip_test,
         ),
         Item::Type(input) => frozen_abi_type_alias(
             input,
             api_expected_digest.as_ref(),
             abi_expected_digest.as_ref(),
             &abi_serializers,
+            roundtrip_test,
         ),
         _ => Error::new_spanned(
             item,

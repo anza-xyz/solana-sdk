@@ -1,7 +1,7 @@
 //! # StableAbi
 //!
 //! The `StableAbi` is an optional extension to `frozen-abi` that provides functionality for
-//! detecting unintended encoding changes.
+//! detecting unintended encoding and decoding changes.
 //!
 //! ## How it works?
 //!
@@ -15,7 +15,8 @@
 //! The macro would generate the `test_abi_digest` test that verifies binary layout stability:
 //! - Initializes a deterministic random number generator with fixed seed
 //! - Generates 10_000 instances of the type
-//! - Serializes each instance
+//! - Serializes each instance, then deserializes and reserializes it
+//! - Compares the resulting bytes of first serialization and after roundtrip
 //! - Hashes all serialized bytes together
 //! - Compares the resulting hash against the provided in `abi_digest` attribute
 //!
@@ -116,7 +117,7 @@
 //! For `wincode`-based types, add `abi_serializer = "wincode"` to `#[frozen_abi(...)]`.
 //!
 //! ```rust,ignore
-//! #[derive(StableAbi, StableAbiSample, wincode::SchemaWrite)]
+//! #[derive(StableAbi, StableAbiSample, wincode::SchemaWrite, wincode::SchemaRead)]
 //! #[frozen_abi(
 //!     api_digest = "...",
 //!     abi_digest = "...",
@@ -141,6 +142,37 @@
 //!     abi_serializer = ["bincode", "wincode"],
 //! )]
 //! struct MySharedType {
+//!     a: u64,
+//!     b: bool,
+//! }
+//! ```
+//!
+//! By default, the generated test uses `test_roundtrip = "wire_only"`, which verifies that
+//! deserializing and reserializing produces identical bytes. Use `test_roundtrip = "eq_and_wire"`
+//! to also verify `original == deserialized`, or `test_roundtrip = "no"` to skip roundtrip
+//! verification.
+//!
+//! ```rust,ignore
+//! #[derive(StableAbi, StableAbiSample, wincode::SchemaWrite)]
+//! #[frozen_abi(
+//!     abi_digest = "...",
+//!     abi_serializer = "wincode",
+//!     test_roundtrip = "no",
+//! )]
+//! struct MyRoundtripIncompatibleType {
+//!     a: u64,
+//!     b: bool,
+//! }
+//! ```
+//!
+//! ```rust,ignore
+//! #[derive(PartialEq, StableAbi, StableAbiSample, wincode::SchemaWrite, wincode::SchemaRead)]
+//! #[frozen_abi(
+//!     abi_digest = "...",
+//!     abi_serializer = "wincode",
+//!     test_roundtrip = "eq_and_wire",
+//! )]
+//! struct MyRoundtripType {
 //!     a: u64,
 //!     b: bool,
 //! }

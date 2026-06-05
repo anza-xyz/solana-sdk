@@ -361,19 +361,26 @@ mod tests {
     // A single type whose ABI is digested with both `bincode` and `wincode`,
     // which must agree on the shared digest. Each serializer gets its own
     // generated test (`test_abi_digest_bincode` / `test_abi_digest_wincode`).
-    #[derive(Debug, serde_derive::Serialize, wincode::SchemaWrite)]
+    #[derive(
+        PartialEq,
+        serde_derive::Deserialize,
+        serde_derive::Serialize,
+        wincode::SchemaRead,
+        wincode::SchemaWrite,
+    )]
     #[cfg_attr(
-                feature = "frozen-abi",
-                derive(
-                    solana_frozen_abi_macro::AbiExample,
-                    solana_frozen_abi_macro::StableAbi
-                ),
-                solana_frozen_abi_macro::frozen_abi(
-                    api_digest = API_SHARED_SERIALIZERS,
-                    abi_digest = ABI_SHARED_WINCODE_VS_BINCODE,
-                    abi_serializer = ["bincode", "wincode"],
-                )
-            )]
+        feature = "frozen-abi",
+        derive(
+            solana_frozen_abi_macro::AbiExample,
+            solana_frozen_abi_macro::StableAbi
+        ),
+        solana_frozen_abi_macro::frozen_abi(
+            api_digest = API_SHARED_SERIALIZERS,
+            abi_digest = ABI_SHARED_WINCODE_VS_BINCODE,
+            abi_serializer = ["bincode", "wincode"],
+            test_roundtrip = "eq_and_wire",
+        )
+    )]
     struct TestStructSharedSerializers {
         a: u64,
         b: bool,
@@ -395,13 +402,14 @@ mod tests {
     }
 
     // Verify abi_digest-only: no API digest, should still run ABI test.
-    #[derive(wincode::SchemaWrite)]
+    #[derive(PartialEq, wincode::SchemaWrite, wincode::SchemaRead)]
     #[cfg_attr(
         feature = "frozen-abi",
         derive(solana_frozen_abi_macro::StableAbi),
         solana_frozen_abi_macro::frozen_abi(
             abi_digest = "AgNkEpErnFBuy7iTAEUUAC1fbvokEkhbsfFnx4DtXAvY",
-            abi_serializer = "wincode"
+            abi_serializer = "wincode",
+            test_roundtrip = "eq_and_wire",
         )
     )]
     struct TestStructAbiDigestOnly {
@@ -425,7 +433,7 @@ mod tests {
     }
 
     // Verify stable abi sample derive (all fields with rand distribution)
-    #[derive(wincode::SchemaWrite)]
+    #[derive(PartialEq, wincode::SchemaWrite, wincode::SchemaRead)]
     #[cfg_attr(
         feature = "frozen-abi",
         derive(
@@ -435,6 +443,7 @@ mod tests {
         solana_frozen_abi_macro::frozen_abi(
             abi_digest = "AgNkEpErnFBuy7iTAEUUAC1fbvokEkhbsfFnx4DtXAvY",
             abi_serializer = "wincode",
+            test_roundtrip = "eq_and_wire",
         )
     )]
     struct TestStableAbiSampleSimple {
@@ -444,7 +453,7 @@ mod tests {
         d: (u8, u8),
     }
 
-    #[derive(wincode::SchemaWrite)]
+    #[derive(PartialEq, wincode::SchemaWrite, wincode::SchemaRead)]
     #[cfg_attr(
         feature = "frozen-abi",
         derive(
@@ -454,6 +463,7 @@ mod tests {
         solana_frozen_abi_macro::frozen_abi(
             abi_digest = "CuEDjcfdYbKAoxSV9QeQDv9K71mKgitE28CwvB4PAM3S",
             abi_serializer = "wincode",
+            test_roundtrip = "eq_and_wire",
         )
     )]
     enum TestStableAbiSampleEnumSimple {
@@ -463,7 +473,7 @@ mod tests {
         D(f64),
     }
 
-    #[derive(wincode::SchemaWrite)]
+    #[derive(PartialEq, wincode::SchemaWrite, wincode::SchemaRead)]
     #[cfg_attr(
         feature = "frozen-abi",
         derive(
@@ -473,6 +483,7 @@ mod tests {
         solana_frozen_abi_macro::frozen_abi(
             abi_digest = "2XwyJT2T6oDWtStC8n9EfDMk8wHBExsX4AoBS5uRf74u",
             abi_serializer = "wincode",
+            test_roundtrip = "eq_and_wire",
         )
     )]
     enum TestStableAbiSampleEnumNamed {
@@ -481,7 +492,7 @@ mod tests {
     }
 
     // Verify stable abi sample derive (fields mixed, mostly without implementation of rand distribution)
-    #[derive(wincode::SchemaWrite)]
+    #[derive(PartialEq, wincode::SchemaWrite, wincode::SchemaRead)]
     #[cfg_attr(
         feature = "frozen-abi",
         derive(
@@ -491,6 +502,7 @@ mod tests {
         solana_frozen_abi_macro::frozen_abi(
             abi_digest = "Da7uAdhapexEgWf4xxKLrYXhnYU9g6CKpRSbrzFWDg6a",
             abi_serializer = "wincode",
+            test_roundtrip = "eq_and_wire",
         )
     )]
     struct TestStableAbiSampleOverride {
@@ -506,7 +518,7 @@ mod tests {
         d: u16,
     }
 
-    #[derive(wincode::SchemaWrite)]
+    #[derive(PartialEq, wincode::SchemaWrite, wincode::SchemaRead)]
     #[cfg_attr(
         feature = "frozen-abi",
         derive(
@@ -516,6 +528,7 @@ mod tests {
         solana_frozen_abi_macro::frozen_abi(
             abi_digest = "DTzLXmgVsieme1R1gFBF3NBckeeXfqR7hrkiMyWXUK7M",
             abi_serializer = "wincode",
+            test_roundtrip = "eq_and_wire",
         )
     )]
     enum TestStableAbiSampleEnumOverride {
@@ -524,7 +537,7 @@ mod tests {
         C(#[stable_abi_sample(with = "rng.random::<[bool; 4]>().to_vec()")] Vec<bool>),
     }
 
-    #[derive(wincode::SchemaWrite)]
+    #[derive(PartialEq, wincode::SchemaWrite, wincode::SchemaRead)]
     #[cfg_attr(
         feature = "frozen-abi",
         derive(
@@ -534,6 +547,7 @@ mod tests {
         solana_frozen_abi_macro::frozen_abi(
             abi_digest = "NDiMpkrAEM4QN3GkELuBzxdCwCtVz6gp3pjFuiGtTWD",
             abi_serializer = "wincode",
+            test_roundtrip = "eq_and_wire",
         )
     )]
     enum TestStableAbiSampleEnumNamedOverride {
@@ -551,13 +565,14 @@ mod tests {
 
     const ABI_DIGEST_EQUIVALENT_FIELD_STRUCTURES: &str =
         "G7kuFGzwY6HwSytv6UsjWVEAbhrfv2n2gmchE27mSRiM";
-    #[derive(Debug, wincode::SchemaWrite)]
+    #[derive(PartialEq, wincode::SchemaWrite, wincode::SchemaRead)]
     #[cfg_attr(
         feature = "frozen-abi",
         derive(solana_frozen_abi_macro::StableAbi, solana_frozen_abi_macro::StableAbiSample),
         solana_frozen_abi_macro::frozen_abi(
             abi_digest = ABI_DIGEST_EQUIVALENT_FIELD_STRUCTURES,
             abi_serializer = "wincode",
+            test_roundtrip = "eq_and_wire",
         )
     )]
     struct TestEquivalentWincodeStruct {
@@ -566,26 +581,28 @@ mod tests {
         c: (u8, [u8; 3]),
     }
 
-    #[derive(Debug, serde_derive::Serialize)]
+    #[derive(PartialEq, serde_derive::Serialize, serde_derive::Deserialize)]
     #[cfg_attr(
         feature = "frozen-abi",
         derive(solana_frozen_abi_macro::StableAbi, solana_frozen_abi_macro::StableAbiSample),
         solana_frozen_abi_macro::frozen_abi(
             abi_digest = ABI_DIGEST_EQUIVALENT_FIELD_STRUCTURES,
             abi_serializer = "bincode",
+            test_roundtrip = "eq_and_wire",
         )
     )]
     struct TestEquivalentBincodeTuple(u8, u64, u8, [u8; 3]);
 
     const ABI_DIGEST_EQUIVALENT_BYTE_SEQUENCES: &str =
         "14qLvWX4UebbLBaKi6v31A8xDfXU8ifX8DqCGbpAwjtD";
-    #[derive(Debug, wincode::SchemaWrite)]
+    #[derive(PartialEq, wincode::SchemaWrite, wincode::SchemaRead)]
     #[cfg_attr(
         feature = "frozen-abi",
         derive(solana_frozen_abi_macro::StableAbi, solana_frozen_abi_macro::StableAbiSample),
         solana_frozen_abi_macro::frozen_abi(
             abi_digest = ABI_DIGEST_EQUIVALENT_BYTE_SEQUENCES,
             abi_serializer = "wincode",
+            test_roundtrip = "eq_and_wire",
         )
     )]
     struct TestEquivalentCollectionsWincode {
@@ -596,13 +613,14 @@ mod tests {
         b: bool,
     }
 
-    #[derive(Debug, serde_derive::Serialize)]
+    #[derive(PartialEq, serde_derive::Serialize, serde_derive::Deserialize)]
     #[cfg_attr(
         feature = "frozen-abi",
         derive(solana_frozen_abi_macro::StableAbi, solana_frozen_abi_macro::StableAbiSample),
         solana_frozen_abi_macro::frozen_abi(
             abi_digest = ABI_DIGEST_EQUIVALENT_BYTE_SEQUENCES,
             abi_serializer = "bincode",
+            test_roundtrip = "eq_and_wire",
         )
     )]
     struct TestEquivalentCollectionsBincode(
@@ -615,13 +633,14 @@ mod tests {
 
     const ABI_DIGEST_EQUIVALENT_KEY_VALUE_SEQUENCES: &str =
         "9pGP5GGD2HxDRCQeDv3rPGTfVH9SzkZCXMSGHpZnzz4G";
-    #[derive(Debug, wincode::SchemaWrite)]
+    #[derive(PartialEq, wincode::SchemaWrite, wincode::SchemaRead)]
     #[cfg_attr(
         feature = "frozen-abi",
         derive(solana_frozen_abi_macro::StableAbi, solana_frozen_abi_macro::StableAbiSample),
         solana_frozen_abi_macro::frozen_abi(
             abi_digest = ABI_DIGEST_EQUIVALENT_KEY_VALUE_SEQUENCES,
             abi_serializer = "wincode",
+            test_roundtrip = "eq_and_wire",
         )
     )]
     struct TestEquivalentBTreeMapVsVecWincode {
@@ -632,13 +651,14 @@ mod tests {
         b: bool,
     }
 
-    #[derive(Debug, serde_derive::Serialize)]
+    #[derive(PartialEq, serde_derive::Serialize, serde_derive::Deserialize)]
     #[cfg_attr(
         feature = "frozen-abi",
         derive(solana_frozen_abi_macro::StableAbi, solana_frozen_abi_macro::StableAbiSample),
         solana_frozen_abi_macro::frozen_abi(
             abi_digest = ABI_DIGEST_EQUIVALENT_KEY_VALUE_SEQUENCES,
             abi_serializer = "bincode",
+            test_roundtrip = "eq_and_wire",
         )
     )]
     struct TestEquivalentBTreeMapVsVecBincode {
@@ -654,7 +674,7 @@ mod tests {
 
     // do not remove the constraint as the expected abi_digest was calculated 64 bit little endian
     #[cfg(target_pointer_width = "64")]
-    #[derive(Debug, wincode::SchemaWrite)]
+    #[derive(PartialEq, wincode::SchemaWrite, wincode::SchemaRead)]
     #[cfg_attr(
         feature = "frozen-abi",
         derive(
@@ -664,6 +684,7 @@ mod tests {
         solana_frozen_abi_macro::frozen_abi(
             abi_digest = "Yfy4agydqEFuudgHJ497PHPNjbSmEDywbjRuQExv8mV",
             abi_serializer = "wincode",
+            test_roundtrip = "eq_and_wire",
         )
     )]
     struct TestPlatformDependent {
@@ -676,7 +697,7 @@ mod tests {
         g: Option<AliasIsize>,
     }
 
-    #[derive(Debug, wincode::SchemaWrite)]
+    #[derive(PartialEq, wincode::SchemaWrite, wincode::SchemaRead)]
     #[cfg_attr(
         feature = "frozen-abi",
         derive(
@@ -686,6 +707,7 @@ mod tests {
         solana_frozen_abi_macro::frozen_abi(
             abi_digest = "B4hSLevsio8KgQrkzAiQefJ181pYLbKS8qdvtjhy6LGz",
             abi_serializer = "wincode",
+            test_roundtrip = "eq_and_wire",
         )
     )]
     struct TestTuples {
@@ -703,7 +725,7 @@ mod tests {
         l: (u8, u8, u8, u8, u8, u8, u8, u8, u8, u8, u8, u8),
     }
 
-    #[derive(Debug, wincode::SchemaWrite)]
+    #[derive(PartialEq, wincode::SchemaWrite, wincode::SchemaRead)]
     #[cfg_attr(
         feature = "frozen-abi",
         derive(
@@ -713,6 +735,7 @@ mod tests {
         solana_frozen_abi_macro::frozen_abi(
             abi_digest = "58FbcqrJoX4TQC3i9eMUxc6fqPBqbzwxZ5ZkNyUYQYzR",
             abi_serializer = "wincode",
+            test_roundtrip = "eq_and_wire",
         )
     )]
     struct TestNonZero {
@@ -721,7 +744,7 @@ mod tests {
         c: NonZero<i16>,
     }
 
-    #[derive(Debug, wincode::SchemaWrite)]
+    #[derive(PartialEq, wincode::SchemaWrite, wincode::SchemaRead)]
     #[cfg_attr(
         feature = "frozen-abi",
         derive(
@@ -731,6 +754,7 @@ mod tests {
         solana_frozen_abi_macro::frozen_abi(
             abi_digest = "2Qrf3xihSoFBSv49eVXhw2vkHDmfDfwfTKArszJuhKmz",
             abi_serializer = "wincode",
+            test_roundtrip = "eq_and_wire",
         )
     )]
     struct TestWrapContainers {
@@ -740,8 +764,7 @@ mod tests {
         d: std::marker::PhantomData<u64>,
         e: Result<u64, bool>,
     }
-
-    #[derive(Debug, wincode::SchemaWrite)]
+    #[derive(wincode::SchemaWrite, wincode::SchemaRead)]
     #[cfg_attr(
         feature = "frozen-abi",
         derive(
@@ -751,6 +774,7 @@ mod tests {
         solana_frozen_abi_macro::frozen_abi(
             abi_digest = "ENF1otBEp2hAgjwMZoQmgB46JroZMEwwRDKYsCJxapHQ",
             abi_serializer = "wincode",
+            test_roundtrip = "wire_only",
         )
     )]
     struct TestNet {
@@ -763,7 +787,7 @@ mod tests {
     }
     macro_rules! mk_stable_abi_sample_with_from_macro_rules {
         ({ $($body:tt)* }) => {
-            #[derive(wincode::SchemaWrite)]
+            #[derive(PartialEq, wincode::SchemaWrite, wincode::SchemaRead)]
             #[cfg_attr(
                 feature = "frozen-abi",
                 derive(
@@ -773,6 +797,7 @@ mod tests {
                 solana_frozen_abi_macro::frozen_abi(
                     abi_digest = "33q22jGb8M6yo7fWeZvMoSUJBAoBEf4w2VQpjwXuHVXM",
                     abi_serializer = "wincode",
+                    test_roundtrip = "eq_and_wire",
                 )
             )]
             struct TestStableAbiSampleWithFromMacroRules {
@@ -789,7 +814,7 @@ mod tests {
     type AliasHashMap = HashMap<u8, u128>;
     type AliasVecDeque = VecDeque<i16>;
 
-    #[derive(Debug, wincode::SchemaWrite)]
+    #[derive(PartialEq, wincode::SchemaWrite, wincode::SchemaRead)]
     #[cfg_attr(
         feature = "frozen-abi",
         derive(
@@ -799,6 +824,7 @@ mod tests {
         solana_frozen_abi_macro::frozen_abi(
             abi_digest = "hsD1Hmwbrwnfw4rdiBospgofHtJTftbN9vHUGXf7N2t",
             abi_serializer = "wincode",
+            test_roundtrip = "eq_and_wire",
         )
     )]
     struct TestCollectionsDerive {
@@ -823,9 +849,9 @@ mod tests {
         ) => {
             mod sequence_sample_test_types {
                 macro_rules! test_types {
-                    ($derive:path, $serializer:literal) => {
+                    ($derives:tt, $serializer:literal) => {
                         $($(
-                            #[derive($derive)]
+                            #[derive $derives]
                             #[cfg_attr(
                                 feature = "frozen-abi",
                                 derive(
@@ -835,14 +861,15 @@ mod tests {
                                 solana_frozen_abi_macro::frozen_abi(
                                     abi_digest = $abi_digest,
                                     abi_serializer = $serializer,
+                                    test_roundtrip = "eq_and_wire",
                                 )
                             )]
                             struct $struct_name { $($body)* }
                         )+)+
                     };
                 }
-                mod wincode {use super::super::*; test_types!(wincode::SchemaWrite, "wincode");}
-                mod bincode {use super::super::*; test_types!(serde_derive::Serialize, "bincode");}
+                mod wincode {use super::super::*; test_types!((PartialEq, wincode::SchemaWrite, wincode::SchemaRead), "wincode");}
+                mod bincode {use super::super::*; test_types!((PartialEq, serde_derive::Serialize, serde_derive::Deserialize), "bincode");}
             }
         };
     }
@@ -976,7 +1003,7 @@ mod tests {
     );
 
     const ARRAY_LEN: usize = 1;
-    #[derive(wincode::SchemaWrite)]
+    #[derive(PartialEq, wincode::SchemaWrite, wincode::SchemaRead)]
     #[cfg_attr(
         feature = "frozen-abi",
         derive(
@@ -988,7 +1015,7 @@ mod tests {
         a: [I; ARRAY_LEN],
     }
 
-    #[derive(wincode::SchemaWrite)]
+    #[derive(PartialEq, wincode::SchemaWrite, wincode::SchemaRead)]
     #[cfg_attr(
         feature = "frozen-abi",
         derive(
@@ -1004,7 +1031,7 @@ mod tests {
 
     type More = (bool, u64, usize, Option<usize>);
 
-    #[derive(wincode::SchemaWrite)]
+    #[derive(PartialEq, wincode::SchemaWrite, wincode::SchemaRead)]
     #[cfg_attr(
         feature = "frozen-abi",
         derive(
@@ -1013,11 +1040,69 @@ mod tests {
         ),
         solana_frozen_abi_macro::frozen_abi(
             abi_digest = "z3Tk2mbrbe6j266gAp6Eo9D9Z5NgvxFQRVHvyJEubrv",
-            abi_serializer = "wincode"
+            abi_serializer = "wincode",
+            test_roundtrip = "eq_and_wire",
         )
     )]
     struct TestNestedGenericBounds {
         a: TestGenericArrayWrapper<([u8; 32], u64, u64)>,
         b: TestGenericArrayWrapperMore<([u8; 32], u64, u64), More>,
+    }
+
+    // do not add missing wincode::SchemaRead to this type
+    #[derive(wincode::SchemaWrite)]
+    #[cfg_attr(
+        feature = "frozen-abi",
+        derive(
+            solana_frozen_abi_macro::StableAbi,
+            solana_frozen_abi_macro::StableAbiSample
+        ),
+        solana_frozen_abi_macro::frozen_abi(
+            abi_digest = "ErVp1LhW4wAyXr8KudiFF9DpT3ZuGx8mWBeT5mXnCn8m",
+            abi_serializer = "wincode",
+            test_roundtrip = "no",
+        )
+    )]
+    struct TestRoundtripSkip {
+        a: u8,
+        b: bool,
+        c: Option<Vec<u16>>,
+    }
+
+    #[derive(wincode::SchemaWrite, wincode::SchemaRead)]
+    #[cfg_attr(
+        feature = "frozen-abi",
+        derive(
+            solana_frozen_abi_macro::StableAbi,
+            solana_frozen_abi_macro::StableAbiSample
+        ),
+        solana_frozen_abi_macro::frozen_abi(
+            abi_digest = "ErVp1LhW4wAyXr8KudiFF9DpT3ZuGx8mWBeT5mXnCn8m",
+            abi_serializer = "wincode",
+            test_roundtrip = "wire_only",
+        )
+    )]
+    struct TestRoundtripWireOnly {
+        a: u8,
+        b: bool,
+        c: Option<Vec<u16>>,
+    }
+
+    #[derive(wincode::SchemaWrite, wincode::SchemaRead)]
+    #[cfg_attr(
+        feature = "frozen-abi",
+        derive(
+            solana_frozen_abi_macro::StableAbi,
+            solana_frozen_abi_macro::StableAbiSample
+        ),
+        solana_frozen_abi_macro::frozen_abi(
+            abi_digest = "ErVp1LhW4wAyXr8KudiFF9DpT3ZuGx8mWBeT5mXnCn8m",
+            abi_serializer = "wincode",
+        )
+    )]
+    struct TestRoundtripWireOnlyByDefault {
+        a: u8,
+        b: bool,
+        c: Option<Vec<u16>>,
     }
 }
