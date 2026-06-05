@@ -14,7 +14,7 @@ use {
     },
 };
 
-const DEFAULT_COLLECTION_MAX_SAMPLE_LEN: usize = 5;
+pub(crate) const DEFAULT_COLLECTION_MAX_SAMPLE_LEN: usize = 5;
 const DEFAULT_COLLECTION_MAX_SAMPLE_LEN_NON_DETERMINISTIC_ORDER: usize = 1;
 
 macro_rules! impl_stable_abi_via_standard_uniform {
@@ -353,7 +353,7 @@ mod tests {
     use {
         crate::stable_abi::context::{SequenceLenMax, SequenceLenRange},
         core::num::NonZero,
-        std::collections::{BTreeMap, BTreeSet, HashMap, HashSet, VecDeque},
+        std::collections::{BTreeMap, BTreeSet, HashMap, HashSet, LinkedList, VecDeque},
     };
 
     const ABI_SHARED_WINCODE_VS_BINCODE: &str = "AgNkEpErnFBuy7iTAEUUAC1fbvokEkhbsfFnx4DtXAvY";
@@ -788,7 +788,6 @@ mod tests {
         e: std::net::SocketAddrV6,
         f: std::net::SocketAddr,
     }
-
     macro_rules! mk_stable_abi_sample_with_from_macro_rules {
         ({ $($body:tt)* }) => {
             #[derive(wincode::SchemaWrite)]
@@ -895,6 +894,18 @@ mod tests {
                     #[stable_abi_sample(ctx = SequenceLenMax(5))]
                     a: VecDeque<u8>,
                 },
+                // `LinkedList` has no dedicated `StableAbi` impl; exercise the
+                // sampling helpers on it as an arbitrary `FromIterator` collection.
+                struct MultiElementsLinkedListDefault {
+                    #[stable_abi_sample(with = "crate::stable_abi::sample_collection(rng)")]
+                    a: LinkedList<u8>,
+                },
+                struct MultiElementsLinkedListSized {
+                    #[stable_abi_sample(
+                        with = "crate::stable_abi::sample_collection_sized(rng, SequenceLenMax(5))"
+                    )]
+                    a: LinkedList<u8>,
+                },
             ],
             "7dXyMka1Z72sENE9vva8vmE65F7y6kXZKQ2DHu9aTWyz" => [
                 struct UpToOneElementWith {
@@ -929,6 +940,12 @@ mod tests {
                     #[stable_abi_sample(ctx = SequenceLenMax(1))]
                     a: BTreeMap<u8, ()>,
                 },
+                struct UpToOneElementLinkedListSized {
+                    #[stable_abi_sample(
+                        with = "crate::stable_abi::sample_collection_sized(rng, SequenceLenMax(1))"
+                    )]
+                    a: LinkedList<u8>,
+                },
             ],
             "Du8dTBApdeSxYTQVprkbMGvc5dLgCfUKKZ2z63qqr5Bj" => [
                 struct UpToOneKeyValueHashMapWith {
@@ -949,6 +966,12 @@ mod tests {
                     #[stable_abi_sample(ctx = SequenceLenMax(1))]
                     a: BTreeMap<u8, u16>,
                 },
+                struct UpToOneKeyValueLinkedListSized {
+                    #[stable_abi_sample(
+                        with = "crate::stable_abi::sample_collection_sized(rng, SequenceLenMax(1))"
+                    )]
+                    a: LinkedList<(u8, u16)>,
+                },
             ],
             "57dywdByMU7XcWbsfnXY5ChZdqne57zjJCn7uEjDKGNc" => [
                 struct UpToOneKeyValueHashMapWithRange {
@@ -968,6 +991,12 @@ mod tests {
                 struct UpToOneKeyValueBTreeMapRange {
                     #[stable_abi_sample(ctx = SequenceLenRange::new(1..=1))]
                     a: BTreeMap<u8, u16>,
+                },
+                struct UpToOneKeyValueLinkedListRange {
+                    #[stable_abi_sample(
+                        with = "crate::stable_abi::sample_collection_sized(rng, SequenceLenRange::new(1..=1))"
+                    )]
+                    a: LinkedList<(u8, u16)>,
                 },
             ],
         ]
