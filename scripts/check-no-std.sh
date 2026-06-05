@@ -53,6 +53,7 @@ no_std_alloc_crates=(
   -p solana-instructions-sysvar
   -p solana-message
   -p solana-serialize-utils
+  -p solana-signer
   -p solana-short-vec
   -p solana-transaction
 )

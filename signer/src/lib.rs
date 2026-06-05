@@ -1,17 +1,26 @@
 //! Abstractions and implementations for transaction signers.
 #![cfg_attr(docsrs, feature(doc_cfg))]
+#![no_std]
+extern crate alloc;
+#[cfg(feature = "std")]
+extern crate std;
+
+#[cfg(feature = "std")]
 use {
-    core::fmt,
-    solana_pubkey::Pubkey,
-    solana_signature::Signature,
-    solana_transaction_error::TransactionError,
+    alloc::{boxed::Box, string::ToString},
     std::{
         error,
         fs::{self, File, OpenOptions},
         io::{Read, Write},
-        ops::Deref,
         path::Path,
     },
+};
+use {
+    alloc::{collections::BTreeSet, string::String, vec::Vec},
+    core::{fmt, ops::Deref},
+    solana_pubkey::Pubkey,
+    solana_signature::Signature,
+    solana_transaction_error::TransactionError,
 };
 
 pub mod null_signer;
@@ -154,21 +163,21 @@ impl PartialEq for dyn Signer {
 
 impl Eq for dyn Signer {}
 
-impl std::fmt::Debug for dyn Signer {
-    fn fmt(&self, fmt: &mut std::fmt::Formatter) -> std::fmt::Result {
+impl fmt::Debug for dyn Signer {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         write!(fmt, "Signer: {:?}", self.pubkey())
     }
 }
 
-/// Removes duplicate signers while preserving order. O(n²)
+/// Removes duplicate signers while preserving order. O(n log n)
 pub fn unique_signers(signers: Vec<&dyn Signer>) -> Vec<&dyn Signer> {
     let capacity = signers.len();
     let mut out = Vec::with_capacity(capacity);
-    let mut seen = std::collections::HashSet::with_capacity(capacity);
+    let mut seen = BTreeSet::new();
     for signer in signers {
         let pubkey = signer.pubkey();
-        if !seen.contains(&pubkey) {
-            seen.insert(pubkey);
+        let is_unique = seen.insert(pubkey);
+        if is_unique {
             out.push(signer);
         }
     }
@@ -177,6 +186,7 @@ pub fn unique_signers(signers: Vec<&dyn Signer>) -> Vec<&dyn Signer> {
 
 /// The `EncodableKey` trait defines the interface by which cryptographic keys/keypairs are read,
 /// written, and derived from sources.
+#[cfg(feature = "std")]
 pub trait EncodableKey: Sized {
     fn read<R: Read>(reader: &mut R) -> Result<Self, Box<dyn error::Error>>;
     fn read_from_file<F: AsRef<Path>>(path: F) -> Result<Self, Box<dyn error::Error>> {
@@ -213,6 +223,7 @@ pub trait EncodableKey: Sized {
 
 /// The `EncodableKeypair` trait extends `EncodableKey` for asymmetric keypairs, i.e. have
 /// associated public keys.
+#[cfg(feature = "std")]
 pub trait EncodableKeypair: EncodableKey {
     type Pubkey: ToString;
 

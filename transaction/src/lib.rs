@@ -117,7 +117,7 @@ extern crate std;
 
 #[cfg(feature = "frozen-abi")]
 use solana_frozen_abi_macro::{frozen_abi, AbiExample, StableAbi};
-#[cfg(all(feature = "wincode", feature = "std"))]
+#[cfg(feature = "wincode")]
 pub use solana_signer::{signers::Signers, SignerError};
 use {
     alloc::{vec, vec::Vec},
@@ -403,7 +403,7 @@ impl Transaction {
     /// #
     /// # Ok::<(), anyhow::Error>(())
     /// ```
-    #[cfg(all(feature = "wincode", feature = "std"))]
+    #[cfg(feature = "wincode")]
     pub fn new<T: Signers + ?Sized>(
         from_keypairs: &T,
         message: Message,
@@ -557,7 +557,7 @@ impl Transaction {
     /// #
     /// # Ok::<(), anyhow::Error>(())
     /// ```
-    #[cfg(all(feature = "wincode", feature = "std"))]
+    #[cfg(feature = "wincode")]
     pub fn new_signed_with_payer<T: Signers + ?Sized>(
         instructions: &[Instruction],
         payer: Option<&Address>,
@@ -583,7 +583,7 @@ impl Transaction {
     ///
     /// Panics when signing fails. See [`Transaction::try_sign`] and for a full
     /// description of failure conditions.
-    #[cfg(all(feature = "wincode", feature = "std"))]
+    #[cfg(feature = "wincode")]
     pub fn new_with_compiled_instructions<T: Signers + ?Sized>(
         from_keypairs: &T,
         keys: &[Address],
@@ -763,7 +763,7 @@ impl Transaction {
     /// #
     /// # Ok::<(), anyhow::Error>(())
     /// ```
-    #[cfg(all(feature = "wincode", feature = "std"))]
+    #[cfg(feature = "wincode")]
     pub fn sign<T: Signers + ?Sized>(&mut self, keypairs: &T, recent_blockhash: Hash) {
         if let Err(e) = self.try_sign(keypairs, recent_blockhash) {
             panic!("Transaction::sign failed with error {e:?}");
@@ -790,7 +790,7 @@ impl Transaction {
     /// handle the error. See the documentation for
     /// [`Transaction::try_partial_sign`] for a full description of failure
     /// conditions.
-    #[cfg(all(feature = "wincode", feature = "std"))]
+    #[cfg(feature = "wincode")]
     pub fn partial_sign<T: Signers + ?Sized>(&mut self, keypairs: &T, recent_blockhash: Hash) {
         if let Err(e) = self.try_partial_sign(keypairs, recent_blockhash) {
             panic!("Transaction::partial_sign failed with error {e:?}");
@@ -810,7 +810,7 @@ impl Transaction {
     ///
     /// Panics if signing fails. Use [`Transaction::try_partial_sign_unchecked`]
     /// to handle the error.
-    #[cfg(all(feature = "wincode", feature = "std"))]
+    #[cfg(feature = "wincode")]
     pub fn partial_sign_unchecked<T: Signers + ?Sized>(
         &mut self,
         keypairs: &T,
@@ -903,7 +903,7 @@ impl Transaction {
     /// #
     /// # Ok::<(), anyhow::Error>(())
     /// ```
-    #[cfg(all(feature = "wincode", feature = "std"))]
+    #[cfg(feature = "wincode")]
     pub fn try_sign<T: Signers + ?Sized>(
         &mut self,
         keypairs: &T,
@@ -967,7 +967,7 @@ impl Transaction {
     /// [`PresignerError::VerificationFailure`]: https://docs.rs/solana-signer/latest/solana_signer/enum.PresignerError.html#variant.WrongSize
     /// [`solana-remote-wallet`]: https://docs.rs/solana-remote-wallet/latest/
     /// [`RemoteKeypair`]: https://docs.rs/solana-remote-wallet/latest/solana_remote_wallet/remote_keypair/struct.RemoteKeypair.html
-    #[cfg(all(feature = "wincode", feature = "std"))]
+    #[cfg(feature = "wincode")]
     pub fn try_partial_sign<T: Signers + ?Sized>(
         &mut self,
         keypairs: &T,
@@ -994,7 +994,7 @@ impl Transaction {
     /// # Errors
     ///
     /// Returns an error if signing fails.
-    #[cfg(all(feature = "wincode", feature = "std"))]
+    #[cfg(feature = "wincode")]
     pub fn try_partial_sign_unchecked<T: Signers + ?Sized>(
         &mut self,
         keypairs: &T,

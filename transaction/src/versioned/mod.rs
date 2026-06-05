@@ -9,7 +9,7 @@ use {
     solana_sdk_ids::system_program,
     solana_signature::Signature,
 };
-#[cfg(all(feature = "wincode", feature = "std"))]
+#[cfg(feature = "wincode")]
 use {
     alloc::string::ToString,
     solana_signer::{signers::Signers, SignerError},
@@ -91,7 +91,7 @@ impl From<Transaction> for VersionedTransaction {
 impl VersionedTransaction {
     /// Signs a versioned message and if successful, returns a signed
     /// transaction.
-    #[cfg(all(feature = "wincode", feature = "std"))]
+    #[cfg(feature = "wincode")]
     pub fn try_new<T: Signers + ?Sized>(
         message: VersionedMessage,
         keypairs: &T,

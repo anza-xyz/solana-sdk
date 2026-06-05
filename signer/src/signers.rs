@@ -1,5 +1,6 @@
 use {
     crate::{Signer, SignerError},
+    alloc::vec::Vec,
     solana_pubkey::Pubkey,
     solana_signature::Signature,
 };
@@ -55,7 +56,10 @@ where
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use {
+        super::*,
+        alloc::{boxed::Box, vec},
+    };
 
     struct Foo;
     impl Signer for Foo {

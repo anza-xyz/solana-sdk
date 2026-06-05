@@ -318,7 +318,7 @@ solana-sha512-hasher = { path = "sha512-hasher", version = "1.0.1" }
 solana-short-vec = { path = "short-vec", version = "3.2.1", default-features = false }
 solana-shred-version = { path = "shred-version", version = "3.0.0" }
 solana-signature = { path = "signature", version = "3.4.1", default-features = false }
-solana-signer = { path = "signer", version = "3.0.0" }
+solana-signer = { path = "signer", version = "3.0.0", default-features = false }
 solana-signer-store = { path = "signer-store", version = "0.1.0" }
 solana-slot-hashes = { path = "slot-hashes", version = "3.0.2" }
 solana-slot-history = { path = "slot-history", version = "3.0.1" }
