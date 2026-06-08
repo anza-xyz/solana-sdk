@@ -1018,4 +1018,47 @@ mod tests {
         a: TestGenericArrayWrapper<([u8; 32], u64, u64)>,
         b: TestGenericArrayWrapperMore<([u8; 32], u64, u64), More>,
     }
+
+    const SKIP_VS_DEFAULT_DIGEST: &str = "3ond2XNeEMFqW5atfrgyVrjkzrAH8bkuK1NbsTVeUvVf";
+    #[derive(wincode::SchemaWrite)]
+    #[cfg_attr(
+        feature = "frozen-abi",
+        derive(
+            solana_frozen_abi_macro::StableAbi,
+            solana_frozen_abi_macro::StableAbiSample
+        ),
+        solana_frozen_abi_macro::frozen_abi(
+            abi_digest = SKIP_VS_DEFAULT_DIGEST,
+            abi_serializer = "wincode"
+        )
+    )]
+    struct TestSkipFieldSampling {
+        #[stable_abi_sample(skip)]
+        a: u64,
+        #[stable_abi_sample(skip)]
+        b: Vec<u64>,
+        #[stable_abi_sample(skip)]
+        c: Option<u64>,
+    }
+
+    #[derive(wincode::SchemaWrite)]
+    #[cfg_attr(
+        feature = "frozen-abi",
+        derive(
+            solana_frozen_abi_macro::StableAbi,
+            solana_frozen_abi_macro::StableAbiSample
+        ),
+        solana_frozen_abi_macro::frozen_abi(
+            abi_digest = SKIP_VS_DEFAULT_DIGEST,
+            abi_serializer = "wincode"
+        )
+    )]
+    struct TestDefaultFieldSampling {
+        #[stable_abi_sample(with = "u64::default()")]
+        a: u64,
+        #[stable_abi_sample(with = "Vec::default()")]
+        b: Vec<u64>,
+        #[stable_abi_sample(with = "Option::default()")]
+        c: Option<u64>,
+    }
 }
