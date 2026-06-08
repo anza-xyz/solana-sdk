@@ -1102,4 +1102,45 @@ mod tests {
         b: bool,
         c: Option<Vec<u16>>,
     }
+
+    #[derive(Default, wincode::SchemaWrite, wincode::SchemaRead)]
+    struct TestSkippedFieldWithoutStableAbi;
+
+    const SKIP_VS_UNIT_DIGEST: &str = "8po7NHArG1np5zmKWjxaG5WzZwDz8uzZRr4u3WJ8LDuX";
+    #[derive(wincode::SchemaWrite, wincode::SchemaRead)]
+    #[cfg_attr(
+        feature = "frozen-abi",
+        derive(
+            solana_frozen_abi_macro::StableAbi,
+            solana_frozen_abi_macro::StableAbiSample
+        ),
+        solana_frozen_abi_macro::frozen_abi(
+            abi_digest = SKIP_VS_UNIT_DIGEST,
+            abi_serializer = "wincode",
+        )
+    )]
+    struct TestSkipFieldSampling {
+        a: u64,
+        #[stable_abi_sample(skip)]
+        b: TestSkippedFieldWithoutStableAbi,
+        c: bool,
+    }
+
+    #[derive(wincode::SchemaWrite, wincode::SchemaRead)]
+    #[cfg_attr(
+        feature = "frozen-abi",
+        derive(
+            solana_frozen_abi_macro::StableAbi,
+            solana_frozen_abi_macro::StableAbiSample
+        ),
+        solana_frozen_abi_macro::frozen_abi(
+            abi_digest = SKIP_VS_UNIT_DIGEST,
+            abi_serializer = "wincode",
+        )
+    )]
+    struct TestUnitFieldSampling {
+        a: u64,
+        b: (),
+        c: bool,
+    }
 }

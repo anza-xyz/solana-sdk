@@ -236,12 +236,14 @@ fn filter_allow_attrs(attrs: &mut Vec<Attribute>) {
 struct StableAbiSampleOptions {
     with_expr: Option<TokenStream2>,
     ctx_expr: Option<TokenStream2>,
+    skip: bool,
 }
 
 #[cfg(feature = "frozen-abi")]
 fn parse_stable_abi_sample_options(field: &syn::Field) -> Result<StableAbiSampleOptions, Error> {
     let mut with_expr: Option<TokenStream2> = None;
     let mut ctx_expr: Option<TokenStream2> = None;
+    let mut skip = false;
     for attr in &field.attrs {
         if !attr.path().is_ident("stable_abi_sample") {
             continue;
@@ -266,22 +268,30 @@ fn parse_stable_abi_sample_options(field: &syn::Field) -> Result<StableAbiSample
                 let expr = meta.value()?.parse::<Expr>()?;
                 ctx_expr = Some(quote! { #expr });
                 Ok(())
+            } else if meta.path.is_ident("skip") {
+                // reject duplicate `skip` on the same field
+                if skip {
+                    return Err(meta.error("duplicate `skip` in `#[stable_abi_sample(...)]`"));
+                }
+                skip = true;
+                Ok(())
             } else {
                 Err(meta.error(
-                    "unsupported `stable_abi_sample` option; expected `with = \"...\"` or `ctx = <expr>`",
+                    "unsupported `stable_abi_sample` option; expected `with`, `ctx`, or `skip`",
                 ))
             }
         })?;
     }
-    if with_expr.is_some() && ctx_expr.is_some() {
+    if with_expr.is_some() && ctx_expr.is_some() && skip {
         return Err(Error::new_spanned(
             field,
-            "cannot combine `with` and `ctx` in `#[stable_abi_sample(...)]`",
+            "cannot combine `with`, `ctx` or `skip` in `#[stable_abi_sample(...)]`",
         ));
     }
     Ok(StableAbiSampleOptions {
         with_expr,
         ctx_expr,
+        skip,
     })
 }
 
@@ -289,21 +299,30 @@ fn parse_stable_abi_sample_options(field: &syn::Field) -> Result<StableAbiSample
 fn stable_abi_sample_field_expr(field: &syn::Field) -> Result<TokenStream2, Error> {
     let options = parse_stable_abi_sample_options(field)?;
     let ty = &field.ty;
-    Ok(match (options.with_expr, options.ctx_expr) {
-        (Some(expr), None) => expr,
-        (None, Some(ctx_expr)) => quote! {
+
+    match (options.with_expr, options.ctx_expr, options.skip) {
+        (Some(expr), None, false) => Ok(expr),
+
+        (None, Some(ctx_expr), false) => Ok(quote! {
             <#ty as ::solana_frozen_abi::stable_abi::StableAbi<_>>::random_with_context(
                 rng,
                 #ctx_expr,
             )
-        },
-        (None, None) => {
-            quote! {
-                <#ty as ::solana_frozen_abi::stable_abi::StableAbi>::random(rng)
-            }
-        }
-        (Some(_), Some(_)) => unreachable!("`with` and `ctx` are mutually exclusive"),
-    })
+        }),
+
+        (None, None, true) => Ok(quote! {
+            ::core::default::Default::default()
+        }),
+
+        (None, None, false) => Ok(quote! {
+            <#ty as ::solana_frozen_abi::stable_abi::StableAbi>::random(rng)
+        }),
+
+        _ => Err(Error::new_spanned(
+            field,
+            "`with`, `ctx`, and `skip` are mutually exclusive",
+        )),
+    }
 }
 
 #[cfg(feature = "frozen-abi")]

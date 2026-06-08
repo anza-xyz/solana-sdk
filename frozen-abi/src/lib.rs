@@ -98,6 +98,17 @@
 //! }
 //! ```
 //!
+//! `skip` is useful for fields that should be sampled as `Default::default()`:
+//!
+//! ```rust,ignore
+//! #[derive(StableAbi, StableAbiSample)]
+//! #[frozen_abi(abi_digest = "...")]
+//! struct MyTypeWithSkippedFields {
+//!     #[stable_abi_sample(skip)]
+//!     a: Option<u64>,
+//! }
+//! ```
+//!
 //! 2. Write a manual `Distribution` implementation
 //!
 //! ```rust,ignore
