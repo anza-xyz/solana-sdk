@@ -196,10 +196,6 @@ where
 mod tests {
     use super::*;
 
-    impl Nullable for u64 {
-        const NONE: Self = 0;
-    }
-
     #[test]
     fn test_try_from_option() {
         let some = Some(42u64);
