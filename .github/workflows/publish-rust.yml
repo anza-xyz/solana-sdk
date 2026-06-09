@@ -218,10 +218,18 @@ jobs:
     permissions:
       contents: write
     steps:
+      - name: Generate app token
+        if: github.event.inputs.dry_run != 'true'
+        id: app-token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1  # v3.2.0
+        with:
+          client-id: ${{ vars.CLIENT_ID }}
+          private-key: ${{ secrets.PRIVATE_KEY }}
+
       - name: Git Checkout
         uses: actions/checkout@v4
         with:
-          token: ${{ secrets.ANZA_TEAM_PAT }}
+          token: ${{ inputs.dry_run && github.token || steps.app-token.outputs.token }}
           fetch-depth: 0 # get the whole history for git-cliff
 
       - name: Setup Environment
@@ -247,8 +255,16 @@ jobs:
 
       - name: Set Git Author
         run: |
-          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git config --global user.name "github-actions[bot]"
+          if [ "${{ inputs.dry_run }}" == "true" ]; then
+            git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git config --global user.name "github-actions[bot]"
+          else
+            git config --global user.email "${APP_ID}+${APP_SLUG}[bot]@users.noreply.github.com"
+            git config --global user.name "${APP_SLUG}[bot]"
+          fi
+        env:
+          APP_ID: ${{ vars.APP_ID }}
+          APP_SLUG: ${{ steps.app-token.outputs.app-slug }}
 
       - name: Rebase (in case any changes landed after)
         run: git pull --rebase origin
@@ -288,3 +304,4 @@ jobs:
         with:
           tag: ${{ steps.publish.outputs.new_git_tag }}
           bodyFile: TEMP_CHANGELOG.md
+          token: ${{ steps.app-token.outputs.token }}
