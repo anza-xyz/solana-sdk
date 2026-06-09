@@ -200,23 +200,77 @@ impl<I> CircBuf<I> {
     }
 }
 
+/// Shared helpers for the compact wire format used by
+/// [`serde_compact_vote_state_update`] and [`serde_tower_sync`]: lockout slots
+/// are stored as varint offsets relative to the previous slot (or the root).
 #[cfg(feature = "serde")]
-pub mod serde_compact_vote_state_update {
-    use {
-        super::*,
-        crate::state::Lockout,
-        serde::{Deserialize, Deserializer, Serialize, Serializer},
-        solana_hash::Hash,
-        solana_serde_varint as serde_varint, solana_short_vec as short_vec,
-    };
+mod compact {
+    #[cfg(feature = "frozen-abi")]
+    use solana_frozen_abi_macro::{AbiExample, StableAbi, StableAbiSample};
+    use {super::Lockout, solana_clock::Slot, std::collections::VecDeque};
 
     #[cfg_attr(feature = "frozen-abi", derive(AbiExample, StableAbi, StableAbiSample))]
     #[derive(serde_derive::Deserialize, serde_derive::Serialize)]
-    struct LockoutOffset {
-        #[serde(with = "serde_varint")]
+    pub(super) struct LockoutOffset {
+        #[serde(with = "solana_serde_varint")]
         offset: Slot,
         confirmation_count: u8,
     }
+
+    /// Convert a tower's absolute lockout slots into the relative, delta-encoded
+    /// offsets used by the compact wire format. The returned error message is
+    /// mapped to the caller's error type.
+    pub(super) fn lockout_offsets(
+        lockouts: &VecDeque<Lockout>,
+        root: Option<Slot>,
+    ) -> Result<Vec<LockoutOffset>, &'static str> {
+        let mut offsets = Vec::with_capacity(lockouts.len());
+        let mut slot = root.unwrap_or_default();
+        for lockout in lockouts {
+            let offset = lockout
+                .slot()
+                .checked_sub(slot)
+                .ok_or("Invalid vote lockout")?;
+            let confirmation_count = u8::try_from(lockout.confirmation_count())
+                .map_err(|_| "Invalid confirmation count")?;
+            offsets.push(LockoutOffset {
+                offset,
+                confirmation_count,
+            });
+            slot = lockout.slot();
+        }
+        Ok(offsets)
+    }
+
+    /// Reconstruct the absolute lockouts from the relative offsets stored in the
+    /// compact wire format. Inverse of [`lockout_offsets`].
+    pub(super) fn lockouts_from_offsets(
+        lockout_offsets: &[LockoutOffset],
+        root: Option<Slot>,
+    ) -> Result<VecDeque<Lockout>, &'static str> {
+        let mut lockouts = VecDeque::with_capacity(lockout_offsets.len());
+        let mut slot = root.unwrap_or_default();
+        for lockout_offset in lockout_offsets {
+            slot = slot
+                .checked_add(lockout_offset.offset)
+                .ok_or("Invalid lockout offset")?;
+            lockouts.push_back(Lockout::new_with_confirmation_count(
+                slot,
+                u32::from(lockout_offset.confirmation_count),
+            ));
+        }
+        Ok(lockouts)
+    }
+}
+
+#[cfg(feature = "serde")]
+pub mod serde_compact_vote_state_update {
+    use {
+        super::{compact, compact::LockoutOffset, *},
+        serde::{Deserialize, Deserializer, Serialize, Serializer},
+        solana_hash::Hash,
+        solana_short_vec as short_vec,
+    };
 
     #[derive(serde_derive::Deserialize, serde_derive::Serialize)]
     struct CompactVoteStateUpdate {
@@ -234,26 +288,13 @@ pub mod serde_compact_vote_state_update {
     where
         S: Serializer,
     {
-        let lockout_offsets = vote_state_update.lockouts.iter().scan(
-            vote_state_update.root.unwrap_or_default(),
-            |slot, lockout| {
-                let Some(offset) = lockout.slot().checked_sub(*slot) else {
-                    return Some(Err(serde::ser::Error::custom("Invalid vote lockout")));
-                };
-                let Ok(confirmation_count) = u8::try_from(lockout.confirmation_count()) else {
-                    return Some(Err(serde::ser::Error::custom("Invalid confirmation count")));
-                };
-                let lockout_offset = LockoutOffset {
-                    offset,
-                    confirmation_count,
-                };
-                *slot = lockout.slot();
-                Some(Ok(lockout_offset))
-            },
-        );
         let compact_vote_state_update = CompactVoteStateUpdate {
             root: vote_state_update.root.unwrap_or(Slot::MAX),
-            lockout_offsets: lockout_offsets.collect::<Result<_, _>>()?,
+            lockout_offsets: compact::lockout_offsets(
+                &vote_state_update.lockouts,
+                vote_state_update.root,
+            )
+            .map_err(serde::ser::Error::custom)?,
             hash: Hash::new_from_array(vote_state_update.hash.to_bytes()),
             timestamp: vote_state_update.timestamp,
         };
@@ -271,25 +312,10 @@ pub mod serde_compact_vote_state_update {
             timestamp,
         } = CompactVoteStateUpdate::deserialize(deserializer)?;
         let root = (root != Slot::MAX).then_some(root);
-        let lockouts =
-            lockout_offsets
-                .iter()
-                .scan(root.unwrap_or_default(), |slot, lockout_offset| {
-                    *slot = match slot.checked_add(lockout_offset.offset) {
-                        None => {
-                            return Some(Err(serde::de::Error::custom("Invalid lockout offset")))
-                        }
-                        Some(slot) => slot,
-                    };
-                    let lockout = Lockout::new_with_confirmation_count(
-                        *slot,
-                        u32::from(lockout_offset.confirmation_count),
-                    );
-                    Some(Ok(lockout))
-                });
         Ok(VoteStateUpdate {
             root,
-            lockouts: lockouts.collect::<Result<_, _>>()?,
+            lockouts: compact::lockouts_from_offsets(&lockout_offsets, root)
+                .map_err(serde::de::Error::custom)?,
             hash,
             timestamp,
         })
@@ -299,20 +325,11 @@ pub mod serde_compact_vote_state_update {
 #[cfg(feature = "serde")]
 pub mod serde_tower_sync {
     use {
-        super::*,
-        crate::state::Lockout,
+        super::{compact, compact::LockoutOffset, *},
         serde::{Deserialize, Deserializer, Serialize, Serializer},
         solana_hash::Hash,
-        solana_serde_varint as serde_varint, solana_short_vec as short_vec,
+        solana_short_vec as short_vec,
     };
-
-    #[cfg_attr(feature = "frozen-abi", derive(AbiExample, StableAbi, StableAbiSample))]
-    #[derive(serde_derive::Deserialize, serde_derive::Serialize)]
-    struct LockoutOffset {
-        #[serde(with = "serde_varint")]
-        offset: Slot,
-        confirmation_count: u8,
-    }
 
     #[derive(serde_derive::Deserialize, serde_derive::Serialize)]
     struct CompactTowerSync {
@@ -328,26 +345,10 @@ pub mod serde_tower_sync {
     where
         S: Serializer,
     {
-        let lockout_offsets = tower_sync.lockouts.iter().scan(
-            tower_sync.root.unwrap_or_default(),
-            |slot, lockout| {
-                let Some(offset) = lockout.slot().checked_sub(*slot) else {
-                    return Some(Err(serde::ser::Error::custom("Invalid vote lockout")));
-                };
-                let Ok(confirmation_count) = u8::try_from(lockout.confirmation_count()) else {
-                    return Some(Err(serde::ser::Error::custom("Invalid confirmation count")));
-                };
-                let lockout_offset = LockoutOffset {
-                    offset,
-                    confirmation_count,
-                };
-                *slot = lockout.slot();
-                Some(Ok(lockout_offset))
-            },
-        );
         let compact_tower_sync = CompactTowerSync {
             root: tower_sync.root.unwrap_or(Slot::MAX),
-            lockout_offsets: lockout_offsets.collect::<Result<_, _>>()?,
+            lockout_offsets: compact::lockout_offsets(&tower_sync.lockouts, tower_sync.root)
+                .map_err(serde::ser::Error::custom)?,
             hash: Hash::new_from_array(tower_sync.hash.to_bytes()),
             timestamp: tower_sync.timestamp,
             block_id: Hash::new_from_array(tower_sync.block_id.to_bytes()),
@@ -367,25 +368,10 @@ pub mod serde_tower_sync {
             block_id,
         } = CompactTowerSync::deserialize(deserializer)?;
         let root = (root != Slot::MAX).then_some(root);
-        let lockouts =
-            lockout_offsets
-                .iter()
-                .scan(root.unwrap_or_default(), |slot, lockout_offset| {
-                    *slot = match slot.checked_add(lockout_offset.offset) {
-                        None => {
-                            return Some(Err(serde::de::Error::custom("Invalid lockout offset")))
-                        }
-                        Some(slot) => slot,
-                    };
-                    let lockout = Lockout::new_with_confirmation_count(
-                        *slot,
-                        u32::from(lockout_offset.confirmation_count),
-                    );
-                    Some(Ok(lockout))
-                });
         Ok(TowerSync {
             root,
-            lockouts: lockouts.collect::<Result<_, _>>()?,
+            lockouts: compact::lockouts_from_offsets(&lockout_offsets, root)
+                .map_err(serde::de::Error::custom)?,
             hash,
             timestamp,
             block_id,
