@@ -128,6 +128,24 @@
 //! }
 //! ```
 //!
+//! `abi_serializer` also accepts a list of serializers. This is useful for a type that is
+//! serialized with both `bincode` and `wincode`: the ABI is digested with each serializer and
+//! all of them must agree on the shared `abi_digest`. A separate test is generated per serializer
+//! (`test_abi_digest_bincode`, `test_abi_digest_wincode`).
+//!
+//! ```rust,ignore
+//! #[derive(StableAbi, StableAbiSample, serde_derive::Serialize, wincode::SchemaWrite)]
+//! #[frozen_abi(
+//!     api_digest = "...",
+//!     abi_digest = "...",
+//!     abi_serializer = ["bincode", "wincode"],
+//! )]
+//! struct MySharedType {
+//!     a: u64,
+//!     b: bool,
+//! }
+//! ```
+//!
 //! ## Edge Cases
 //!
 //! 1. It will not detect field name or order changes, nor same size type swaps (e.g., `i64`

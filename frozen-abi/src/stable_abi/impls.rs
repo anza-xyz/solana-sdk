@@ -357,8 +357,10 @@ mod tests {
     };
 
     const ABI_SHARED_WINCODE_VS_BINCODE: &str = "AgNkEpErnFBuy7iTAEUUAC1fbvokEkhbsfFnx4DtXAvY";
-    const API_WINCODE: &str = "2cJjhqi4hsJ3Y5HeT8fYE6YzDPdWnKAmbVHcw75rG1ky";
-    const API_BINCODE: &str = "ARDLdidYVUVVNNHgHx1Uf8Ec2dDdDyYAzNsAtm4oB494";
+    const API_SHARED_SERIALIZERS: &str = "CKtY7bQJ1TMwbRQA93kKfaUMA3FjHSnvyWiuRQTvfhRh";
+    // A single type whose ABI is digested with both `bincode` and `wincode`,
+    // which must agree on the shared digest. Each serializer gets its own
+    // generated test (`test_abi_digest_bincode` / `test_abi_digest_wincode`).
     #[derive(Debug, serde_derive::Serialize, wincode::SchemaWrite)]
     #[cfg_attr(
                 feature = "frozen-abi",
@@ -367,52 +369,23 @@ mod tests {
                     solana_frozen_abi_macro::StableAbi
                 ),
                 solana_frozen_abi_macro::frozen_abi(
-                    api_digest = API_WINCODE,
+                    api_digest = API_SHARED_SERIALIZERS,
                     abi_digest = ABI_SHARED_WINCODE_VS_BINCODE,
-                    abi_serializer = "wincode",
+                    abi_serializer = ["bincode", "wincode"],
                 )
             )]
-    struct TestStructWincode {
+    struct TestStructSharedSerializers {
         a: u64,
         b: bool,
         c: [u8; 32],
         d: (u8, u8),
     }
 
-    impl crate::rand::distr::Distribution<TestStructWincode> for crate::rand::distr::StandardUniform {
-        fn sample<R: crate::rand::Rng + ?Sized>(&self, rng: &mut R) -> TestStructWincode {
-            TestStructWincode {
-                a: rng.random(),
-                b: rng.random(),
-                c: rng.random(),
-                d: rng.random(),
-            }
-        }
-    }
-
-    #[derive(Debug, serde_derive::Serialize)]
-    #[cfg_attr(
-                feature = "frozen-abi",
-                derive(
-                    solana_frozen_abi_macro::AbiExample,
-                    solana_frozen_abi_macro::StableAbi
-                ),
-                solana_frozen_abi_macro::frozen_abi(
-                    api_digest = API_BINCODE,
-                    abi_digest = ABI_SHARED_WINCODE_VS_BINCODE,
-                    abi_serializer = "bincode",
-                )
-            )]
-    struct TestStructBincode {
-        a: u64,
-        b: bool,
-        c: [u8; 32],
-        d: (u8, u8),
-    }
-
-    impl crate::rand::distr::Distribution<TestStructBincode> for crate::rand::distr::StandardUniform {
-        fn sample<R: crate::rand::Rng + ?Sized>(&self, rng: &mut R) -> TestStructBincode {
-            TestStructBincode {
+    impl crate::rand::distr::Distribution<TestStructSharedSerializers>
+        for crate::rand::distr::StandardUniform
+    {
+        fn sample<R: crate::rand::Rng + ?Sized>(&self, rng: &mut R) -> TestStructSharedSerializers {
+            TestStructSharedSerializers {
                 a: rng.random(),
                 b: rng.random(),
                 c: rng.random(),

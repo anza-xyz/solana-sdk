@@ -90,14 +90,87 @@ use proc_macro2::{Span, TokenStream as TokenStream2, TokenTree};
 use quote::{quote, ToTokens};
 #[cfg(feature = "frozen-abi")]
 use syn::{
-    parse_macro_input, Attribute, Error, Expr, Fields, Ident, Item, ItemEnum, ItemStruct, ItemType,
-    LitStr, Variant,
+    parse_macro_input, Attribute, Error, Expr, ExprLit, Fields, Ident, Item, ItemEnum, ItemStruct,
+    ItemType, Lit, LitStr, Variant,
 };
 
 #[cfg(feature = "frozen-abi")]
+#[derive(Clone, Copy)]
 enum AbiSerializer {
     Bincode,
     Wincode,
+}
+
+#[cfg(feature = "frozen-abi")]
+impl AbiSerializer {
+    fn from_lit_str(lit: &LitStr) -> Result<Self, Error> {
+        match lit.value().as_str() {
+            "bincode" => Ok(Self::Bincode),
+            "wincode" => Ok(Self::Wincode),
+            other => Err(Error::new(
+                lit.span(),
+                format!(
+                    "unsupported `abi_serializer` value `{other}`; expected `bincode` or `wincode`"
+                ),
+            )),
+        }
+    }
+
+    fn name(self) -> &'static str {
+        match self {
+            Self::Bincode => "bincode",
+            Self::Wincode => "wincode",
+        }
+    }
+
+    fn serialize_expr(self) -> TokenStream2 {
+        match self {
+            Self::Bincode => {
+                quote! { ::solana_frozen_abi::bincode::serialize(&val).unwrap() }
+            }
+            Self::Wincode => {
+                quote! { ::solana_frozen_abi::wincode::serialize(&val).unwrap() }
+            }
+        }
+    }
+}
+
+/// Parse the `abi_serializer` attribute value, which may be either a single
+/// string literal (e.g. `"wincode"`) or a list of string literals
+/// (e.g. `["bincode", "wincode"]`).
+#[cfg(feature = "frozen-abi")]
+fn parse_abi_serializers(expr: &Expr) -> Result<Vec<AbiSerializer>, Error> {
+    fn lit_str(expr: &Expr) -> Result<&LitStr, Error> {
+        match expr {
+            // Unwrap the invisible group that wraps a `macro_rules!` `:literal`
+            // fragment when it is interpolated into the attribute.
+            Expr::Group(group) => lit_str(&group.expr),
+            Expr::Lit(ExprLit {
+                lit: Lit::Str(lit), ..
+            }) => Ok(lit),
+            other => Err(Error::new_spanned(
+                other,
+                "expected a string literal `abi_serializer` value",
+            )),
+        }
+    }
+
+    match expr {
+        Expr::Array(array) => {
+            if array.elems.is_empty() {
+                return Err(Error::new_spanned(
+                    array,
+                    "`abi_serializer` list must not be empty",
+                ));
+            }
+            array
+                .elems
+                .iter()
+                .map(|elem| AbiSerializer::from_lit_str(lit_str(elem)?))
+                .collect()
+        }
+        expr => Ok(vec![AbiSerializer::from_lit_str(lit_str(expr)?)?]),
+    }
 }
 
 #[cfg(feature = "frozen-abi")]
@@ -542,7 +615,7 @@ fn quote_for_test(
     type_name: &Ident,
     expected_api_digest: Option<&Expr>,
     expected_abi_digest: Option<&Expr>,
-    abi_serializer: AbiSerializer,
+    abi_serializers: &[AbiSerializer],
 ) -> TokenStream2 {
     let test_api = if let Some(expected_api_digest) = expected_api_digest {
         quote! {
@@ -577,33 +650,35 @@ fn quote_for_test(
         TokenStream2::new()
     };
 
-    let abi_serialize_expr = match abi_serializer {
-        AbiSerializer::Bincode => {
-            quote! { ::solana_frozen_abi::bincode::serialize(&val).unwrap() }
-        }
-        AbiSerializer::Wincode => {
-            quote! { ::solana_frozen_abi::wincode::serialize(&val).unwrap() }
-        }
-    };
-
+    // Both serializers share the same expected digest, so generate a separate
+    // test per serializer (named with the serializer) that each check against
+    // it; the tests run in sequence without cross-checking each other.
     let test_abi = if let Some(expected_abi_digest) = expected_abi_digest {
-        quote! {
-            #[test]
-            fn test_abi_digest() {
-                use ::solana_frozen_abi::rand::{SeedableRng, RngCore};
-                use ::solana_frozen_abi::rand_chacha::ChaCha8Rng;
-                use ::solana_frozen_abi::stable_abi::StableAbi;
+        let abi_tests = abi_serializers.iter().map(|abi_serializer| {
+            let test_fn_name = Ident::new(
+                &format!("test_abi_digest_{}", abi_serializer.name()),
+                Span::call_site(),
+            );
+            let abi_serialize_expr = abi_serializer.serialize_expr();
+            quote! {
+                #[test]
+                fn #test_fn_name() {
+                    use ::solana_frozen_abi::rand::{SeedableRng, RngCore};
+                    use ::solana_frozen_abi::rand_chacha::ChaCha8Rng;
+                    use ::solana_frozen_abi::stable_abi::StableAbi;
 
-                let mut rng = ChaCha8Rng::seed_from_u64(20666175621446498);
-                let mut digester = ::solana_frozen_abi::hash::Hasher::default();
+                    let mut rng = ChaCha8Rng::seed_from_u64(20666175621446498);
+                    let mut digester = ::solana_frozen_abi::hash::Hasher::default();
 
-                for _ in 0..10_000 {
-                    let val = <#type_name>::random(&mut rng);
-                    digester.hash(&#abi_serialize_expr);
+                    for _ in 0..10_000 {
+                        let val = <#type_name>::random(&mut rng);
+                        digester.hash(&#abi_serialize_expr);
+                    }
+                    assert_eq!(#expected_abi_digest, ::std::format!("{}", digester.result()), "ABI layout has changed!");
                 }
-                assert_eq!(#expected_abi_digest, ::std::format!("{}", digester.result()), "ABI layout has changed!");
             }
-        }
+        });
+        quote! { #(#abi_tests)* }
     } else {
         TokenStream2::new()
     };
@@ -628,7 +703,7 @@ fn frozen_abi_type_alias(
     input: ItemType,
     expected_api_digest: Option<&Expr>,
     expected_abi_digest: Option<&Expr>,
-    abi_serializer: AbiSerializer,
+    abi_serializers: &[AbiSerializer],
 ) -> TokenStream {
     let type_name = &input.ident;
     let test = quote_for_test(
@@ -636,7 +711,7 @@ fn frozen_abi_type_alias(
         type_name,
         expected_api_digest,
         expected_abi_digest,
-        abi_serializer,
+        abi_serializers,
     );
     let result = quote! {
         #input
@@ -650,7 +725,7 @@ fn frozen_abi_struct_type(
     input: ItemStruct,
     expected_api_digest: Option<&Expr>,
     expected_abi_digest: Option<&Expr>,
-    abi_serializer: AbiSerializer,
+    abi_serializers: &[AbiSerializer],
 ) -> TokenStream {
     let type_name = &input.ident;
     let test = quote_for_test(
@@ -658,7 +733,7 @@ fn frozen_abi_struct_type(
         type_name,
         expected_api_digest,
         expected_abi_digest,
-        abi_serializer,
+        abi_serializers,
     );
     let result = quote! {
         #input
@@ -718,7 +793,7 @@ fn frozen_abi_enum_type(
     input: ItemEnum,
     expected_api_digest: Option<&Expr>,
     expected_abi_digest: Option<&Expr>,
-    abi_serializer: AbiSerializer,
+    abi_serializers: &[AbiSerializer],
 ) -> TokenStream {
     let type_name = &input.ident;
     let test = quote_for_test(
@@ -726,7 +801,7 @@ fn frozen_abi_enum_type(
         type_name,
         expected_api_digest,
         expected_abi_digest,
-        abi_serializer,
+        abi_serializers,
     );
     let result = quote! {
         #input
@@ -740,7 +815,7 @@ fn frozen_abi_enum_type(
 pub fn frozen_abi(attrs: TokenStream, item: TokenStream) -> TokenStream {
     let mut api_expected_digest: Option<Expr> = None;
     let mut abi_expected_digest: Option<Expr> = None;
-    let mut abi_serializer = AbiSerializer::Bincode;
+    let mut abi_serializers = vec![AbiSerializer::Bincode];
 
     let attrs_parser = syn::meta::parser(|meta| {
         if meta.path.is_ident("digest") || meta.path.is_ident("api_digest") {
@@ -750,15 +825,7 @@ pub fn frozen_abi(attrs: TokenStream, item: TokenStream) -> TokenStream {
             abi_expected_digest = Some(meta.value()?.parse::<Expr>()?);
             Ok(())
         } else if meta.path.is_ident("abi_serializer") {
-            abi_serializer = match meta.value()?.parse::<LitStr>()?.value().as_str() {
-                "bincode" => AbiSerializer::Bincode,
-                "wincode" => AbiSerializer::Wincode,
-                other => {
-                    return Err(meta.error(format!(
-                        "unsupported `abi_serializer` value `{other}`; expected `bincode` or `wincode`"
-                    )));
-                }
-            };
+            abi_serializers = parse_abi_serializers(&meta.value()?.parse::<Expr>()?)?;
             Ok(())
         } else {
             Err(meta.error("unsupported \"frozen_abi\" property"))
@@ -781,19 +848,19 @@ pub fn frozen_abi(attrs: TokenStream, item: TokenStream) -> TokenStream {
             input,
             api_expected_digest.as_ref(),
             abi_expected_digest.as_ref(),
-            abi_serializer,
+            &abi_serializers,
         ),
         Item::Enum(input) => frozen_abi_enum_type(
             input,
             api_expected_digest.as_ref(),
             abi_expected_digest.as_ref(),
-            abi_serializer,
+            &abi_serializers,
         ),
         Item::Type(input) => frozen_abi_type_alias(
             input,
             api_expected_digest.as_ref(),
             abi_expected_digest.as_ref(),
-            abi_serializer,
+            &abi_serializers,
         ),
         _ => Error::new_spanned(
             item,
