@@ -18,9 +18,10 @@ rustdoc-args = ["--cfg=docsrs"]
 proc-macro = true
 
 [features]
-default = []
-# activate the frozen-abi feature when we actually want to do frozen-abi testing,
-# otherwise leave it off because it requires nightly Rust
+default = ["frozen-abi"]
+# Deprecated: `frozen-abi` is now enabled by default and no longer needs to be
+# requested explicitly. It is retained for backward compatibility and will be
+# removed in a future release.
 frozen-abi = []
 
 [dependencies]
