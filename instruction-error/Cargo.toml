@@ -25,7 +25,7 @@ wincode = ["dep:wincode"]
 num-traits = { workspace = true, optional = true }
 serde = { workspace = true, optional = true }
 serde_derive = { workspace = true, optional = true }
-solana-frozen-abi = { workspace = true, optional = true }
+solana-frozen-abi = { workspace = true, optional = true, features = ["frozen-abi"] }
 solana-frozen-abi-macro = { workspace = true, optional = true }
 solana-program-error = { workspace = true }
 wincode = { workspace = true, optional = true }
