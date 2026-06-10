@@ -95,7 +95,7 @@ use syn::{
 };
 
 #[cfg(feature = "frozen-abi")]
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum AbiSerializer {
     Bincode,
     Wincode,
@@ -868,5 +868,74 @@ pub fn frozen_abi(attrs: TokenStream, item: TokenStream) -> TokenStream {
         )
         .to_compile_error()
         .into(),
+    }
+}
+
+#[cfg(all(test, feature = "frozen-abi"))]
+mod parse_abi_serializers_tests {
+    use {
+        super::*,
+        AbiSerializer::{Bincode, Wincode},
+    };
+
+    /// Parse `input` as an expression.
+    fn expr(input: &str) -> Expr {
+        syn::parse_str(input).unwrap()
+    }
+
+    #[test]
+    fn valid_serializers() {
+        assert_eq!(
+            parse_abi_serializers(&expr(r#""bincode""#)).unwrap(),
+            vec![Bincode]
+        );
+        assert_eq!(
+            parse_abi_serializers(&expr(r#""wincode""#)).unwrap(),
+            vec![Wincode]
+        );
+        assert_eq!(
+            parse_abi_serializers(&expr(r#"["wincode"]"#)).unwrap(),
+            vec![Wincode]
+        );
+        assert_eq!(
+            parse_abi_serializers(&expr(r#"["bincode", "wincode"]"#)).unwrap(),
+            vec![Bincode, Wincode]
+        );
+        // Order is preserved and duplicates are kept as-is.
+        assert_eq!(
+            parse_abi_serializers(&expr(r#"["wincode", "bincode", "wincode"]"#)).unwrap(),
+            vec![Wincode, Bincode, Wincode]
+        );
+    }
+
+    #[test]
+    fn invalid_serializers_are_rejected() {
+        let err = |input| parse_abi_serializers(&expr(input)).unwrap_err().to_string();
+
+        // Empty list.
+        assert!(err(r#"[]"#).contains("must not be empty"));
+
+        // Unsupported value, standalone and inside a list.
+        assert!(err(r#""json""#).contains("unsupported"));
+        assert!(err(r#""json""#).contains("json"));
+        assert!(err(r#"["bincode", "json"]"#).contains("unsupported"));
+
+        // Non-string literal, standalone and inside a list.
+        assert!(err(r#"42"#).contains("expected a string literal"));
+        assert!(err(r#"["bincode", 42]"#).contains("expected a string literal"));
+    }
+
+    #[test]
+    fn group_wrapped_literal_is_unwrapped() {
+        // A `macro_rules!` `:literal` fragment is interpolated into the
+        // attribute wrapped in an invisible `Group`. Build such an expression
+        // directly to ensure `parse_abi_serializers` unwraps it.
+        let group = proc_macro2::Group::new(
+            proc_macro2::Delimiter::None,
+            expr(r#""wincode""#).to_token_stream(),
+        );
+        let grouped: Expr = syn::parse2(group.to_token_stream()).unwrap();
+        assert!(matches!(grouped, Expr::Group(_)), "expected a grouped expr");
+        assert_eq!(parse_abi_serializers(&grouped).unwrap(), vec![Wincode]);
     }
 }
