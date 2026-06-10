@@ -5,6 +5,7 @@ use {
     },
     solana_big_mod_exp::{
         big_mod_exp, BIG_MOD_EXP_BASE_CU, BIG_MOD_EXP_CU_DIVISOR, BIG_MOD_EXP_MIN_EXPONENT_LENGTH,
+        BIG_MOD_EXP_MOD_REDUCTION_COMPLEXITY_FACTOR,
     },
 };
 
@@ -168,6 +169,8 @@ fn adjusted_exponent_length(exponent: &[u8]) -> u64 {
 
 fn mod_reduce_complexity(base_len: usize, modulus_len: usize) -> u64 {
     mult_complexity(base_len.max(modulus_len) as u64)
+        .checked_mul(BIG_MOD_EXP_MOD_REDUCTION_COMPLEXITY_FACTOR)
+        .expect("modular reduction complexity fits in u64")
 }
 
 fn mod_reduce_compute_units(base_len: usize, modulus_len: usize) -> u64 {

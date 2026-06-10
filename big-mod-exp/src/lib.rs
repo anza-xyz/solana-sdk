@@ -4,6 +4,7 @@ pub const BIG_MOD_EXP_MAX_BYTES: u64 = 512;
 pub const BIG_MOD_EXP_BASE_CU: u64 = 422;
 pub const BIG_MOD_EXP_CU_DIVISOR: u64 = 189;
 pub const BIG_MOD_EXP_MIN_EXPONENT_LENGTH: u64 = 75;
+pub const BIG_MOD_EXP_MOD_REDUCTION_COMPLEXITY_FACTOR: u64 = 15;
 
 /// Big integer modular exponentiation.
 ///
