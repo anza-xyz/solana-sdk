@@ -28,6 +28,17 @@ const RSA_OPERAND_SIZES: [(&str, usize); 3] =
 
 const EXPONENT_SWEEP_SIZES: [usize; 9] = [0, 1, 3, 32, 33, 64, 128, 256, 512];
 
+const MOD_REDUCTION_SIZES: [(&str, usize, usize); 8] = [
+    ("64-bit base, 32-bit modulus", 8, 4),
+    ("128-bit base, 64-bit modulus", 16, 8),
+    ("256-bit base, 128-bit modulus", 32, 16),
+    ("384-bit base, 192-bit modulus", 48, 24),
+    ("512-bit base, 256-bit modulus", 64, 32),
+    ("1024-bit base, 512-bit modulus", 128, 64),
+    ("2048-bit base, 1024-bit modulus", 256, 128),
+    ("4096-bit base, 2048-bit modulus", 512, 256),
+];
+
 struct BenchCase {
     base: Vec<u8>,
     exponent: Vec<u8>,
@@ -58,6 +69,23 @@ fn simd_0529_case(modulus_len: usize, exponent: Vec<u8>, seed: u64) -> BenchCase
     BenchCase {
         base,
         exponent,
+        modulus,
+    }
+}
+
+fn mod_reduction_case(base_len: usize, modulus_len: usize, seed: u64) -> BenchCase {
+    let mut base = deterministic_bytes(base_len, seed ^ base_len as u64);
+    if let Some(last_byte) = base.last_mut() {
+        *last_byte |= 0x80;
+    }
+
+    let mut modulus = deterministic_bytes(modulus_len, seed ^ modulus_len as u64);
+    modulus[0] |= 1;
+    *modulus.last_mut().expect("modulus lengths are non-empty") |= 0x80;
+
+    BenchCase {
+        base,
+        exponent: vec![1],
         modulus,
     }
 }
@@ -138,10 +166,20 @@ fn adjusted_exponent_length(exponent: &[u8]) -> u64 {
     }
 }
 
-fn compute_units(modulus_len: usize, exponent: &[u8]) -> u64 {
+fn mod_reduce_complexity(base_len: usize, modulus_len: usize) -> u64 {
+    mult_complexity(base_len.max(modulus_len) as u64)
+}
+
+fn mod_reduce_compute_units(base_len: usize, modulus_len: usize) -> u64 {
+    BIG_MOD_EXP_BASE_CU
+        .checked_add(mod_reduce_complexity(base_len, modulus_len).div_ceil(BIG_MOD_EXP_CU_DIVISOR))
+        .expect("compute unit cost fits in u64")
+}
+
+fn compute_units(base_len: usize, modulus_len: usize, exponent: &[u8]) -> u64 {
     let effective_exponent_length =
         adjusted_exponent_length(exponent).max(BIG_MOD_EXP_MIN_EXPONENT_LENGTH);
-    let operation_complexity = mult_complexity(modulus_len as u64)
+    let operation_complexity = mult_complexity(base_len.max(modulus_len) as u64)
         .checked_mul(effective_exponent_length)
         .expect("operation complexity fits in u64");
     BIG_MOD_EXP_BASE_CU
@@ -155,7 +193,16 @@ fn bench_label(case_name: &str, size_name: &str, case: &BenchCase) -> String {
         case.modulus.len(),
         case.exponent.len(),
         adjusted_exponent_length(&case.exponent),
-        compute_units(case.modulus.len(), &case.exponent),
+        compute_units(case.base.len(), case.modulus.len(), &case.exponent),
+    )
+}
+
+fn mod_reduce_bench_label(size_name: &str, case: &BenchCase) -> String {
+    format!(
+        "mod-reduce/{size_name}/base_len={}B/modulus_len={}B/model_cu={}",
+        case.base.len(),
+        case.modulus.len(),
+        mod_reduce_compute_units(case.base.len(), case.modulus.len()),
     )
 }
 
@@ -231,6 +278,17 @@ fn all_benches(c: &mut Criterion) {
         );
     }
     group_exponent.finish();
+
+    let mut group_reduction = c.benchmark_group("SIMD-0529 modular reduction exponent 1");
+    for (size_name, base_len, modulus_len) in MOD_REDUCTION_SIZES {
+        let case = mod_reduction_case(base_len, modulus_len, 0x0529_0001 ^ base_len as u64);
+        bench_case(
+            &mut group_reduction,
+            mod_reduce_bench_label(size_name, &case),
+            case,
+        );
+    }
+    group_reduction.finish();
 }
 
 criterion_group!(benches, all_benches);

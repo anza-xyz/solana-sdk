@@ -12,9 +12,8 @@ pub const BIG_MOD_EXP_MIN_EXPONENT_LENGTH: u64 = 75;
 ///
 /// # Panics
 ///
-/// Panics if any operand is longer than [`BIG_MOD_EXP_MAX_BYTES`], if `modulus`
-/// is empty, zero, one, or even, or if `base.len()` is greater than
-/// `modulus.len()`.
+/// Panics if any operand is longer than [`BIG_MOD_EXP_MAX_BYTES`] or if
+/// `modulus` is empty, zero, one, or even.
 pub fn big_mod_exp(base: &[u8], exponent: &[u8], modulus: &[u8]) -> Vec<u8> {
     validate_inputs(base, exponent, modulus);
     let padded_base =
@@ -70,10 +69,6 @@ fn validate_inputs(base: &[u8], exponent: &[u8], modulus: &[u8]) {
         "modulus length exceeds BIG_MOD_EXP_MAX_BYTES"
     );
     assert!(!modulus.is_empty(), "modulus length must be nonzero");
-    assert!(
-        base.len() <= modulus.len(),
-        "base length must not exceed modulus length"
-    );
     assert!(!is_zero_or_one(modulus), "modulus must be greater than one");
     assert!(is_odd(modulus), "modulus must be odd");
 }
@@ -164,6 +159,14 @@ mod tests {
     }
 
     #[test]
+    fn big_mod_exp_reduction_test() {
+        assert_eq!(
+            big_mod_exp(&[0x00, 0xe1, 0xf5, 0x05], &[0x01], &[0xb3, 0x15]),
+            vec![0x5d, 0x11]
+        );
+    }
+
+    #[test]
     fn big_mod_exp_max_length_inputs_test() {
         let max_len = BIG_MOD_EXP_MAX_BYTES as usize;
         let base = vec![0xff; max_len];
@@ -220,12 +223,6 @@ mod tests {
         let mut modulus = vec![0xff; BIG_MOD_EXP_MAX_BYTES as usize + 1];
         modulus[0] |= 1;
         big_mod_exp(&[], &[], &modulus);
-    }
-
-    #[test]
-    #[should_panic(expected = "base length must not exceed modulus length")]
-    fn big_mod_exp_base_longer_than_modulus_panics() {
-        big_mod_exp(&[0x00, 0x00], &[], &[0x03]);
     }
 
     #[test]
