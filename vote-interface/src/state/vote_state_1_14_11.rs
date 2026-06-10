@@ -12,7 +12,7 @@ const DEFAULT_PRIOR_VOTERS_OFFSET: usize = 82;
     frozen_abi(
         api_digest = "2rjXSWaNeAdoUNJDC5otC7NPR1qXHvLMuAs5faE4DPEt",
         abi_digest = "AiZEyXQnygp5KQWY9godna9h8fZQ7nFPJvdvkuNkyAWc",
-        abi_serializer = "bincode"
+        abi_serializer = ["bincode", "wincode"]
     ),
     derive(AbiExample, StableAbi, StableAbiSample)
 )]

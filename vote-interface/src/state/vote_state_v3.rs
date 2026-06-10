@@ -24,7 +24,7 @@ use {
     frozen_abi(
         api_digest = "pZqasQc6duzMYzpzU7eriHH9cMXmubuUP4NmCrkWZjt",
         abi_digest = "6xrS3B1cUyFYdPAwavAQ4DKpGTWsdoV4fkaGfiEBRmtQ",
-        abi_serializer = "bincode"
+        abi_serializer = ["bincode", "wincode"]
     ),
     derive(AbiExample, StableAbi, StableAbiSample)
 )]

@@ -21,7 +21,7 @@ use {
     frozen_abi(
         api_digest = "GvUzgtcxhKVVxPAjSntXGPqjLZK5ovgZzCiUP1tDpB9q",
         abi_digest = "6kXER3mQxF3R1Th74tQFGfYUWJfBakNZZVyU4rTrNEek",
-        abi_serializer = "bincode"
+        abi_serializer = ["bincode", "wincode"]
     ),
     derive(AbiExample, StableAbi, StableAbiSample)
 )]
@@ -56,7 +56,7 @@ impl Vote {
     frozen_abi(
         api_digest = "CxyuwbaEdzP7jDCZyxjgQvLGXadBUZF3LoUvbSpQ6tYN",
         abi_digest = "CAZasoggS6VYsJWdWf9tWUmqXjmCe1iCa1s1szSkcV3q",
-        abi_serializer = "bincode"
+        abi_serializer = ["bincode", "wincode"]
     ),
     derive(AbiExample, StableAbi, StableAbiSample)
 )]
@@ -115,7 +115,7 @@ impl VoteStateUpdate {
     frozen_abi(
         api_digest = "6UDiQMH4wbNwkMHosPMtekMYu2Qa6CHPZ2ymK4mc6FGu",
         abi_digest = "AFc7BWoFERboQDSN7VmXqXu7MoV3TwksgKoabdarYycF",
-        abi_serializer = "bincode"
+        abi_serializer = ["bincode", "wincode"]
     ),
     derive(AbiExample, StableAbi, StableAbiSample)
 )]
