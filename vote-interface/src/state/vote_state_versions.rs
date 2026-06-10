@@ -14,6 +14,7 @@ use {
     feature = "serde",
     derive(serde_derive::Deserialize, serde_derive::Serialize)
 )]
+#[cfg_attr(feature = "wincode", derive(wincode::SchemaWrite, wincode::SchemaRead))]
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum VoteStateVersions {
     Uninitialized,

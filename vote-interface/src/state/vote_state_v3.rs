@@ -23,11 +23,13 @@ use {
     feature = "frozen-abi",
     frozen_abi(
         api_digest = "pZqasQc6duzMYzpzU7eriHH9cMXmubuUP4NmCrkWZjt",
-        abi_digest = "6xrS3B1cUyFYdPAwavAQ4DKpGTWsdoV4fkaGfiEBRmtQ"
+        abi_digest = "6xrS3B1cUyFYdPAwavAQ4DKpGTWsdoV4fkaGfiEBRmtQ",
+        abi_serializer = "bincode"
     ),
     derive(AbiExample, StableAbi, StableAbiSample)
 )]
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
+#[cfg_attr(feature = "wincode", derive(wincode::SchemaWrite, wincode::SchemaRead))]
 #[derive(Debug, Default, PartialEq, Eq, Clone)]
 #[cfg_attr(feature = "dev-context-only-utils", derive(Arbitrary))]
 pub struct VoteStateV3 {

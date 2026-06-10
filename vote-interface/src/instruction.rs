@@ -16,6 +16,11 @@ use {
     solana_instruction::{AccountMeta, Instruction},
     solana_sdk_ids::sysvar,
 };
+#[cfg(feature = "wincode")]
+use {
+    crate::state::wincode_compact::{CompactTowerSync, CompactVoteStateUpdate},
+    wincode::{SchemaRead, SchemaWrite},
+};
 #[cfg(feature = "serde")]
 use {
     crate::state::{serde_compact_vote_state_update, serde_tower_sync},
@@ -24,6 +29,7 @@ use {
 
 #[repr(u8)]
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
+#[cfg_attr(feature = "wincode", derive(SchemaWrite, SchemaRead))]
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum CommissionKind {
     InflationRewards = 0,
@@ -31,6 +37,7 @@ pub enum CommissionKind {
 }
 
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
+#[cfg_attr(feature = "wincode", derive(SchemaWrite, SchemaRead))]
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum VoteInstruction {
     /// Initialize a vote account
@@ -161,7 +168,9 @@ pub enum VoteInstruction {
     ///   0. `[Write]` Vote account to vote with
     ///   1. `[SIGNER]` Vote authority
     #[cfg_attr(feature = "serde", serde(with = "serde_compact_vote_state_update"))]
-    CompactUpdateVoteState(VoteStateUpdate),
+    CompactUpdateVoteState(
+        #[cfg_attr(feature = "wincode", wincode(with = "CompactVoteStateUpdate"))] VoteStateUpdate,
+    ),
 
     /// Update the onchain vote state for the signer along with a switching proof.
     ///
@@ -170,6 +179,7 @@ pub enum VoteInstruction {
     ///   1. `[SIGNER]` Vote authority
     CompactUpdateVoteStateSwitch(
         #[cfg_attr(feature = "serde", serde(with = "serde_compact_vote_state_update"))]
+        #[cfg_attr(feature = "wincode", wincode(with = "CompactVoteStateUpdate"))]
         VoteStateUpdate,
         Hash,
     ),
@@ -180,7 +190,7 @@ pub enum VoteInstruction {
     ///   0. `[Write]` Vote account to vote with
     ///   1. `[SIGNER]` Vote authority
     #[cfg_attr(feature = "serde", serde(with = "serde_tower_sync"))]
-    TowerSync(TowerSync),
+    TowerSync(#[cfg_attr(feature = "wincode", wincode(with = "CompactTowerSync"))] TowerSync),
 
     /// Sync the onchain vote state with local tower along with a switching proof
     ///
@@ -188,7 +198,9 @@ pub enum VoteInstruction {
     ///   0. `[Write]` Vote account to vote with
     ///   1. `[SIGNER]` Vote authority
     TowerSyncSwitch(
-        #[cfg_attr(feature = "serde", serde(with = "serde_tower_sync"))] TowerSync,
+        #[cfg_attr(feature = "serde", serde(with = "serde_tower_sync"))]
+        #[cfg_attr(feature = "wincode", wincode(with = "CompactTowerSync"))]
+        TowerSync,
         Hash,
     ),
 

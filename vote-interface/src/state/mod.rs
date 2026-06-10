@@ -51,6 +51,7 @@ pub const VOTE_CREDITS_MAXIMUM_PER_SLOT: u8 = 16;
 
 #[cfg_attr(feature = "frozen-abi", derive(AbiExample, StableAbi, StableAbiSample))]
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
+#[cfg_attr(feature = "wincode", derive(wincode::SchemaWrite, wincode::SchemaRead))]
 #[derive(Default, Debug, PartialEq, Eq, Copy, Clone)]
 #[cfg_attr(feature = "dev-context-only-utils", derive(Arbitrary))]
 pub struct Lockout {
@@ -104,6 +105,7 @@ impl Lockout {
 
 #[cfg_attr(feature = "frozen-abi", derive(AbiExample, StableAbi, StableAbiSample))]
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
+#[cfg_attr(feature = "wincode", derive(wincode::SchemaWrite, wincode::SchemaRead))]
 #[derive(Default, Debug, PartialEq, Eq, Copy, Clone)]
 #[cfg_attr(feature = "dev-context-only-utils", derive(Arbitrary))]
 pub struct LandedVote {
@@ -141,6 +143,7 @@ impl From<Lockout> for LandedVote {
 
 #[cfg_attr(feature = "frozen-abi", derive(AbiExample, StableAbi, StableAbiSample))]
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
+#[cfg_attr(feature = "wincode", derive(wincode::SchemaWrite, wincode::SchemaRead))]
 #[derive(Debug, Default, PartialEq, Eq, Clone)]
 #[cfg_attr(feature = "dev-context-only-utils", derive(Arbitrary))]
 pub struct BlockTimestamp {
@@ -152,6 +155,7 @@ pub struct BlockTimestamp {
 const MAX_ITEMS: usize = 32;
 
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
+#[cfg_attr(feature = "wincode", derive(wincode::SchemaWrite, wincode::SchemaRead))]
 #[cfg_attr(feature = "frozen-abi", derive(AbiExample, StableAbi, StableAbiSample))]
 #[derive(Debug, PartialEq, Eq, Clone)]
 #[cfg_attr(feature = "dev-context-only-utils", derive(Arbitrary))]
@@ -200,27 +204,76 @@ impl<I> CircBuf<I> {
     }
 }
 
-/// Shared helpers for the compact wire format used by
-/// [`serde_compact_vote_state_update`] and [`serde_tower_sync`]: lockout slots
-/// are stored as varint offsets relative to the previous slot (or the root).
-#[cfg(feature = "serde")]
+/// Shared compact wire-format representations for [`VoteStateUpdate`] and
+/// [`TowerSync`]: lockout slots are stored as varint offsets from the previous
+/// slot in a `short_vec`.
+///
+/// The [`serde_compact_vote_state_update`]/[`serde_tower_sync`] (serde) and
+/// [`wincode_compact`] (wincode) modules bridge the original types to these
+/// representations.
+#[cfg(any(feature = "serde", feature = "wincode"))]
 mod compact {
+    #[cfg(feature = "serde")]
+    use serde_derive::{Deserialize, Serialize};
     #[cfg(feature = "frozen-abi")]
     use solana_frozen_abi_macro::{AbiExample, StableAbi, StableAbiSample};
-    use {super::Lockout, solana_clock::Slot, std::collections::VecDeque};
+    use {
+        super::{Lockout, TowerSync, VoteStateUpdate},
+        solana_clock::{Slot, UnixTimestamp},
+        solana_hash::Hash,
+        std::collections::VecDeque,
+    };
+    #[cfg(feature = "wincode")]
+    use {
+        solana_short_vec::ShortU16,
+        solana_wincode_varint::Leb128Int,
+        wincode::{containers, SchemaRead, SchemaWrite},
+    };
 
     #[cfg_attr(feature = "frozen-abi", derive(AbiExample, StableAbi, StableAbiSample))]
-    #[derive(serde_derive::Deserialize, serde_derive::Serialize)]
-    pub(super) struct LockoutOffset {
-        #[serde(with = "solana_serde_varint")]
+    #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
+    #[cfg_attr(feature = "wincode", derive(SchemaWrite, SchemaRead))]
+    struct LockoutOffset {
+        #[cfg_attr(feature = "serde", serde(with = "solana_serde_varint"))]
+        #[cfg_attr(feature = "wincode", wincode(with = "Leb128Int<Slot>"))]
         offset: Slot,
         confirmation_count: u8,
     }
 
+    /// `short_vec`-length-encoded `Vec<LockoutOffset>`, the wincode counterpart
+    /// of `#[serde(with = "solana_short_vec")]`.
+    #[cfg(feature = "wincode")]
+    type LockoutOffsetShortVec = containers::Vec<LockoutOffset, ShortU16>;
+
+    #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
+    #[cfg_attr(feature = "wincode", derive(SchemaWrite, SchemaRead))]
+    pub(super) struct CompactVoteStateUpdate {
+        root: Slot,
+        #[cfg_attr(feature = "serde", serde(with = "solana_short_vec"))]
+        #[cfg_attr(feature = "wincode", wincode(with = "LockoutOffsetShortVec"))]
+        lockout_offsets: Vec<LockoutOffset>,
+        hash: Hash,
+        timestamp: Option<UnixTimestamp>,
+    }
+
+    #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
+    #[cfg_attr(feature = "wincode", derive(SchemaWrite, SchemaRead))]
+    pub(super) struct CompactTowerSync {
+        root: Slot,
+        #[cfg_attr(feature = "serde", serde(with = "solana_short_vec"))]
+        #[cfg_attr(feature = "wincode", wincode(with = "LockoutOffsetShortVec"))]
+        lockout_offsets: Vec<LockoutOffset>,
+        hash: Hash,
+        timestamp: Option<UnixTimestamp>,
+        block_id: Hash,
+    }
+
     /// Convert a tower's absolute lockout slots into the relative, delta-encoded
-    /// offsets used by the compact wire format. The returned error message is
-    /// mapped to the caller's error type.
-    pub(super) fn lockout_offsets(
+    /// offsets used by the compact wire format.
+    ///
+    /// Shared by the serde and wincode encoders; the returned error message is
+    /// mapped to each backend's error type by the caller.
+    fn lockout_offsets(
         lockouts: &VecDeque<Lockout>,
         root: Option<Slot>,
     ) -> Result<Vec<LockoutOffset>, &'static str> {
@@ -244,7 +297,7 @@ mod compact {
 
     /// Reconstruct the absolute lockouts from the relative offsets stored in the
     /// compact wire format. Inverse of [`lockout_offsets`].
-    pub(super) fn lockouts_from_offsets(
+    fn lockouts_from_offsets(
         lockout_offsets: &[LockoutOffset],
         root: Option<Slot>,
     ) -> Result<VecDeque<Lockout>, &'static str> {
@@ -261,25 +314,62 @@ mod compact {
         }
         Ok(lockouts)
     }
+
+    pub(super) fn vote_state_update_to_compact(
+        src: &VoteStateUpdate,
+    ) -> Result<CompactVoteStateUpdate, &'static str> {
+        #[allow(clippy::clone_on_copy)]
+        Ok(CompactVoteStateUpdate {
+            root: src.root.unwrap_or(Slot::MAX),
+            lockout_offsets: lockout_offsets(&src.lockouts, src.root)?,
+            hash: src.hash.clone(),
+            timestamp: src.timestamp,
+        })
+    }
+
+    pub(super) fn vote_state_update_from_compact(
+        repr: CompactVoteStateUpdate,
+    ) -> Result<VoteStateUpdate, &'static str> {
+        let root = (repr.root != Slot::MAX).then_some(repr.root);
+        Ok(VoteStateUpdate {
+            lockouts: lockouts_from_offsets(&repr.lockout_offsets, root)?,
+            root,
+            hash: repr.hash,
+            timestamp: repr.timestamp,
+        })
+    }
+
+    pub(super) fn tower_sync_to_compact(src: &TowerSync) -> Result<CompactTowerSync, &'static str> {
+        #[allow(clippy::clone_on_copy)]
+        Ok(CompactTowerSync {
+            root: src.root.unwrap_or(Slot::MAX),
+            lockout_offsets: lockout_offsets(&src.lockouts, src.root)?,
+            hash: src.hash.clone(),
+            timestamp: src.timestamp,
+            block_id: src.block_id.clone(),
+        })
+    }
+
+    pub(super) fn tower_sync_from_compact(
+        repr: CompactTowerSync,
+    ) -> Result<TowerSync, &'static str> {
+        let root = (repr.root != Slot::MAX).then_some(repr.root);
+        Ok(TowerSync {
+            lockouts: lockouts_from_offsets(&repr.lockout_offsets, root)?,
+            root,
+            hash: repr.hash,
+            timestamp: repr.timestamp,
+            block_id: repr.block_id,
+        })
+    }
 }
 
 #[cfg(feature = "serde")]
 pub mod serde_compact_vote_state_update {
     use {
-        super::{compact, compact::LockoutOffset, *},
+        super::{compact, compact::CompactVoteStateUpdate, *},
         serde::{Deserialize, Deserializer, Serialize, Serializer},
-        solana_hash::Hash,
-        solana_short_vec as short_vec,
     };
-
-    #[derive(serde_derive::Deserialize, serde_derive::Serialize)]
-    struct CompactVoteStateUpdate {
-        root: Slot,
-        #[serde(with = "short_vec")]
-        lockout_offsets: Vec<LockoutOffset>,
-        hash: Hash,
-        timestamp: Option<UnixTimestamp>,
-    }
 
     pub fn serialize<S>(
         vote_state_update: &VoteStateUpdate,
@@ -288,110 +378,137 @@ pub mod serde_compact_vote_state_update {
     where
         S: Serializer,
     {
-        let compact_vote_state_update = CompactVoteStateUpdate {
-            root: vote_state_update.root.unwrap_or(Slot::MAX),
-            lockout_offsets: compact::lockout_offsets(
-                &vote_state_update.lockouts,
-                vote_state_update.root,
-            )
-            .map_err(serde::ser::Error::custom)?,
-            hash: Hash::new_from_array(vote_state_update.hash.to_bytes()),
-            timestamp: vote_state_update.timestamp,
-        };
-        compact_vote_state_update.serialize(serializer)
+        compact::vote_state_update_to_compact(vote_state_update)
+            .map_err(serde::ser::Error::custom)?
+            .serialize(serializer)
     }
 
     pub fn deserialize<'de, D>(deserializer: D) -> Result<VoteStateUpdate, D::Error>
     where
         D: Deserializer<'de>,
     {
-        let CompactVoteStateUpdate {
-            root,
-            lockout_offsets,
-            hash,
-            timestamp,
-        } = CompactVoteStateUpdate::deserialize(deserializer)?;
-        let root = (root != Slot::MAX).then_some(root);
-        Ok(VoteStateUpdate {
-            root,
-            lockouts: compact::lockouts_from_offsets(&lockout_offsets, root)
-                .map_err(serde::de::Error::custom)?,
-            hash,
-            timestamp,
-        })
+        let repr = CompactVoteStateUpdate::deserialize(deserializer)?;
+        compact::vote_state_update_from_compact(repr).map_err(serde::de::Error::custom)
     }
 }
 
 #[cfg(feature = "serde")]
 pub mod serde_tower_sync {
     use {
-        super::{compact, compact::LockoutOffset, *},
+        super::{compact, compact::CompactTowerSync, *},
         serde::{Deserialize, Deserializer, Serialize, Serializer},
-        solana_hash::Hash,
-        solana_short_vec as short_vec,
     };
-
-    #[derive(serde_derive::Deserialize, serde_derive::Serialize)]
-    struct CompactTowerSync {
-        root: Slot,
-        #[serde(with = "short_vec")]
-        lockout_offsets: Vec<LockoutOffset>,
-        hash: Hash,
-        timestamp: Option<UnixTimestamp>,
-        block_id: Hash,
-    }
 
     pub fn serialize<S>(tower_sync: &TowerSync, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
     {
-        let compact_tower_sync = CompactTowerSync {
-            root: tower_sync.root.unwrap_or(Slot::MAX),
-            lockout_offsets: compact::lockout_offsets(&tower_sync.lockouts, tower_sync.root)
-                .map_err(serde::ser::Error::custom)?,
-            hash: Hash::new_from_array(tower_sync.hash.to_bytes()),
-            timestamp: tower_sync.timestamp,
-            block_id: Hash::new_from_array(tower_sync.block_id.to_bytes()),
-        };
-        compact_tower_sync.serialize(serializer)
+        compact::tower_sync_to_compact(tower_sync)
+            .map_err(serde::ser::Error::custom)?
+            .serialize(serializer)
     }
 
     pub fn deserialize<'de, D>(deserializer: D) -> Result<TowerSync, D::Error>
     where
         D: Deserializer<'de>,
     {
-        let CompactTowerSync {
-            root,
-            lockout_offsets,
-            hash,
-            timestamp,
-            block_id,
-        } = CompactTowerSync::deserialize(deserializer)?;
-        let root = (root != Slot::MAX).then_some(root);
-        Ok(TowerSync {
-            root,
-            lockouts: compact::lockouts_from_offsets(&lockout_offsets, root)
-                .map_err(serde::de::Error::custom)?,
-            hash,
-            timestamp,
-            block_id,
-        })
+        let repr = CompactTowerSync::deserialize(deserializer)?;
+        compact::tower_sync_from_compact(repr).map_err(serde::de::Error::custom)
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use {super::*, itertools::Itertools, rand::Rng, solana_hash::Hash};
+/// Wincode schemas for the compact wire encodings of [`VoteStateUpdate`] and
+/// [`TowerSync`].
+///
+/// These are the wincode analog of [`serde_compact_vote_state_update`] /
+/// [`serde_tower_sync`]: the types' own (derived) wincode schemas encode the
+/// non-compact form, so the compact form is selected per-field via
+/// `#[wincode(with = ...)]` on [`crate::instruction::VoteInstruction`]. Each
+/// schema is a thin marker that converts to/from the shared `compact`
+/// representation (whose derived schema does the actual encoding) and produces
+/// bytes identical to bincode.
+#[cfg(feature = "wincode")]
+pub mod wincode_compact {
+    use {
+        super::{
+            compact,
+            compact::{
+                CompactTowerSync as CompactTowerSyncRepr,
+                CompactVoteStateUpdate as CompactVoteStateUpdateRepr,
+            },
+            TowerSync, VoteStateUpdate,
+        },
+        std::mem::MaybeUninit,
+        wincode::{
+            config::Config,
+            io::{Reader, Writer},
+            ReadError, ReadResult, SchemaRead, SchemaWrite, WriteError, WriteResult,
+        },
+    };
 
-    #[test]
-    fn test_serde_compact_vote_state_update() {
-        let mut rng = rand::rng();
-        for _ in 0..5000 {
-            run_serde_compact_vote_state_update(&mut rng);
+    /// Wincode schema mirroring [`super::serde_compact_vote_state_update`].
+    pub struct CompactVoteStateUpdate;
+
+    unsafe impl<C: Config> SchemaWrite<C> for CompactVoteStateUpdate {
+        type Src = VoteStateUpdate;
+
+        fn size_of(src: &Self::Src) -> WriteResult<usize> {
+            let repr = compact::vote_state_update_to_compact(src).map_err(WriteError::Custom)?;
+            <CompactVoteStateUpdateRepr as SchemaWrite<C>>::size_of(&repr)
+        }
+
+        fn write(writer: impl Writer, src: &Self::Src) -> WriteResult<()> {
+            let repr = compact::vote_state_update_to_compact(src).map_err(WriteError::Custom)?;
+            <CompactVoteStateUpdateRepr as SchemaWrite<C>>::write(writer, &repr)
         }
     }
 
-    fn run_serde_compact_vote_state_update<R: Rng>(rng: &mut R) {
+    unsafe impl<'de, C: Config> SchemaRead<'de, C> for CompactVoteStateUpdate {
+        type Dst = VoteStateUpdate;
+
+        fn read(reader: impl Reader<'de>, dst: &mut MaybeUninit<Self::Dst>) -> ReadResult<()> {
+            let repr = <CompactVoteStateUpdateRepr as SchemaRead<C>>::get(reader)?;
+            dst.write(compact::vote_state_update_from_compact(repr).map_err(ReadError::Custom)?);
+            Ok(())
+        }
+    }
+
+    /// Wincode schema mirroring [`super::serde_tower_sync`].
+    pub struct CompactTowerSync;
+
+    unsafe impl<C: Config> SchemaWrite<C> for CompactTowerSync {
+        type Src = TowerSync;
+
+        fn size_of(src: &Self::Src) -> WriteResult<usize> {
+            let repr = compact::tower_sync_to_compact(src).map_err(WriteError::Custom)?;
+            <CompactTowerSyncRepr as SchemaWrite<C>>::size_of(&repr)
+        }
+
+        fn write(writer: impl Writer, src: &Self::Src) -> WriteResult<()> {
+            let repr = compact::tower_sync_to_compact(src).map_err(WriteError::Custom)?;
+            <CompactTowerSyncRepr as SchemaWrite<C>>::write(writer, &repr)
+        }
+    }
+
+    unsafe impl<'de, C: Config> SchemaRead<'de, C> for CompactTowerSync {
+        type Dst = TowerSync;
+
+        fn read(reader: impl Reader<'de>, dst: &mut MaybeUninit<Self::Dst>) -> ReadResult<()> {
+            let repr = <CompactTowerSyncRepr as SchemaRead<C>>::get(reader)?;
+            dst.write(compact::tower_sync_from_compact(repr).map_err(ReadError::Custom)?);
+            Ok(())
+        }
+    }
+}
+
+#[cfg(all(test, feature = "bincode"))]
+mod tests {
+    use {super::*, itertools::Itertools, rand::Rng, solana_hash::Hash};
+
+    /// Build a random `VoteStateUpdate` with strictly increasing lockout slots
+    /// and an optional root below the first slot, suitable for exercising the
+    /// compact (offset-encoded) wire formats.
+    fn random_vote_state_update<R: Rng>(rng: &mut R) -> VoteStateUpdate {
         let lockouts: VecDeque<_> = std::iter::repeat_with(|| {
             let slot = 149_303_885_u64.saturating_add(rng.random_range(0..10_000));
             let confirmation_count = rng.random_range(0..33);
@@ -408,28 +525,64 @@ mod tests {
         });
         let timestamp = rng.random_bool(0.5).then(|| rng.random());
         let hash = Hash::from(rng.random::<[u8; 32]>());
-        let vote_state_update = VoteStateUpdate {
+        VoteStateUpdate {
             lockouts,
             root,
             hash,
             timestamp,
-        };
+        }
+    }
+
+    #[test]
+    fn test_serde_compact_vote_state_update() {
+        let mut rng = rand::rng();
+        for _ in 0..5000 {
+            run_serde_compact_vote_state_update(&mut rng);
+        }
+    }
+
+    fn run_serde_compact_vote_state_update<R: Rng>(rng: &mut R) {
+        let vote_state_update = random_vote_state_update(rng);
+        #[cfg_attr(feature = "wincode", derive(wincode::SchemaWrite, wincode::SchemaRead))]
         #[derive(Debug, Eq, PartialEq, Deserialize, Serialize)]
         enum VoteInstruction {
             #[serde(with = "serde_compact_vote_state_update")]
-            UpdateVoteState(VoteStateUpdate),
+            UpdateVoteState(
+                #[cfg_attr(
+                    feature = "wincode",
+                    wincode(with = "wincode_compact::CompactVoteStateUpdate")
+                )]
+                VoteStateUpdate,
+            ),
             UpdateVoteStateSwitch(
-                #[serde(with = "serde_compact_vote_state_update")] VoteStateUpdate,
+                #[serde(with = "serde_compact_vote_state_update")]
+                #[cfg_attr(
+                    feature = "wincode",
+                    wincode(with = "wincode_compact::CompactVoteStateUpdate")
+                )]
+                VoteStateUpdate,
                 Hash,
             ),
         }
-        let vote = VoteInstruction::UpdateVoteState(vote_state_update.clone());
-        let bytes = bincode::serialize(&vote).unwrap();
-        assert_eq!(vote, bincode::deserialize(&bytes).unwrap());
+
+        // bincode is the reference encoding; when wincode is enabled, assert it
+        // produces identical bytes and round-trips the same value.
+        let check = |vote: &VoteInstruction| {
+            let bytes = bincode::serialize(vote).unwrap();
+            assert_eq!(*vote, bincode::deserialize(&bytes).unwrap());
+            #[cfg(feature = "wincode")]
+            {
+                assert_eq!(bytes, wincode::serialize(vote).unwrap());
+                assert_eq!(*vote, wincode::deserialize(&bytes).unwrap());
+            }
+        };
+
+        check(&VoteInstruction::UpdateVoteState(vote_state_update.clone()));
         let hash = Hash::from(rng.random::<[u8; 32]>());
-        let vote = VoteInstruction::UpdateVoteStateSwitch(vote_state_update, hash);
-        let bytes = bincode::serialize(&vote).unwrap();
-        assert_eq!(vote, bincode::deserialize(&bytes).unwrap());
+        check(&VoteInstruction::UpdateVoteStateSwitch(
+            vote_state_update,
+            hash,
+        ));
     }
 
     #[test]
@@ -438,5 +591,11 @@ mod tests {
         let data: &[u8] = &[0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x00];
         let circ_buf: CircBuf<()> = bincode::deserialize(data).unwrap();
         assert_eq!(circ_buf.last(), None);
+
+        #[cfg(feature = "wincode")]
+        {
+            let circ_buf: CircBuf<()> = wincode::deserialize(data).unwrap();
+            assert_eq!(circ_buf.last(), None);
+        }
     }
 }

@@ -11,11 +11,13 @@ const DEFAULT_PRIOR_VOTERS_OFFSET: usize = 82;
     feature = "frozen-abi",
     frozen_abi(
         api_digest = "2rjXSWaNeAdoUNJDC5otC7NPR1qXHvLMuAs5faE4DPEt",
-        abi_digest = "AiZEyXQnygp5KQWY9godna9h8fZQ7nFPJvdvkuNkyAWc"
+        abi_digest = "AiZEyXQnygp5KQWY9godna9h8fZQ7nFPJvdvkuNkyAWc",
+        abi_serializer = "bincode"
     ),
     derive(AbiExample, StableAbi, StableAbiSample)
 )]
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
+#[cfg_attr(feature = "wincode", derive(wincode::SchemaWrite, wincode::SchemaRead))]
 #[derive(Debug, Default, PartialEq, Eq, Clone)]
 #[cfg_attr(feature = "dev-context-only-utils", derive(Arbitrary))]
 pub struct VoteState1_14_11 {

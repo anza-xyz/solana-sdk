@@ -4826,7 +4826,9 @@ dependencies = [
  "solana-short-vec",
  "solana-system-interface",
  "solana-vote-interface",
+ "solana-wincode-varint",
  "test-case",
+ "wincode",
 ]
 
 [[package]]

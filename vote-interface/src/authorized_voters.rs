@@ -14,6 +14,7 @@ use {solana_clock::Epoch, solana_pubkey::Pubkey, std::collections::BTreeMap};
 /// sentinel for an uninitialized vote state.
 #[cfg_attr(feature = "frozen-abi", derive(AbiExample, StableAbi, StableAbiSample))]
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
+#[cfg_attr(feature = "wincode", derive(wincode::SchemaWrite, wincode::SchemaRead))]
 #[derive(Debug, Default, PartialEq, Eq, Clone)]
 #[cfg_attr(feature = "dev-context-only-utils", derive(Arbitrary))]
 pub struct AuthorizedVoters {

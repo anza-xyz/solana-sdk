@@ -20,11 +20,13 @@ use {
     feature = "frozen-abi",
     frozen_abi(
         api_digest = "GvUzgtcxhKVVxPAjSntXGPqjLZK5ovgZzCiUP1tDpB9q",
-        abi_digest = "6kXER3mQxF3R1Th74tQFGfYUWJfBakNZZVyU4rTrNEek"
+        abi_digest = "6kXER3mQxF3R1Th74tQFGfYUWJfBakNZZVyU4rTrNEek",
+        abi_serializer = "bincode"
     ),
     derive(AbiExample, StableAbi, StableAbiSample)
 )]
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
+#[cfg_attr(feature = "wincode", derive(wincode::SchemaWrite, wincode::SchemaRead))]
 #[derive(Default, Debug, PartialEq, Eq, Clone)]
 pub struct Vote {
     /// A stack of votes starting with the oldest vote
@@ -53,11 +55,13 @@ impl Vote {
     feature = "frozen-abi",
     frozen_abi(
         api_digest = "CxyuwbaEdzP7jDCZyxjgQvLGXadBUZF3LoUvbSpQ6tYN",
-        abi_digest = "CAZasoggS6VYsJWdWf9tWUmqXjmCe1iCa1s1szSkcV3q"
+        abi_digest = "CAZasoggS6VYsJWdWf9tWUmqXjmCe1iCa1s1szSkcV3q",
+        abi_serializer = "bincode"
     ),
     derive(AbiExample, StableAbi, StableAbiSample)
 )]
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
+#[cfg_attr(feature = "wincode", derive(wincode::SchemaWrite, wincode::SchemaRead))]
 #[derive(Default, Debug, PartialEq, Eq, Clone)]
 pub struct VoteStateUpdate {
     /// The proposed tower
@@ -110,11 +114,13 @@ impl VoteStateUpdate {
     feature = "frozen-abi",
     frozen_abi(
         api_digest = "6UDiQMH4wbNwkMHosPMtekMYu2Qa6CHPZ2ymK4mc6FGu",
-        abi_digest = "AFc7BWoFERboQDSN7VmXqXu7MoV3TwksgKoabdarYycF"
+        abi_digest = "AFc7BWoFERboQDSN7VmXqXu7MoV3TwksgKoabdarYycF",
+        abi_serializer = "bincode"
     ),
     derive(AbiExample, StableAbi, StableAbiSample)
 )]
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
+#[cfg_attr(feature = "wincode", derive(wincode::SchemaWrite, wincode::SchemaRead))]
 #[derive(Default, Debug, PartialEq, Eq, Clone)]
 pub struct TowerSync {
     /// The proposed tower
@@ -208,6 +214,7 @@ impl TowerSync {
 }
 
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
+#[cfg_attr(feature = "wincode", derive(wincode::SchemaWrite, wincode::SchemaRead))]
 #[derive(Default, Debug, PartialEq, Eq, Clone, Copy)]
 pub struct VoteInit {
     pub node_pubkey: Pubkey,
@@ -218,6 +225,7 @@ pub struct VoteInit {
 
 #[cfg_attr(feature = "serde", cfg_eval::cfg_eval, serde_as)]
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
+#[cfg_attr(feature = "wincode", derive(wincode::SchemaWrite, wincode::SchemaRead))]
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub struct VoteInitV2 {
     pub node_pubkey: Pubkey,
@@ -254,6 +262,7 @@ impl Default for VoteInitV2 {
 
 #[cfg_attr(feature = "serde", cfg_eval::cfg_eval, serde_as)]
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
+#[cfg_attr(feature = "wincode", derive(wincode::SchemaWrite, wincode::SchemaRead))]
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub struct VoterWithBLSArgs {
     #[cfg_attr(
@@ -278,6 +287,7 @@ impl Default for VoterWithBLSArgs {
 }
 
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
+#[cfg_attr(feature = "wincode", derive(wincode::SchemaWrite, wincode::SchemaRead))]
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum VoteAuthorize {
     Voter,
@@ -286,6 +296,7 @@ pub enum VoteAuthorize {
 }
 
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
+#[cfg_attr(feature = "wincode", derive(wincode::SchemaWrite, wincode::SchemaRead))]
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct VoteAuthorizeWithSeedArgs {
     pub authorization_type: VoteAuthorize,
@@ -295,6 +306,7 @@ pub struct VoteAuthorizeWithSeedArgs {
 }
 
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
+#[cfg_attr(feature = "wincode", derive(wincode::SchemaWrite, wincode::SchemaRead))]
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct VoteAuthorizeCheckedWithSeedArgs {
     pub authorization_type: VoteAuthorize,

@@ -43,6 +43,15 @@ serde = [
     "solana-pubkey/serde",
     "solana-short-vec/serde",
 ]
+wincode = [
+    "dep:solana-short-vec",
+    "dep:solana-wincode-varint",
+    "dep:wincode",
+    "solana-hash/wincode",
+    "solana-pubkey/wincode",
+    "solana-short-vec/wincode",
+    "wincode/alloc",
+]
 
 [dependencies]
 arbitrary = { workspace = true, features = ["derive"], optional = true }
@@ -66,6 +75,8 @@ solana-serde-varint = { workspace = true, optional = true }
 solana-serialize-utils = { workspace = true, optional = true, features = ["std"] }
 solana-short-vec = { workspace = true, optional = true }
 solana-system-interface = { workspace = true, features = ["bincode"], optional = true }
+solana-wincode-varint = { workspace = true, optional = true }
+wincode = { workspace = true, optional = true }
 
 [target.'cfg(target_os = "solana")'.dependencies]
 solana-serialize-utils = { workspace = true, features = ["std"] }
@@ -75,7 +86,7 @@ itertools = { workspace = true }
 rand = { workspace = true }
 solana-epoch-schedule = { workspace = true }
 solana-pubkey = { workspace = true, features = ["dev-context-only-utils"] }
-solana-vote-interface = { path = ".", features = ["dev-context-only-utils"] }
+solana-vote-interface = { path = ".", features = ["dev-context-only-utils", "wincode"] }
 test-case = { workspace = true }
 
 [lints]
