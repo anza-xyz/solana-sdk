@@ -327,14 +327,11 @@ impl StableAbi for SocketAddrV4 {
 
 impl StableAbi for SocketAddrV6 {
     fn random_with_context(rng: &mut (impl RngCore + ?Sized), _ctx: ()) -> Self {
-        // `flowinfo` and `scope_id` are sampled randomly too: this asserts that
-        // serializers agree on (and consistently ignore) them.
-        SocketAddrV6::new(
-            Ipv6Addr::random(rng),
-            rng.random(),
-            rng.random(),
-            rng.random(),
-        )
+        // `flowinfo` and `scope_id` are not part of the serialized form, so we
+        // leave them at their default (`0`) instead of sampling them. This keeps
+        // the sampled value round-trip stable (`deserialize(serialize(x)) == x`),
+        // which is what lets `test_roundtrip` cover this type.
+        SocketAddrV6::new(Ipv6Addr::random(rng), rng.random(), 0, 0)
     }
 }
 
@@ -764,7 +761,7 @@ mod tests {
         d: std::marker::PhantomData<u64>,
         e: Result<u64, bool>,
     }
-    #[derive(wincode::SchemaWrite, wincode::SchemaRead)]
+    #[derive(PartialEq, wincode::SchemaWrite, wincode::SchemaRead)]
     #[cfg_attr(
         feature = "frozen-abi",
         derive(
@@ -772,9 +769,9 @@ mod tests {
             solana_frozen_abi_macro::StableAbiSample
         ),
         solana_frozen_abi_macro::frozen_abi(
-            abi_digest = "ENF1otBEp2hAgjwMZoQmgB46JroZMEwwRDKYsCJxapHQ",
+            abi_digest = "BpX6LYJMYg5tvkZpvPmfwfU2mvzoQgXqyYzcXS2HXz7S",
             abi_serializer = "wincode",
-            test_roundtrip = "wire_only",
+            test_roundtrip = "eq_and_wire",
         )
     )]
     struct TestNet {
