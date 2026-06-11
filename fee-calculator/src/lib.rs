@@ -6,11 +6,13 @@
 use log::*;
 #[cfg(feature = "frozen-abi")]
 extern crate std;
+#[cfg(feature = "frozen-abi")]
+use solana_frozen_abi_macro::{AbiExample, StableAbi, StableAbiSample};
 #[cfg(feature = "wincode")]
 use wincode::{SchemaRead, SchemaWrite};
 
 #[repr(C)]
-#[cfg_attr(feature = "frozen-abi", derive(solana_frozen_abi_macro::AbiExample))]
+#[cfg_attr(feature = "frozen-abi", derive(AbiExample, StableAbi, StableAbiSample))]
 #[cfg_attr(
     feature = "serde",
     derive(serde_derive::Serialize, serde_derive::Deserialize)
@@ -34,7 +36,7 @@ impl FeeCalculator {
     }
 }
 
-#[cfg_attr(feature = "frozen-abi", derive(solana_frozen_abi_macro::AbiExample))]
+#[cfg_attr(feature = "frozen-abi", derive(AbiExample, StableAbi, StableAbiSample))]
 #[cfg_attr(
     feature = "serde",
     derive(serde_derive::Serialize, serde_derive::Deserialize)
