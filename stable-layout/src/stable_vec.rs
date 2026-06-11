@@ -28,9 +28,9 @@ use std::{
 /// ```
 #[repr(C)]
 pub struct StableVec<T> {
-    pub addr: u64,
-    pub cap: u64,
-    pub len: u64,
+    addr: u64,
+    cap: u64,
+    len: u64,
     _marker: PhantomData<T>,
 }
 
@@ -45,6 +45,11 @@ impl<T> StableVec<T> {
     #[inline]
     pub fn len(&self) -> u64 {
         self.len
+    }
+
+    #[inline]
+    pub fn cap(&self) -> u64 {
+        self.cap
     }
 
     #[inline]
