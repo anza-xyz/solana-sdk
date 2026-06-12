@@ -67,15 +67,16 @@ pub struct Instructions();
 solana_sysvar_id::impl_sysvar_id!(Instructions);
 
 /// Construct the account data for the instructions sysvar.
+/// Returns None if the instructions cannot be serialized correctly.
 ///
 /// This function is used by the runtime and not available to Solana programs.
 #[cfg(not(target_os = "solana"))]
-pub fn construct_instructions_data(instructions: &[BorrowedInstruction]) -> Vec<u8> {
-    let mut data = serialize_instructions(instructions);
+pub fn construct_instructions_data(instructions: &[BorrowedInstruction]) -> Option<Vec<u8>> {
+    let mut data = serialize_instructions(instructions)?;
     // add room for current instruction index.
     data.resize(data.len() + 2, 0);
 
-    data
+    Some(data)
 }
 
 #[cfg(not(target_os = "solana"))]
@@ -110,9 +111,11 @@ bitflags! {
 // - N = num_instructions
 // - A = number of accounts in a particular instruction
 // - D = data_len
+//
+// Returns None if the instructions cannot be serialized correctly.
 #[cfg(not(target_os = "solana"))]
 #[cfg_attr(feature = "dev-context-only-utils", qualifiers(pub))]
-fn serialize_instructions(instructions: &[BorrowedInstruction]) -> Vec<u8> {
+fn serialize_instructions(instructions: &[BorrowedInstruction]) -> Option<Vec<u8>> {
     // 64 bytes is a reasonable guess, calculating exactly is slower in benchmarks
     let mut data = Vec::with_capacity(instructions.len() * (32 * 2));
     append_u16(&mut data, instructions.len() as u16);
@@ -121,7 +124,7 @@ fn serialize_instructions(instructions: &[BorrowedInstruction]) -> Vec<u8> {
     }
 
     for (i, instruction) in instructions.iter().enumerate() {
-        let start_instruction_offset = data.len() as u16;
+        let start_instruction_offset = u16::try_from(data.len()).ok()?;
         let start = 2 + (2 * i);
         data[start..start + 2].copy_from_slice(&start_instruction_offset.to_le_bytes());
         append_u16(&mut data, instruction.accounts.len() as u16);
@@ -141,7 +144,7 @@ fn serialize_instructions(instructions: &[BorrowedInstruction]) -> Vec<u8> {
         append_u16(&mut data, instruction.data.len() as u16);
         append_slice(&mut data, instruction.data);
     }
-    data
+    Some(data)
 }
 
 /// Load the current `Instruction`'s index in the currently executing
@@ -395,7 +398,8 @@ mod tests {
         let borrowed_instruction1 = make_borrowed_instruction(&params1);
         let key = id();
         let mut lamports = 0;
-        let mut data = construct_instructions_data(&[borrowed_instruction0, borrowed_instruction1]);
+        let mut data =
+            construct_instructions_data(&[borrowed_instruction0, borrowed_instruction1]).unwrap();
         let owner = solana_sdk_ids::sysvar::id();
         let mut account_info =
             AccountInfo::new(&key, false, false, &mut lamports, &mut data, &owner, false);
@@ -444,7 +448,8 @@ mod tests {
 
         let key = id();
         let mut lamports = 0;
-        let mut data = construct_instructions_data(&[borrowed_instruction0, borrowed_instruction1]);
+        let mut data =
+            construct_instructions_data(&[borrowed_instruction0, borrowed_instruction1]).unwrap();
         let res = store_current_index_checked(&mut data, 1);
         assert!(res.is_ok());
         let owner = solana_sdk_ids::sysvar::id();
@@ -506,7 +511,8 @@ mod tests {
             borrowed_instruction0,
             borrowed_instruction1,
             borrowed_instruction2,
-        ]);
+        ])
+        .unwrap();
         let res = store_current_index_checked(&mut data, 1);
         assert!(res.is_ok());
         let owner = solana_sdk_ids::sysvar::id();
@@ -606,7 +612,7 @@ mod tests {
         let borrowed_instructions: Vec<BorrowedInstruction> =
             params.iter().map(make_borrowed_instruction).collect();
 
-        let serialized = serialize_instructions(&borrowed_instructions);
+        let serialized = serialize_instructions(&borrowed_instructions).unwrap();
 
         // assert that deserialize_instruction is compatible with SanitizedMessage::serialize_instructions
         for (i, instruction) in instructions.iter().enumerate() {
@@ -615,6 +621,63 @@ mod tests {
                 *instruction
             );
         }
+    }
+
+    #[test]
+    fn test_serialize_instructions_rejects_instruction_offset_overflow() {
+        fn make_borrowed_instruction_with_accounts<'a>(
+            program_id: &'a Address,
+            account_key: &'a Address,
+            num_account_refs: usize,
+            data: &'a [u8],
+        ) -> BorrowedInstruction<'a> {
+            BorrowedInstruction {
+                program_id,
+                accounts: (0..num_account_refs)
+                    .map(|_| BorrowedAccountMeta {
+                        pubkey: account_key,
+                        is_signer: false,
+                        is_writable: false,
+                    })
+                    .collect(),
+                data,
+            }
+        }
+
+        fn make_instructions<'a>(
+            program_id: &'a Address,
+            account_key: &'a Address,
+            padding_data: &'a [u8],
+        ) -> Vec<BorrowedInstruction<'a>> {
+            let mut instructions = (0..7)
+                .map(|_| make_borrowed_instruction_with_accounts(program_id, account_key, 255, &[]))
+                .collect::<Vec<_>>();
+            instructions.push(make_borrowed_instruction_with_accounts(
+                program_id,
+                account_key,
+                191,
+                padding_data,
+            ));
+            instructions.push(make_borrowed_instruction_with_accounts(
+                program_id,
+                account_key,
+                255,
+                &[],
+            ));
+            instructions
+        }
+
+        let program_id = Address::new_unique();
+        let account_key = Address::new_unique();
+
+        let boundary_padding_data = [0; 19];
+        let instructions = make_instructions(&program_id, &account_key, &boundary_padding_data);
+        assert!(serialize_instructions(&instructions).is_some());
+
+        let overflow_padding_data = [0; 20];
+        let instructions = make_instructions(&program_id, &account_key, &overflow_padding_data);
+        assert_eq!(serialize_instructions(&instructions), None);
+        assert_eq!(construct_instructions_data(&instructions), None);
     }
 
     #[test]
@@ -641,7 +704,7 @@ mod tests {
         let borrowed_instructions: Vec<BorrowedInstruction> =
             params.iter().map(make_borrowed_instruction).collect();
 
-        let serialized = serialize_instructions(&borrowed_instructions);
+        let serialized = serialize_instructions(&borrowed_instructions).unwrap();
         assert_eq!(
             deserialize_instruction(instructions.len(), &serialized).unwrap_err(),
             SanitizeError::IndexOutOfBounds,
