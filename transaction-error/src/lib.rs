@@ -147,6 +147,9 @@ pub enum TransactionError {
 
     /// Commit cancelled internally.
     CommitCancelled,
+
+    /// Instruction sysvar overflow.
+    InstructionsSysvarOverflow,
 }
 
 impl core::error::Error for TransactionError {}
@@ -232,6 +235,7 @@ impl fmt::Display for TransactionError {
              => f.write_str("Program cache hit max limit"),
             Self::CommitCancelled
              => f.write_str("CommitCancelled"),
+            Self::InstructionsSysvarOverflow => f.write_str("Instruction sysvar format overflow"),
         }
     }
 }
