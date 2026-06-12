@@ -94,6 +94,7 @@ pub mod rent;
 pub mod rewards;
 pub mod slot_hashes;
 pub mod slot_history;
+pub mod stake_history;
 
 #[cfg(feature = "bincode")]
 /// A type that holds sysvar data.

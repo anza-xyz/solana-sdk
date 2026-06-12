@@ -96,6 +96,7 @@ all_crate_dirs=(
   slot-hashes
   slot-history
   stable-layout
+  stake-history
   system-transaction
   sysvar
   sysvar-id

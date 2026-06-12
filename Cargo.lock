@@ -4639,6 +4639,25 @@ dependencies = [
 ]
 
 [[package]]
+name = "solana-stake-history"
+version = "0.0.0"
+dependencies = [
+ "anyhow",
+ "bincode",
+ "serde",
+ "serde_derive",
+ "solana-clock",
+ "solana-example-mocks",
+ "solana-frozen-abi",
+ "solana-frozen-abi-macro",
+ "solana-get-sysvar",
+ "solana-sdk-ids",
+ "solana-stake-history",
+ "solana-sysvar-id",
+ "wincode",
+]
+
+[[package]]
 name = "solana-svm-transaction"
 version = "4.2.0"
 dependencies = [
@@ -4743,6 +4762,7 @@ dependencies = [
  "solana-sha256-hasher",
  "solana-slot-hashes",
  "solana-slot-history",
+ "solana-stake-history",
  "solana-sysvar",
  "solana-sysvar-id",
  "test-case",

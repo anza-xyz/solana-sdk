@@ -14,6 +14,7 @@ on:
       - 'rent/src/**'
       - 'slot-hashes/src/**'
       - 'slot-history/src/**'
+      - 'stake-history/src/**'
       - 'sysvar/src/**'
       - 'sysvar-id/src/**'
 

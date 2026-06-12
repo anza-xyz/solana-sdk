@@ -56,6 +56,7 @@ no_std_alloc_crates=(
   -p solana-serialize-utils
   -p solana-signer
   -p solana-short-vec
+  -p solana-stake-history
   -p solana-transaction
 )
 

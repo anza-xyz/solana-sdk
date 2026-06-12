@@ -31,6 +31,7 @@ serde = [
     "solana-rent/serde",
     "solana-slot-hashes/serde",
     "solana-slot-history/serde",
+    "solana-stake-history/serde",
 ]
 wincode = [
     "dep:wincode",
@@ -45,6 +46,7 @@ wincode = [
     "solana-rent/wincode",
     "solana-slot-hashes/wincode",
     "solana-slot-history/wincode",
+    "solana-stake-history/wincode",
 ]
 
 [dependencies]
@@ -72,6 +74,7 @@ solana-sdk-ids = { workspace = true }
 solana-sdk-macro = { workspace = true }
 solana-slot-hashes = { workspace = true, features = ["sysvar"] }
 solana-slot-history = { workspace = true, features = ["sysvar"] }
+solana-stake-history = { workspace = true, features = ["sysvar"] }
 solana-sysvar-id = { workspace = true }
 wincode = { workspace = true, optional = true }
 

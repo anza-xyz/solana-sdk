@@ -2,12 +2,13 @@
 //!
 //! The _stake history sysvar_ provides access to the [`StakeHistory`] type.
 //!
-//! The [`Sysvar::get`] method always returns
+//! The [`GetSysvar::get`] method always returns
 //! [`ProgramError::UnsupportedSysvar`], and in practice the data size of this
 //! sysvar is too large to process on chain. One can still use the
 //! [`SysvarId::id`] and [`SysvarId::check_id`] methods in an on-chain program,
 //! and it can be accessed off-chain through RPC.
 //!
+//! [`GetSysvar::get`]: solana_get_sysvar::GetSysvar::get
 //! [`ProgramError::UnsupportedSysvar`]: https://docs.rs/solana-program-error/latest/solana_program_error/enum.ProgramError.html#variant.UnsupportedSysvar
 //! [`SysvarId::id`]: https://docs.rs/solana-sysvar-id/latest/solana_sysvar_id/trait.SysvarId.html
 //! [`SysvarId::check_id`]: https://docs.rs/solana-sysvar-id/latest/solana_sysvar_id/trait.SysvarId.html#tymethod.check_id
@@ -18,20 +19,20 @@
 //!
 //! ```
 //! # use solana_example_mocks::{solana_account, solana_rpc_client};
-//! # use solana_stake_interface::{stake_history::StakeHistory, sysvar::stake_history};
+//! # use solana_stake_history::{sysvar, StakeHistory};
 //! # use solana_account::Account;
 //! # use solana_rpc_client::rpc_client::RpcClient;
 //! # use anyhow::Result;
 //! #
 //! fn print_sysvar_stake_history(client: &RpcClient) -> Result<()> {
-//! #   client.set_get_account_response(stake_history::ID, Account {
+//! #   client.set_get_account_response(sysvar::ID, Account {
 //! #       lamports: 114979200,
 //! #       data: vec![0, 0, 0, 0, 0, 0, 0, 0],
 //! #       owner: solana_sdk_ids::system_program::ID,
 //! #       executable: false,
 //! #   });
 //! #
-//!     let stake_history = client.get_account(&stake_history::ID)?;
+//!     let stake_history = client.get_account(&sysvar::ID)?;
 //!     let data: StakeHistory = bincode::deserialize(&stake_history.data)?;
 //!
 //!     Ok(())
@@ -43,19 +44,19 @@
 //! # Ok::<(), anyhow::Error>(())
 //! ```
 
+pub use solana_sdk_ids::sysvar::stake_history::{check_id, id, ID};
 use {
-    crate::stake_history::{
-        StakeHistory, StakeHistoryEntry, StakeHistoryGetEntry, EPOCH_AND_ENTRY_SERIALIZED_SIZE,
-        MAX_ENTRIES,
+    crate::{
+        Epoch, StakeHistory, StakeHistoryEntry, StakeHistoryGetEntry,
+        EPOCH_AND_ENTRY_SERIALIZED_SIZE, MAX_ENTRIES,
     },
-    solana_clock::Epoch,
-    solana_sysvar::{get_sysvar, Sysvar},
-    solana_sysvar_id::declare_sysvar_id,
+    solana_get_sysvar::{get_sysvar, GetSysvar},
+    solana_sysvar_id::impl_sysvar_id,
 };
 
-declare_sysvar_id!("SysvarStakeHistory1111111111111111111111111", StakeHistory);
+impl_sysvar_id!(StakeHistory);
 
-impl Sysvar for StakeHistory {}
+impl GetSysvar for StakeHistory {}
 
 // we do not provide Default because this requires the real current epoch
 #[derive(Debug, PartialEq, Eq, Clone)]
@@ -81,7 +82,7 @@ impl StakeHistoryGetEntry for StakeHistorySysvar {
         // offset is the number of bytes to our desired entry, including eight for vector length
         let offset = epoch_delta
             .checked_mul(EPOCH_AND_ENTRY_SERIALIZED_SIZE as u64)?
-            .checked_add(std::mem::size_of::<u64>() as u64)?;
+            .checked_add(core::mem::size_of::<u64>() as u64)?;
 
         let mut entry_buf = [0; EPOCH_AND_ENTRY_SERIALIZED_SIZE];
         let result = get_sysvar(
@@ -115,40 +116,10 @@ impl StakeHistoryGetEntry for StakeHistorySysvar {
 
 #[cfg(test)]
 mod tests {
-    use {
-        super::*,
-        serial_test::serial,
-        solana_sysvar::program_stubs::{set_syscall_stubs, SyscallStubs},
-    };
-
-    // NOTE tests that use this mock MUST carry the #[serial] attribute
-    struct MockGetSysvarSyscall {
-        data: Vec<u8>,
-    }
-    impl SyscallStubs for MockGetSysvarSyscall {
-        #[allow(clippy::arithmetic_side_effects)]
-        fn sol_get_sysvar(
-            &self,
-            _sysvar_id_addr: *const u8,
-            var_addr: *mut u8,
-            offset: u64,
-            length: u64,
-        ) -> u64 {
-            let slice = unsafe { std::slice::from_raw_parts_mut(var_addr, length as usize) };
-            slice.copy_from_slice(&self.data[offset as usize..(offset + length) as usize]);
-            0 // SUCCESS
-        }
-    }
-    pub fn mock_get_sysvar_syscall(data: &[u8]) {
-        set_syscall_stubs(Box::new(MockGetSysvarSyscall {
-            data: data.to_vec(),
-        }));
-    }
+    use {super::*, crate::SIZE, alloc::vec::Vec};
 
     #[test]
     fn test_size_of() {
-        use crate::stake_history::SIZE;
-
         let mut stake_history = StakeHistory::default();
         for i in 0..MAX_ENTRIES as u64 {
             stake_history.add(
@@ -175,7 +146,6 @@ mod tests {
         );
     }
 
-    #[serial]
     #[test]
     fn test_stake_history_get_entry() {
         let unique_entry_for_epoch = |epoch: u64| StakeHistoryEntry {
@@ -194,12 +164,6 @@ mod tests {
         assert_eq!(stake_history.len(), MAX_ENTRIES);
         assert_eq!(stake_history.iter().map(|entry| entry.0).min().unwrap(), 2);
 
-        // set up sol_get_sysvar
-        mock_get_sysvar_syscall(&bincode::serialize(&stake_history).unwrap());
-
-        // make a syscall interface object
-        let stake_history_sysvar = StakeHistorySysvar(current_epoch);
-
         // now test the stake history interfaces
 
         assert_eq!(stake_history.get(0), None);
@@ -210,22 +174,15 @@ mod tests {
         assert_eq!(stake_history.get_entry(1), None);
         assert_eq!(stake_history.get_entry(current_epoch), None);
 
-        assert_eq!(stake_history_sysvar.get_entry(0), None);
-        assert_eq!(stake_history_sysvar.get_entry(1), None);
-        assert_eq!(stake_history_sysvar.get_entry(current_epoch), None);
-
         for i in 2..current_epoch {
             let entry = Some(unique_entry_for_epoch(i));
 
             assert_eq!(stake_history.get(i), entry.as_ref(),);
 
             assert_eq!(stake_history.get_entry(i), entry,);
-
-            assert_eq!(stake_history_sysvar.get_entry(i), entry,);
         }
     }
 
-    #[serial]
     #[test]
     fn test_stake_history_get_entry_zero() {
         let mut current_epoch = 0;
@@ -234,12 +191,8 @@ mod tests {
         let stake_history = StakeHistory::default();
         assert_eq!(stake_history.len(), 0);
 
-        mock_get_sysvar_syscall(&bincode::serialize(&stake_history).unwrap());
-        let stake_history_sysvar = StakeHistorySysvar(current_epoch);
-
         assert_eq!(stake_history.get(0), None);
         assert_eq!(stake_history.get_entry(0), None);
-        assert_eq!(stake_history_sysvar.get_entry(0), None);
 
         // next test that we can get a zeroth entry in the first epoch
         let entry_zero = StakeHistoryEntry {
@@ -253,23 +206,14 @@ mod tests {
         assert_eq!(stake_history.len(), 1);
         current_epoch = current_epoch.saturating_add(1);
 
-        mock_get_sysvar_syscall(&bincode::serialize(&stake_history).unwrap());
-        let stake_history_sysvar = StakeHistorySysvar(current_epoch);
-
         assert_eq!(stake_history.get(0), entry.as_ref());
         assert_eq!(stake_history.get_entry(0), entry);
-        assert_eq!(stake_history_sysvar.get_entry(0), entry);
 
         // finally test that we can still get a zeroth entry in later epochs
         stake_history.add(current_epoch, StakeHistoryEntry::default());
         assert_eq!(stake_history.len(), 2);
-        current_epoch = current_epoch.saturating_add(1);
-
-        mock_get_sysvar_syscall(&bincode::serialize(&stake_history).unwrap());
-        let stake_history_sysvar = StakeHistorySysvar(current_epoch);
 
         assert_eq!(stake_history.get(0), entry.as_ref());
         assert_eq!(stake_history.get_entry(0), entry);
-        assert_eq!(stake_history_sysvar.get_entry(0), entry);
     }
 }
