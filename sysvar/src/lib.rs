@@ -83,9 +83,12 @@ pub mod __private {
     pub use solana_define_syscall::definitions;
     pub use {solana_program_entrypoint::SUCCESS, solana_program_error::ProgramError};
 }
+pub use solana_get_sysvar::get_sysvar;
+#[doc(hidden)]
+pub use solana_get_sysvar::get_sysvar_unchecked;
+use solana_program_error::ProgramError;
 #[cfg(feature = "bincode")]
 use {solana_account_info::AccountInfo, solana_sysvar_id::SysvarId};
-use {solana_program_error::ProgramError, solana_pubkey::Pubkey};
 
 pub mod clock;
 pub mod epoch_rewards;
@@ -98,17 +101,6 @@ pub mod rent;
 pub mod rewards;
 pub mod slot_hashes;
 pub mod slot_history;
-
-/// Return value indicating that the  `offset + length` is greater than the length of
-/// the sysvar data.
-//
-// Defined in the bpf loader as [`OFFSET_LENGTH_EXCEEDS_SYSVAR`](https://github.com/anza-xyz/agave/blob/master/programs/bpf_loader/src/syscalls/sysvar.rs#L172).
-const OFFSET_LENGTH_EXCEEDS_SYSVAR: u64 = 1;
-
-/// Return value indicating that the sysvar was not found.
-//
-// Defined in the bpf loader as [`SYSVAR_NOT_FOUND`](https://github.com/anza-xyz/agave/blob/master/programs/bpf_loader/src/syscalls/sysvar.rs#L171).
-const SYSVAR_NOT_FOUND: u64 = 2;
 
 /// Interface for loading a sysvar.
 pub trait Sysvar: Default + Sized {
@@ -213,79 +205,16 @@ macro_rules! impl_sysvar_get {
     };
 }
 
-/// Handler for retrieving a slice of sysvar data from the `sol_get_sysvar`
-/// syscall.
-pub fn get_sysvar(
-    dst: &mut [u8],
-    sysvar_id: &Pubkey,
-    offset: u64,
-    length: u64,
-) -> Result<(), solana_program_error::ProgramError> {
-    // Check that the provided destination buffer is large enough to hold the
-    // requested data.
-    if dst.len() < length as usize {
-        return Err(solana_program_error::ProgramError::InvalidArgument);
-    }
-
-    let sysvar_id = sysvar_id as *const _ as *const u8;
-    let var_addr = dst as *mut _ as *mut u8;
-
-    #[cfg(target_os = "solana")]
-    let result = unsafe {
-        solana_define_syscall::definitions::sol_get_sysvar(sysvar_id, var_addr, offset, length)
-    };
-
-    #[cfg(not(target_os = "solana"))]
-    let result = crate::program_stubs::sol_get_sysvar(sysvar_id, var_addr, offset, length);
-
-    match result {
-        solana_program_entrypoint::SUCCESS => Ok(()),
-        OFFSET_LENGTH_EXCEEDS_SYSVAR => Err(solana_program_error::ProgramError::InvalidArgument),
-        _ => Err(solana_program_error::ProgramError::UnsupportedSysvar),
-    }
-}
-
-/// Internal helper for retrieving sysvar data directly into a raw buffer.
-///
-/// # Safety
-///
-/// This function bypasses the slice-length check that `get_sysvar` performs.
-/// The caller must ensure that `var_addr` points to a writable buffer of at
-/// least `length` bytes. This is typically used with `MaybeUninit` to load
-/// compact representations of sysvars.
-#[doc(hidden)]
-pub unsafe fn get_sysvar_unchecked(
-    var_addr: *mut u8,
-    sysvar_id: *const u8,
-    offset: u64,
-    length: u64,
-) -> Result<(), solana_program_error::ProgramError> {
-    #[cfg(target_os = "solana")]
-    let result =
-        solana_define_syscall::definitions::sol_get_sysvar(sysvar_id, var_addr, offset, length);
-
-    #[cfg(not(target_os = "solana"))]
-    let result = crate::program_stubs::sol_get_sysvar(sysvar_id, var_addr, offset, length);
-
-    match result {
-        solana_program_entrypoint::SUCCESS => Ok(()),
-        OFFSET_LENGTH_EXCEEDS_SYSVAR => Err(solana_program_error::ProgramError::InvalidArgument),
-        SYSVAR_NOT_FOUND => Err(solana_program_error::ProgramError::UnsupportedSysvar),
-        // Unexpected errors are folded into `UnsupportedSysvar`.
-        _ => Err(solana_program_error::ProgramError::UnsupportedSysvar),
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use {
         super::*,
-        crate::program_stubs::{set_syscall_stubs, SyscallStubs},
         serde_derive::{Deserialize, Serialize},
+        solana_get_sysvar::{set_get_sysvar_stub, GetSysvarStub},
         solana_program_entrypoint::SUCCESS,
         solana_program_error::ProgramError,
         solana_pubkey::Pubkey,
-        std::{cell::RefCell, rc::Rc},
+        std::{cell::RefCell, rc::Rc, sync::Arc},
     };
 
     #[repr(C)]
@@ -307,13 +236,13 @@ mod tests {
     impl SysvarSerialize for TestSysvar {}
 
     // NOTE: Tests using these mocks MUST carry the #[serial] attribute
-    // because they modify global SYSCALL_STUBS state.
+    // because they modify global get-sysvar stub state.
 
     struct MockGetSysvarSyscall {
         data: Vec<u8>,
     }
 
-    impl SyscallStubs for MockGetSysvarSyscall {
+    impl GetSysvarStub for MockGetSysvarSyscall {
         #[allow(clippy::arithmetic_side_effects)]
         fn sol_get_sysvar(
             &self,
@@ -330,7 +259,7 @@ mod tests {
 
     /// Mock syscall stub for tests. Requires `#[serial]` attribute.
     pub fn mock_get_sysvar_syscall(data: &[u8]) {
-        set_syscall_stubs(Box::new(MockGetSysvarSyscall {
+        set_get_sysvar_stub(Arc::new(MockGetSysvarSyscall {
             data: data.to_vec(),
         }));
     }
@@ -340,7 +269,7 @@ mod tests {
         expected_id: Pubkey,
     }
 
-    impl SyscallStubs for ValidateIdSyscall {
+    impl GetSysvarStub for ValidateIdSyscall {
         #[allow(clippy::arithmetic_side_effects)]
         fn sol_get_sysvar(
             &self,
@@ -363,8 +292,8 @@ mod tests {
     pub fn mock_get_sysvar_syscall_with_id(
         data: &[u8],
         expected_id: &Pubkey,
-    ) -> Box<dyn SyscallStubs> {
-        set_syscall_stubs(Box::new(ValidateIdSyscall {
+    ) -> Option<Arc<dyn GetSysvarStub>> {
+        set_get_sysvar_stub(Arc::new(ValidateIdSyscall {
             data: data.to_vec(),
             expected_id: *expected_id,
         }))

@@ -39,6 +39,7 @@ all_crate_dirs=(
   frozen-abi
   frozen-abi-macro
   genesis-config
+  get-sysvar
   hard-forks
   hash
   hash-512

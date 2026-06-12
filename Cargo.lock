@@ -3787,6 +3787,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "solana-get-sysvar"
+version = "0.0.0"
+dependencies = [
+ "solana-address",
+ "solana-define-syscall",
+ "solana-program-error",
+]
+
+[[package]]
 name = "solana-hard-forks"
 version = "3.1.1"
 dependencies = [
@@ -4711,6 +4720,7 @@ dependencies = [
  "solana-fee-calculator",
  "solana-frozen-abi",
  "solana-frozen-abi-macro",
+ "solana-get-sysvar",
  "solana-hash",
  "solana-instruction",
  "solana-last-restart-slot",

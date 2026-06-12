@@ -61,6 +61,7 @@ solana-epoch-schedule = { workspace = true, features = ["sysvar"] }
 solana-fee-calculator = { workspace = true }
 solana-frozen-abi = { workspace = true, optional = true, features = ["frozen-abi"] }
 solana-frozen-abi-macro = { workspace = true, optional = true }
+solana-get-sysvar = { workspace = true, features = ["std"] }
 solana-hash = { workspace = true, features = ["bytemuck"] }
 solana-last-restart-slot = { workspace = true, features = ["sysvar"] }
 solana-program-entrypoint = { workspace = true }

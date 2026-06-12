@@ -142,19 +142,6 @@ pub fn sol_invoke_signed(
         .sol_invoke_signed(instruction, account_infos, signers_seeds)
 }
 
-#[allow(dead_code)]
-pub(crate) fn sol_get_sysvar(
-    sysvar_id_addr: *const u8,
-    var_addr: *mut u8,
-    offset: u64,
-    length: u64,
-) -> u64 {
-    SYSCALL_STUBS
-        .read()
-        .unwrap()
-        .sol_get_sysvar(sysvar_id_addr, var_addr, offset, length)
-}
-
 pub fn sol_get_epoch_stake(vote_address: *const u8) -> u64 {
     SYSCALL_STUBS
         .read()

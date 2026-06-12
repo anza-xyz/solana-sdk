@@ -188,6 +188,14 @@ mod tests {
         let got = Clock::get().unwrap();
         assert_eq!(got, expected);
 
-        let _ = crate::program_stubs::set_syscall_stubs(prev);
+        // Restore the process-global stub to the state this test replaced.
+        match prev {
+            Some(prev) => {
+                solana_get_sysvar::set_get_sysvar_stub(prev);
+            }
+            None => {
+                solana_get_sysvar::clear_get_sysvar_stub();
+            }
+        }
     }
 }
