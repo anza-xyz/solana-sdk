@@ -58,7 +58,7 @@ fn bench_manual_instruction_deserialize(b: &mut Bencher) {
         &HashSet::default(),
     )
     .unwrap();
-    let serialized = construct_instructions_data(&message.decompile_instructions());
+    let serialized = construct_instructions_data(&message.decompile_instructions()).unwrap();
     b.iter(|| {
         for i in 0..instructions.len() {
             #[allow(deprecated)]
@@ -75,7 +75,7 @@ fn bench_manual_instruction_deserialize_single(b: &mut Bencher) {
         &HashSet::default(),
     )
     .unwrap();
-    let serialized = construct_instructions_data(&message.decompile_instructions());
+    let serialized = construct_instructions_data(&message.decompile_instructions()).unwrap();
     b.iter(|| {
         #[allow(deprecated)]
         test::black_box(instructions::load_instruction_at(3, &serialized).unwrap());
