@@ -1,14 +1,23 @@
 //! A type to hold data for the [`StakeHistory` sysvar][sv].
 //!
 //! [sv]: https://docs.solanalabs.com/runtime/sysvars#stakehistory
+#![no_std]
 #![cfg_attr(docsrs, feature(doc_cfg))]
 #![cfg_attr(feature = "frozen-abi", feature(min_specialization))]
+
+#[cfg(feature = "frozen-abi")]
+extern crate std;
+
+extern crate alloc;
 
 #[cfg(feature = "sysvar")]
 pub mod sysvar;
 
 pub use solana_clock::Epoch;
-use std::ops::Deref;
+use {
+    alloc::{borrow::ToOwned, vec::Vec},
+    core::ops::Deref,
+};
 
 pub const MAX_ENTRIES: usize = 512; // it should never take as many as 512 epochs to warm up or cool down
 
@@ -87,7 +96,7 @@ impl StakeHistoryEntry {
 }
 
 // TODO: Remove once we are comfortable with adding breaking changes.
-impl std::ops::Add for StakeHistoryEntry {
+impl core::ops::Add for StakeHistoryEntry {
     type Output = StakeHistoryEntry;
     fn add(self, rhs: StakeHistoryEntry) -> Self::Output {
         Self {
