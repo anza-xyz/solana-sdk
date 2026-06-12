@@ -9,7 +9,7 @@
 //! and it can be accessed off-chain through RPC.
 //!
 //! [`ProgramError::UnsupportedSysvar`]: https://docs.rs/solana-program-error/latest/solana_program_error/enum.ProgramError.html#variant.UnsupportedSysvar
-//! [`SysvarId::id`]: https://docs.rs/solana-sysvar-id/latest/solana_sysvar_id/trait.SysvarId.html
+//! [`SysvarId::id`]: https://docs.rs/solana-sysvar-id/latest/solana_sysvar_id/trait.SysvarId.html#tymethod.id
 //! [`SysvarId::check_id`]: https://docs.rs/solana-sysvar-id/latest/solana_sysvar_id/trait.SysvarId.html#tymethod.check_id
 //!
 //! # Examples
@@ -18,7 +18,8 @@
 //!
 //! ```
 //! # use solana_example_mocks::{solana_account, solana_rpc_client};
-//! # use solana_stake_interface::{stake_history::StakeHistory, sysvar::stake_history};
+//! # use solana_sdk_ids::sysvar::stake_history;
+//! # use solana_stake_history::StakeHistory;
 //! # use solana_account::Account;
 //! # use solana_rpc_client::rpc_client::RpcClient;
 //! # use anyhow::Result;
@@ -44,16 +45,15 @@
 //! ```
 
 use {
-    crate::stake_history::{
-        StakeHistory, StakeHistoryEntry, StakeHistoryGetEntry, EPOCH_AND_ENTRY_SERIALIZED_SIZE,
-        MAX_ENTRIES,
-    },
+    crate::{get_sysvar, Sysvar},
     solana_clock::Epoch,
-    solana_sysvar::{get_sysvar, Sysvar},
-    solana_sysvar_id::declare_sysvar_id,
+    solana_stake_history::{EPOCH_AND_ENTRY_SERIALIZED_SIZE, MAX_ENTRIES},
 };
-
-declare_sysvar_id!("SysvarStakeHistory1111111111111111111111111", StakeHistory);
+pub use {
+    solana_sdk_ids::sysvar::stake_history::{check_id, id, ID},
+    solana_stake_history::{StakeHistory, StakeHistoryEntry, StakeHistoryGetEntry},
+    solana_sysvar_id::SysvarId,
+};
 
 impl Sysvar for StakeHistory {}
 
@@ -116,39 +116,12 @@ impl StakeHistoryGetEntry for StakeHistorySysvar {
 #[cfg(test)]
 mod tests {
     use {
-        super::*,
-        serial_test::serial,
-        solana_sysvar::program_stubs::{set_syscall_stubs, SyscallStubs},
+        super::*, crate::tests::mock_get_sysvar_syscall, serial_test::serial,
+        solana_stake_history::SIZE,
     };
-
-    // NOTE tests that use this mock MUST carry the #[serial] attribute
-    struct MockGetSysvarSyscall {
-        data: Vec<u8>,
-    }
-    impl SyscallStubs for MockGetSysvarSyscall {
-        #[allow(clippy::arithmetic_side_effects)]
-        fn sol_get_sysvar(
-            &self,
-            _sysvar_id_addr: *const u8,
-            var_addr: *mut u8,
-            offset: u64,
-            length: u64,
-        ) -> u64 {
-            let slice = unsafe { std::slice::from_raw_parts_mut(var_addr, length as usize) };
-            slice.copy_from_slice(&self.data[offset as usize..(offset + length) as usize]);
-            0 // SUCCESS
-        }
-    }
-    pub fn mock_get_sysvar_syscall(data: &[u8]) {
-        set_syscall_stubs(Box::new(MockGetSysvarSyscall {
-            data: data.to_vec(),
-        }));
-    }
 
     #[test]
     fn test_size_of() {
-        use crate::stake_history::SIZE;
-
         let mut stake_history = StakeHistory::default();
         for i in 0..MAX_ENTRIES as u64 {
             stake_history.add(
