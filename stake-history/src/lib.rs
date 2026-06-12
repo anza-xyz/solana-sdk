@@ -1,6 +1,11 @@
 //! A type to hold data for the [`StakeHistory` sysvar][sv].
 //!
 //! [sv]: https://docs.solanalabs.com/runtime/sysvars#stakehistory
+#![cfg_attr(docsrs, feature(doc_cfg))]
+#![cfg_attr(feature = "frozen-abi", feature(min_specialization))]
+
+#[cfg(feature = "sysvar")]
+pub mod sysvar;
 
 pub use solana_clock::Epoch;
 use std::ops::Deref;
@@ -8,7 +13,7 @@ use std::ops::Deref;
 pub const MAX_ENTRIES: usize = 512; // it should never take as many as 512 epochs to warm up or cool down
 
 /// Serialized size of a single `(Epoch, StakeHistoryEntry)` tuple
-pub(crate) const EPOCH_AND_ENTRY_SERIALIZED_SIZE: usize = 32;
+pub const EPOCH_AND_ENTRY_SERIALIZED_SIZE: usize = 32;
 const _: () =
     assert!(EPOCH_AND_ENTRY_SERIALIZED_SIZE == size_of::<u64>() + size_of::<StakeHistoryEntry>());
 
