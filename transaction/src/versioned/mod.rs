@@ -199,6 +199,10 @@ impl VersionedTransaction {
         &self,
     ) -> solana_transaction_error::TransactionResult<solana_hash::Hash> {
         let message_bytes = self.message.serialize();
+        if self.sanitize_signatures().is_err() {
+            return Err(solana_transaction_error::TransactionError::SignatureFailure);
+        }
+
         if !self
             ._verify_with_results(&message_bytes)
             .iter()
@@ -219,10 +223,20 @@ impl VersionedTransaction {
 
     #[cfg(feature = "verify")]
     fn _verify_with_results(&self, message_bytes: &[u8]) -> Vec<bool> {
-        self.signatures
-            .iter()
-            .zip(self.message.static_account_keys().iter())
-            .map(|(signature, pubkey)| signature.verify(pubkey.as_ref(), message_bytes))
+        let num_required_signatures = usize::from(self.message.header().num_required_signatures);
+        let static_account_keys = self.message.static_account_keys();
+
+        (0..num_required_signatures)
+            .map(|index| {
+                let Some(signature) = self.signatures.get(index) else {
+                    return false;
+                };
+                let Some(pubkey) = static_account_keys.get(index) else {
+                    return false;
+                };
+
+                signature.verify(pubkey.as_ref(), message_bytes)
+            })
             .collect()
     }
 
@@ -429,6 +443,47 @@ mod tests {
             Ok(tx) => assert_eq!(tx.verify_with_results(), vec![true; 2]),
             Err(err) => assert_eq!(Some(err), None),
         }
+    }
+
+    #[test]
+    fn test_verify_with_results_returns_false_for_missing_signatures() {
+        let tx = VersionedTransaction {
+            signatures: vec![],
+            message: VersionedMessage::Legacy(LegacyMessage {
+                header: MessageHeader {
+                    num_required_signatures: 1,
+                    num_readonly_signed_accounts: 0,
+                    num_readonly_unsigned_accounts: 0,
+                },
+                account_keys: vec![Address::new_unique()],
+                recent_blockhash: Hash::default(),
+                instructions: vec![],
+            }),
+        };
+
+        assert_eq!(tx.verify_with_results(), vec![false]);
+    }
+
+    #[test]
+    fn test_verify_and_hash_message_fails_with_missing_signatures() {
+        let tx = VersionedTransaction {
+            signatures: vec![],
+            message: VersionedMessage::Legacy(LegacyMessage {
+                header: MessageHeader {
+                    num_required_signatures: 1,
+                    num_readonly_signed_accounts: 0,
+                    num_readonly_unsigned_accounts: 0,
+                },
+                account_keys: vec![Address::new_unique()],
+                recent_blockhash: Hash::default(),
+                instructions: vec![],
+            }),
+        };
+
+        assert_eq!(
+            tx.verify_and_hash_message(),
+            Err(solana_transaction_error::TransactionError::SignatureFailure),
+        );
     }
 
     fn nonced_transfer_tx() -> (Pubkey, Pubkey, VersionedTransaction) {
