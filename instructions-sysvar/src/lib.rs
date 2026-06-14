@@ -71,12 +71,14 @@ solana_sysvar_id::impl_sysvar_id!(Instructions);
 ///
 /// This function is used by the runtime and not available to Solana programs.
 #[cfg(not(target_os = "solana"))]
-pub fn construct_instructions_data(instructions: &[BorrowedInstruction]) -> Option<Vec<u8>> {
+pub fn construct_instructions_data(
+    instructions: &[BorrowedInstruction],
+) -> Result<Vec<u8>, InstructionsSysvarError> {
     let mut data = serialize_instructions(instructions)?;
     // add room for current instruction index.
     data.resize(data.len() + 2, 0);
 
-    Some(data)
+    Ok(data)
 }
 
 #[cfg(not(target_os = "solana"))]
@@ -85,6 +87,12 @@ bitflags! {
         const IS_SIGNER = 0b00000001;
         const IS_WRITABLE = 0b00000010;
     }
+}
+
+#[derive(Debug, PartialEq, Eq)]
+pub enum InstructionsSysvarError {
+    /// The instruction index stored in the instructions sysvar account data is out of bounds.
+    InstructionIndexOutOfBounds,
 }
 
 // Instructions memory layout
@@ -115,7 +123,9 @@ bitflags! {
 // Returns None if the instructions cannot be serialized correctly.
 #[cfg(not(target_os = "solana"))]
 #[cfg_attr(feature = "dev-context-only-utils", qualifiers(pub))]
-fn serialize_instructions(instructions: &[BorrowedInstruction]) -> Option<Vec<u8>> {
+fn serialize_instructions(
+    instructions: &[BorrowedInstruction],
+) -> Result<Vec<u8>, InstructionsSysvarError> {
     // 64 bytes is a reasonable guess, calculating exactly is slower in benchmarks
     let mut data = Vec::with_capacity(instructions.len() * (32 * 2));
     append_u16(&mut data, instructions.len() as u16);
@@ -124,7 +134,8 @@ fn serialize_instructions(instructions: &[BorrowedInstruction]) -> Option<Vec<u8
     }
 
     for (i, instruction) in instructions.iter().enumerate() {
-        let start_instruction_offset = u16::try_from(data.len()).ok()?;
+        let start_instruction_offset = u16::try_from(data.len())
+            .map_err(|_| InstructionsSysvarError::InstructionIndexOutOfBounds)?;
         let start = 2 + (2 * i);
         data[start..start + 2].copy_from_slice(&start_instruction_offset.to_le_bytes());
         append_u16(&mut data, instruction.accounts.len() as u16);
@@ -144,7 +155,7 @@ fn serialize_instructions(instructions: &[BorrowedInstruction]) -> Option<Vec<u8
         append_u16(&mut data, instruction.data.len() as u16);
         append_slice(&mut data, instruction.data);
     }
-    Some(data)
+    Ok(data)
 }
 
 /// Load the current `Instruction`'s index in the currently executing
@@ -672,12 +683,18 @@ mod tests {
 
         let boundary_padding_data = [0; 19];
         let instructions = make_instructions(&program_id, &account_key, &boundary_padding_data);
-        assert!(serialize_instructions(&instructions).is_some());
+        assert!(serialize_instructions(&instructions).is_ok());
 
         let overflow_padding_data = [0; 20];
         let instructions = make_instructions(&program_id, &account_key, &overflow_padding_data);
-        assert_eq!(serialize_instructions(&instructions), None);
-        assert_eq!(construct_instructions_data(&instructions), None);
+        assert_eq!(
+            serialize_instructions(&instructions),
+            Err(InstructionsSysvarError::InstructionIndexOutOfBounds)
+        );
+        assert_eq!(
+            construct_instructions_data(&instructions),
+            Err(InstructionsSysvarError::InstructionIndexOutOfBounds)
+        );
     }
 
     #[test]

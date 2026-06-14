@@ -37,7 +37,7 @@ fn bench_construct_instructions_data(b: &mut Bencher) {
     .unwrap();
     b.iter(|| {
         let instructions = message.decompile_instructions();
-        test::black_box(construct_instructions_data(&instructions));
+        test::black_box(construct_instructions_data(&instructions).unwrap());
     });
 }
 
