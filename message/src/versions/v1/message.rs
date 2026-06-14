@@ -476,7 +476,7 @@ impl Message {
 
         // if specified, heap size must be a multiple of 1024 and within valid bounds
         if let Some(heap_size) = self.config.heap_size {
-            if heap_size % 1024 != 0 {
+            if !heap_size.is_multiple_of(1024) {
                 return Err(MessageError::InvalidHeapSize);
             }
 
