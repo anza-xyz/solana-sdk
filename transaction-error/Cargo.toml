@@ -16,7 +16,12 @@ all-features = true
 rustdoc-args = ["--cfg=docsrs"]
 
 [features]
-frozen-abi = ["dep:solana-frozen-abi", "dep:solana-frozen-abi-macro", "serde"]
+frozen-abi = [
+    "dep:solana-frozen-abi",
+    "dep:solana-frozen-abi-macro",
+    "serde",
+    "solana-instruction-error/frozen-abi",
+]
 serde = ["dep:serde", "dep:serde_derive", "solana-instruction-error/serde"]
 wincode = ["dep:wincode", "solana-instruction-error/wincode"]
 
@@ -28,6 +33,11 @@ solana-frozen-abi-macro = { workspace = true, optional = true }
 solana-instruction-error = { workspace = true }
 solana-sanitize = { workspace = true }
 wincode = { workspace = true, optional = true }
+
+[dev-dependencies]
+# Self-dependency enabling `wincode` so the `frozen_abi` wincode digest test can
+# serialize `TransactionError` during unit tests.
+solana-transaction-error = { path = ".", features = ["wincode"] }
 
 [lints]
 workspace = true

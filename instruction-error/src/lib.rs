@@ -24,7 +24,9 @@ pub use {
 #[allow(deprecated)]
 mod instruction_error_module {
     #[cfg(feature = "frozen-abi")]
-    use solana_frozen_abi_macro::{AbiEnumVisitor, AbiExample};
+    use solana_frozen_abi_macro::{
+        frozen_abi, AbiEnumVisitor, AbiExample, StableAbi, StableAbiSample,
+    };
 
     /// Reasons the runtime might have rejected an instruction.
     ///
@@ -33,7 +35,15 @@ mod instruction_error_module {
     /// an error be consistent across software versions.  For example, it is
     /// dangerous to include error strings from 3rd party crates because they could
     /// change at any time and changes to them are difficult to detect.
-    #[cfg_attr(feature = "frozen-abi", derive(AbiExample, AbiEnumVisitor))]
+    #[cfg_attr(
+        feature = "frozen-abi",
+        derive(AbiExample, AbiEnumVisitor, StableAbi, StableAbiSample),
+        frozen_abi(
+            abi_digest = "99sLbFrZmSAM4i28P5vPDJFtB6xDgvyT92iEJpKiMPpF",
+            abi_serializer = ["bincode", "wincode"],
+            test_roundtrip = "eq_and_wire"
+        )
+    )]
     #[cfg_attr(
         feature = "serde",
         derive(serde_derive::Serialize, serde_derive::Deserialize)

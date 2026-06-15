@@ -13,7 +13,7 @@ pub use loaded::*;
 #[cfg(feature = "serde")]
 use serde_derive::{Deserialize, Serialize};
 #[cfg(feature = "frozen-abi")]
-use solana_frozen_abi_macro::AbiExample;
+use solana_frozen_abi_macro::{frozen_abi, AbiExample, StableAbi, StableAbiSample};
 use {
     crate::{
         compiled_instruction::CompiledInstruction,
@@ -38,7 +38,15 @@ mod loaded;
 
 /// Address table lookups describe an on-chain address lookup table to use
 /// for loading more readonly and writable accounts in a single tx.
-#[cfg_attr(feature = "frozen-abi", derive(AbiExample))]
+#[cfg_attr(
+    feature = "frozen-abi",
+    derive(AbiExample, StableAbi, StableAbiSample),
+    frozen_abi(
+        abi_digest = "BgfDMK6KNGWbvzMmSAcwMsMoL25jmE7x7CCzCeYtMnqa",
+        abi_serializer = ["bincode", "wincode"],
+        test_roundtrip = "eq_and_wire"
+    )
+)]
 #[cfg_attr(
     feature = "serde",
     derive(Deserialize, Serialize),

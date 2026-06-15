@@ -4,7 +4,7 @@
 #[cfg(feature = "serde")]
 use serde_derive::{Deserialize, Serialize};
 #[cfg(feature = "frozen-abi")]
-use solana_frozen_abi_macro::{AbiEnumVisitor, AbiExample};
+use solana_frozen_abi_macro::{frozen_abi, AbiEnumVisitor, AbiExample, StableAbi, StableAbiSample};
 #[cfg(any(
     feature = "frozen-abi",
     not(any(target_os = "solana", target_arch = "bpf"))
@@ -15,7 +15,15 @@ use {core::fmt, solana_instruction_error::InstructionError, solana_sanitize::San
 pub type TransactionResult<T> = Result<T, TransactionError>;
 
 /// Reasons a transaction might be rejected.
-#[cfg_attr(feature = "frozen-abi", derive(AbiExample, AbiEnumVisitor))]
+#[cfg_attr(
+    feature = "frozen-abi",
+    derive(AbiExample, AbiEnumVisitor, StableAbi, StableAbiSample),
+    frozen_abi(
+        abi_digest = "6qvmfr8X2536Tt5964pUX2mhSggRQxcyHPBVVonnbbhE",
+        abi_serializer = ["bincode", "wincode"],
+        test_roundtrip = "eq_and_wire"
+    )
+)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "wincode", derive(wincode::SchemaWrite, wincode::SchemaRead))]
 #[derive(Debug, PartialEq, Eq, Clone)]

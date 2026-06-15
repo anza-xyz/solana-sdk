@@ -30,5 +30,10 @@ solana-frozen-abi-macro = { workspace = true, optional = true }
 solana-program-error = { workspace = true }
 wincode = { workspace = true, optional = true }
 
+[dev-dependencies]
+# Self-dependency enabling `wincode` so the `frozen_abi` wincode digest test can
+# serialize `InstructionError` during unit tests.
+solana-instruction-error = { path = ".", features = ["wincode"] }
+
 [lints]
 workspace = true

@@ -1,5 +1,7 @@
 //! Defines a transaction which supports multiple versions of messages.
 
+#[cfg(feature = "frozen-abi")]
+use solana_frozen_abi_macro::{frozen_abi, AbiExample, StableAbi};
 use {
     crate::Transaction,
     alloc::vec::Vec,
@@ -63,7 +65,15 @@ impl TransactionVersion {
 
 // NOTE: Serialization-related changes must be paired with the direct read at sigverify.
 /// An atomic transaction
-#[cfg_attr(feature = "frozen-abi", derive(solana_frozen_abi_macro::AbiExample))]
+#[cfg_attr(
+    feature = "frozen-abi",
+    derive(AbiExample, StableAbi),
+    frozen_abi(
+        abi_digest = "DFvqfzN7BvZXod7qDFqR2g3Qo6fXvHNtghaxyAgmuhJX",
+        abi_serializer = "wincode",
+        test_roundtrip = "eq_and_wire"
+    )
+)]
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[cfg_attr(feature = "wincode", derive(UninitBuilder))]
 #[derive(Debug, PartialEq, Default, Eq, Clone)]
@@ -77,6 +87,94 @@ pub struct VersionedTransaction {
     pub signatures: Vec<Signature>,
     /// Message to sign.
     pub message: VersionedMessage,
+}
+
+// `StableAbi` is provided through a manual `Distribution` (rather than the
+// `StableAbiSample` derive) because the sampled value must be self-consistent to
+// survive a serialize/deserialize roundtrip. The component types are still
+// sampled with their derived `StableAbi::random`; only the parts that the wire
+// format couples together are constrained here:
+//   * The legacy message has no version prefix, so its first byte (the header's
+//     `num_required_signatures`) must stay below `MESSAGE_VERSION_PREFIX`,
+//     otherwise it would decode as a versioned message. Legacy is therefore only
+//     selected when the sampled header allows it.
+//   * V0/legacy signatures use a `ShortU16` length prefix; the derived 0..=5
+//     count fits in a single prefix byte, so the derived sampling is reused.
+//   * V1 writes signatures as a fixed-length array sized by the header, so the
+//     signature count must equal `num_required_signatures`.
+#[cfg(feature = "frozen-abi")]
+impl solana_frozen_abi::rand::prelude::Distribution<VersionedTransaction>
+    for solana_frozen_abi::rand::distr::StandardUniform
+{
+    fn sample<R: solana_frozen_abi::rand::Rng + ?Sized>(
+        &self,
+        rng: &mut R,
+    ) -> VersionedTransaction {
+        use {
+            solana_address::Address,
+            solana_frozen_abi::stable_abi::StableAbi,
+            solana_message::{
+                compiled_instruction::CompiledInstruction, v0, v1, Message as LegacyMessage,
+                MessageHeader, MESSAGE_VERSION_PREFIX,
+            },
+        };
+
+        let header = MessageHeader::random(rng);
+        let legacy_representable = header.num_required_signatures & MESSAGE_VERSION_PREFIX == 0;
+
+        // 0 = legacy, 1 = v0, 2 = v1.
+        let version = if legacy_representable {
+            rng.random_range(0u8..3)
+        } else {
+            rng.random_range(1u8..3)
+        };
+
+        // `Vec` has several context-specific `StableAbi` impls, so the element
+        // type is named explicitly to select the default-context one (which draws
+        // a small, single-byte-prefix-sized length); the other fields infer it.
+        let (message, signatures) = match version {
+            0 => (
+                VersionedMessage::Legacy(LegacyMessage {
+                    header,
+                    account_keys: <Vec<Address> as StableAbi>::random(rng),
+                    recent_blockhash: StableAbi::random(rng),
+                    instructions: <Vec<CompiledInstruction> as StableAbi>::random(rng),
+                }),
+                <Vec<Signature> as StableAbi>::random(rng),
+            ),
+            1 => (
+                VersionedMessage::V0(v0::Message {
+                    header,
+                    account_keys: <Vec<Address> as StableAbi>::random(rng),
+                    recent_blockhash: StableAbi::random(rng),
+                    instructions: <Vec<CompiledInstruction> as StableAbi>::random(rng),
+                    address_table_lookups:
+                        <Vec<v0::MessageAddressTableLookup> as StableAbi>::random(rng),
+                }),
+                <Vec<Signature> as StableAbi>::random(rng),
+            ),
+            _ => {
+                let signatures = (0..header.num_required_signatures)
+                    .map(|_| Signature::random(rng))
+                    .collect();
+                (
+                    VersionedMessage::V1(v1::Message {
+                        header,
+                        config: StableAbi::random(rng),
+                        lifetime_specifier: StableAbi::random(rng),
+                        account_keys: <Vec<Address> as StableAbi>::random(rng),
+                        instructions: <Vec<CompiledInstruction> as StableAbi>::random(rng),
+                    }),
+                    signatures,
+                )
+            }
+        };
+
+        VersionedTransaction {
+            signatures,
+            message,
+        }
+    }
 }
 
 impl From<Transaction> for VersionedTransaction {

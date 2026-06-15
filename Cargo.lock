@@ -3871,6 +3871,7 @@ dependencies = [
  "serde_derive",
  "solana-frozen-abi",
  "solana-frozen-abi-macro",
+ "solana-instruction-error",
  "solana-program-error",
  "wincode",
 ]
@@ -4790,6 +4791,7 @@ dependencies = [
  "solana-frozen-abi-macro",
  "solana-instruction-error",
  "solana-sanitize",
+ "solana-transaction-error",
  "wincode",
 ]
 
