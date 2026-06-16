@@ -1,5 +1,7 @@
 #![cfg_attr(docsrs, feature(doc_cfg))]
 
+pub use solana_define_syscall::definitions::BigModExpParams;
+
 pub const BIG_MOD_EXP_MAX_BYTES: u64 = 512;
 pub const BIG_MOD_EXP_BASE_CU: u64 = 422;
 pub const BIG_MOD_EXP_CU_DIVISOR: u64 = 189;
@@ -17,11 +19,8 @@ pub const BIG_MOD_EXP_MOD_REDUCTION_COMPLEXITY_FACTOR: u64 = 15;
 /// `modulus` is empty, zero, one, or even.
 pub fn big_mod_exp(base: &[u8], exponent: &[u8], modulus: &[u8]) -> Vec<u8> {
     validate_inputs(base, exponent, modulus);
-    let padded_base =
-        (base.len() < modulus.len()).then(|| pad_base_to_modulus_len(base, modulus.len()));
-    let base = padded_base.as_deref().unwrap_or(base);
 
-    #[cfg(not(target_os = "solana"))]
+    #[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
     {
         use num_bigint::BigUint;
 
@@ -36,19 +35,19 @@ pub fn big_mod_exp(base: &[u8], exponent: &[u8], modulus: &[u8]) -> Vec<u8> {
         return_value
     }
 
-    #[cfg(target_os = "solana")]
+    #[cfg(any(target_os = "solana", target_arch = "bpf"))]
     {
         let mut return_value = vec![0_u8; modulus.len()];
+        let params = BigModExpParams {
+            base: base.as_ptr(),
+            base_len: base.len() as u64,
+            exponent: exponent.as_ptr(),
+            exponent_len: exponent.len() as u64,
+            modulus: modulus.as_ptr(),
+            modulus_len: modulus.len() as u64,
+        };
         unsafe {
-            solana_define_syscall::definitions::sol_big_mod_exp(
-                base.as_ptr(),
-                base.len() as u64,
-                exponent.as_ptr(),
-                exponent.len() as u64,
-                modulus.as_ptr(),
-                modulus.len() as u64,
-                return_value.as_mut_ptr(),
-            )
+            solana_define_syscall::definitions::sol_big_mod_exp(&params, return_value.as_mut_ptr());
         };
         return_value
     }
@@ -74,12 +73,6 @@ fn validate_inputs(base: &[u8], exponent: &[u8], modulus: &[u8]) {
     assert!(is_odd(modulus), "modulus must be odd");
 }
 
-fn pad_base_to_modulus_len(base: &[u8], modulus_len: usize) -> Vec<u8> {
-    let mut padded_base = vec![0; modulus_len];
-    padded_base[..base.len()].copy_from_slice(base);
-    padded_base
-}
-
 fn is_zero_or_one(input: &[u8]) -> bool {
     input.iter().all(|byte| *byte == 0) || is_one(input)
 }
@@ -98,6 +91,18 @@ fn is_odd(input: &[u8]) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn big_mod_exp_params_abi_layout_test() {
+        assert_eq!(core::mem::size_of::<BigModExpParams>(), 48);
+        assert_eq!(core::mem::align_of::<BigModExpParams>(), 8);
+        assert_eq!(core::mem::offset_of!(BigModExpParams, base), 0);
+        assert_eq!(core::mem::offset_of!(BigModExpParams, base_len), 8);
+        assert_eq!(core::mem::offset_of!(BigModExpParams, exponent), 16);
+        assert_eq!(core::mem::offset_of!(BigModExpParams, exponent_len), 24);
+        assert_eq!(core::mem::offset_of!(BigModExpParams, modulus), 32);
+        assert_eq!(core::mem::offset_of!(BigModExpParams, modulus_len), 40);
+    }
 
     #[test]
     fn big_mod_exp_basic_test() {

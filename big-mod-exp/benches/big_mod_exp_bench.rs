@@ -150,6 +150,10 @@ fn highest_set_bit_index_le(bytes: &[u8]) -> Option<u64> {
         })
 }
 
+fn is_one_le(bytes: &[u8]) -> bool {
+    matches!(bytes.first(), Some(1)) && bytes[1..].iter().all(|byte| *byte == 0)
+}
+
 fn adjusted_exponent_length(exponent: &[u8]) -> u64 {
     if exponent.len() <= 32 {
         highest_set_bit_index_le(exponent).unwrap_or(0)
@@ -180,6 +184,10 @@ fn mod_reduce_compute_units(base_len: usize, modulus_len: usize) -> u64 {
 }
 
 fn compute_units(base_len: usize, modulus_len: usize, exponent: &[u8]) -> u64 {
+    if is_one_le(exponent) {
+        return mod_reduce_compute_units(base_len, modulus_len);
+    }
+
     let effective_exponent_length =
         adjusted_exponent_length(exponent).max(BIG_MOD_EXP_MIN_EXPONENT_LENGTH);
     let operation_complexity = mult_complexity(base_len.max(modulus_len) as u64)

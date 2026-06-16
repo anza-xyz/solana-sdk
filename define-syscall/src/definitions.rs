@@ -1,6 +1,21 @@
 //! This module is only for syscall definitions that bring in no extra dependencies.
 use crate::define_syscall;
 
+/// Parameters for the `sol_big_mod_exp` syscall.
+///
+/// The pointed-to input slices and output buffer are encoded as little-endian
+/// unsigned integers.
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct BigModExpParams {
+    pub base: *const u8,
+    pub base_len: u64,
+    pub exponent: *const u8,
+    pub exponent_len: u64,
+    pub modulus: *const u8,
+    pub modulus_len: u64,
+}
+
 define_syscall!(fn sol_secp256k1_recover(hash: *const u8, recovery_id: u64, signature: *const u8, result: *mut u8) -> u64);
 define_syscall!(fn sol_poseidon(parameters: u64, endianness: u64, vals: *const u8, val_len: u64, hash_result: *mut u8) -> u64);
 define_syscall!(fn sol_invoke_signed_c(instruction_addr: *const u8, account_infos_addr: *const u8, account_infos_len: u64, signers_seeds_addr: *const u8, signers_seeds_len: u64) -> u64);
@@ -28,7 +43,7 @@ define_syscall!(fn sol_curve_multiscalar_mul(curve_id: u64, scalars_addr: *const
 define_syscall!(fn sol_curve_pairing_map(curve_id: u64, num_pairs: u64, g1_points: *const u8, g2_points: *const u8, result: *mut u8) -> u64);
 define_syscall!(fn sol_curve_decompress(curve_id: u64, point: *const u8, result: *mut u8) -> u64);
 define_syscall!(fn sol_alt_bn128_group_op(group_op: u64, input: *const u8, input_size: u64, result: *mut u8) -> u64);
-define_syscall!(fn sol_big_mod_exp(base_addr: *const u8, base_len: u64, exponent_addr: *const u8, exponent_len: u64, modulus_addr: *const u8, modulus_len: u64, result_addr: *mut u8));
+define_syscall!(fn sol_big_mod_exp(params: *const BigModExpParams, result: *mut u8));
 define_syscall!(fn sol_remaining_compute_units() -> u64);
 define_syscall!(fn sol_alt_bn128_compression(op: u64, input: *const u8, input_size: u64, result: *mut u8) -> u64);
 define_syscall!(fn sol_get_sysvar(sysvar_id_addr: *const u8, result: *mut u8, offset: u64, length: u64) -> u64);
