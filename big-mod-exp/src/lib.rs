@@ -1,6 +1,24 @@
 #![cfg_attr(docsrs, feature(doc_cfg))]
 
-pub use solana_define_syscall::definitions::BigModExpParams;
+/// Parameters for the `sol_big_mod_exp` syscall.
+///
+/// The pointed-to input slices are encoded as little-endian unsigned integers.
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct BigModExpParams {
+    /// VM pointer to the base bytes.
+    pub base: *const u8,
+    /// Length of the base bytes.
+    pub base_len: u64,
+    /// VM pointer to the exponent bytes.
+    pub exponent: *const u8,
+    /// Length of the exponent bytes.
+    pub exponent_len: u64,
+    /// VM pointer to the modulus bytes.
+    pub modulus: *const u8,
+    /// Length of the modulus bytes and writable result buffer.
+    pub modulus_len: u64,
+}
 
 pub const BIG_MOD_EXP_MAX_BYTES: u64 = 512;
 pub const BIG_MOD_EXP_BASE_CU: u64 = 422;
@@ -50,7 +68,10 @@ pub fn big_mod_exp(base: &[u8], exponent: &[u8], modulus: &[u8]) -> Vec<u8> {
         // invalid moduli. The syscall reads the params and input slices before
         // writing exactly `modulus.len()` bytes to `return_value`.
         unsafe {
-            solana_define_syscall::definitions::sol_big_mod_exp(&params, return_value.as_mut_ptr());
+            solana_define_syscall::definitions::sol_big_mod_exp(
+                &params as *const _ as *const u8,
+                return_value.as_mut_ptr(),
+            );
         };
         return_value
     }
