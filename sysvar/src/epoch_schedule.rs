@@ -208,7 +208,7 @@ impl SysvarSerialize for EpochSchedule {}
 
 #[cfg(test)]
 mod tests {
-    use {super::*, crate::Sysvar, serial_test::serial};
+    use super::*;
 
     #[test]
     fn test_pod_epoch_schedule_conversion() {
@@ -227,18 +227,5 @@ mod tests {
         assert!(epoch_schedule.warmup);
         assert_eq!(epoch_schedule.first_normal_epoch, 14);
         assert_eq!(epoch_schedule.first_normal_slot, 524256);
-    }
-
-    #[test]
-    #[serial]
-    #[cfg(feature = "bincode")]
-    fn test_epoch_schedule_get() {
-        let expected = EpochSchedule::custom(1234, 5678, false);
-        let data = bincode::serialize(&expected).unwrap();
-        assert_eq!(data.len(), 33);
-
-        crate::tests::mock_get_sysvar_syscall(&data);
-        let got = EpochSchedule::get().unwrap();
-        assert_eq!(got, expected);
     }
 }

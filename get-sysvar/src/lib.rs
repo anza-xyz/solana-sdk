@@ -1,21 +1,9 @@
 //! Access to the `sol_get_sysvar` syscall, used to fetch sysvar data from the runtime.
-//!
-//! On-chain calls go directly to the syscall. Off-chain calls are routed through a
-//! stub which test harnesses can install with [`set_get_sysvar_stub`] to serve mock
-//! sysvar data.
+
 #![no_std]
 #![cfg_attr(docsrs, feature(doc_cfg))]
 
-#[cfg(all(not(target_os = "solana"), feature = "std"))]
-extern crate std;
-
 use {solana_address::Address, solana_program_error::ProgramError};
-
-#[cfg(all(not(target_os = "solana"), feature = "std"))]
-mod stubs;
-
-#[cfg(all(not(target_os = "solana"), feature = "std"))]
-pub use stubs::{clear_get_sysvar_stub, set_get_sysvar_stub, GetSysvarStub};
 
 /// Syscall success code.
 //
@@ -79,7 +67,6 @@ pub unsafe fn get_sysvar_unchecked(
     }
 }
 
-// Dispatch to the syscall backend available for this target and feature set
 fn sol_get_sysvar(sysvar_id: *const u8, var_addr: *mut u8, offset: u64, length: u64) -> u64 {
     // On-chain programs call the runtime syscall directly
     #[cfg(target_os = "solana")]
@@ -87,16 +74,10 @@ fn sol_get_sysvar(sysvar_id: *const u8, var_addr: *mut u8, offset: u64, length: 
         solana_define_syscall::definitions::sol_get_sysvar(sysvar_id, var_addr, offset, length)
     }
 
-    // Off-chain std builds route through the host-test stub registry
-    #[cfg(all(not(target_os = "solana"), feature = "std"))]
+    // Off-chain builds have no solana runtime syscall to call
+    #[cfg(not(target_os = "solana"))]
     {
-        stubs::sol_get_sysvar(sysvar_id, var_addr, offset, length)
-    }
-
-    // Off-chain no-std builds have neither runtime syscalls nor host stubs.
-    #[cfg(all(not(target_os = "solana"), not(feature = "std")))]
-    {
-        let _ = (sysvar_id, var_addr, offset, length);
+        let _ = (sysvar_id, var_addr, offset, length); // warning suppression
         solana_program_error::UNSUPPORTED_SYSVAR
     }
 }

@@ -210,11 +210,9 @@ mod tests {
     use {
         super::*,
         serde_derive::{Deserialize, Serialize},
-        solana_get_sysvar::{set_get_sysvar_stub, GetSysvarStub},
-        solana_program_entrypoint::SUCCESS,
         solana_program_error::ProgramError,
         solana_pubkey::Pubkey,
-        std::{cell::RefCell, rc::Rc, sync::Arc},
+        std::{cell::RefCell, rc::Rc},
     };
 
     #[repr(C)]
@@ -234,86 +232,6 @@ mod tests {
     }
     impl Sysvar for TestSysvar {}
     impl SysvarSerialize for TestSysvar {}
-
-    // NOTE: Tests using these mocks MUST carry the #[serial] attribute
-    // because they modify global get-sysvar stub state.
-
-    struct MockGetSysvarSyscall {
-        data: Vec<u8>,
-    }
-
-    impl GetSysvarStub for MockGetSysvarSyscall {
-        #[allow(clippy::arithmetic_side_effects)]
-        fn sol_get_sysvar(
-            &self,
-            _sysvar_id_addr: *const u8,
-            var_addr: *mut u8,
-            offset: u64,
-            length: u64,
-        ) -> u64 {
-            let slice = unsafe { std::slice::from_raw_parts_mut(var_addr, length as usize) };
-            slice.copy_from_slice(&self.data[offset as usize..(offset + length) as usize]);
-            SUCCESS
-        }
-    }
-
-    /// Mock syscall stub for tests. Requires `#[serial]` attribute.
-    pub fn mock_get_sysvar_syscall(data: &[u8]) {
-        set_get_sysvar_stub(Arc::new(MockGetSysvarSyscall {
-            data: data.to_vec(),
-        }));
-    }
-
-    struct ValidateIdSyscall {
-        data: Vec<u8>,
-        expected_id: Pubkey,
-    }
-
-    impl GetSysvarStub for ValidateIdSyscall {
-        #[allow(clippy::arithmetic_side_effects)]
-        fn sol_get_sysvar(
-            &self,
-            sysvar_id_addr: *const u8,
-            var_addr: *mut u8,
-            offset: u64,
-            length: u64,
-        ) -> u64 {
-            // Validate that the correct sysvar id pointer was passed
-            let passed_id = unsafe { *(sysvar_id_addr as *const Pubkey) };
-            assert_eq!(passed_id, self.expected_id);
-
-            let slice = unsafe { std::slice::from_raw_parts_mut(var_addr, length as usize) };
-            slice.copy_from_slice(&self.data[offset as usize..(offset + length) as usize]);
-            SUCCESS
-        }
-    }
-
-    /// Mock syscall stub that validates sysvar ID. Requires `#[serial]` attribute.
-    pub fn mock_get_sysvar_syscall_with_id(
-        data: &[u8],
-        expected_id: &Pubkey,
-    ) -> Option<Arc<dyn GetSysvarStub>> {
-        set_get_sysvar_stub(Arc::new(ValidateIdSyscall {
-            data: data.to_vec(),
-            expected_id: *expected_id,
-        }))
-    }
-
-    /// Convert a value to its in-memory byte representation.
-    ///
-    /// # Safety
-    ///
-    /// This function is only safe for plain-old-data types with no padding.
-    /// Intended for test use only.
-    pub fn to_bytes<T>(value: &T) -> Vec<u8> {
-        let size = core::mem::size_of::<T>();
-        let ptr = (value as *const T) as *const u8;
-        let mut data = vec![0u8; size];
-        unsafe {
-            std::ptr::copy_nonoverlapping(ptr, data.as_mut_ptr(), size);
-        }
-        data
-    }
 
     #[test]
     fn test_sysvar_account_info_to_from() {

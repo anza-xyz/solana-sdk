@@ -61,7 +61,7 @@ solana-epoch-schedule = { workspace = true, features = ["sysvar"] }
 solana-fee-calculator = { workspace = true }
 solana-frozen-abi = { workspace = true, optional = true, features = ["frozen-abi"] }
 solana-frozen-abi-macro = { workspace = true, optional = true }
-solana-get-sysvar = { workspace = true, features = ["std"] }
+solana-get-sysvar = { workspace = true }
 solana-hash = { workspace = true, features = ["bytemuck"] }
 solana-last-restart-slot = { workspace = true, features = ["sysvar"] }
 solana-program-entrypoint = { workspace = true }
@@ -89,9 +89,7 @@ serial_test = { workspace = true }
 solana-example-mocks = { path = "../example-mocks" }
 solana-hash = { workspace = true, features = ["atomic", "bytemuck"] }
 solana-msg = { workspace = true, features = ["std"] }
-solana-sha256-hasher = { workspace = true, features = ["sha2"] }
 solana-sysvar = { path = ".", features = ["dev-context-only-utils"] }
-test-case = { workspace = true }
 
 [lints]
 workspace = true

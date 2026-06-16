@@ -138,7 +138,7 @@ impl SysvarSerialize for Clock {}
 
 #[cfg(test)]
 mod tests {
-    use {super::*, crate::tests::to_bytes, serial_test::serial};
+    use super::*;
 
     #[test]
     #[cfg(feature = "bincode")]
@@ -152,50 +152,5 @@ mod tests {
             in_memory_size, bincode_size,
             "Clock in-memory size ({in_memory_size}) must match bincode size ({bincode_size})",
         );
-    }
-
-    #[test]
-    #[serial]
-    fn test_clock_get_uses_sysvar_syscall() {
-        let expected = Clock {
-            slot: 1,
-            epoch_start_timestamp: 2,
-            epoch: 3,
-            leader_schedule_epoch: 4,
-            unix_timestamp: 5,
-        };
-
-        let data = to_bytes(&expected);
-        crate::tests::mock_get_sysvar_syscall(&data);
-
-        let got = Clock::get().unwrap();
-        assert_eq!(got, expected);
-    }
-
-    #[test]
-    #[serial]
-    fn test_clock_get_passes_correct_sysvar_id() {
-        let expected = Clock {
-            slot: 11,
-            epoch_start_timestamp: 22,
-            epoch: 33,
-            leader_schedule_epoch: 44,
-            unix_timestamp: 55,
-        };
-        let data = to_bytes(&expected);
-        let prev = crate::tests::mock_get_sysvar_syscall_with_id(&data, &id());
-
-        let got = Clock::get().unwrap();
-        assert_eq!(got, expected);
-
-        // Restore the process-global stub to the state this test replaced.
-        match prev {
-            Some(prev) => {
-                solana_get_sysvar::set_get_sysvar_stub(prev);
-            }
-            None => {
-                solana_get_sysvar::clear_get_sysvar_stub();
-            }
-        }
     }
 }

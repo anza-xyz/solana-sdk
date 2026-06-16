@@ -135,23 +135,3 @@ impl Sysvar for Rent {
 
 #[cfg(feature = "bincode")]
 impl SysvarSerialize for Rent {}
-
-#[cfg(test)]
-mod tests {
-    use {super::*, crate::Sysvar, serial_test::serial};
-
-    #[test]
-    #[serial]
-    #[cfg(feature = "bincode")]
-    #[allow(deprecated)]
-    fn test_rent_get() {
-        let expected = Rent::with_lamports_per_byte(123);
-        let data = bincode::serialize(&expected).unwrap();
-        assert_eq!(data.len(), 17);
-        assert_eq!(data.len() + 7, core::mem::size_of::<Rent>());
-
-        crate::tests::mock_get_sysvar_syscall(&data);
-        let got = Rent::get().unwrap();
-        assert_eq!(got, expected);
-    }
-}
