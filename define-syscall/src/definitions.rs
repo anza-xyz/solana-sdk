@@ -3,16 +3,21 @@ use crate::define_syscall;
 
 /// Parameters for the `sol_big_mod_exp` syscall.
 ///
-/// The pointed-to input slices and output buffer are encoded as little-endian
-/// unsigned integers.
+/// The pointed-to input slices are encoded as little-endian unsigned integers.
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct BigModExpParams {
+    /// VM pointer to the base bytes.
     pub base: *const u8,
+    /// Length of the base bytes.
     pub base_len: u64,
+    /// VM pointer to the exponent bytes.
     pub exponent: *const u8,
+    /// Length of the exponent bytes.
     pub exponent_len: u64,
+    /// VM pointer to the modulus bytes.
     pub modulus: *const u8,
+    /// Length of the modulus bytes and writable result buffer.
     pub modulus_len: u64,
 }
 

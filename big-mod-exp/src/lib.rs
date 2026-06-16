@@ -46,6 +46,9 @@ pub fn big_mod_exp(base: &[u8], exponent: &[u8], modulus: &[u8]) -> Vec<u8> {
             modulus: modulus.as_ptr(),
             modulus_len: modulus.len() as u64,
         };
+        // SAFETY: `validate_inputs` bounds the slice lengths and rejects
+        // invalid moduli. The syscall reads the params and input slices before
+        // writing exactly `modulus.len()` bytes to `return_value`.
         unsafe {
             solana_define_syscall::definitions::sol_big_mod_exp(&params, return_value.as_mut_ptr());
         };
