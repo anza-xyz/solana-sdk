@@ -4,7 +4,7 @@
 //! current slot, the current epoch, and the approximate real-world time of the
 //! slot.
 //!
-//! [`Clock`] implements [`Sysvar::get`] and can be loaded efficiently without
+//! [`Clock`] implements [`crate::Sysvar::get`] and can be loaded efficiently without
 //! passing the sysvar account ID to the program.
 //!
 //! See also the Solana [documentation on the clock sysvar][sdoc].
@@ -123,15 +123,10 @@
 
 #[cfg(feature = "bincode")]
 use crate::SysvarSerialize;
-use crate::{impl_sysvar_get, Sysvar};
 pub use {
     solana_clock::Clock,
     solana_sdk_ids::sysvar::clock::{check_id, id, ID},
 };
-
-impl Sysvar for Clock {
-    impl_sysvar_get!(id());
-}
 
 #[cfg(feature = "bincode")]
 impl SysvarSerialize for Clock {}

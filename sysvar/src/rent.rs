@@ -5,7 +5,7 @@
 //! The _rent sysvar_ provides access to the [`Rent`] type, which defines
 //! storage rent fees.
 //!
-//! [`Rent`] implements [`Sysvar::get`] and can be loaded efficiently without
+//! [`Rent`] implements [`crate::Sysvar::get`] and can be loaded efficiently without
 //! passing the sysvar account ID to the program.
 //!
 //! See also the Solana [documentation on the rent sysvar][sdoc].
@@ -123,15 +123,10 @@
 //! ```
 #[cfg(feature = "bincode")]
 use crate::SysvarSerialize;
-use crate::{impl_sysvar_get, Sysvar};
 pub use {
     solana_rent::Rent,
     solana_sdk_ids::sysvar::rent::{check_id, id, ID},
 };
-
-impl Sysvar for Rent {
-    impl_sysvar_get!(id(), 7);
-}
 
 #[cfg(feature = "bincode")]
 impl SysvarSerialize for Rent {}

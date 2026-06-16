@@ -2,7 +2,7 @@
 //!
 //! The _slot history sysvar_ provides access to the [`SlotHistory`] type.
 //!
-//! The [`SysvarSerialize::from_account_info`] and [`Sysvar::get`] methods always return
+//! The [`SysvarSerialize::from_account_info`] and [`crate::Sysvar::get`] methods always return
 //! [`ProgramError::UnsupportedSysvar`] because this sysvar account is too large
 //! to process on-chain. Thus this sysvar cannot be accessed on chain, though
 //! one can still use the [`SysvarId::id`], [`SysvarId::check_id`] and
@@ -47,7 +47,6 @@
 //! # Ok::<(), anyhow::Error>(())
 //! ```
 
-use crate::Sysvar;
 #[cfg(feature = "bincode")]
 use crate::SysvarSerialize;
 pub use {
@@ -56,7 +55,7 @@ pub use {
     solana_sdk_ids::sysvar::slot_history::{check_id, id, ID},
     solana_slot_history::SlotHistory,
 };
-impl Sysvar for SlotHistory {}
+
 #[cfg(feature = "bincode")]
 impl SysvarSerialize for SlotHistory {
     // override

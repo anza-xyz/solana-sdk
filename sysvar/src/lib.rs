@@ -77,15 +77,8 @@
 //!
 //! [sysvardoc]: https://docs.solanalabs.com/runtime/sysvars
 
-// hidden re-exports to make macros work
-pub mod __private {
-    #[cfg(target_os = "solana")]
-    pub use solana_define_syscall::definitions;
-    pub use {solana_program_entrypoint::SUCCESS, solana_program_error::ProgramError};
-}
-pub use solana_get_sysvar::get_sysvar;
-#[doc(hidden)]
-pub use solana_get_sysvar::get_sysvar_unchecked;
+pub use solana_get_sysvar::{get_sysvar, impl_sysvar_get, GetSysvar as Sysvar};
+#[cfg(feature = "bincode")]
 use solana_program_error::ProgramError;
 #[cfg(feature = "bincode")]
 use {solana_account_info::AccountInfo, solana_sysvar_id::SysvarId};
@@ -101,21 +94,6 @@ pub mod rent;
 pub mod rewards;
 pub mod slot_hashes;
 pub mod slot_history;
-
-/// Interface for loading a sysvar.
-pub trait Sysvar: Default + Sized {
-    /// Load the sysvar directly from the runtime.
-    ///
-    /// This is the preferred way to load a sysvar. Calling this method does not
-    /// incur any deserialization overhead, and does not require the sysvar
-    /// account to be passed to the program.
-    ///
-    /// Not all sysvars support this method. If not, it returns
-    /// [`ProgramError::UnsupportedSysvar`].
-    fn get() -> Result<Self, ProgramError> {
-        Err(ProgramError::UnsupportedSysvar)
-    }
-}
 
 #[cfg(feature = "bincode")]
 /// A type that holds sysvar data.
@@ -148,61 +126,6 @@ pub trait SysvarSerialize:
     fn to_account_info(&self, account_info: &mut AccountInfo) -> Option<()> {
         bincode::serialize_into(&mut account_info.data.borrow_mut()[..], self).ok()
     }
-}
-
-/// Implements the [`Sysvar::get`] method for both SBF and host targets.
-#[macro_export]
-macro_rules! impl_sysvar_get {
-    // DEPRECATED: This variant is only for the deprecated Fees sysvar and should be
-    // removed once Fees is no longer in use. It uses the old-style direct syscall
-    // approach instead of the new sol_get_sysvar syscall.
-    ($syscall_name:ident) => {
-        fn get() -> Result<Self, $crate::__private::ProgramError> {
-            let mut var = Self::default();
-            let var_addr = &mut var as *mut _ as *mut u8;
-
-            #[cfg(target_os = "solana")]
-            let result = unsafe { $crate::__private::definitions::$syscall_name(var_addr) };
-
-            #[cfg(not(target_os = "solana"))]
-            let result = $crate::program_stubs::$syscall_name(var_addr);
-
-            match result {
-                $crate::__private::SUCCESS => Ok(var),
-                _ => Err($crate::__private::ProgramError::UnsupportedSysvar),
-            }
-        }
-    };
-    // Variant for sysvars with padding at the end. Loads bincode-serialized data
-    // (size - padding bytes) and zeros the padding to avoid undefined behavior.
-    // Only supports sysvars where padding is at the end of the layout. Caller
-    // must supply the correct number of padding bytes.
-    ($sysvar_id:expr, $padding:literal) => {
-        fn get() -> Result<Self, $crate::__private::ProgramError> {
-            let mut var = core::mem::MaybeUninit::<Self>::uninit();
-            let var_addr = var.as_mut_ptr() as *mut u8;
-            let length = core::mem::size_of::<Self>().saturating_sub($padding);
-            let sysvar_id_ptr = (&$sysvar_id) as *const _ as *const u8;
-            // SAFETY: The allocation is valid for `size_of::<Self>()`. We zero
-            // the padding bytes first, then load `(size - padding)` bytes from
-            // the syscall, which matches bincode serialization.
-            let result = unsafe {
-                var_addr.add(length).write_bytes(0, $padding);
-                $crate::get_sysvar_unchecked(var_addr, sysvar_id_ptr, 0, length as u64)
-            };
-            match result {
-                // SAFETY: All bytes initialized: padding was zeroed above,
-                // syscall filled the data bytes.
-                Ok(()) => Ok(unsafe { var.assume_init() }),
-                // Unexpected errors are folded into `UnsupportedSysvar`.
-                Err(_) => Err($crate::__private::ProgramError::UnsupportedSysvar),
-            }
-        }
-    };
-    // Variant for sysvars without padding (struct size matches bincode size).
-    ($sysvar_id:expr) => {
-        $crate::impl_sysvar_get!($sysvar_id, 0);
-    };
 }
 
 #[cfg(test)]

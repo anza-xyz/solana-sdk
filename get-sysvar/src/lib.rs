@@ -5,6 +5,12 @@
 
 use {solana_address::Address, solana_program_error::ProgramError};
 
+// Stable `$crate` paths for `impl_sysvar_get!`, which expands downstream
+#[doc(hidden)]
+pub mod __private {
+    pub use {crate::get_sysvar_unchecked, solana_program_error::ProgramError};
+}
+
 /// Syscall success code.
 //
 // Defined in solana-program-entrypoint as [`SUCCESS`](https://github.com/anza-xyz/solana-sdk/blob/program-entrypoint@v2.2.1/program-entrypoint/src/lib.rs#L35).
@@ -19,6 +25,21 @@ const OFFSET_LENGTH_EXCEEDS_SYSVAR: u64 = 1;
 //
 // Defined in the Agave syscalls crate as [`SYSVAR_NOT_FOUND`](https://github.com/anza-xyz/agave/blob/v4.0.2/syscalls/src/sysvar.rs#L179).
 const SYSVAR_NOT_FOUND: u64 = 2;
+
+/// Interface for loading a sysvar directly from the runtime.
+pub trait GetSysvar: Default + Sized {
+    /// Load the sysvar directly from the runtime.
+    ///
+    /// This is the preferred way to load a sysvar. Calling this method does not
+    /// incur any deserialization overhead, and does not require the sysvar
+    /// account to be passed to the program.
+    ///
+    /// Not all sysvars support this method. If not, it returns
+    /// [`ProgramError::UnsupportedSysvar`].
+    fn get() -> Result<Self, ProgramError> {
+        Err(ProgramError::UnsupportedSysvar)
+    }
+}
 
 /// Handler for retrieving a slice of sysvar data from the `sol_get_sysvar`
 /// syscall.
@@ -80,4 +101,39 @@ fn sol_get_sysvar(sysvar_id: *const u8, var_addr: *mut u8, offset: u64, length: 
         let _ = (sysvar_id, var_addr, offset, length); // warning suppression
         solana_program_error::UNSUPPORTED_SYSVAR
     }
+}
+
+/// Implements [`GetSysvar::get`] for runtime-backed sysvars.
+#[macro_export]
+macro_rules! impl_sysvar_get {
+    // Variant for sysvars with padding at the end. Loads bincode-serialized data
+    // (size - padding bytes) and zeros the padding to avoid undefined behavior.
+    // Only supports sysvars where padding is at the end of the layout. Caller
+    // must supply the correct number of padding bytes.
+    ($sysvar_id:expr, $padding:literal) => {
+        fn get() -> Result<Self, $crate::__private::ProgramError> {
+            let mut var = core::mem::MaybeUninit::<Self>::uninit();
+            let var_addr = var.as_mut_ptr() as *mut u8;
+            let length = core::mem::size_of::<Self>().saturating_sub($padding);
+            let sysvar_id_ptr = (&$sysvar_id) as *const _ as *const u8;
+            // SAFETY: The allocation is valid for `size_of::<Self>()`. We zero
+            // the padding bytes first, then load `(size - padding)` bytes from
+            // the syscall, which matches bincode serialization.
+            let result = unsafe {
+                var_addr.add(length).write_bytes(0, $padding);
+                $crate::__private::get_sysvar_unchecked(var_addr, sysvar_id_ptr, 0, length as u64)
+            };
+            match result {
+                // SAFETY: All bytes initialized: padding was zeroed above,
+                // syscall filled the data bytes.
+                Ok(()) => Ok(unsafe { var.assume_init() }),
+                // Unexpected errors are folded into `UnsupportedSysvar`.
+                Err(_) => Err($crate::__private::ProgramError::UnsupportedSysvar),
+            }
+        }
+    };
+    // Variant for sysvars without padding (struct size matches bincode size).
+    ($sysvar_id:expr) => {
+        $crate::impl_sysvar_get!($sysvar_id, 0);
+    };
 }

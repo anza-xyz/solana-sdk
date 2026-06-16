@@ -2,7 +2,7 @@
 //!
 //! The _slot hashes sysvar_ provides access to the [`SlotHashes`] type.
 //!
-//! The [`SysvarSerialize::from_account_info`] and [`Sysvar::get`] methods always return
+//! The [`SysvarSerialize::from_account_info`] and [`crate::Sysvar::get`] methods always return
 //! [`solana_program_error::ProgramError::UnsupportedSysvar`] because this sysvar account is too large
 //! to process on-chain. Thus this sysvar cannot be accessed on chain, though
 //! one can still use the [`SysvarId::id`], [`SysvarId::check_id`] and
@@ -46,9 +46,9 @@
 //! ```
 #[cfg(feature = "bytemuck")]
 use bytemuck_derive::{Pod, Zeroable};
-use {crate::Sysvar, solana_clock::Slot, solana_hash::Hash};
 #[cfg(feature = "bincode")]
 use {crate::SysvarSerialize, solana_account_info::AccountInfo};
+use {solana_clock::Slot, solana_hash::Hash};
 
 #[cfg(feature = "bytemuck")]
 const U64_SIZE: usize = std::mem::size_of::<u64>();
@@ -62,7 +62,6 @@ pub use {
     solana_sysvar_id::SysvarId,
 };
 
-impl Sysvar for SlotHashes {}
 #[cfg(feature = "bincode")]
 impl SysvarSerialize for SlotHashes {
     // override

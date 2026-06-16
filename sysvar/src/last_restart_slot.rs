@@ -4,7 +4,7 @@
 //! bank fork for the slot on the fork that executes the current transaction.
 //! In case there was no fork it returns _0_.
 //!
-//! [`LastRestartSlot`] implements [`Sysvar::get`] and can be loaded efficiently without
+//! [`LastRestartSlot`] implements [`crate::Sysvar::get`] and can be loaded efficiently without
 //! passing the sysvar account ID to the program.
 //!
 //! See also the Solana [SIMD proposal][simd].
@@ -38,15 +38,10 @@
 //!
 #[cfg(feature = "bincode")]
 use crate::SysvarSerialize;
-use crate::{impl_sysvar_get, Sysvar};
 pub use {
     solana_last_restart_slot::LastRestartSlot,
     solana_sdk_ids::sysvar::last_restart_slot::{check_id, id, ID},
 };
-
-impl Sysvar for LastRestartSlot {
-    impl_sysvar_get!(id());
-}
 
 #[cfg(feature = "bincode")]
 impl SysvarSerialize for LastRestartSlot {}

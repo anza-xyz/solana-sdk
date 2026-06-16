@@ -15,7 +15,7 @@
 //!   - rewards for the epoch distributed so far, in lamports
 //!   - whether the rewards period is active
 //!
-//! [`EpochRewards`] implements [`Sysvar::get`] and can be loaded efficiently without
+//! [`EpochRewards`] implements [`crate::Sysvar::get`] and can be loaded efficiently without
 //! passing the sysvar account ID to the program.
 //!
 //! See also the Solana [documentation on the epoch rewards sysvar][sdoc].
@@ -156,19 +156,10 @@
 
 #[cfg(feature = "bincode")]
 use crate::SysvarSerialize;
-use crate::{impl_sysvar_get, Sysvar};
 pub use {
     solana_epoch_rewards::EpochRewards,
     solana_sdk_ids::sysvar::epoch_rewards::{check_id, id, ID},
 };
-
-impl Sysvar for EpochRewards {
-    // SAFETY: upstream invariant: the sysvar data is created exclusively
-    // by the Solana runtime and serializes bool as 0x00 or 0x01, so the final
-    // `bool` field of `EpochRewards` can be re-aligned with padding and read
-    // directly without validation.
-    impl_sysvar_get!(id(), 15);
-}
 
 #[cfg(feature = "bincode")]
 impl SysvarSerialize for EpochRewards {}

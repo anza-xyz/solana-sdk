@@ -14,12 +14,13 @@ targets = ["x86_64-unknown-linux-gnu"]
 
 [features]
 serde = ["dep:serde", "dep:serde_derive", "serde/alloc", "solana-hash/serde"]
-sysvar = ["dep:solana-sdk-ids", "dep:solana-sysvar-id"]
+sysvar = ["dep:solana-get-sysvar", "dep:solana-sdk-ids", "dep:solana-sysvar-id"]
 wincode = ["dep:wincode", "wincode/alloc", "solana-hash/wincode"]
 
 [dependencies]
 serde = { workspace = true, optional = true }
 serde_derive = { workspace = true, optional = true }
+solana-get-sysvar = { workspace = true, optional = true }
 solana-hash = { workspace = true, features = ["decode"] }
 solana-sdk-ids = { workspace = true, optional = true }
 solana-sysvar-id = { workspace = true, optional = true }

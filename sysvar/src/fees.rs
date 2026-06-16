@@ -3,7 +3,7 @@
 //! The _fees sysvar_ provides access to the [`Fees`] type, which contains the
 //! current [`FeeCalculator`].
 //!
-//! [`Fees`] implements [`Sysvar::get`] and can be loaded efficiently without
+//! [`Fees`] implements [`crate::Sysvar::get`] and can be loaded efficiently without
 //! passing the sysvar account ID to the program.
 //!
 //! This sysvar is deprecated and will not be available in the future.
@@ -25,11 +25,11 @@ use crate::SysvarSerialize;
 #[cfg(feature = "serde")]
 use serde_derive::{Deserialize, Serialize};
 pub use solana_sdk_ids::sysvar::fees::{check_id, id, ID};
+#[cfg(target_os = "solana")]
+use {solana_define_syscall::definitions, solana_program_entrypoint::SUCCESS};
 use {
-    crate::{impl_sysvar_get, Sysvar},
-    solana_fee_calculator::FeeCalculator,
-    solana_sdk_macro::CloneZeroed,
-    solana_sysvar_id::impl_deprecated_sysvar_id,
+    solana_fee_calculator::FeeCalculator, solana_get_sysvar::GetSysvar,
+    solana_sdk_macro::CloneZeroed, solana_sysvar_id::impl_deprecated_sysvar_id,
 };
 
 impl_deprecated_sysvar_id!(Fees);
@@ -56,8 +56,28 @@ impl Fees {
     }
 }
 
-impl Sysvar for Fees {
-    impl_sysvar_get!(sol_get_fees_sysvar);
+// DEPRECATED: This impl is only for the deprecated Fees sysvar and should be
+// removed once Fees is no longer in use. It uses the old-style direct syscall
+// approach instead of the new sol_get_sysvar syscall.
+impl GetSysvar for Fees {
+    fn get() -> Result<Self, solana_program_error::ProgramError> {
+        #[cfg(target_os = "solana")]
+        {
+            let mut fees = Self::default();
+            let fees_addr = &mut fees as *mut _ as *mut u8;
+            let result = unsafe { definitions::sol_get_fees_sysvar(fees_addr) };
+
+            match result {
+                SUCCESS => Ok(fees),
+                _ => Err(solana_program_error::ProgramError::UnsupportedSysvar),
+            }
+        }
+
+        #[cfg(not(target_os = "solana"))]
+        {
+            Err(solana_program_error::ProgramError::UnsupportedSysvar)
+        }
+    }
 }
 
 #[cfg(feature = "bincode")]
@@ -65,7 +85,7 @@ impl SysvarSerialize for Fees {}
 
 #[cfg(test)]
 mod tests {
-    use {super::*, serial_test::serial};
+    use super::*;
 
     #[test]
     fn test_clone() {
@@ -76,51 +96,5 @@ mod tests {
         };
         let cloned_fees = fees.clone();
         assert_eq!(cloned_fees, fees);
-    }
-
-    struct MockFeesSyscall;
-    impl crate::program_stubs::SyscallStubs for MockFeesSyscall {
-        fn sol_get_fees_sysvar(&self, var_addr: *mut u8) -> u64 {
-            let fees = Fees {
-                fee_calculator: FeeCalculator {
-                    lamports_per_signature: 42,
-                },
-            };
-            unsafe {
-                std::ptr::copy_nonoverlapping(
-                    &fees as *const _ as *const u8,
-                    var_addr,
-                    core::mem::size_of::<Fees>(),
-                );
-            }
-            solana_program_entrypoint::SUCCESS
-        }
-    }
-
-    #[test]
-    #[serial]
-    fn test_fees_get_deprecated_syscall_path() {
-        let _ = crate::program_stubs::set_syscall_stubs(Box::new(MockFeesSyscall));
-        let got = Fees::get().unwrap();
-        assert_eq!(got.fee_calculator.lamports_per_signature, 42);
-    }
-
-    struct FailFeesSyscall;
-    impl crate::program_stubs::SyscallStubs for FailFeesSyscall {
-        fn sol_get_fees_sysvar(&self, _var_addr: *mut u8) -> u64 {
-            9999
-        }
-    }
-
-    #[test]
-    #[serial]
-    fn test_fees_get_deprecated_non_success_maps_to_unsupported() {
-        let prev = crate::program_stubs::set_syscall_stubs(Box::new(FailFeesSyscall));
-        let got = Fees::get();
-        assert_eq!(
-            got,
-            Err(solana_program_error::ProgramError::UnsupportedSysvar)
-        );
-        let _ = crate::program_stubs::set_syscall_stubs(prev);
     }
 }
