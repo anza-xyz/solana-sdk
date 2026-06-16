@@ -153,7 +153,7 @@ impl solana_frozen_abi::rand::prelude::Distribution<VersionedTransaction>
                 }),
                 <Vec<Signature> as StableAbi>::random(rng),
             ),
-            _ => {
+            2 => {
                 let signatures = (0..header.num_required_signatures)
                     .map(|_| Signature::random(rng))
                     .collect();
@@ -168,6 +168,7 @@ impl solana_frozen_abi::rand::prelude::Distribution<VersionedTransaction>
                     signatures,
                 )
             }
+            _ => unreachable!(),
         };
 
         VersionedTransaction {
