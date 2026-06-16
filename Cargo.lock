@@ -3722,7 +3722,7 @@ dependencies = [
 
 [[package]]
 name = "solana-frozen-abi"
-version = "3.5.0"
+version = "3.6.0"
 dependencies = [
  "bincode",
  "bitflags",
@@ -3749,7 +3749,7 @@ dependencies = [
 
 [[package]]
 name = "solana-frozen-abi-macro"
-version = "3.5.0"
+version = "3.6.0"
 dependencies = [
  "proc-macro2",
  "quote",

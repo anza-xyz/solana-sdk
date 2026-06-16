@@ -259,8 +259,8 @@ solana-feature-gate-interface = { path = "feature-gate-interface", version = "4.
 solana-fee-calculator = { path = "fee-calculator", version = "3.2.1" }
 solana-fee-structure = { path = "fee-structure", version = "3.0.0" }
 solana-file-download = { path = "file-download", version = "3.0.0" }
-solana-frozen-abi = { path = "frozen-abi", version = "3.5.0" }
-solana-frozen-abi-macro = { path = "frozen-abi-macro", version = "3.5.0", default-features = false }
+solana-frozen-abi = { path = "frozen-abi", version = "3.6.0" }
+solana-frozen-abi-macro = { path = "frozen-abi-macro", version = "3.6.0", default-features = false }
 solana-genesis-config = { path = "genesis-config", version = "4.0.0" }
 solana-hard-forks = { path = "hard-forks", version = "3.1.0", default-features = false }
 solana-hash = { path = "hash", version = "4.4.0", default-features = false }
