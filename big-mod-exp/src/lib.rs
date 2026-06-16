@@ -92,24 +92,20 @@ fn validate_inputs(base: &[u8], exponent: &[u8], modulus: &[u8]) {
         modulus.len() <= max_len,
         "modulus length exceeds BIG_MOD_EXP_MAX_BYTES"
     );
-    assert!(!modulus.is_empty(), "modulus length must be nonzero");
-    assert!(!is_zero_or_one(modulus), "modulus must be greater than one");
-    assert!(is_odd(modulus), "modulus must be odd");
+
+    validate_modulus(modulus);
 }
 
-fn is_zero_or_one(input: &[u8]) -> bool {
-    input.iter().all(|byte| *byte == 0) || is_one(input)
-}
+fn validate_modulus(modulus: &[u8]) {
+    let Some((&least_significant_byte, more_significant_bytes)) = modulus.split_first() else {
+        panic!("modulus length must be nonzero");
+    };
+    let has_nonzero_more_significant_byte = more_significant_bytes.iter().any(|byte| *byte != 0);
 
-fn is_one(input: &[u8]) -> bool {
-    input.iter().enumerate().all(|(index, byte)| {
-        let is_least_significant_byte = index == 0;
-        matches!((is_least_significant_byte, *byte), (true, 1) | (false, 0))
-    })
-}
-
-fn is_odd(input: &[u8]) -> bool {
-    input[0] & 1 == 1
+    match (least_significant_byte, has_nonzero_more_significant_byte) {
+        (0, false) | (1, false) => panic!("modulus must be greater than one"),
+        _ => assert!(least_significant_byte & 1 == 1, "modulus must be odd"),
+    }
 }
 
 #[cfg(test)]
