@@ -4740,10 +4740,12 @@ dependencies = [
  "solana-rent",
  "solana-sdk-ids",
  "solana-sdk-macro",
+ "solana-sha256-hasher",
  "solana-slot-hashes",
  "solana-slot-history",
  "solana-sysvar",
  "solana-sysvar-id",
+ "test-case",
  "wincode",
 ]
 

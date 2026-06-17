@@ -120,6 +120,10 @@ impl PodSlotHashes {
             /* length */ sysvar_len as u64,
         )?;
 
+        Self::from_bytes(data)
+    }
+
+    fn from_bytes(data: Vec<u8>) -> Result<Self, solana_program_error::ProgramError> {
         // Get the number of slot hashes present in the data by reading the
         // `u64` length at the beginning of the data, then use that count to
         // calculate the length of the slot hashes data.
@@ -178,7 +182,10 @@ impl PodSlotHashes {
 
 #[cfg(test)]
 mod tests {
-    use {super::*, solana_hash::Hash, solana_slot_hashes::MAX_ENTRIES};
+    use {
+        super::*, solana_hash::Hash, solana_sha256_hasher::hash, solana_slot_hashes::MAX_ENTRIES,
+        test_case::test_case,
+    };
 
     #[test]
     fn test_size_of() {
@@ -191,5 +198,75 @@ mod tests {
             )
             .unwrap() as usize
         );
+    }
+
+    #[test_case(0)]
+    #[test_case(1)]
+    #[test_case(2)]
+    #[test_case(5)]
+    #[test_case(10)]
+    #[test_case(64)]
+    #[test_case(128)]
+    #[test_case(192)]
+    #[test_case(256)]
+    #[test_case(384)]
+    #[test_case(MAX_ENTRIES)]
+    fn test_pod_slot_hashes(num_entries: usize) {
+        let mut slot_hashes = vec![];
+        for i in 0..num_entries {
+            slot_hashes.push((
+                i as u64,
+                hash(&[(i >> 24) as u8, (i >> 16) as u8, (i >> 8) as u8, i as u8]),
+            ));
+        }
+
+        let check_slot_hashes = SlotHashes::new(&slot_hashes);
+        let pod_slot_hashes =
+            PodSlotHashes::from_bytes(bincode::serialize(&check_slot_hashes).unwrap()).unwrap();
+
+        // Assert the slice of `PodSlotHash` has the same length as
+        // `SlotHashes`.
+        let pod_slot_hashes_slice = pod_slot_hashes.as_slice().unwrap();
+        assert_eq!(pod_slot_hashes_slice.len(), slot_hashes.len());
+
+        // Assert `PodSlotHashes` and `SlotHashes` contain the same slot hashes
+        // in the same order.
+        for slot in slot_hashes.iter().map(|(slot, _hash)| slot) {
+            // `get`:
+            assert_eq!(
+                pod_slot_hashes.get(slot).unwrap().as_ref(),
+                check_slot_hashes.get(slot),
+            );
+            // `position`:
+            assert_eq!(
+                pod_slot_hashes.position(slot).unwrap(),
+                check_slot_hashes.position(slot),
+            );
+        }
+
+        // Check a few `None` values.
+        let not_a_slot = num_entries.saturating_add(1) as u64;
+        assert_eq!(
+            pod_slot_hashes.get(&not_a_slot).unwrap().as_ref(),
+            check_slot_hashes.get(&not_a_slot),
+        );
+        assert_eq!(pod_slot_hashes.get(&not_a_slot).unwrap(), None);
+        assert_eq!(
+            pod_slot_hashes.position(&not_a_slot).unwrap(),
+            check_slot_hashes.position(&not_a_slot),
+        );
+        assert_eq!(pod_slot_hashes.position(&not_a_slot).unwrap(), None);
+
+        let not_a_slot = num_entries.saturating_add(2) as u64;
+        assert_eq!(
+            pod_slot_hashes.get(&not_a_slot).unwrap().as_ref(),
+            check_slot_hashes.get(&not_a_slot),
+        );
+        assert_eq!(pod_slot_hashes.get(&not_a_slot).unwrap(), None);
+        assert_eq!(
+            pod_slot_hashes.position(&not_a_slot).unwrap(),
+            check_slot_hashes.position(&not_a_slot),
+        );
+        assert_eq!(pod_slot_hashes.position(&not_a_slot).unwrap(), None);
     }
 }
