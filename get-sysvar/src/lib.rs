@@ -5,7 +5,7 @@
 
 use {solana_address::Address, solana_program_error::ProgramError};
 
-// Stable `$crate` paths for `impl_sysvar_get!`, which expands downstream
+// Stable `$crate` paths for `impl_get_sysvar!`, which expands downstream.
 #[doc(hidden)]
 pub mod __private {
     pub use {crate::get_sysvar_unchecked, solana_program_error::ProgramError};
@@ -105,7 +105,7 @@ fn sol_get_sysvar(sysvar_id: *const u8, var_addr: *mut u8, offset: u64, length: 
 
 /// Implements [`GetSysvar::get`] for runtime-backed sysvars.
 #[macro_export]
-macro_rules! impl_sysvar_get {
+macro_rules! impl_get_sysvar {
     // Variant for sysvars with padding at the end. Loads bincode-serialized data
     // (size - padding bytes) and zeros the padding to avoid undefined behavior.
     // Only supports sysvars where padding is at the end of the layout. Caller
@@ -134,6 +134,6 @@ macro_rules! impl_sysvar_get {
     };
     // Variant for sysvars without padding (struct size matches bincode size).
     ($sysvar_id:expr) => {
-        $crate::impl_sysvar_get!($sysvar_id, 0);
+        $crate::impl_get_sysvar!($sysvar_id, 0);
     };
 }
