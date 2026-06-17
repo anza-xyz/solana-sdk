@@ -57,7 +57,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Git Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1
         with:
           fetch-depth: 0 # full history to check for whitespace / conflict markers
 
@@ -80,7 +80,7 @@ jobs:
     needs: [sanity]
     steps:
       - name: Git Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1
 
       - name: Setup Environment
         uses: ./.github/actions/setup
@@ -98,7 +98,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Git Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1
 
       - name: Setup Environment
         uses: ./.github/actions/setup
@@ -116,10 +116,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Git Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1
 
       - name: Install 'nightly' toolchain
-        uses: dtolnay/rust-toolchain@nightly
+        uses: actions-rust-lang/setup-rust-toolchain@46268bd060767258de96ed93c1251119784f2ab6  # v1.16.1
+        with:
+          toolchain: nightly
+          cache: false
+          rustflags: ""
 
       - name: Run docs.rs build
         run: |
@@ -134,7 +138,7 @@ jobs:
     needs: [sanity]
     steps:
       - name: Git Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1
 
       - name: Setup Environment
         uses: ./.github/actions/setup
@@ -144,17 +148,17 @@ jobs:
           cargo-cache-fallback-key: cargo-nightly
 
       - name: Install cargo-hack
-        uses: taiki-e/cache-cargo-install-action@v2
+        uses: taiki-e/cache-cargo-install-action@7447f04c51f2ba27ca35e7f1e28fab848c5b3ba7  # v2.3.1
         with:
           tool: cargo-hack
 
       - name: Install cargo-minimal-versions
-        uses: taiki-e/cache-cargo-install-action@v2
+        uses: taiki-e/cache-cargo-install-action@7447f04c51f2ba27ca35e7f1e28fab848c5b3ba7  # v2.3.1
         with:
           tool: cargo-minimal-versions
 
       - name: Install toml-cli
-        uses: taiki-e/cache-cargo-install-action@v2
+        uses: taiki-e/cache-cargo-install-action@7447f04c51f2ba27ca35e7f1e28fab848c5b3ba7  # v2.3.1
         with:
           tool: toml-cli
 
@@ -166,7 +170,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Git checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1
 
       - name: Setup Environment
         uses: ./.github/actions/setup
@@ -175,7 +179,7 @@ jobs:
           cargo-cache-fallback-key: cargo-publish-semver
 
       - name: Install cargo-semver-checks
-        uses: taiki-e/install-action@v2
+        uses: taiki-e/install-action@15449e3094499af05d8d964a1c884208e4b8b595  # v2.81.11
         with:
           tool: toml-cli,cargo-semver-checks,cargo-release
 
@@ -228,7 +232,7 @@ jobs:
           private-key: ${{ secrets.PRIVATE_KEY }}
 
       - name: Git Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1
         with:
           token: ${{ inputs.dry_run && github.token || steps.app-token.outputs.token }}
           fetch-depth: 0 # get the whole history for git-cliff
@@ -241,7 +245,7 @@ jobs:
           cargo-cache-fallback-key: cargo-stable
 
       - name: Install cargo-release
-        uses: taiki-e/install-action@v2
+        uses: taiki-e/install-action@15449e3094499af05d8d964a1c884208e4b8b595  # v2.81.11
         with:
           tool: cargo-release
 
@@ -287,7 +291,7 @@ jobs:
 
       - name: Generate a changelog
         if: github.event.inputs.create_release == 'true'
-        uses: orhun/git-cliff-action@v4
+        uses: orhun/git-cliff-action@f50e11560dce63f7c33227798f90b924471a88b5  # v4.8.0
         with:
           config: "scripts/cliff.toml"
           args: ${{ steps.publish.outputs.old_git_tag }}..HEAD --include-path "${{ inputs.package_path }}/**" --github-repo ${{ github.repository }}
@@ -297,7 +301,7 @@ jobs:
 
       - name: Create GitHub release
         if: github.event.inputs.create_release == 'true' && github.event.inputs.dry_run != 'true'
-        uses: ncipollo/release-action@v1
+        uses: ncipollo/release-action@339a81892b84b4eeb0f6e744e4574d79d0d9b8dd  # v1.21.0
         with:
           tag: ${{ steps.publish.outputs.new_git_tag }}
           bodyFile: TEMP_CHANGELOG.md
