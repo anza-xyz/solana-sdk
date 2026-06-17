@@ -3392,6 +3392,9 @@ dependencies = [
  "array-bytes",
  "criterion",
  "num-bigint",
+ "serde",
+ "serde_derive",
+ "serde_json",
  "solana-define-syscall",
 ]
 

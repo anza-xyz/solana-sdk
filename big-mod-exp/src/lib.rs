@@ -112,6 +112,33 @@ fn validate_modulus(modulus: &[u8]) {
 mod tests {
     use super::*;
 
+    #[derive(serde_derive::Deserialize)]
+    #[serde(rename_all = "PascalCase")]
+    struct TestCase {
+        base: String,
+        exponent: String,
+        modulus: String,
+        expected: String,
+    }
+
+    fn be_hex_to_le_bytes(hex: &str) -> Vec<u8> {
+        let mut bytes = array_bytes::hex2bytes_unchecked(hex);
+        bytes.reverse();
+        bytes
+    }
+
+    fn is_supported_modulus(modulus: &[u8]) -> bool {
+        let Some((&least_significant_byte, more_significant_bytes)) = modulus.split_first() else {
+            return false;
+        };
+
+        let has_nonzero_more_significant_byte =
+            more_significant_bytes.iter().any(|byte| *byte != 0);
+
+        (least_significant_byte > 1 || has_nonzero_more_significant_byte)
+            && least_significant_byte & 1 == 1
+    }
+
     #[test]
     fn big_mod_exp_params_abi_layout_test() {
         assert_eq!(core::mem::size_of::<BigModExpParams>(), 48);
@@ -122,6 +149,28 @@ mod tests {
         assert_eq!(core::mem::offset_of!(BigModExpParams, exponent_len), 24);
         assert_eq!(core::mem::offset_of!(BigModExpParams, modulus), 32);
         assert_eq!(core::mem::offset_of!(BigModExpParams, modulus_len), 40);
+    }
+
+    #[test]
+    fn big_mod_exp_json_test_vectors() {
+        let test_data = include_str!("../tests/data/big_mod_exp_cases.json");
+        let test_cases: Vec<TestCase> = serde_json::from_str(test_data).unwrap();
+
+        for (index, test) in test_cases.iter().enumerate() {
+            // The test vectors are encoded in big-endian hex, so convert to little-endian bytes.
+            let base = be_hex_to_le_bytes(&test.base);
+            let exponent = be_hex_to_le_bytes(&test.exponent);
+            let modulus = be_hex_to_le_bytes(&test.modulus);
+            let expected = be_hex_to_le_bytes(&test.expected);
+
+            if is_supported_modulus(&modulus) {
+                let result = big_mod_exp(&base, &exponent, &modulus);
+                assert_eq!(result, expected, "JSON test vector {index}");
+            } else {
+                let result = std::panic::catch_unwind(|| big_mod_exp(&base, &exponent, &modulus));
+                assert!(result.is_err(), "JSON test vector {index}");
+            }
+        }
     }
 
     #[test]
