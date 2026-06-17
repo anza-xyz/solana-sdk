@@ -27,7 +27,7 @@ const OFFSET_LENGTH_EXCEEDS_SYSVAR: u64 = 1;
 const SYSVAR_NOT_FOUND: u64 = 2;
 
 /// Interface for loading a sysvar directly from the runtime.
-pub trait GetSysvar: Default + Sized {
+pub trait GetSysvar: Sized {
     /// Load the sysvar directly from the runtime.
     ///
     /// This is the preferred way to load a sysvar. Calling this method does not

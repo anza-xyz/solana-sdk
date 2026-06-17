@@ -98,7 +98,7 @@ pub mod slot_history;
 #[cfg(feature = "bincode")]
 /// A type that holds sysvar data.
 pub trait SysvarSerialize:
-    Sysvar + SysvarId + serde::Serialize + serde::de::DeserializeOwned
+    Default + Sysvar + SysvarId + serde::Serialize + serde::de::DeserializeOwned
 {
     /// The size in bytes of the sysvar as serialized account data.
     fn size_of() -> usize {
