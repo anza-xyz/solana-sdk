@@ -77,7 +77,7 @@
 //!
 //! [sysvardoc]: https://docs.solanalabs.com/runtime/sysvars
 
-pub use solana_get_sysvar::{get_sysvar, impl_get_sysvar, GetSysvar as Sysvar};
+pub use solana_get_sysvar::{get_sysvar, impl_get_sysvar as impl_sysvar_get, GetSysvar as Sysvar};
 #[cfg(feature = "bincode")]
 use solana_program_error::ProgramError;
 #[cfg(feature = "bincode")]

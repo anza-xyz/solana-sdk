@@ -531,7 +531,7 @@ pub use {
         entrypoint_no_alloc,
     },
     solana_program_option as program_option, solana_pubkey as pubkey, solana_rent as rent,
-    solana_sysvar::impl_get_sysvar,
+    solana_sysvar::impl_sysvar_get,
 };
 /// The [config native program][np].
 ///
