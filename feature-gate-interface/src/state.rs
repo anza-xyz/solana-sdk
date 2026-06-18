@@ -50,9 +50,7 @@ pub fn to_account(feature: &Feature, account: &mut AccountSharedData) -> Option<
 #[cfg(feature = "bincode")]
 pub fn create_account(feature: &Feature, lamports: u64) -> AccountSharedData {
     let data_len = Feature::size_of().max(bincode::serialized_size(feature).unwrap() as usize);
-    let mut account = AccountSharedData::new(lamports, data_len, &id());
-    to_account(feature, &mut account).unwrap();
-    account
+    AccountSharedData::new_data_with_space(lamports, feature, data_len, &id()).unwrap()
 }
 
 #[cfg(test)]
