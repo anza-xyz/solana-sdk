@@ -381,6 +381,17 @@ impl Account {
     pub fn new_ref(lamports: u64, space: usize, owner: &Pubkey) -> Rc<RefCell<Self>> {
         Rc::new(RefCell::new(Account::new(lamports, space, owner)))
     }
+    /// Create an `Account` from an already-built data buffer, taking ownership
+    /// of it without reallocating or zeroing.
+    pub fn new_with_data(lamports: u64, data: Vec<u8>, owner: &Pubkey) -> Self {
+        Account {
+            lamports,
+            data,
+            owner: *owner,
+            executable: false,
+            rent_epoch: Epoch::default(),
+        }
+    }
     #[cfg(feature = "bincode")]
     pub fn new_data<T: serde::Serialize>(
         lamports: u64,
@@ -411,9 +422,13 @@ impl Account {
         space: usize,
         owner: &Pubkey,
     ) -> Result<Self, bincode::Error> {
-        let mut account = Account::new(lamports, space, owner);
-        shared_serialize_data(&mut account, state)?;
-        Ok(account)
+        if bincode::serialized_size(state)? > space as u64 {
+            return Err(Box::new(bincode::ErrorKind::SizeLimit));
+        }
+        let mut data = Vec::with_capacity(space);
+        bincode::serialize_into(&mut data, state)?;
+        data.resize(space, 0);
+        Ok(Account::new_with_data(lamports, data, owner))
     }
     #[cfg(feature = "bincode")]
     pub fn new_ref_data_with_space<T: serde::Serialize>(
@@ -568,9 +583,19 @@ impl AccountSharedData {
         space: usize,
         owner: &Pubkey,
     ) -> Result<Self, bincode::Error> {
-        let mut account = AccountSharedData::new(lamports, space, owner);
-        shared_serialize_data(&mut account, state)?;
-        Ok(account)
+        if bincode::serialized_size(state)? > space as u64 {
+            return Err(Box::new(bincode::ErrorKind::SizeLimit));
+        }
+        let mut data = Vec::with_capacity(space);
+        bincode::serialize_into(&mut data, state)?;
+        data.resize(space, 0);
+        Ok(Self::create_from_existing_shared_data(
+            lamports,
+            Arc::new(data),
+            *owner,
+            false,
+            Epoch::default(),
+        ))
     }
     #[cfg(feature = "bincode")]
     pub fn new_ref_data_with_space<T: serde::Serialize>(
@@ -624,9 +649,12 @@ pub fn create_account_with_fields<S: SysvarSerialize>(
     sysvar: &S,
     (lamports, rent_epoch): InheritableAccountFields,
 ) -> Account {
-    let data_len = S::size_of().max(bincode::serialized_size(sysvar).unwrap() as usize);
-    let mut account = Account::new(lamports, data_len, &solana_sdk_ids::sysvar::id());
-    to_account::<S, Account>(sysvar, &mut account).unwrap();
+    // Size to the sysvar's full capacity (larger than the current serialized
+    // size for variable-length sysvars like SlotHashes/RecentBlockhashes).
+    let space = S::size_of().max(bincode::serialized_size(sysvar).unwrap() as usize);
+    let mut account =
+        Account::new_data_with_space(lamports, sysvar, space, &solana_sdk_ids::sysvar::id())
+            .unwrap();
     account.rent_epoch = rent_epoch;
     account
 }
