@@ -16,7 +16,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Git Checkout
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10  # v6.0.3
         with:
           fetch-depth: 0 # full history to check for whitespace / conflict markers
 
@@ -44,7 +44,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Git Checkout
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10  # v6.0.3
         with:
           fetch-depth: 0 # full history to check for diff
 
@@ -79,7 +79,7 @@ jobs:
     needs: [sanity]
     steps:
       - name: Git Checkout
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10  # v6.0.3
 
       - name: Setup Environment
         uses: ./.github/actions/setup
@@ -103,7 +103,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - name: Git Checkout
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10  # v6.0.3
 
       - name: Setup Environment
         uses: ./.github/actions/setup
@@ -146,7 +146,7 @@ jobs:
     needs: [sanity]
     steps:
       - name: Git Checkout
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10  # v6.0.3
 
       - name: Setup Environment
         uses: ./.github/actions/setup
@@ -168,7 +168,7 @@ jobs:
     needs: [sanity]
     steps:
       - name: Git Checkout
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10  # v6.0.3
 
       - name: Setup Environment
         uses: ./.github/actions/setup
@@ -194,7 +194,7 @@ jobs:
         partition: [1, 2, 3, 4, 5, 6]
     steps:
       - name: Git Checkout
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10  # v6.0.3
 
       - name: Setup Environment
         uses: ./.github/actions/setup
@@ -218,7 +218,7 @@ jobs:
     needs: [sanity]
     steps:
       - name: Git Checkout
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10  # v6.0.3
 
       - name: Setup Environment
         uses: ./.github/actions/setup
@@ -243,7 +243,7 @@ jobs:
     needs: [sanity]
     steps:
       - name: Git Checkout
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10  # v6.0.3
 
       - name: Setup Environment
         uses: ./.github/actions/setup
@@ -271,7 +271,7 @@ jobs:
     needs: [sanity]
     steps:
       - name: Git Checkout
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10  # v6.0.3
 
       - name: Check crates for publishing
         run: ./scripts/order-crates-for-publishing.py
@@ -282,7 +282,7 @@ jobs:
     needs: [sanity]
     steps:
       - name: Git Checkout
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10  # v6.0.3
 
       - name: Setup Environment
         uses: ./.github/actions/setup
@@ -305,7 +305,7 @@ jobs:
     needs: [sanity]
     steps:
       - name: Git Checkout
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10  # v6.0.3
 
       - name: Setup Environment
         uses: ./.github/actions/setup
@@ -328,7 +328,7 @@ jobs:
     needs: [sanity]
     steps:
       - name: Git Checkout
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10  # v6.0.3
 
       - name: Setup Environment
         uses: ./.github/actions/setup
@@ -346,7 +346,7 @@ jobs:
     needs: [sanity]
     steps:
       - name: Git Checkout
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10  # v6.0.3
 
       - name: Setup Environment
         uses: ./.github/actions/setup
@@ -381,7 +381,7 @@ jobs:
     needs: [check]
     steps:
       - name: Git Checkout
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10  # v6.0.3
 
       - name: Setup Environment
         uses: ./.github/actions/setup
@@ -404,7 +404,7 @@ jobs:
     needs: [check]
     steps:
       - name: Git Checkout
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10  # v6.0.3
 
       - name: Setup Environment
         uses: ./.github/actions/setup
@@ -422,7 +422,7 @@ jobs:
     needs: [check]
     steps:
       - name: Git Checkout
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10  # v6.0.3
 
       - name: Setup Environment
         uses: ./.github/actions/setup
@@ -445,7 +445,7 @@ jobs:
     needs: [check]
     steps:
       - name: Git Checkout
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10  # v6.0.3
 
       - name: Setup Node.js
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020  # v4.4.0
@@ -472,7 +472,7 @@ jobs:
     needs: [check]
     steps:
       - name: Git Checkout
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10  # v6.0.3
 
       - name: Setup Environment
         uses: ./.github/actions/setup
@@ -495,7 +495,7 @@ jobs:
     needs: [check]
     steps:
       - name: Git Checkout
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10  # v6.0.3
 
       - name: Setup Environment
         uses: ./.github/actions/setup
@@ -513,7 +513,7 @@ jobs:
     needs: [check]
     steps:
       - name: Git Checkout
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10  # v6.0.3
 
       - name: Setup Environment
         uses: ./.github/actions/setup
@@ -531,7 +531,7 @@ jobs:
     needs: [sanity]
     steps:
       - name: Git Checkout
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10  # v6.0.3
 
       - name: Setup Environment
         uses: ./.github/actions/setup
