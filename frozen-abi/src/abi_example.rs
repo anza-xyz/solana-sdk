@@ -624,6 +624,27 @@ impl<O: AbiEnumVisitor, E: AbiEnumVisitor> AbiEnumVisitor for Result<O, E> {
     }
 }
 
+impl<T: AbiEnumVisitor> AbiEnumVisitor for Box<T> {
+    fn visit_for_abi(&self, digester: &mut AbiDigester) -> DigestResult {
+        println!("AbiEnumVisitor for (Box<T>): {}", type_name::<Self>());
+        <&T>::visit_for_abi(&self.as_ref(), digester)
+    }
+}
+
+impl<T: AbiEnumVisitor> AbiEnumVisitor for std::sync::Arc<T> {
+    fn visit_for_abi(&self, digester: &mut AbiDigester) -> DigestResult {
+        println!("AbiEnumVisitor for (Arc<T>): {}", type_name::<Self>());
+        <&T>::visit_for_abi(&self.as_ref(), digester)
+    }
+}
+
+impl<T: AbiEnumVisitor> AbiEnumVisitor for std::rc::Rc<T> {
+    fn visit_for_abi(&self, digester: &mut AbiDigester) -> DigestResult {
+        println!("AbiEnumVisitor for (Rc<T>): {}", type_name::<Self>());
+        <&T>::visit_for_abi(&self.as_ref(), digester)
+    }
+}
+
 #[cfg(not(target_os = "solana"))]
 impl<T: AbiExample> AbiExample for std::sync::OnceLock<T> {
     fn example() -> Self {
