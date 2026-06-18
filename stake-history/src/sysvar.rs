@@ -62,8 +62,14 @@ impl GetSysvar for StakeHistory {}
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct StakeHistorySysvar(pub Epoch);
 
-impl StakeHistoryGetEntry for StakeHistorySysvar {
-    fn get_entry(&self, target_epoch: Epoch) -> Option<StakeHistoryEntry> {
+impl StakeHistorySysvar {
+    /// Shared offset/parse logic for [`StakeHistoryGetEntry::get_entry`].
+    /// The raw-byte read is injected as `read_entry_bytes` so tests can bypass the syscall.
+    fn get_entry_with_reader(
+        &self,
+        target_epoch: Epoch,
+        read_entry_bytes: impl FnOnce(u64) -> Option<[u8; EPOCH_AND_ENTRY_SERIALIZED_SIZE]>,
+    ) -> Option<StakeHistoryEntry> {
         let current_epoch = self.0;
 
         // if current epoch is zero this returns None because there is no history yet
@@ -84,39 +90,59 @@ impl StakeHistoryGetEntry for StakeHistorySysvar {
             .checked_mul(EPOCH_AND_ENTRY_SERIALIZED_SIZE as u64)?
             .checked_add(core::mem::size_of::<u64>() as u64)?;
 
+        let entry_buf = read_entry_bytes(offset)?;
+
+        // All safe because `entry_buf` is a 32-length array
+        let entry_epoch = u64::from_le_bytes(entry_buf[0..8].try_into().unwrap());
+        let effective = u64::from_le_bytes(entry_buf[8..16].try_into().unwrap());
+        let activating = u64::from_le_bytes(entry_buf[16..24].try_into().unwrap());
+        let deactivating = u64::from_le_bytes(entry_buf[24..32].try_into().unwrap());
+
+        // this would only fail if stake history skipped an epoch or the binary format of the sysvar changed
+        assert_eq!(entry_epoch, target_epoch);
+
+        Some(StakeHistoryEntry {
+            effective,
+            activating,
+            deactivating,
+        })
+    }
+
+    // Reads the target entry's bytes from the runtime via the `sol_get_sysvar` syscall.
+    fn read_entry_bytes_from_syscall(offset: u64) -> Option<[u8; EPOCH_AND_ENTRY_SERIALIZED_SIZE]> {
         let mut entry_buf = [0; EPOCH_AND_ENTRY_SERIALIZED_SIZE];
-        let result = get_sysvar(
+        get_sysvar(
             &mut entry_buf,
             &id(),
             offset,
             EPOCH_AND_ENTRY_SERIALIZED_SIZE as u64,
-        );
+        )
+        .ok()?;
+        Some(entry_buf)
+    }
+}
 
-        match result {
-            Ok(()) => {
-                // All safe because `entry_buf` is a 32-length array
-                let entry_epoch = u64::from_le_bytes(entry_buf[0..8].try_into().unwrap());
-                let effective = u64::from_le_bytes(entry_buf[8..16].try_into().unwrap());
-                let activating = u64::from_le_bytes(entry_buf[16..24].try_into().unwrap());
-                let deactivating = u64::from_le_bytes(entry_buf[24..32].try_into().unwrap());
-
-                // this would only fail if stake history skipped an epoch or the binary format of the sysvar changed
-                assert_eq!(entry_epoch, target_epoch);
-
-                Some(StakeHistoryEntry {
-                    effective,
-                    activating,
-                    deactivating,
-                })
-            }
-            _ => None,
-        }
+impl StakeHistoryGetEntry for StakeHistorySysvar {
+    fn get_entry(&self, target_epoch: Epoch) -> Option<StakeHistoryEntry> {
+        self.get_entry_with_reader(target_epoch, Self::read_entry_bytes_from_syscall)
     }
 }
 
 #[cfg(test)]
 mod tests {
     use {super::*, crate::SIZE, alloc::vec::Vec};
+
+    fn get_entry_from_serialized(
+        stake_history_sysvar: &StakeHistorySysvar,
+        target_epoch: Epoch,
+        serialized_stake_history: &[u8],
+    ) -> Option<StakeHistoryEntry> {
+        stake_history_sysvar.get_entry_with_reader(target_epoch, |offset| {
+            let offset = usize::try_from(offset).unwrap();
+            let end = offset.checked_add(EPOCH_AND_ENTRY_SERIALIZED_SIZE).unwrap();
+            Some(serialized_stake_history[offset..end].try_into().unwrap())
+        })
+    }
 
     #[test]
     fn test_size_of() {
@@ -164,6 +190,9 @@ mod tests {
         assert_eq!(stake_history.len(), MAX_ENTRIES);
         assert_eq!(stake_history.iter().map(|entry| entry.0).min().unwrap(), 2);
 
+        let stake_history_sysvar = StakeHistorySysvar(current_epoch);
+        let serialized_stake_history = bincode::serialize(&stake_history).unwrap();
+
         // now test the stake history interfaces
 
         assert_eq!(stake_history.get(0), None);
@@ -174,12 +203,34 @@ mod tests {
         assert_eq!(stake_history.get_entry(1), None);
         assert_eq!(stake_history.get_entry(current_epoch), None);
 
+        assert_eq!(
+            get_entry_from_serialized(&stake_history_sysvar, 0, &serialized_stake_history),
+            None
+        );
+        assert_eq!(
+            get_entry_from_serialized(&stake_history_sysvar, 1, &serialized_stake_history),
+            None
+        );
+        assert_eq!(
+            get_entry_from_serialized(
+                &stake_history_sysvar,
+                current_epoch,
+                &serialized_stake_history
+            ),
+            None
+        );
+
         for i in 2..current_epoch {
             let entry = Some(unique_entry_for_epoch(i));
 
             assert_eq!(stake_history.get(i), entry.as_ref(),);
 
             assert_eq!(stake_history.get_entry(i), entry,);
+
+            assert_eq!(
+                get_entry_from_serialized(&stake_history_sysvar, i, &serialized_stake_history),
+                entry,
+            );
         }
     }
 
@@ -193,6 +244,14 @@ mod tests {
 
         assert_eq!(stake_history.get(0), None);
         assert_eq!(stake_history.get_entry(0), None);
+        assert_eq!(
+            get_entry_from_serialized(
+                &StakeHistorySysvar(current_epoch),
+                0,
+                &bincode::serialize(&stake_history).unwrap()
+            ),
+            None
+        );
 
         // next test that we can get a zeroth entry in the first epoch
         let entry_zero = StakeHistoryEntry {
@@ -208,6 +267,14 @@ mod tests {
 
         assert_eq!(stake_history.get(0), entry.as_ref());
         assert_eq!(stake_history.get_entry(0), entry);
+        assert_eq!(
+            get_entry_from_serialized(
+                &StakeHistorySysvar(current_epoch),
+                0,
+                &bincode::serialize(&stake_history).unwrap()
+            ),
+            entry,
+        );
 
         // finally test that we can still get a zeroth entry in later epochs
         stake_history.add(current_epoch, StakeHistoryEntry::default());
@@ -215,5 +282,13 @@ mod tests {
 
         assert_eq!(stake_history.get(0), entry.as_ref());
         assert_eq!(stake_history.get_entry(0), entry);
+        assert_eq!(
+            get_entry_from_serialized(
+                &StakeHistorySysvar(current_epoch.saturating_add(1)),
+                0,
+                &bincode::serialize(&stake_history).unwrap()
+            ),
+            entry,
+        );
     }
 }
