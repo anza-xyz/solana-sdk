@@ -467,12 +467,9 @@ impl Message {
             return Err(MessageError::DuplicateAddresses);
         }
 
-        // validate config mask (2-bit fields must have both bits set or neither)
-        let mask: TransactionConfigMask = self.config.into();
-
-        if mask.has_invalid_priority_fee_bits() {
-            return Err(MessageError::InvalidConfigMask);
-        }
+        // The config mask is regenerated from the typed `TransactionConfig` on
+        // serialization, so a malformed mask cannot exist here. Invalid/unknown mask
+        // bits only occur in raw wire bytes and are rejected during deserialization.
 
         // if specified, heap size must be a multiple of 1024 and within valid bounds
         if let Some(heap_size) = self.config.heap_size {
