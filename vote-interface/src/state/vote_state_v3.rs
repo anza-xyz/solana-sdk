@@ -23,7 +23,7 @@ use {
     feature = "frozen-abi",
     frozen_abi(
         api_digest = "pZqasQc6duzMYzpzU7eriHH9cMXmubuUP4NmCrkWZjt",
-        abi_digest = "6xrS3B1cUyFYdPAwavAQ4DKpGTWsdoV4fkaGfiEBRmtQ",
+        abi_digest = "4VUwurjnJ96aMgYXaAmkDut56mMkC4uo6b5bm8iH7WzJ",
         abi_serializer = ["bincode", "wincode"]
     ),
     derive(AbiExample, StableAbi, StableAbiSample)

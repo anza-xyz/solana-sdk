@@ -56,6 +56,12 @@ pub const VOTE_CREDITS_MAXIMUM_PER_SLOT: u8 = 16;
 #[cfg_attr(feature = "dev-context-only-utils", derive(Arbitrary))]
 pub struct Lockout {
     slot: Slot,
+    /// Effectively bounded by `MAX_LOCKOUT_HISTORY`, the cap applied to it as the
+    /// lockout exponent in [`Lockout::lockout`]; the ABI sample uses that range.
+    #[cfg_attr(
+        feature = "frozen-abi",
+        stable_abi_sample(with = "sampling::sample_confirmation_count(rng)")
+    )]
     confirmation_count: u32,
 }
 
@@ -100,6 +106,52 @@ impl Lockout {
 
     pub fn increase_confirmation_count(&mut self, by: u32) {
         self.confirmation_count = self.confirmation_count.saturating_add(by)
+    }
+}
+
+/// Sampling support for random lockout towers, shared by the `frozen-abi` ABI
+/// samplers and the round-trip tests.
+///
+/// The compact (offset-encoded) wire format used on the wire requires strictly
+/// increasing slots and a root at or below the first slot. Slots are sampled
+/// starting at `LOCKOUT_SAMPLE_SLOT_BASE` and grow by up to
+/// `LOCKOUT_SAMPLE_SLOT_STEP` per lockout; the (optional) root sits just below
+/// the base, so the first delta-encoded offset is always non-negative.
+#[cfg(any(feature = "frozen-abi", test))]
+mod sampling {
+    use {
+        super::{Lockout, MAX_LOCKOUT_HISTORY},
+        solana_clock::Slot,
+        std::collections::VecDeque,
+    };
+
+    const LOCKOUT_SAMPLE_SLOT_BASE: Slot = 149_303_885;
+    const LOCKOUT_SAMPLE_SLOT_STEP: Slot = 1_000;
+
+    /// A `confirmation_count` capped to `MAX_LOCKOUT_HISTORY`, the range usable
+    /// by the compact wire format (and the lockout exponent).
+    pub(super) fn sample_confirmation_count<R: rand::Rng + ?Sized>(rng: &mut R) -> u32 {
+        rng.random_range(0..=MAX_LOCKOUT_HISTORY as u32)
+    }
+
+    /// Build a tower with strictly increasing slots and in-range
+    /// `confirmation_count`s, so the sample survives the compact codec.
+    pub(super) fn sample_lockouts<R: rand::Rng + ?Sized>(rng: &mut R) -> VecDeque<Lockout> {
+        let mut slot = LOCKOUT_SAMPLE_SLOT_BASE;
+        (0..rng.random_range(0..=MAX_LOCKOUT_HISTORY))
+            .map(|_| {
+                slot = slot.saturating_add(rng.random_range(1..=LOCKOUT_SAMPLE_SLOT_STEP));
+                Lockout::new_with_confirmation_count(slot, sample_confirmation_count(rng))
+            })
+            .collect()
+    }
+
+    /// An optional root just below the first sampled slot, keeping the first
+    /// delta-encoded offset non-negative.
+    pub(super) fn sample_root<R: rand::Rng + ?Sized>(rng: &mut R) -> Option<Slot> {
+        rng.random_bool(0.5).then(|| {
+            LOCKOUT_SAMPLE_SLOT_BASE.saturating_sub(rng.random_range(0..=LOCKOUT_SAMPLE_SLOT_STEP))
+        })
     }
 }
 
@@ -503,33 +555,17 @@ pub mod wincode_compact {
 
 #[cfg(all(test, feature = "bincode"))]
 mod tests {
-    use {super::*, itertools::Itertools, rand::Rng, solana_hash::Hash};
+    use {super::*, rand::Rng, solana_hash::Hash};
 
     /// Build a random `VoteStateUpdate` with strictly increasing lockout slots
     /// and an optional root below the first slot, suitable for exercising the
     /// compact (offset-encoded) wire formats.
     fn random_vote_state_update<R: Rng>(rng: &mut R) -> VoteStateUpdate {
-        let lockouts: VecDeque<_> = std::iter::repeat_with(|| {
-            let slot = 149_303_885_u64.saturating_add(rng.random_range(0..10_000));
-            let confirmation_count = rng.random_range(0..33);
-            Lockout::new_with_confirmation_count(slot, confirmation_count)
-        })
-        .take(32)
-        .sorted_by_key(|lockout| lockout.slot())
-        .collect();
-        let root = rng.random_bool(0.5).then(|| {
-            lockouts[0]
-                .slot()
-                .checked_sub(rng.random_range(0..1_000))
-                .expect("All slots should be greater than 1_000")
-        });
-        let timestamp = rng.random_bool(0.5).then(|| rng.random());
-        let hash = Hash::from(rng.random::<[u8; 32]>());
         VoteStateUpdate {
-            lockouts,
-            root,
-            hash,
-            timestamp,
+            lockouts: sampling::sample_lockouts(rng),
+            root: sampling::sample_root(rng),
+            hash: Hash::from(rng.random::<[u8; 32]>()),
+            timestamp: rng.random_bool(0.5).then(|| rng.random()),
         }
     }
 

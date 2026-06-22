@@ -4844,7 +4844,6 @@ dependencies = [
  "arbitrary",
  "bincode",
  "cfg_eval",
- "itertools 0.12.1",
  "num-derive",
  "num-traits",
  "rand 0.9.2",

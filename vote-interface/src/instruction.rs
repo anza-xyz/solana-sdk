@@ -1,5 +1,7 @@
 //! Vote program instructions
 
+#[cfg(feature = "frozen-abi")]
+use solana_frozen_abi_macro::{frozen_abi, StableAbi, StableAbiSample};
 use {
     super::state::TowerSync,
     crate::state::{
@@ -28,6 +30,7 @@ use {
 };
 
 #[repr(u8)]
+#[cfg_attr(feature = "frozen-abi", derive(StableAbi, StableAbiSample))]
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[cfg_attr(feature = "wincode", derive(SchemaWrite, SchemaRead))]
 #[derive(Debug, PartialEq, Eq, Clone)]
@@ -36,6 +39,14 @@ pub enum CommissionKind {
     BlockRevenue = 1,
 }
 
+#[cfg_attr(
+    feature = "frozen-abi",
+    frozen_abi(
+        abi_digest = "9bqZ5L1KnMFnjQPMoRtfhdgUok3G5W2KKRGuw8uwbkuY",
+        abi_serializer = ["bincode", "wincode"]
+    ),
+    derive(StableAbi, StableAbiSample)
+)]
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[cfg_attr(feature = "wincode", derive(SchemaWrite, SchemaRead))]
 #[derive(Debug, PartialEq, Eq, Clone)]
@@ -795,4 +806,32 @@ pub fn withdraw(
     ];
 
     Instruction::new_with_bincode(id(), &VoteInstruction::Withdraw(lamports), account_metas)
+}
+
+#[cfg(all(test, feature = "bincode"))]
+mod tests {
+    use {super::*, crate::state::Lockout, std::collections::VecDeque};
+
+    #[test]
+    fn test_compact_serialize_rejects_confirmation_count_above_u8() {
+        // The compact wire format stores `confirmation_count` as a `u8`, so a
+        // value that does not fit (> 255) must fail to serialize rather than be
+        // silently truncated.
+        let lockouts = VecDeque::from([Lockout::new_with_confirmation_count(1, 256)]);
+        let vote_state_update = VoteStateUpdate::new(lockouts.clone(), None, Hash::default());
+        let tower_sync = TowerSync::new(lockouts, None, Hash::default(), Hash::default());
+
+        for ix in [
+            VoteInstruction::CompactUpdateVoteState(vote_state_update),
+            VoteInstruction::TowerSync(tower_sync),
+        ] {
+            let err = bincode::serialize(&ix).unwrap_err();
+            assert!(
+                err.to_string().contains("Invalid confirmation count"),
+                "unexpected error: {err}"
+            );
+            #[cfg(feature = "wincode")]
+            assert!(wincode::serialize(&ix).is_err());
+        }
+    }
 }

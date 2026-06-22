@@ -22,8 +22,14 @@ bincode = [
     "dep:solana-system-interface",
     "serde",
 ]
-dev-context-only-utils = ["bincode", "dep:arbitrary", "solana-pubkey/dev-context-only-utils"]
+dev-context-only-utils = [
+    "bincode",
+    "dep:arbitrary",
+    "dep:rand",
+    "solana-pubkey/dev-context-only-utils",
+]
 frozen-abi = [
+    "dep:rand",
     "dep:solana-frozen-abi",
     "dep:solana-frozen-abi-macro",
     "serde",
@@ -59,6 +65,7 @@ bincode = { workspace = true, optional = true }
 cfg_eval = { workspace = true, optional = true }
 num-derive = { workspace = true }
 num-traits = { workspace = true }
+rand = { workspace = true, optional = true }
 serde = { workspace = true, optional = true }
 serde_derive = { workspace = true, optional = true }
 serde_with = { workspace = true, features = ["macros"], optional = true }
@@ -82,8 +89,6 @@ wincode = { workspace = true, optional = true }
 solana-serialize-utils = { workspace = true, features = ["std"] }
 
 [dev-dependencies]
-itertools = { workspace = true }
-rand = { workspace = true }
 solana-epoch-schedule = { workspace = true }
 solana-pubkey = { workspace = true, features = ["dev-context-only-utils"] }
 solana-vote-interface = { path = ".", features = ["dev-context-only-utils", "wincode"] }
