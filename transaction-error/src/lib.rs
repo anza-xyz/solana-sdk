@@ -19,7 +19,7 @@ pub type TransactionResult<T> = Result<T, TransactionError>;
     feature = "frozen-abi",
     derive(AbiExample, AbiEnumVisitor, StableAbi, StableAbiSample),
     frozen_abi(
-        abi_digest = "6qvmfr8X2536Tt5964pUX2mhSggRQxcyHPBVVonnbbhE",
+        abi_digest = "DQJRmVrrXp8rnoN2fjcHuvZNE6yorCxLEnifgoc3CQNA",
         abi_serializer = ["bincode", "wincode"],
         test_roundtrip = "eq_and_wire"
     )
