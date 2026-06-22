@@ -357,6 +357,24 @@ fn shared_deserialize_data<T: serde::de::DeserializeOwned, U: ReadableAccount>(
     bincode::deserialize(account.data())
 }
 
+/// Serialize `state` into `writer`, failing with [`bincode::ErrorKind::SizeLimit`]
+/// once `limit` bytes have been written. The limit is enforced during
+/// serialization, so a `Serialize` impl that under-reports its size (or whose
+/// output varies between calls) cannot write past `limit`. Fixint encoding
+/// matches the default `bincode::serialize` byte format.
+#[cfg(feature = "bincode")]
+fn limited_serialize_into<W: std::io::Write, T: serde::Serialize>(
+    writer: W,
+    state: &T,
+    limit: u64,
+) -> Result<(), bincode::Error> {
+    use bincode::Options;
+    bincode::options()
+        .with_fixint_encoding()
+        .with_limit(limit)
+        .serialize_into(writer, state)
+}
+
 #[cfg(feature = "bincode")]
 fn shared_serialize_data<T: serde::Serialize, U: WritableAccount>(
     account: &mut U,
@@ -422,11 +440,10 @@ impl Account {
         space: usize,
         owner: &Pubkey,
     ) -> Result<Self, bincode::Error> {
-        if bincode::serialized_size(state)? > space as u64 {
-            return Err(Box::new(bincode::ErrorKind::SizeLimit));
-        }
+        // The byte limit prevents a misbehaving `Serialize` impl from growing
+        // `data` past `space` (which the `resize` below would then truncate).
         let mut data = Vec::with_capacity(space);
-        bincode::serialize_into(&mut data, state)?;
+        limited_serialize_into(&mut data, state, space as u64)?;
         data.resize(space, 0);
         Ok(Account::new_with_data(lamports, data, owner))
     }
@@ -583,11 +600,10 @@ impl AccountSharedData {
         space: usize,
         owner: &Pubkey,
     ) -> Result<Self, bincode::Error> {
-        if bincode::serialized_size(state)? > space as u64 {
-            return Err(Box::new(bincode::ErrorKind::SizeLimit));
-        }
+        // The byte limit prevents a misbehaving `Serialize` impl from growing
+        // `data` past `space` (which the `resize` below would then truncate).
         let mut data = Vec::with_capacity(space);
-        bincode::serialize_into(&mut data, state)?;
+        limited_serialize_into(&mut data, state, space as u64)?;
         data.resize(space, 0);
         Ok(Self::create_from_existing_shared_data(
             lamports,
