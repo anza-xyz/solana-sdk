@@ -67,7 +67,6 @@ pub struct Instructions();
 solana_sysvar_id::impl_sysvar_id!(Instructions);
 
 /// Construct the account data for the instructions sysvar.
-/// Returns None if the instructions cannot be serialized correctly.
 ///
 /// This function is used by the runtime and not available to Solana programs.
 #[cfg(not(target_os = "solana"))]
@@ -119,8 +118,6 @@ pub enum InstructionsSysvarError {
 // - N = num_instructions
 // - A = number of accounts in a particular instruction
 // - D = data_len
-//
-// Returns None if the instructions cannot be serialized correctly.
 #[cfg(not(target_os = "solana"))]
 #[cfg_attr(feature = "dev-context-only-utils", qualifiers(pub))]
 fn serialize_instructions(
