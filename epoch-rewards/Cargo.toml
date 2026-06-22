@@ -39,7 +39,7 @@ solana-sysvar-id = { workspace = true, optional = true }
 wincode = { workspace = true, optional = true }
 
 [dev-dependencies]
-solana-epoch-rewards = { path = ".", features = ["sysvar"] }
+solana-epoch-rewards = { path = ".", features = ["sysvar", "wincode"] }
 
 [lints]
 workspace = true

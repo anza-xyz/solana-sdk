@@ -28,3 +28,4 @@ wincode = { workspace = true, optional = true }
 
 [dev-dependencies]
 solana-sha256-hasher = { workspace = true, features = ["sha2"] }
+solana-slot-hashes = { path = ".", features = ["wincode"] }

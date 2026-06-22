@@ -53,12 +53,9 @@ use {solana_clock::Slot, solana_hash::Hash};
 #[cfg(feature = "bytemuck")]
 const U64_SIZE: usize = std::mem::size_of::<u64>();
 
-#[cfg(any(feature = "bytemuck", feature = "bincode"))]
-const SYSVAR_LEN: usize = 20_488; // golden, update if MAX_ENTRIES changes
-
 pub use {
     solana_sdk_ids::sysvar::slot_hashes::{check_id, id, ID},
-    solana_slot_hashes::SlotHashes,
+    solana_slot_hashes::{SlotHashes, SIZE},
     solana_sysvar_id::SysvarId,
 };
 
@@ -67,7 +64,7 @@ impl SysvarSerialize for SlotHashes {
     // override
     fn size_of() -> usize {
         // hard-coded so that we don't have to construct an empty
-        SYSVAR_LEN
+        SIZE
     }
     fn from_account_info(
         _account_info: &AccountInfo,
@@ -103,7 +100,7 @@ impl PodSlotHashes {
     /// Fetch all of the raw sysvar data using the `sol_get_sysvar` syscall.
     pub fn fetch() -> Result<Self, solana_program_error::ProgramError> {
         // Allocate an uninitialized buffer for the raw sysvar data.
-        let sysvar_len = SYSVAR_LEN;
+        let sysvar_len = SIZE;
         let mut data = vec![0; sysvar_len];
 
         // Ensure the created buffer is aligned to 8.

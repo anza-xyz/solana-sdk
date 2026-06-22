@@ -39,6 +39,12 @@ pub struct Rent {
     pub burn_percent: u8,
 }
 
+/// Serialized size of the `Rent` sysvar account.
+pub const SIZE: usize = size_of::<u64>() // lamports_per_byte
+    + size_of::<[u8; 8]>() // exemption_threshold
+    + size_of::<u8>(); // burn_percent
+const _: () = assert!(SIZE == 17);
+
 /// Maximum permitted size of account data (10 MiB).
 const MAX_PERMITTED_DATA_LENGTH: u64 = 10 * 1024 * 1024;
 
@@ -225,6 +231,14 @@ impl Rent {
 #[cfg(test)]
 mod tests {
     use {super::*, proptest::proptest};
+
+    #[test]
+    fn test_size_of() {
+        assert_eq!(
+            wincode::serialized_size(&Rent::default()).unwrap() as usize,
+            SIZE,
+        );
+    }
 
     #[test]
     fn test_clone() {

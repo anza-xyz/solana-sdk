@@ -37,7 +37,7 @@ wincode = { workspace = true, optional = true }
 
 [dev-dependencies]
 solana-clock = { workspace = true }
-solana-epoch-schedule = { path = ".", features = ["sysvar"] }
+solana-epoch-schedule = { path = ".", features = ["sysvar", "wincode"] }
 static_assertions = { workspace = true }
 
 [lints]

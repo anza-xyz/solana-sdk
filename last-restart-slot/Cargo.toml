@@ -27,3 +27,6 @@ wincode = ["dep:wincode"]
 targets = ["x86_64-unknown-linux-gnu"]
 all-features = true
 rustdoc-args = ["--cfg=docsrs"]
+
+[dev-dependencies]
+solana-last-restart-slot = { path = ".", features = ["wincode"] }

@@ -29,5 +29,5 @@ solana-sysvar-id = { workspace = true, optional = true }
 wincode = { workspace = true, optional = true }
 
 [dev-dependencies]
-solana-clock = { path = ".", features = ["sysvar"] }
+solana-clock = { path = ".", features = ["sysvar", "wincode"] }
 static_assertions = { workspace = true }

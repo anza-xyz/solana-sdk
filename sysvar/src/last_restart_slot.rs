@@ -39,7 +39,7 @@
 #[cfg(feature = "bincode")]
 use crate::SysvarSerialize;
 pub use {
-    solana_last_restart_slot::LastRestartSlot,
+    solana_last_restart_slot::{LastRestartSlot, SIZE},
     solana_sdk_ids::sysvar::last_restart_slot::{check_id, id, ID},
 };
 
@@ -55,12 +55,11 @@ mod tests {
     fn test_last_restart_slot_size_matches_bincode() {
         // Prove that LastRestartSlot's in-memory layout matches its bincode serialization.
         let slot = LastRestartSlot::default();
-        let in_memory_size = core::mem::size_of::<LastRestartSlot>();
         let bincode_size = bincode::serialized_size(&slot).unwrap() as usize;
 
         assert_eq!(
-            in_memory_size, bincode_size,
-            "LastRestartSlot in-memory size ({in_memory_size}) must match bincode size ({bincode_size})",
+            SIZE, bincode_size,
+            "LastRestartSlot SIZE ({SIZE}) must match bincode size ({bincode_size})",
         );
     }
 }

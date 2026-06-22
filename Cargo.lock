@@ -3953,6 +3953,7 @@ dependencies = [
  "serde",
  "serde_derive",
  "solana-get-sysvar",
+ "solana-last-restart-slot",
  "solana-sdk-ids",
  "solana-sdk-macro",
  "solana-sysvar-id",
@@ -4296,6 +4297,7 @@ dependencies = [
  "solana-frozen-abi",
  "solana-frozen-abi-macro",
  "solana-get-sysvar",
+ "solana-rent",
  "solana-sdk-ids",
  "solana-sdk-macro",
  "solana-sysvar-id",
@@ -4612,6 +4614,7 @@ dependencies = [
  "solana-hash",
  "solana-sdk-ids",
  "solana-sha256-hasher",
+ "solana-slot-hashes",
  "solana-sysvar-id",
  "wincode",
 ]
@@ -4625,6 +4628,7 @@ dependencies = [
  "serde_derive",
  "solana-get-sysvar",
  "solana-sdk-ids",
+ "solana-slot-history",
  "solana-sysvar-id",
  "wincode",
 ]

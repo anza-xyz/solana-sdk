@@ -51,6 +51,9 @@ impl std::fmt::Debug for SlotHistory {
 
 pub const MAX_ENTRIES: u64 = 1024 * 1024; // 1 million slots is about 5 days
 
+/// Serialized size of the `SlotHistory` sysvar account.
+pub const SIZE: usize = 131_097;
+
 #[derive(PartialEq, Eq, Debug)]
 pub enum Check {
     Future,
@@ -101,6 +104,14 @@ impl SlotHistory {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_size_of() {
+        assert_eq!(
+            wincode::serialized_size(&SlotHistory::default()).unwrap() as usize,
+            SIZE,
+        );
+    }
 
     #[test]
     fn slot_history_test1() {

@@ -124,7 +124,7 @@
 #[cfg(feature = "bincode")]
 use crate::SysvarSerialize;
 pub use {
-    solana_clock::Clock,
+    solana_clock::{Clock, SIZE},
     solana_sdk_ids::sysvar::clock::{check_id, id, ID},
 };
 
@@ -140,12 +140,11 @@ mod tests {
     fn test_clock_size_matches_bincode() {
         // Prove that Clock's in-memory layout matches its bincode serialization.
         let clock = Clock::default();
-        let in_memory_size = core::mem::size_of::<Clock>();
         let bincode_size = bincode::serialized_size(&clock).unwrap() as usize;
 
         assert_eq!(
-            in_memory_size, bincode_size,
-            "Clock in-memory size ({in_memory_size}) must match bincode size ({bincode_size})",
+            SIZE, bincode_size,
+            "Clock SIZE ({SIZE}) must match bincode size ({bincode_size})",
         );
     }
 }

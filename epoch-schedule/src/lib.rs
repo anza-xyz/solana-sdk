@@ -79,6 +79,14 @@ pub struct EpochSchedule {
     pub first_normal_slot: u64,
 }
 
+/// Serialized size of the `EpochSchedule` sysvar account.
+pub const SIZE: usize = size_of::<u64>() // slots_per_epoch
+    + size_of::<u64>() // leader_schedule_slot_offset
+    + size_of::<bool>() // warmup
+    + size_of::<u64>() // first_normal_epoch
+    + size_of::<u64>(); // first_normal_slot
+const _: () = assert!(SIZE == 33);
+
 impl Default for EpochSchedule {
     fn default() -> Self {
         Self::custom(
@@ -213,6 +221,14 @@ impl EpochSchedule {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_size_of() {
+        assert_eq!(
+            wincode::serialized_size(&EpochSchedule::default()).unwrap() as usize,
+            SIZE,
+        );
+    }
 
     #[test]
     fn test_epoch_schedule() {

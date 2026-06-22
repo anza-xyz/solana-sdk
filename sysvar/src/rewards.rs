@@ -16,6 +16,11 @@ pub struct Rewards {
     pub validator_point_value: f64,
     pub unused: f64,
 }
+
+/// Serialized size of `Rewards` sysvar account.
+pub const SIZE: usize = size_of::<Rewards>();
+const _: () = assert!(SIZE == 16);
+
 impl Rewards {
     pub fn new(validator_point_value: f64) -> Self {
         Self {
@@ -27,3 +32,16 @@ impl Rewards {
 impl Sysvar for Rewards {}
 #[cfg(feature = "bincode")]
 impl SysvarSerialize for Rewards {}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_size_of() {
+        assert_eq!(
+            wincode::serialized_size(&Rewards::default()).unwrap() as usize,
+            SIZE,
+        );
+    }
+}

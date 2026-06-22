@@ -47,6 +47,10 @@ pub struct Fees {
     pub fee_calculator: FeeCalculator,
 }
 
+/// Serialized size of `Fees` sysvar account.
+pub const SIZE: usize = size_of::<Fees>();
+const _: () = assert!(SIZE == 8);
+
 impl Fees {
     pub fn new(fee_calculator: &FeeCalculator) -> Self {
         #[allow(deprecated)]
@@ -86,6 +90,14 @@ impl SysvarSerialize for Fees {}
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_size_of() {
+        assert_eq!(
+            wincode::serialized_size(&Fees::default()).unwrap() as usize,
+            SIZE,
+        );
+    }
 
     #[test]
     fn test_clone() {

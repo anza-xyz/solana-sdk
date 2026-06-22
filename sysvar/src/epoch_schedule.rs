@@ -122,7 +122,7 @@
 #[cfg(feature = "bincode")]
 use crate::SysvarSerialize;
 pub use {
-    solana_epoch_schedule::{sysvar::PodEpochSchedule, EpochSchedule},
+    solana_epoch_schedule::{sysvar::PodEpochSchedule, EpochSchedule, SIZE},
     solana_sdk_ids::sysvar::epoch_schedule::{check_id, id, ID},
 };
 

@@ -171,9 +171,21 @@ pub struct Clock {
     pub unix_timestamp: UnixTimestamp,
 }
 
+/// Serialized size of the `Clock` sysvar account.
+pub const SIZE: usize = size_of::<Clock>();
+const _: () = assert!(SIZE == 40);
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_size_of() {
+        assert_eq!(
+            wincode::serialized_size(&Clock::default()).unwrap() as usize,
+            SIZE,
+        );
+    }
 
     #[test]
     fn test_clone() {

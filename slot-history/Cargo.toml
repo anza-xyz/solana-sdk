@@ -27,3 +27,6 @@ solana-get-sysvar = { workspace = true, optional = true }
 solana-sdk-ids = { workspace = true, optional = true }
 solana-sysvar-id = { workspace = true, optional = true }
 wincode = { workspace = true, optional = true }
+
+[dev-dependencies]
+solana-slot-history = { path = ".", features = ["wincode"] }

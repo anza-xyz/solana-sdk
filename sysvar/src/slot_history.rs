@@ -53,15 +53,14 @@ pub use {
     solana_account_info::AccountInfo,
     solana_program_error::ProgramError,
     solana_sdk_ids::sysvar::slot_history::{check_id, id, ID},
-    solana_slot_history::SlotHistory,
+    solana_slot_history::{SlotHistory, SIZE},
 };
 
 #[cfg(feature = "bincode")]
 impl SysvarSerialize for SlotHistory {
     // override
     fn size_of() -> usize {
-        // hard-coded so that we don't have to construct an empty
-        131_097 // golden, update if MAX_ENTRIES changes
+        SIZE
     }
     fn from_account_info(_account_info: &AccountInfo) -> Result<Self, ProgramError> {
         // This sysvar is too large to bincode::deserialize in-program

@@ -157,7 +157,7 @@
 #[cfg(feature = "bincode")]
 use crate::SysvarSerialize;
 pub use {
-    solana_epoch_rewards::EpochRewards,
+    solana_epoch_rewards::{EpochRewards, SIZE},
     solana_sdk_ids::sysvar::epoch_rewards::{check_id, id, ID},
 };
 

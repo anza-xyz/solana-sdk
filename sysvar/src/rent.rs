@@ -124,7 +124,7 @@
 #[cfg(feature = "bincode")]
 use crate::SysvarSerialize;
 pub use {
-    solana_rent::Rent,
+    solana_rent::{Rent, SIZE},
     solana_sdk_ids::sysvar::rent::{check_id, id, ID},
 };
 
