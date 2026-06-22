@@ -16,6 +16,9 @@ use {
 
 pub(crate) const DEFAULT_COLLECTION_MAX_SAMPLE_LEN: usize = 5;
 const DEFAULT_COLLECTION_MAX_SAMPLE_LEN_NON_DETERMINISTIC_ORDER: usize = 1;
+// Strings sample longer than other collections so the digest exercises
+// multi-byte lengths and a wider spread of code points.
+const DEFAULT_STRING_MAX_SAMPLE_LEN: usize = 80;
 
 macro_rules! impl_stable_abi_via_standard_uniform {
     ($($t:ty),* $(,)?) => {
@@ -185,6 +188,28 @@ where
 impl_with_context_via! {
     impl<T> StableAbi<SequenceLenMax> for Vec<T>
     where { T: StableAbi },
+    |ctx| SequenceLenRange::from(ctx),
+}
+
+// `String` samples like a `Vec<char>`: a length is drawn from the context and
+// that many random `char`s are collected into a (necessarily valid UTF-8)
+// string. Strings get their own, larger default length.
+impl_with_context_via! {
+    impl StableAbi<()> for String
+    where { },
+    |_| SequenceLenRange::new(0..=DEFAULT_STRING_MAX_SAMPLE_LEN),
+}
+
+impl StableAbi<SequenceLenRange> for String {
+    fn random_with_context(rng: &mut (impl RngCore + ?Sized), ctx: SequenceLenRange) -> Self {
+        let len = rng.random_range(ctx.min..=ctx.max);
+        (0..len).map(|_| char::random(rng)).collect()
+    }
+}
+
+impl_with_context_via! {
+    impl StableAbi<SequenceLenMax> for String
+    where { },
     |ctx| SequenceLenRange::from(ctx),
 }
 
@@ -427,6 +452,34 @@ mod tests {
                 d: rng.random(),
             }
         }
+    }
+
+    // Verify `String` sampling across the default, max, and range contexts.
+    #[derive(
+        PartialEq,
+        serde_derive::Deserialize,
+        serde_derive::Serialize,
+        wincode::SchemaRead,
+        wincode::SchemaWrite,
+    )]
+    #[cfg_attr(
+        feature = "frozen-abi",
+        derive(
+            solana_frozen_abi_macro::StableAbi,
+            solana_frozen_abi_macro::StableAbiSample
+        ),
+        solana_frozen_abi_macro::frozen_abi(
+            abi_digest = "52C5jkppahAFHnuBDr1H5WstW11SNeckxoBmJF4hThGQ",
+            abi_serializer = ["bincode", "wincode"],
+            test_roundtrip = "eq_and_wire",
+        )
+    )]
+    struct TestStableAbiSampleString {
+        default_len: String,
+        #[stable_abi_sample(ctx = SequenceLenMax(8))]
+        max_len: String,
+        #[stable_abi_sample(ctx = SequenceLenRange { min: 1, max: 4 })]
+        range_len: String,
     }
 
     // Verify stable abi sample derive (all fields with rand distribution)

@@ -48,11 +48,11 @@ impl From<SequenceLenMax> for SequenceLenRange {
 
 macro_rules! impl_with_context_via {
     (
-        impl<$($g:tt),+ $(,)?> StableAbi<$ctx:ty> for $self_ty:ty
+        impl $(<$($g:tt),+ $(,)?>)? StableAbi<$ctx:ty> for $self_ty:ty
         where { $($wc:tt)* },
         |$bind:pat_param| $convert:expr $(,)?
     ) => {
-        impl<$($g),+> StableAbi<$ctx> for $self_ty
+        impl $(<$($g),+>)? StableAbi<$ctx> for $self_ty
         where $($wc)*
         {
             fn random_with_context(
