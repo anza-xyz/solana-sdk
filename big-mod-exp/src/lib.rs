@@ -43,14 +43,29 @@ pub fn big_mod_exp(base: &[u8], exponent: &[u8], modulus: &[u8]) -> Vec<u8> {
         use num_bigint::BigUint;
 
         let modulus_len = modulus.len();
-        let base = BigUint::from_bytes_le(base);
-        let exponent = BigUint::from_bytes_le(exponent);
-        let modulus = BigUint::from_bytes_le(modulus);
 
+        if is_zero_le(exponent) {
+            return padded_one(modulus_len);
+        }
+        if is_zero_le(base) {
+            return vec![0; modulus_len];
+        }
+
+        let should_reduce_base = base_needs_reduction(base, modulus);
+        let modulus = BigUint::from_bytes_le(modulus);
+        let mut base = BigUint::from_bytes_le(base);
+
+        if should_reduce_base {
+            base %= &modulus;
+        }
+
+        if is_one_le(exponent) {
+            return padded_to_modulus_len(base.to_bytes_le(), modulus_len);
+        }
+
+        let exponent = BigUint::from_bytes_le(exponent);
         let ret_int = base.modpow(&exponent, &modulus);
-        let mut return_value = ret_int.to_bytes_le();
-        return_value.resize(modulus_len, 0);
-        return_value
+        padded_to_modulus_len(ret_int.to_bytes_le(), modulus_len)
     }
 
     #[cfg(any(target_os = "solana", target_arch = "bpf"))]
@@ -100,12 +115,66 @@ fn validate_modulus(modulus: &[u8]) {
     let Some((&least_significant_byte, more_significant_bytes)) = modulus.split_first() else {
         panic!("modulus length must be nonzero");
     };
+
     let has_nonzero_more_significant_byte = more_significant_bytes.iter().any(|byte| *byte != 0);
 
-    match (least_significant_byte, has_nonzero_more_significant_byte) {
-        (0, false) | (1, false) => panic!("modulus must be greater than one"),
-        _ => assert!(least_significant_byte & 1 == 1, "modulus must be odd"),
+    if least_significant_byte == 0 && !has_nonzero_more_significant_byte {
+        panic!("modulus must be greater than one");
     }
+    assert!(least_significant_byte & 1 == 1, "modulus must be odd");
+
+    if least_significant_byte == 1 && !has_nonzero_more_significant_byte {
+        panic!("modulus must be greater than one");
+    }
+}
+
+#[cfg(any(test, not(any(target_os = "solana", target_arch = "bpf"))))]
+fn is_zero_le(bytes: &[u8]) -> bool {
+    bytes.iter().all(|byte| *byte == 0)
+}
+
+#[cfg(any(test, not(any(target_os = "solana", target_arch = "bpf"))))]
+fn is_one_le(bytes: &[u8]) -> bool {
+    matches!(bytes.first(), Some(1)) && bytes[1..].iter().all(|byte| *byte == 0)
+}
+
+#[cfg(any(test, not(any(target_os = "solana", target_arch = "bpf"))))]
+fn significant_len_le(bytes: &[u8]) -> usize {
+    bytes
+        .iter()
+        .rposition(|byte| *byte != 0)
+        .map_or(0, |index| index + 1)
+}
+
+#[cfg(any(test, not(any(target_os = "solana", target_arch = "bpf"))))]
+fn base_needs_reduction(base: &[u8], modulus: &[u8]) -> bool {
+    let base_len = significant_len_le(base);
+    let modulus_len = significant_len_le(modulus);
+
+    match base_len.cmp(&modulus_len) {
+        core::cmp::Ordering::Less => false,
+        core::cmp::Ordering::Greater => true,
+        core::cmp::Ordering::Equal => {
+            base[..base_len]
+                .iter()
+                .rev()
+                .cmp(modulus[..modulus_len].iter().rev())
+                != core::cmp::Ordering::Less
+        }
+    }
+}
+
+#[cfg(any(test, not(any(target_os = "solana", target_arch = "bpf"))))]
+fn padded_one(modulus_len: usize) -> Vec<u8> {
+    let mut return_value = vec![0; modulus_len];
+    return_value[0] = 1;
+    return_value
+}
+
+#[cfg(any(test, not(any(target_os = "solana", target_arch = "bpf"))))]
+fn padded_to_modulus_len(mut return_value: Vec<u8>, modulus_len: usize) -> Vec<u8> {
+    return_value.resize(modulus_len, 0);
+    return_value
 }
 
 #[cfg(test)]
@@ -218,6 +287,30 @@ mod tests {
     }
 
     #[test]
+    fn big_mod_exp_zero_exponent_test() {
+        assert_eq!(
+            big_mod_exp(&[0x00], &[0x00, 0x00], &[0x03, 0x00]),
+            vec![0x01, 0x00]
+        );
+    }
+
+    #[test]
+    fn big_mod_exp_zero_base_test() {
+        assert_eq!(
+            big_mod_exp(&[0x00, 0x00], &[0x02], &[0x03, 0x00]),
+            vec![0x00, 0x00]
+        );
+    }
+
+    #[test]
+    fn big_mod_exp_one_exponent_equal_length_reduction_test() {
+        assert_eq!(
+            big_mod_exp(&[0x0a, 0x01], &[0x01, 0x00], &[0x07, 0x01]),
+            vec![0x03, 0x00]
+        );
+    }
+
+    #[test]
     fn big_mod_exp_output_padding_test() {
         assert_eq!(
             big_mod_exp(&[0x02], &[0x02], &[0x07, 0x00]),
@@ -239,6 +332,14 @@ mod tests {
             big_mod_exp(&[0x00, 0xe1, 0xf5, 0x05], &[0x01], &[0xb3, 0x15]),
             vec![0x5d, 0x11]
         );
+    }
+
+    #[test]
+    fn base_needs_reduction_test() {
+        assert!(base_needs_reduction(&[0x0a, 0x01], &[0x07, 0x01]));
+        assert!(base_needs_reduction(&[0x07, 0x01], &[0x07, 0x01]));
+        assert!(!base_needs_reduction(&[0x06, 0x01], &[0x07, 0x01]));
+        assert!(!base_needs_reduction(&[0x02, 0x00], &[0x03]));
     }
 
     #[test]
@@ -305,4 +406,11 @@ mod tests {
     fn big_mod_exp_multi_byte_one_modulus_panics() {
         big_mod_exp(&[0x00], &[], &[0x01, 0x00]);
     }
+
+    #[test]
+    #[should_panic(expected = "modulus must be greater than one")]
+    fn big_mod_exp_multi_byte_zero_modulus_panics() {
+        big_mod_exp(&[0x00], &[], &[0x00, 0x00]);
+    }
 }
+
