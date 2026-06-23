@@ -56,7 +56,7 @@ pub fn big_mod_exp(base: &[u8], exponent: &[u8], modulus: &[u8]) -> Vec<u8> {
         let mut base = BigUint::from_bytes_le(base);
 
         if should_reduce_base {
-            base %= &modulus;
+            base = core::ops::Rem::rem(base, &modulus);
         }
 
         if is_one_le(exponent) {
@@ -143,7 +143,11 @@ fn significant_len_le(bytes: &[u8]) -> usize {
     bytes
         .iter()
         .rposition(|byte| *byte != 0)
-        .map_or(0, |index| index + 1)
+        .map_or(0, |index| {
+            index
+                .checked_add(1)
+                .expect("significant byte length fits in usize")
+        })
 }
 
 #[cfg(any(test, not(any(target_os = "solana", target_arch = "bpf"))))]
