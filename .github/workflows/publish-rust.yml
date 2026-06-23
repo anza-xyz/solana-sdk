@@ -158,7 +158,7 @@ jobs:
           tool: cargo-minimal-versions
 
       - name: Install toml-cli
-        uses: taiki-e/cache-cargo-install-action@417450f3c33ee20393705369577571770643d4c7  # v3.0.7
+        uses: taiki-e/install-action@15449e3094499af05d8d964a1c884208e4b8b595  # v2.81.11
         with:
           tool: toml-cli
 
