@@ -160,6 +160,7 @@ bitvec = "1.0.1"
 blake3 = { version = "1.5.5", default-features = false }
 blst = "0.3.14"
 blstrs = "0.7.1"
+bolero = "0.13.4"
 borsh = { version = "1.5.5", default-features = false, features = ["derive", "unstable__schema"] }
 boxcar = "0.2.12"
 bs58 = { version = "0.5.1", default-features = false }
@@ -365,3 +366,7 @@ opt-level = 1
 # Enable optimizations for procmacros for faster recompile
 [profile.dev.build-override]
 opt-level = 1
+
+[profile.fuzz]
+inherits = "release"
+codegen-units = 1
