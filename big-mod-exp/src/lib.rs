@@ -28,15 +28,17 @@ pub const BIG_MOD_EXP_MOD_REDUCTION_COMPLEXITY_FACTOR: u64 = 15;
 
 /// Big integer modular exponentiation.
 ///
-/// Inputs and output are little-endian unsigned integers. The returned value is
-/// padded to exactly `modulus.len()` bytes with trailing zeroes.
+/// Inputs and output are little-endian unsigned integers. The returned value,
+/// if any, is padded to exactly `modulus.len()` bytes with trailing zeroes.
 ///
-/// # Panics
+/// # Returns
 ///
-/// Panics if any operand is longer than [`BIG_MOD_EXP_MAX_BYTES`] or if
+/// Returns `None` if any operand is longer than [`BIG_MOD_EXP_MAX_BYTES`] or if
 /// `modulus` is empty, zero, one, or even.
-pub fn big_mod_exp(base: &[u8], exponent: &[u8], modulus: &[u8]) -> Vec<u8> {
-    validate_inputs(base, exponent, modulus);
+pub fn big_mod_exp(base: &[u8], exponent: &[u8], modulus: &[u8]) -> Option<Vec<u8>> {
+    if !validate_inputs(base, exponent, modulus) {
+        return None;
+    }
 
     #[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
     {
@@ -45,27 +47,27 @@ pub fn big_mod_exp(base: &[u8], exponent: &[u8], modulus: &[u8]) -> Vec<u8> {
         let modulus_len = modulus.len();
 
         if is_zero_le(exponent) {
-            return padded_one(modulus_len);
-        }
-        if is_zero_le(base) {
-            return vec![0; modulus_len];
+            return Some(padded_one(modulus_len));
         }
 
-        let should_reduce_base = base_needs_reduction(base, modulus);
         let modulus = BigUint::from_bytes_le(modulus);
         let mut base = BigUint::from_bytes_le(base);
 
-        if should_reduce_base {
+        if base >= modulus {
             base = core::ops::Rem::rem(base, &modulus);
         }
 
-        if is_one_le(exponent) {
-            return padded_to_modulus_len(base.to_bytes_le(), modulus_len);
+        if base == BigUint::ZERO {
+            return Some(vec![0; modulus_len]);
+        }
+
+        if base == BigUint::from(1_u8) || is_one_le(exponent) {
+            return Some(padded_to_modulus_len(base.to_bytes_le(), modulus_len));
         }
 
         let exponent = BigUint::from_bytes_le(exponent);
         let ret_int = base.modpow(&exponent, &modulus);
-        padded_to_modulus_len(ret_int.to_bytes_le(), modulus_len)
+        Some(padded_to_modulus_len(ret_int.to_bytes_le(), modulus_len))
     }
 
     #[cfg(any(target_os = "solana", target_arch = "bpf"))]
@@ -88,44 +90,29 @@ pub fn big_mod_exp(base: &[u8], exponent: &[u8], modulus: &[u8]) -> Vec<u8> {
                 return_value.as_mut_ptr(),
             );
         };
-        return_value
+        Some(return_value)
     }
 }
 
-fn validate_inputs(base: &[u8], exponent: &[u8], modulus: &[u8]) {
+fn validate_inputs(base: &[u8], exponent: &[u8], modulus: &[u8]) -> bool {
     let max_len = BIG_MOD_EXP_MAX_BYTES as usize;
 
-    assert!(
-        base.len() <= max_len,
-        "base length exceeds BIG_MOD_EXP_MAX_BYTES"
-    );
-    assert!(
-        exponent.len() <= max_len,
-        "exponent length exceeds BIG_MOD_EXP_MAX_BYTES"
-    );
-    assert!(
-        modulus.len() <= max_len,
-        "modulus length exceeds BIG_MOD_EXP_MAX_BYTES"
-    );
-
-    validate_modulus(modulus);
+    base.len() <= max_len
+        && exponent.len() <= max_len
+        && modulus.len() <= max_len
+        && validate_modulus(modulus)
 }
 
-fn validate_modulus(modulus: &[u8]) {
+fn validate_modulus(modulus: &[u8]) -> bool {
     let Some((&least_significant_byte, more_significant_bytes)) = modulus.split_first() else {
-        panic!("modulus length must be nonzero");
+        return false;
     };
 
-    let has_nonzero_more_significant_byte = more_significant_bytes.iter().any(|byte| *byte != 0);
-
-    if least_significant_byte == 0 && !has_nonzero_more_significant_byte {
-        panic!("modulus must be greater than one");
+    if least_significant_byte & 1 == 0 {
+        return false;
     }
-    assert!(least_significant_byte & 1 == 1, "modulus must be odd");
 
-    if least_significant_byte == 1 && !has_nonzero_more_significant_byte {
-        panic!("modulus must be greater than one");
-    }
+    least_significant_byte > 1 || more_significant_bytes.iter().any(|byte| *byte != 0)
 }
 
 #[cfg(any(test, not(any(target_os = "solana", target_arch = "bpf"))))]
@@ -136,36 +123,6 @@ fn is_zero_le(bytes: &[u8]) -> bool {
 #[cfg(any(test, not(any(target_os = "solana", target_arch = "bpf"))))]
 fn is_one_le(bytes: &[u8]) -> bool {
     matches!(bytes.first(), Some(1)) && bytes[1..].iter().all(|byte| *byte == 0)
-}
-
-#[cfg(any(test, not(any(target_os = "solana", target_arch = "bpf"))))]
-fn significant_len_le(bytes: &[u8]) -> usize {
-    bytes
-        .iter()
-        .rposition(|byte| *byte != 0)
-        .map_or(0, |index| {
-            index
-                .checked_add(1)
-                .expect("significant byte length fits in usize")
-        })
-}
-
-#[cfg(any(test, not(any(target_os = "solana", target_arch = "bpf"))))]
-fn base_needs_reduction(base: &[u8], modulus: &[u8]) -> bool {
-    let base_len = significant_len_le(base);
-    let modulus_len = significant_len_le(modulus);
-
-    match base_len.cmp(&modulus_len) {
-        core::cmp::Ordering::Less => false,
-        core::cmp::Ordering::Greater => true,
-        core::cmp::Ordering::Equal => {
-            base[..base_len]
-                .iter()
-                .rev()
-                .cmp(modulus[..modulus_len].iter().rev())
-                != core::cmp::Ordering::Less
-        }
-    }
 }
 
 #[cfg(any(test, not(any(target_os = "solana", target_arch = "bpf"))))]
@@ -201,15 +158,7 @@ mod tests {
     }
 
     fn is_supported_modulus(modulus: &[u8]) -> bool {
-        let Some((&least_significant_byte, more_significant_bytes)) = modulus.split_first() else {
-            return false;
-        };
-
-        let has_nonzero_more_significant_byte =
-            more_significant_bytes.iter().any(|byte| *byte != 0);
-
-        (least_significant_byte > 1 || has_nonzero_more_significant_byte)
-            && least_significant_byte & 1 == 1
+        validate_modulus(modulus)
     }
 
     #[test]
@@ -238,10 +187,13 @@ mod tests {
 
             if is_supported_modulus(&modulus) {
                 let result = big_mod_exp(&base, &exponent, &modulus);
-                assert_eq!(result, expected, "JSON test vector {index}");
+                assert_eq!(result, Some(expected), "JSON test vector {index}");
             } else {
-                let result = std::panic::catch_unwind(|| big_mod_exp(&base, &exponent, &modulus));
-                assert!(result.is_err(), "JSON test vector {index}");
+                assert_eq!(
+                    big_mod_exp(&base, &exponent, &modulus),
+                    None,
+                    "JSON test vector {index}"
+                );
             }
         }
     }
@@ -249,7 +201,7 @@ mod tests {
     #[test]
     fn big_mod_exp_basic_test() {
         let result = big_mod_exp(&[0x05], &[0x02], &[0x07]);
-        assert_eq!(result, vec![0x04]);
+        assert_eq!(result, Some(vec![0x04]));
     }
 
     #[test]
@@ -265,7 +217,7 @@ mod tests {
         let result = big_mod_exp(&base, &exponent, &modulus);
         let mut expected = vec![0; 32];
         expected[0] = 1;
-        assert_eq!(result, expected);
+        assert_eq!(result, Some(expected));
     }
 
     #[test]
@@ -282,19 +234,19 @@ mod tests {
         let result = big_mod_exp(&base, &exponent, &modulus);
         let mut expected = vec![0; 32];
         expected[0] = 1;
-        assert_eq!(result, expected);
+        assert_eq!(result, Some(expected));
     }
 
     #[test]
     fn big_mod_exp_empty_exponent_test() {
-        assert_eq!(big_mod_exp(&[], &[], &[0x03]), vec![0x01]);
+        assert_eq!(big_mod_exp(&[], &[], &[0x03]), Some(vec![0x01]));
     }
 
     #[test]
     fn big_mod_exp_zero_exponent_test() {
         assert_eq!(
             big_mod_exp(&[0x00], &[0x00, 0x00], &[0x03, 0x00]),
-            vec![0x01, 0x00]
+            Some(vec![0x01, 0x00])
         );
     }
 
@@ -302,7 +254,7 @@ mod tests {
     fn big_mod_exp_zero_base_test() {
         assert_eq!(
             big_mod_exp(&[0x00, 0x00], &[0x02], &[0x03, 0x00]),
-            vec![0x00, 0x00]
+            Some(vec![0x00, 0x00])
         );
     }
 
@@ -310,7 +262,7 @@ mod tests {
     fn big_mod_exp_one_exponent_equal_length_reduction_test() {
         assert_eq!(
             big_mod_exp(&[0x0a, 0x01], &[0x01, 0x00], &[0x07, 0x01]),
-            vec![0x03, 0x00]
+            Some(vec![0x03, 0x00])
         );
     }
 
@@ -318,7 +270,7 @@ mod tests {
     fn big_mod_exp_output_padding_test() {
         assert_eq!(
             big_mod_exp(&[0x02], &[0x02], &[0x07, 0x00]),
-            vec![0x04, 0x00]
+            Some(vec![0x04, 0x00])
         );
     }
 
@@ -334,16 +286,13 @@ mod tests {
     fn big_mod_exp_reduction_test() {
         assert_eq!(
             big_mod_exp(&[0x00, 0xe1, 0xf5, 0x05], &[0x01], &[0xb3, 0x15]),
-            vec![0x5d, 0x11]
+            Some(vec![0x5d, 0x11])
         );
     }
 
     #[test]
-    fn base_needs_reduction_test() {
-        assert!(base_needs_reduction(&[0x0a, 0x01], &[0x07, 0x01]));
-        assert!(base_needs_reduction(&[0x07, 0x01], &[0x07, 0x01]));
-        assert!(!base_needs_reduction(&[0x06, 0x01], &[0x07, 0x01]));
-        assert!(!base_needs_reduction(&[0x02, 0x00], &[0x03]));
+    fn big_mod_exp_base_equal_modulus_test() {
+        assert_eq!(big_mod_exp(&[0x07], &[0x02], &[0x07]), Some(vec![0x00]));
     }
 
     #[test]
@@ -355,65 +304,56 @@ mod tests {
 
         let mut expected = vec![0; max_len];
         expected[0] = 1;
-        assert_eq!(big_mod_exp(&base, &exponent, &modulus), expected);
+        assert_eq!(big_mod_exp(&base, &exponent, &modulus), Some(expected));
     }
 
     #[test]
-    #[should_panic(expected = "modulus length must be nonzero")]
-    fn big_mod_exp_empty_modulus_panics() {
-        big_mod_exp(&[], &[], &[]);
+    fn big_mod_exp_empty_modulus_returns_none() {
+        assert_eq!(big_mod_exp(&[], &[], &[]), None);
     }
 
     #[test]
-    #[should_panic(expected = "modulus must be greater than one")]
-    fn big_mod_exp_zero_modulus_panics() {
-        big_mod_exp(&[0x00], &[], &[0x00]);
+    fn big_mod_exp_zero_modulus_returns_none() {
+        assert_eq!(big_mod_exp(&[0x00], &[], &[0x00]), None);
     }
 
     #[test]
-    #[should_panic(expected = "modulus must be greater than one")]
-    fn big_mod_exp_one_modulus_panics() {
-        big_mod_exp(&[0x00], &[], &[0x01]);
+    fn big_mod_exp_one_modulus_returns_none() {
+        assert_eq!(big_mod_exp(&[0x00], &[], &[0x01]), None);
     }
 
     #[test]
-    #[should_panic(expected = "modulus must be odd")]
-    fn big_mod_exp_even_modulus_panics() {
-        big_mod_exp(&[0x00], &[], &[0x02]);
+    fn big_mod_exp_even_modulus_returns_none() {
+        assert_eq!(big_mod_exp(&[0x00], &[], &[0x02]), None);
     }
 
     #[test]
-    #[should_panic(expected = "base length exceeds BIG_MOD_EXP_MAX_BYTES")]
-    fn big_mod_exp_base_too_long_panics() {
+    fn big_mod_exp_base_too_long_returns_none() {
         let base = vec![0; BIG_MOD_EXP_MAX_BYTES as usize + 1];
         let modulus = vec![0xff; BIG_MOD_EXP_MAX_BYTES as usize];
-        big_mod_exp(&base, &[], &modulus);
+        assert_eq!(big_mod_exp(&base, &[], &modulus), None);
     }
 
     #[test]
-    #[should_panic(expected = "exponent length exceeds BIG_MOD_EXP_MAX_BYTES")]
-    fn big_mod_exp_exponent_too_long_panics() {
+    fn big_mod_exp_exponent_too_long_returns_none() {
         let exponent = vec![0; BIG_MOD_EXP_MAX_BYTES as usize + 1];
-        big_mod_exp(&[], &exponent, &[0x03]);
+        assert_eq!(big_mod_exp(&[], &exponent, &[0x03]), None);
     }
 
     #[test]
-    #[should_panic(expected = "modulus length exceeds BIG_MOD_EXP_MAX_BYTES")]
-    fn big_mod_exp_modulus_too_long_panics() {
+    fn big_mod_exp_modulus_too_long_returns_none() {
         let mut modulus = vec![0xff; BIG_MOD_EXP_MAX_BYTES as usize + 1];
         modulus[0] |= 1;
-        big_mod_exp(&[], &[], &modulus);
+        assert_eq!(big_mod_exp(&[], &[], &modulus), None);
     }
 
     #[test]
-    #[should_panic(expected = "modulus must be greater than one")]
-    fn big_mod_exp_multi_byte_one_modulus_panics() {
-        big_mod_exp(&[0x00], &[], &[0x01, 0x00]);
+    fn big_mod_exp_multi_byte_one_modulus_returns_none() {
+        assert_eq!(big_mod_exp(&[0x00], &[], &[0x01, 0x00]), None);
     }
 
     #[test]
-    #[should_panic(expected = "modulus must be greater than one")]
-    fn big_mod_exp_multi_byte_zero_modulus_panics() {
-        big_mod_exp(&[0x00], &[], &[0x00, 0x00]);
+    fn big_mod_exp_multi_byte_zero_modulus_returns_none() {
+        assert_eq!(big_mod_exp(&[0x00], &[], &[0x00, 0x00]), None);
     }
 }
