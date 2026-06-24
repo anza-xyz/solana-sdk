@@ -61,7 +61,7 @@ pub fn big_mod_exp(base: &[u8], exponent: &[u8], modulus: &[u8]) -> Option<Vec<u
             return Some(vec![0; modulus_len]);
         }
 
-        if base == BigUint::from(1_u8) || is_one_le(exponent) {
+        if base.bits() == 1 || is_one_le(exponent) {
             return Some(padded_to_modulus_len(base.to_bytes_le(), modulus_len));
         }
 
