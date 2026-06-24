@@ -1196,4 +1196,68 @@ mod tests {
         b: (),
         c: bool,
     }
+
+    #[derive(wincode::SchemaWrite, wincode::SchemaRead, PartialEq)]
+    struct TestFuzzerFeed {
+        a: u8,
+        b: bool,
+        c: Option<Vec<u16>>,
+        d: [u8; 32],
+    }
+
+    #[derive(
+        serde::Serialize, serde::Deserialize, wincode::SchemaWrite, wincode::SchemaRead, PartialEq,
+    )]
+    struct TestFuzzerFeedTwoSerializers {
+        a: u8,
+        b: bool,
+        c: Option<Vec<u16>>,
+        d: [u8; 32],
+    }
+
+    #[derive(wincode::SchemaWrite, wincode::SchemaRead, PartialEq)]
+    struct TestFuzzerMultiTypeA {}
+
+    #[derive(wincode::SchemaWrite, wincode::SchemaRead, PartialEq)]
+    struct TestFuzzerMultiTypeB {}
+
+    #[derive(
+        solana_frozen_abi_macro::StableAbiSample,
+        wincode::SchemaWrite,
+        wincode::SchemaRead,
+        PartialEq,
+    )]
+    struct TestRandomStableAbiFeed {
+        a: u64,
+        b: bool,
+        c: [u8; 32],
+        d: (u8, u8),
+    }
+
+    mod fuzzers {
+        solana_frozen_abi_macro::generate_serialization_test!(
+            super::TestFuzzerFeed,
+            strategy = "bolero_fuzzer",
+            serializer = "wincode",
+            test_roundtrip = "eq_and_wire"
+        );
+        solana_frozen_abi_macro::generate_serialization_test!(
+            super::TestFuzzerFeedTwoSerializers,
+            strategy = "bolero_fuzzer",
+            serializer = ["bincode", "wincode"],
+            test_roundtrip = "eq_and_wire"
+        );
+        solana_frozen_abi_macro::generate_serialization_test!(
+            [super::TestFuzzerMultiTypeA, super::TestFuzzerMultiTypeB],
+            strategy = "bolero_fuzzer",
+            test_roundtrip = "eq_and_wire"
+        );
+        solana_frozen_abi_macro::generate_serialization_test!(
+            super::TestRandomStableAbiFeed,
+            strategy = "random",
+            serializer = "wincode",
+            abi_digest = "AgNkEpErnFBuy7iTAEUUAC1fbvokEkhbsfFnx4DtXAvY",
+            test_roundtrip = "eq_and_wire"
+        );
+    }
 }
