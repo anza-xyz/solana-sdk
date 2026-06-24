@@ -1,5 +1,6 @@
 target/
 farf/
+__fuzz__/
 
 **/*.rs.bk
 .cargo
