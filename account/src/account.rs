@@ -17,6 +17,11 @@ mod bincode;
 #[cfg(feature = "bincode")]
 pub use bincode::*;
 
+#[cfg(all(feature = "wincode", not(feature = "bincode")))]
+mod wincode;
+#[cfg(all(feature = "wincode", not(feature = "bincode")))]
+pub use wincode::*;
+
 // NOTE: `Account` and `AccountSharedData` are defined in the crate root (`lib.rs`)
 // rather than here. The frozen-abi digest of any downstream struct that holds an
 // `Account`/`AccountSharedData` field hashes that field's fully-qualified
@@ -229,6 +234,18 @@ impl Account {
         Account {
             lamports,
             data: vec![0; space],
+            owner: *owner,
+            executable: false,
+            rent_epoch: Epoch::default(),
+        }
+    }
+    /// Construct an `Account` from already-encoded `data`, taking ownership of the
+    /// buffer. Avoids the zero-fill allocation of [`Account::new`] followed by a
+    /// separate write when the caller already has the bytes.
+    pub fn new_with_data(lamports: u64, data: Vec<u8>, owner: &Pubkey) -> Self {
+        Account {
+            lamports,
+            data,
             owner: *owner,
             executable: false,
             rent_epoch: Epoch::default(),

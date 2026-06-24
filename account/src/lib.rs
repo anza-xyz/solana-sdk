@@ -12,8 +12,22 @@ pub use account::*;
 #[cfg(feature = "serde")]
 mod serde;
 
-#[cfg(feature = "bincode")]
+#[cfg(any(feature = "bincode", feature = "wincode"))]
 pub mod state_traits;
+
+// wincode config shared by the `account::wincode` and `state_traits::wincode`
+// sub-modules. The wire format matches bincode byte-for-byte; the only deliberate
+// difference is raising the preallocation guard to 10 MiB (Solana's max account data
+// length) so valid accounts are never rejected. This gates only the prealloc check,
+// not the encoded bytes.
+#[cfg(feature = "wincode")]
+const WINCODE_PREALLOC_LIMIT: usize = 10 * 1024 * 1024;
+#[cfg(feature = "wincode")]
+pub(crate) type WincodeConfig = wincode::config::Configuration<true, WINCODE_PREALLOC_LIMIT>;
+#[cfg(feature = "wincode")]
+pub(crate) const WINCODE_CONFIG: WincodeConfig = wincode::config::Configuration::default()
+    .with_preallocation_size_limit::<WINCODE_PREALLOC_LIMIT>(
+);
 
 // NOTE: `Account` and `AccountSharedData` are defined here, in the crate root, on
 // purpose. The frozen-abi digest of any downstream struct that has an
