@@ -17,7 +17,7 @@ max_input_len="${MAX_INPUT_LEN:-${MAX_LEN:-}}"
 
 bolero_args=(
   --package "$package"
-  --features frozen-abi
+  --features fuzz-bolero
   --rustc-bootstrap
 )
 
