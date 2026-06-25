@@ -1197,6 +1197,7 @@ mod tests {
         c: bool,
     }
 
+    #[cfg(feature = "fuzz-bolero")]
     #[derive(wincode::SchemaWrite, wincode::SchemaRead, PartialEq)]
     struct TestFuzzerFeed {
         a: u8,
@@ -1205,6 +1206,7 @@ mod tests {
         d: [u8; 32],
     }
 
+    #[cfg(feature = "fuzz-bolero")]
     #[derive(
         serde::Serialize, serde::Deserialize, wincode::SchemaWrite, wincode::SchemaRead, PartialEq,
     )]
@@ -1215,9 +1217,11 @@ mod tests {
         d: [u8; 32],
     }
 
+    #[cfg(feature = "fuzz-bolero")]
     #[derive(wincode::SchemaWrite, wincode::SchemaRead, PartialEq)]
     struct TestFuzzerMultiTypeA {}
 
+    #[cfg(feature = "fuzz-bolero")]
     #[derive(wincode::SchemaWrite, wincode::SchemaRead, PartialEq)]
     struct TestFuzzerMultiTypeB {}
 
@@ -1234,7 +1238,8 @@ mod tests {
         d: (u8, u8),
     }
 
-    mod fuzzers {
+    #[cfg(feature = "fuzz-bolero")]
+    mod bolero_fuzzer {
         solana_frozen_abi_macro::generate_serialization_test!(
             super::TestFuzzerFeed,
             strategy = "bolero_fuzzer",
@@ -1252,6 +1257,9 @@ mod tests {
             strategy = "bolero_fuzzer",
             test_roundtrip = "eq_and_wire"
         );
+    }
+
+    mod random {
         solana_frozen_abi_macro::generate_serialization_test!(
             super::TestRandomStableAbiFeed,
             strategy = "random",
