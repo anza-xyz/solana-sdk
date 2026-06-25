@@ -209,8 +209,9 @@
 //! );
 //! ```
 //!
-//! For fuzzing, use `strategy = "bolero_fuzzer"`. The generated test uses `bolero::check!()`
-//! so it can be run with the fuzzing engines supported by bolero.
+//! For fuzzing, enable the `fuzz-bolero` feature and use `strategy = "bolero_fuzzer"`.
+//! The generated test uses `bolero::check!()` so it can be run with the fuzzing engines
+//! supported by bolero.
 //!
 //! Corpus and crashes are stored per type in root e.g. `__fuzz__/MyType_wincode`.
 //!
@@ -260,5 +261,8 @@ pub mod stable_abi;
 #[macro_use]
 extern crate solana_frozen_abi_macro;
 
+#[cfg(all(feature = "fuzz-bolero", not(target_os = "solana")))]
+pub use bolero;
+
 #[cfg(all(feature = "frozen-abi", not(target_os = "solana")))]
-pub use {bincode, bolero, rand, rand_chacha, wincode};
+pub use {bincode, rand, rand_chacha, wincode};

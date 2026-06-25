@@ -18,7 +18,8 @@ rustdoc-args = ["--cfg=docsrs"]
 default = []
 # activate the frozen-abi feature when we actually want to do frozen-abi testing,
 # otherwise leave it off because it requires nightly Rust
-frozen-abi = ["dep:bolero", "dep:wincode", "solana-frozen-abi-macro/frozen-abi"]
+frozen-abi = ["dep:wincode", "solana-frozen-abi-macro/frozen-abi"]
+fuzz-bolero = ["dep:bolero", "frozen-abi"]
 
 [dependencies]
 boxcar = { workspace = true }
