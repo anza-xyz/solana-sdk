@@ -12,7 +12,7 @@ pub use account::*;
 #[cfg(feature = "serde")]
 mod serde;
 
-#[cfg(any(feature = "bincode", feature = "wincode"))]
+#[cfg(feature = "bincode")]
 pub mod state_traits;
 
 // NOTE: `Account` and `AccountSharedData` are defined here, in the crate root, on
