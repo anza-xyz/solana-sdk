@@ -475,7 +475,7 @@ mod tests {
             compiled_instruction::CompiledInstruction,
             v0::Message as MessageV0,
             v1::{
-                InstructionHeader, Message, TransactionConfig, FIXED_HEADER_SIZE,
+                Message, TransactionConfig, WireInstructionHeader, FIXED_HEADER_SIZE,
                 MAX_TRANSACTION_SIZE, SIGNATURE_SIZE,
             },
             Message as LegacyMessage, MessageHeader,
@@ -804,7 +804,7 @@ mod tests {
             + (NUM_SIGNATURES * SIGNATURE_SIZE)
             + FIXED_HEADER_SIZE
             + (NUM_ADDRESSES * ADDRESS_BYTES)
-            + size_of::<InstructionHeader>()
+            + size_of::<WireInstructionHeader>()
             + NUM_INSTRUCTION_ACCOUNTS;
 
         // adds `delta` bytes to the instruction data to test both at max size
