@@ -647,13 +647,26 @@ unsafe impl<'de, C: Config> SchemaRead<'de, C> for Message {
             config.heap_size = Some(u32::from_le_bytes(reader.take_array()?));
         }
 
+        // `InstructionHeader` is a tuple, whose layout Rust does not guarantee. The
+        // cast below reinterprets wire bytes as one, which is only sound if the
+        // fields sit at the offsets the wire format uses. Tuples have no invalid bit
+        // patterns and alignment 1 here, so the only risk is field reordering or
+        // padding; pin both at compile time so a future layout change fails the build
+        // rather than silently mis-parsing instructions.
+        const _: () = {
+            assert!(size_of::<InstructionHeader>() == 4);
+            assert!(core::mem::offset_of!(InstructionHeader, 0) == 0); // program_id_index
+            assert!(core::mem::offset_of!(InstructionHeader, 1) == 1); // num_accounts
+            assert!(core::mem::offset_of!(InstructionHeader, 2) == 2); // data_len (u16 LE)
+        };
+
         // SAFETY:
         // - `take_borrowed(num_instructions * size_of::<InstructionHeader>())` returns
         //   exactly the requested number of bytes, or errors.
         // - `take_borrowed` returns a stable borrow from the backing buffer, so the
         //   resulting slice remains valid across subsequent reader operations.
-        // - `InstructionHeader` has alignment 1 and is encoded exactly as
-        //   4 bytes `(u8, u8, [u8; 2])`.
+        // - The `const` block above pins `InstructionHeader`'s layout to a packed
+        //   4 bytes with fields in wire order, so the reinterpretation is exact.
         let instruction_headers = unsafe {
             from_raw_parts(
                 reader
