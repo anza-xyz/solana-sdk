@@ -20,6 +20,8 @@ pub use {config::*, error::*, message::*};
 #[deprecated(since = "4.3.0", note = "Use WireInstructionHeader instead")]
 pub type InstructionHeader = (u8, u8, [u8; 2]);
 
+#[cfg_attr(feature = "wincode", derive(wincode::SchemaRead, wincode::SchemaWrite))]
+#[cfg_attr(feature = "wincode", wincode(assert_zero_copy))]
 #[repr(C)]
 pub struct WireInstructionHeader {
     pub program_id_index: u8,
