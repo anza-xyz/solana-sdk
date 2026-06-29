@@ -3,7 +3,7 @@
 #![cfg_attr(feature = "frozen-abi", feature(min_specialization))]
 #[cfg(feature = "borsh")]
 use borsh::{BorshDeserialize, BorshSchema, BorshSerialize};
-#[cfg(feature = "frozen-abi")]
+#[cfg(any(feature = "rand", feature = "frozen-abi"))]
 extern crate std;
 #[cfg(feature = "bytemuck")]
 use bytemuck_derive::{Pod, Zeroable};
@@ -24,6 +24,11 @@ use alloc::string::ToString;
 use solana_frozen_abi_macro::{AbiExample, StableAbi, StableAbiSample};
 #[cfg(feature = "wincode")]
 use wincode::{SchemaRead, SchemaWrite};
+#[cfg(feature = "rand")]
+mod hasher;
+
+#[cfg(all(feature = "rand", not(any(target_os = "solana", target_arch = "bpf"))))]
+pub use crate::hasher::{HashHasher, HashHasherBuilder};
 
 /// Size of a hash in bytes.
 pub const HASH_BYTES: usize = 32;
@@ -49,7 +54,7 @@ pub const MAX_BASE58_LEN: usize = 44;
 #[cfg_attr(feature = "wincode", derive(SchemaWrite, SchemaRead))]
 #[cfg_attr(feature = "copy", derive(Copy))]
 #[cfg_attr(not(feature = "decode"), derive(Debug))]
-#[derive(Clone, Default, Eq, PartialEq, Ord, PartialOrd, Hash)]
+#[derive(Clone, Default, Eq, PartialEq, Ord, PartialOrd)]
 #[repr(transparent)]
 pub struct Hash(pub(crate) [u8; HASH_BYTES]);
 
@@ -129,6 +134,16 @@ impl FromStr for Hash {
             | DecodeError::OutputTooLong => ParseHashError::WrongSize,
         })?;
         Ok(Self::from(bytes))
+    }
+}
+
+/// Custom impl of Hash for Hash.
+///
+/// This allows us to skip hashing the length of the hash
+/// which is always the same anyway.
+impl core::hash::Hash for Hash {
+    fn hash<H: core::hash::Hasher>(&self, state: &mut H) {
+        state.write(self.as_bytes());
     }
 }
 
