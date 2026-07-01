@@ -1,18 +1,24 @@
 //! Compact serde-encoding of vectors with small length.
+#![no_std]
 #![cfg_attr(feature = "frozen-abi", feature(min_specialization))]
 #![cfg_attr(docsrs, feature(doc_cfg))]
 #![allow(clippy::arithmetic_side_effects)]
+
+extern crate alloc;
+#[cfg(feature = "frozen-abi")]
+extern crate std;
+
 #[cfg(feature = "frozen-abi")]
 use solana_frozen_abi_macro::AbiExample;
-use std::convert::TryFrom;
+use {alloc::vec::Vec, core::convert::TryFrom};
 #[cfg(feature = "serde")]
 use {
+    core::{fmt, marker::PhantomData},
     serde_core::{
         de::{self, Deserializer, SeqAccess, Visitor},
         ser::{self, SerializeTuple, Serializer},
         Deserialize, Serialize,
     },
-    std::{fmt, marker::PhantomData},
 };
 
 #[cfg(feature = "wincode")]
@@ -289,6 +295,7 @@ pub fn decode_shortu16_len(bytes: &[u8]) -> Result<(usize, usize), ()> {
 mod tests {
     use {
         super::*,
+        alloc::vec,
         assert_matches::assert_matches,
         bincode::{deserialize, serialize},
     };

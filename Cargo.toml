@@ -35,6 +35,7 @@ members = [
     "frozen-abi",
     "frozen-abi-macro",
     "genesis-config",
+    "get-sysvar",
     "hard-forks",
     "hash",
     "hash-512",
@@ -96,6 +97,8 @@ members = [
     "slot-hashes",
     "slot-history",
     "stable-layout",
+    "stake-history",
+    "svm-transaction",
     "system-interface",
     "system-transaction",
     "system-wasm-js",
@@ -154,7 +157,7 @@ base64 = "0.22.1"
 bincode = "1.3.3"
 bitflags = { version = "2.8.0" }
 bitvec = "1.0.1"
-blake3 = "1.5.5"
+blake3 = { version = "1.5.5", default-features = false }
 blst = "0.3.14"
 blstrs = "0.7.1"
 borsh = { version = "1.5.5", default-features = false, features = ["derive", "unstable__schema"] }
@@ -227,20 +230,20 @@ sha2 = { version = "0.10.8", default-features = false }
 sha3 = "0.10.8"
 signal-hook = "0.3.17"
 siphasher = "0.3.11"
-solana-account = { path = "account", version = "4.3.0" }
+solana-account = { path = "account", version = "4.3.1" }
 solana-account-info = { path = "account-info", version = "3.0.0" }
 solana-account-view = { path = "account-view", version = "2.0.0" }
-solana-address = { path = "address", version = "2.6.0" }
+solana-address = { path = "address", version = "2.6.1" }
 solana-address-lookup-table-interface = { path = "address-lookup-table-interface", version = "3.1.0" }
 solana-atomic-u64 = { path = "atomic-u64", version = "3.0.0" }
-solana-big-mod-exp = { path = "big-mod-exp", version = "3.0.0" }
+solana-big-mod-exp = { path = "big-mod-exp", version = "4.0.0" }
 solana-bincode = { path = "bincode", version = "3.0.0" }
 solana-blake3-hasher = { path = "blake3-hasher", version = "3.0.0" }
 solana-bls-signatures = { path = "bls-signatures", version = "3.0.0" }
 solana-bn254 = { path = "bn254", version = "3.0.0" }
 solana-borsh = { path = "borsh", version = "3.0.0" }
 solana-client-traits = { path = "client-traits", version = "4.0.0" }
-solana-clock = { path = "clock", version = "3.1.0" }
+solana-clock = { path = "clock", version = "3.1.1" }
 solana-cluster-type = { path = "cluster-type", version = "3.0.0" }
 solana-commitment-config = { path = "commitment-config", version = "3.0.0" }
 solana-compute-budget-interface = { path = "compute-budget-interface", version = "3.0.0" }
@@ -250,32 +253,33 @@ solana-define-syscall = { path = "define-syscall", version = "5.1.0" }
 solana-derivation-path = { path = "derivation-path", version = "3.0.0" }
 solana-ed25519-program = { path = "ed25519-program", version = "3.0.0" }
 solana-epoch-info = { path = "epoch-info", version = "3.0.0" }
-solana-epoch-rewards = { path = "epoch-rewards", version = "3.0.2" }
+solana-epoch-rewards = { path = "epoch-rewards", version = "3.1.0" }
 solana-epoch-rewards-hasher = { path = "epoch-rewards-hasher", version = "3.0.0" }
-solana-epoch-schedule = { path = "epoch-schedule", version = "3.0.0" }
+solana-epoch-schedule = { path = "epoch-schedule", version = "3.2.0" }
 solana-epoch-stake = { path = "epoch-stake", version = "3.0.0" }
 solana-example-mocks = { path = "example-mocks", version = "4.0.0" }
 solana-feature-gate-interface = { path = "feature-gate-interface", version = "4.0.0" }
-solana-fee-calculator = { path = "fee-calculator", version = "3.2.0" }
+solana-fee-calculator = { path = "fee-calculator", version = "3.2.2" }
 solana-fee-structure = { path = "fee-structure", version = "3.0.0" }
 solana-file-download = { path = "file-download", version = "3.0.0" }
-solana-frozen-abi = { path = "frozen-abi", version = "3.4.0" }
-solana-frozen-abi-macro = { path = "frozen-abi-macro", version = "3.4.0" }
+solana-frozen-abi = { path = "frozen-abi", version = "3.6.0" }
+solana-frozen-abi-macro = { path = "frozen-abi-macro", version = "3.6.0", default-features = false }
 solana-genesis-config = { path = "genesis-config", version = "4.0.0" }
-solana-hard-forks = { path = "hard-forks", version = "3.1.0", default-features = false }
-solana-hash = { path = "hash", version = "4.3.0", default-features = false }
+solana-get-sysvar = { path = "get-sysvar", version = "1.0.0" }
+solana-hard-forks = { path = "hard-forks", version = "3.1.1", default-features = false }
+solana-hash = { path = "hash", version = "4.4.0", default-features = false }
 solana-hash-512 = { path = "hash-512", version = "1.1.0", default-features = false }
-solana-inflation = { path = "inflation", version = "3.1.0" }
+solana-inflation = { path = "inflation", version = "3.1.1" }
 solana-instruction = { path = "instruction", version = "3.4.0", default-features = false }
-solana-instruction-error = { path = "instruction-error", version = "2.3.0" }
+solana-instruction-error = { path = "instruction-error", version = "2.4.0" }
 solana-instruction-view = { path = "instruction-view", version = "2.1.0" }
-solana-instructions-sysvar = { path = "instructions-sysvar", version = "3.0.0" }
+solana-instructions-sysvar = { path = "instructions-sysvar", version = "4.0.0" }
 solana-keccak-hasher = { path = "keccak-hasher", version = "3.0.0" }
 solana-keypair = { path = "keypair", version = "3.0.0" }
-solana-last-restart-slot = { path = "last-restart-slot", version = "3.0.1" }
+solana-last-restart-slot = { path = "last-restart-slot", version = "3.1.0" }
 solana-loader-v2-interface = { path = "loader-v2-interface", version = "3.0.0" }
 solana-loader-v3-interface = { path = "loader-v3-interface", version = "8.0.0" }
-solana-message = { path = "message", version = "4.1.1" }
+solana-message = { path = "message", version = "4.2.4", default-features = false }
 solana-msg = { path = "msg", version = "3.0.0", default-features = false }
 solana-native-token = { path = "native-token", version = "3.0.0" }
 solana-nonce = { path = "nonce", version = "3.2.0" }
@@ -298,7 +302,7 @@ solana-program-memory = { path = "program-memory", version = "3.0.0" }
 solana-program-option = { path = "program-option", version = "3.0.0" }
 solana-program-pack = { path = "program-pack", version = "3.0.0" }
 solana-pubkey = { path = "pubkey", version = "4.2.0", default-features = false }
-solana-rent = { path = "rent", version = "4.2.0", default-features = false }
+solana-rent = { path = "rent", version = "4.3.0", default-features = false }
 solana-reward-info = { path = "reward-info", version = "6.2.0" }
 solana-sanitize = { path = "sanitize", version = "3.0.0" }
 solana-sdk = { path = "sdk", version = "4.0.1" }
@@ -312,27 +316,29 @@ solana-seed-derivable = { path = "seed-derivable", version = "3.0.0" }
 solana-seed-phrase = { path = "seed-phrase", version = "3.0.0" }
 solana-serde = { path = "serde", version = "3.0.0" }
 solana-serde-varint = { path = "serde-varint", version = "3.0.1" }
-solana-serialize-utils = { path = "serialize-utils", version = "3.1.0" }
+solana-serialize-utils = { path = "serialize-utils", version = "3.1.2", default-features = false }
 solana-sha256-hasher = { path = "sha256-hasher", version = "3.0.0" }
 solana-sha512-hasher = { path = "sha512-hasher", version = "1.0.1" }
-solana-short-vec = { path = "short-vec", version = "3.2.1", default-features = false }
+solana-short-vec = { path = "short-vec", version = "3.2.2", default-features = false }
 solana-shred-version = { path = "shred-version", version = "3.0.0" }
-solana-signature = { path = "signature", version = "3.4.0", default-features = false }
-solana-signer = { path = "signer", version = "3.0.0" }
+solana-signature = { path = "signature", version = "3.4.1", default-features = false }
+solana-signer = { path = "signer", version = "3.0.1", default-features = false }
 solana-signer-store = { path = "signer-store", version = "0.1.0" }
-solana-slot-hashes = { path = "slot-hashes", version = "3.0.2" }
-solana-slot-history = { path = "slot-history", version = "3.0.1" }
+solana-slot-hashes = { path = "slot-hashes", version = "3.1.0" }
+solana-slot-history = { path = "slot-history", version = "3.1.0" }
 solana-stable-layout = { path = "stable-layout", version = "3.0.0" }
+solana-stake-history = { path = "stake-history", version = "1.0.0" }
+solana-svm-transaction = { path = "svm-transaction", version = "4.2.0" }
 solana-system-interface = { path = "system-interface", version = "3.2" }
 solana-system-transaction = { path = "system-transaction", version = "4.0.0" }
 solana-system-wasm-js = { path = "system-wasm-js", version = "1.0" }
 solana-sysvar = { path = "sysvar", version = "4.0.0" }
 solana-sysvar-id = { path = "sysvar-id", version = "3.0.0" }
 solana-time-utils = { path = "time-utils", version = "3.0.0" }
-solana-transaction = { path = "transaction", version = "4.1.1" }
-solana-transaction-error = { path = "transaction-error", version = "3.2.0" }
+solana-transaction = { path = "transaction", version = "4.1.5", default-features = false }
+solana-transaction-error = { path = "transaction-error", version = "3.3.1" }
 solana-validator-exit = { path = "validator-exit", version = "3.0.0" }
-solana-vote-interface = { path = "vote-interface", version = "6.0.0" }
+solana-vote-interface = { path = "vote-interface", version = "6.0.1" }
 solana-wincode-varint = { path = "wincode-varint", version = "1.0.0" }
 solana-zero-copy = { path = "zero-copy", version = "1.0.0", default-features = false }
 static_assertions = "1.1.0"

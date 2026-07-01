@@ -84,7 +84,7 @@ solana-shred-version = { workspace = true, optional = true }
 solana-signature = { workspace = true, features = ["rand", "serde", "std", "verify"], optional = true }
 solana-signer = { workspace = true, optional = true }
 solana-time-utils = { workspace = true }
-solana-transaction = { workspace = true, features = ["blake3", "serde", "verify"], optional = true }
+solana-transaction = { workspace = true, features = ["blake3", "serde", "std", "verify"], optional = true }
 solana-transaction-error = { workspace = true, features = ["serde"], optional = true }
 thiserror = { workspace = true }
 

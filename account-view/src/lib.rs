@@ -189,7 +189,6 @@ impl AccountView {
     /// An account is considered empty if the data length is zero.
     #[inline(always)]
     pub fn is_data_empty(&self) -> bool {
-        // SAFETY: The `raw` pointer is guaranteed to be valid.
         self.data_len() == 0
     }
 

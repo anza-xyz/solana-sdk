@@ -2,7 +2,7 @@
 name = "solana-hard-forks"
 description = "The list of slot boundaries at which a hard fork should occur."
 documentation = "https://docs.rs/solana-hard-forks"
-version = "3.1.0"
+version = "3.1.1"
 authors = { workspace = true }
 repository = { workspace = true }
 homepage = { workspace = true }
@@ -11,6 +11,8 @@ edition = { workspace = true }
 
 [package.metadata.docs.rs]
 targets = ["x86_64-unknown-linux-gnu"]
+all-features = true
+rustdoc-args = ["--cfg=docsrs"]
 
 [features]
 frozen-abi = ["dep:solana-frozen-abi", "dep:solana-frozen-abi-macro"]

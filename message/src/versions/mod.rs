@@ -1,5 +1,9 @@
+#[cfg(any(feature = "wincode", feature = "serde"))]
+use alloc::vec::Vec;
 #[cfg(feature = "frozen-abi")]
 use solana_frozen_abi_macro::{frozen_abi, AbiEnumVisitor, AbiExample};
+#[cfg(feature = "std")]
+use std::collections::HashSet;
 use {
     crate::{
         compiled_instruction::CompiledInstruction, legacy::Message as LegacyMessage,
@@ -8,7 +12,15 @@ use {
     solana_address::Address,
     solana_hash::Hash,
     solana_sanitize::{Sanitize, SanitizeError},
-    std::collections::HashSet,
+};
+#[cfg(feature = "serde")]
+use {
+    core::fmt,
+    serde::{
+        de::{self, Deserializer, SeqAccess, Unexpected, Visitor},
+        ser::{SerializeTuple, Serializer},
+    },
+    serde_derive::{Deserialize, Serialize},
 };
 #[cfg(feature = "wincode")]
 use {
@@ -18,15 +30,6 @@ use {
         io::{Reader, Writer},
         ReadResult, SchemaRead, SchemaReadContext, SchemaWrite, WriteResult,
     },
-};
-#[cfg(feature = "serde")]
-use {
-    serde::{
-        de::{self, Deserializer, SeqAccess, Unexpected, Visitor},
-        ser::{SerializeTuple, Serializer},
-    },
-    serde_derive::{Deserialize, Serialize},
-    std::fmt,
 };
 
 mod sanitized;
@@ -48,7 +51,7 @@ pub const MESSAGE_VERSION_PREFIX: u8 = 0x80;
 /// format.
 #[cfg_attr(
     feature = "frozen-abi",
-    frozen_abi(digest = "6CoVPUxkUvDrAvAkfyVXwVDHCSf77aufm7DEZy5mBVeX"),
+    frozen_abi(digest = "9xQQLkQntX2QKgwxbbpeuNrs5V2WopsBa11su46WWCro"),
     derive(AbiEnumVisitor, AbiExample)
 )]
 #[derive(Debug, PartialEq, Eq, Clone)]
@@ -101,6 +104,7 @@ impl VersionedMessage {
     /// instructions in this message. Since dynamically loaded addresses can't
     /// have write locks demoted without loading addresses, this shouldn't be
     /// used in the runtime.
+    #[cfg(feature = "std")]
     pub fn is_maybe_writable(
         &self,
         index: usize,
@@ -460,6 +464,7 @@ mod tests {
             v0::MessageAddressTableLookup,
             v1::{MAX_HEAP_SIZE, MIN_HEAP_SIZE, V1_PREFIX},
         },
+        alloc::vec,
         proptest::{
             collection::vec,
             option::of,
@@ -652,8 +657,8 @@ mod tests {
 
             let message = builder.build().unwrap();
 
-            // Serialize V1 to raw bytes.
-            let bytes = v1::serialize(&message);
+            // Serialize V1 to raw bytes (without the version prefix).
+            let bytes = wincode::serialize(&message).unwrap();
             // Deserialize from raw bytes.
             let parsed = v1::deserialize(&bytes).unwrap();
 

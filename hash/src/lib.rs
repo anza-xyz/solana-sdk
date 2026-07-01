@@ -20,6 +20,8 @@ use solana_sanitize::Sanitize;
 extern crate alloc;
 #[cfg(feature = "borsh")]
 use alloc::string::ToString;
+#[cfg(feature = "frozen-abi")]
+use solana_frozen_abi_macro::{AbiExample, StableAbi, StableAbiSample};
 #[cfg(feature = "wincode")]
 use wincode::{SchemaRead, SchemaWrite};
 
@@ -35,7 +37,7 @@ pub const MAX_BASE58_LEN: usize = 44;
 ///
 /// [SHA-256]: https://en.wikipedia.org/wiki/SHA-2
 /// [blake3]: https://github.com/BLAKE3-team/BLAKE3
-#[cfg_attr(feature = "frozen-abi", derive(solana_frozen_abi_macro::AbiExample))]
+#[cfg_attr(feature = "frozen-abi", derive(AbiExample, StableAbiSample, StableAbi))]
 #[cfg_attr(
     feature = "borsh",
     derive(BorshSerialize, BorshDeserialize),

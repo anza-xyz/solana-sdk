@@ -39,6 +39,8 @@ pub use self::tests::MessageBuilder;
 use serde_derive::{Deserialize, Serialize};
 #[cfg(feature = "frozen-abi")]
 use solana_frozen_abi_macro::AbiExample;
+#[cfg(feature = "std")]
+use std::collections::HashSet;
 #[cfg(feature = "wincode")]
 use {
     crate::v1::{InstructionHeader, FIXED_HEADER_SIZE},
@@ -61,12 +63,12 @@ use {
         },
         AccountKeys, CompileError, MessageHeader,
     },
+    alloc::{collections::BTreeSet, vec::Vec},
     core::mem::size_of,
     solana_address::Address,
     solana_hash::Hash,
     solana_instruction::Instruction,
     solana_sanitize::{Sanitize, SanitizeError},
-    std::collections::HashSet,
 };
 
 /// A V1 transaction message (SIMD-0385) supporting 4KB transactions with inline compute budget.
@@ -152,7 +154,8 @@ impl Message {
     /// #     solana_signer,
     /// #     solana_keypair,
     /// # };
-    /// # use std::borrow::Cow;
+    /// # extern crate alloc;
+    /// # use alloc::borrow::Cow;
     /// # use solana_account::Account;
     /// use anyhow::Result;
     /// use solana_instruction::{AccountMeta, Instruction};
@@ -172,7 +175,7 @@ impl Message {
     /// #             pub fn try_new(
     /// #                 message: VersionedMessage,
     /// #                 _keypairs: &[&Keypair],
-    /// #             ) -> std::result::Result<Self, solana_example_mocks::solana_signer::SignerError> {
+    /// #             ) -> core::result::Result<Self, solana_example_mocks::solana_signer::SignerError> {
     /// #                 Ok(VersionedTransaction {
     /// #                     message,
     /// #                 })
@@ -239,7 +242,8 @@ impl Message {
     /// #     solana_signer,
     /// #     solana_keypair,
     /// # };
-    /// # use std::borrow::Cow;
+    /// # extern crate alloc;
+    /// # use alloc::borrow::Cow;
     /// # use solana_account::Account;
     /// use anyhow::Result;
     /// use solana_instruction::{AccountMeta, Instruction};
@@ -259,7 +263,7 @@ impl Message {
     /// #             pub fn try_new(
     /// #                 message: VersionedMessage,
     /// #                 _keypairs: &[&Keypair],
-    /// #             ) -> std::result::Result<Self, solana_example_mocks::solana_signer::SignerError> {
+    /// #             ) -> core::result::Result<Self, solana_example_mocks::solana_signer::SignerError> {
     /// #                 Ok(VersionedTransaction {
     /// #                     message,
     /// #                 })
@@ -350,6 +354,7 @@ impl Message {
     ///
     /// This method should not be used directly.
     #[inline(always)]
+    #[cfg(feature = "std")]
     pub(crate) fn is_writable_index(&self, i: usize) -> bool {
         crate::is_writable_index(i, self.header, &self.account_keys)
     }
@@ -373,6 +378,7 @@ impl Message {
     /// Program accounts are demoted from writable to readonly, unless the upgradeable
     /// loader is present in which case they are left as writable since upgradeable
     /// programs need to be writable for upgrades.
+    #[cfg(feature = "std")]
     pub fn is_maybe_writable(
         &self,
         key_index: usize,
@@ -389,6 +395,12 @@ impl Message {
 
     pub fn demote_program_id(&self, i: usize) -> bool {
         crate::is_program_id_write_demoted(i, &self.account_keys, &self.instructions)
+    }
+
+    /// Serialize this message with the V1 version prefix byte.
+    #[cfg(feature = "wincode")]
+    pub fn serialize(&self) -> Vec<u8> {
+        wincode::serialize(&(crate::v1::V1_PREFIX, self)).unwrap()
     }
 
     /// Calculate the serialized size of the message in bytes.
@@ -450,21 +462,18 @@ impl Message {
         }
 
         // no duplicate addresses
-        let unique_keys: HashSet<_> = self.account_keys.iter().collect();
+        let unique_keys: BTreeSet<_> = self.account_keys.iter().collect();
         if unique_keys.len() != num_account_keys {
             return Err(MessageError::DuplicateAddresses);
         }
 
-        // validate config mask (2-bit fields must have both bits set or neither)
-        let mask: TransactionConfigMask = self.config.into();
-
-        if mask.has_invalid_priority_fee_bits() {
-            return Err(MessageError::InvalidConfigMask);
-        }
+        // The config mask is regenerated from the typed `TransactionConfig` on
+        // serialization, so a malformed mask cannot exist here. Invalid/unknown mask
+        // bits only occur in raw wire bytes and are rejected during deserialization.
 
         // if specified, heap size must be a multiple of 1024 and within valid bounds
         if let Some(heap_size) = self.config.heap_size {
-            if heap_size % 1024 != 0 {
+            if !heap_size.is_multiple_of(1024) {
                 return Err(MessageError::InvalidHeapSize);
             }
 
@@ -582,6 +591,7 @@ unsafe impl<C: ConfigCore> SchemaWrite<C> for Message {
 /// Serialize the message.
 #[cfg(feature = "wincode")]
 #[inline]
+#[deprecated(since = "4.1.2", note = "use `Message::serialize` instead")]
 pub fn serialize(message: &Message) -> Vec<u8> {
     wincode::serialize(message).unwrap()
 }
@@ -613,6 +623,16 @@ unsafe impl<'de, C: Config> SchemaRead<'de, C> for Message {
                 num_addresses,
             )
         };
+
+        // Reject masks we cannot round-trip. Unknown bits would be silently dropped
+        // on re-serialization (this message is signed, so that invalidates the
+        // signature), and a partial priority-fee bit pair is malformed. Support for
+        // new bits is added by a newer library release that promotes them to known.
+        if config_mask.has_unknown_bits() || config_mask.has_invalid_priority_fee_bits() {
+            return Err(wincode::error::invalid_value(
+                "invalid transaction config mask",
+            ));
+        }
 
         <C::LengthEncoding as SeqLen<C>>::prealloc_check::<Address>(num_addresses)?;
         let account_keys = <Vec<Address> as SchemaReadContext<C, context::Len>>::get_with_context(
@@ -695,7 +715,7 @@ pub fn deserialize(input: &[u8]) -> wincode::ReadResult<Message> {
 
 #[cfg(test)]
 mod tests {
-    use {super::*, solana_sdk_ids::bpf_loader_upgradeable};
+    use {super::*, alloc::vec, solana_sdk_ids::bpf_loader_upgradeable};
 
     /// Builder for constructing V1 messages.
     ///
@@ -1227,7 +1247,7 @@ mod tests {
         ];
 
         for message in &test_cases {
-            assert_eq!(message.size(), serialize(message).len());
+            assert_eq!(message.size(), wincode::serialize(message).unwrap().len());
         }
     }
 
@@ -1249,7 +1269,7 @@ mod tests {
             .build()
             .unwrap();
 
-        let bytes = serialize(&message);
+        let bytes = wincode::serialize(&message).unwrap();
 
         // Build expected bytes manually per SIMD-0385
         //
@@ -1292,7 +1312,7 @@ mod tests {
             .build()
             .unwrap();
 
-        let bytes = serialize(&message);
+        let bytes = wincode::serialize(&message).unwrap();
 
         let mut expected = vec![1, 0, 0];
         // ConfigMask: priority fee (bits 0,1) + CU limit (bit 2) = 0b111 = 7
@@ -1331,8 +1351,55 @@ mod tests {
             .build()
             .unwrap();
 
-        let serialized = serialize(&message);
+        let serialized = wincode::serialize(&message).unwrap();
         let deserialized = deserialize(&serialized).unwrap();
         assert_eq!(message.config, deserialized.config);
+    }
+
+    #[test]
+    fn deserialize_rejects_unknown_config_mask_bits() {
+        let message = MessageBuilder::default()
+            .required_signatures(1)
+            .lifetime_specifier(Hash::new_unique())
+            .accounts(vec![Address::new_unique(), Address::new_unique()])
+            .instruction(CompiledInstruction {
+                program_id_index: 1,
+                accounts: vec![0],
+                data: vec![],
+            })
+            .build()
+            .unwrap();
+
+        let mut serialized = wincode::serialize(&message).unwrap();
+        // Round-trips cleanly with a zero (all-known) mask.
+        assert!(deserialize(&serialized).is_ok());
+
+        // The config mask is a u32 (little-endian) immediately after the 3-byte
+        // header. Set the first bit past KNOWN_BITS; it must be rejected rather than
+        // silently dropped, regardless of how many bits KNOWN_BITS covers.
+        let unknown_bit = 1u32 << TransactionConfigMask::KNOWN_BITS.trailing_ones();
+        let mask = u32::from_le_bytes(serialized[3..7].try_into().unwrap()) | unknown_bit;
+        serialized[3..7].copy_from_slice(&mask.to_le_bytes());
+        assert!(deserialize(&serialized).is_err());
+    }
+
+    #[test]
+    fn deserialize_rejects_partial_priority_fee_bits() {
+        let message = MessageBuilder::default()
+            .required_signatures(1)
+            .lifetime_specifier(Hash::new_unique())
+            .accounts(vec![Address::new_unique(), Address::new_unique()])
+            .instruction(CompiledInstruction {
+                program_id_index: 1,
+                accounts: vec![0],
+                data: vec![],
+            })
+            .build()
+            .unwrap();
+
+        let mut serialized = wincode::serialize(&message).unwrap();
+        // Set only one of the two priority-fee bits (bit 0).
+        serialized[3] |= 0b1;
+        assert!(deserialize(&serialized).is_err());
     }
 }

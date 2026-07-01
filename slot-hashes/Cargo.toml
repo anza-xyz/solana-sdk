@@ -2,7 +2,7 @@
 name = "solana-slot-hashes"
 description = "Types and utilities for the Solana SlotHashes sysvar."
 documentation = "https://docs.rs/solana-slot-hashes"
-version = "3.0.2"
+version = "3.1.0"
 authors = { workspace = true }
 repository = { workspace = true }
 homepage = { workspace = true }
@@ -11,15 +11,18 @@ edition = { workspace = true }
 
 [package.metadata.docs.rs]
 targets = ["x86_64-unknown-linux-gnu"]
+all-features = true
+rustdoc-args = ["--cfg=docsrs"]
 
 [features]
 serde = ["dep:serde", "dep:serde_derive", "serde/alloc", "solana-hash/serde"]
-sysvar = ["dep:solana-sdk-ids", "dep:solana-sysvar-id"]
+sysvar = ["dep:solana-get-sysvar", "dep:solana-sdk-ids", "dep:solana-sysvar-id"]
 wincode = ["dep:wincode", "wincode/alloc", "solana-hash/wincode"]
 
 [dependencies]
 serde = { workspace = true, optional = true }
 serde_derive = { workspace = true, optional = true }
+solana-get-sysvar = { workspace = true, optional = true }
 solana-hash = { workspace = true, features = ["decode"] }
 solana-sdk-ids = { workspace = true, optional = true }
 solana-sysvar-id = { workspace = true, optional = true }
@@ -27,3 +30,4 @@ wincode = { workspace = true, optional = true }
 
 [dev-dependencies]
 solana-sha256-hasher = { workspace = true, features = ["sha2"] }
+solana-slot-hashes = { path = ".", features = ["wincode"] }

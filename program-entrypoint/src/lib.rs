@@ -312,6 +312,11 @@ impl BumpAllocator {
     /// As long as BumpAllocator or any of its allocations are alive,
     /// writing into or deallocating the arena will cause UB.
     ///
+    /// The start of `arena` must be aligned to `align_of::<usize>()`, since
+    /// the first `size_of::<usize>()` bytes are dereferenced as a `*mut usize`
+    /// to store the bump pointer. An unaligned arena results in undefined
+    /// behavior. `arena` must also be larger than `size_of::<usize>()` bytes.
+    ///
     /// Integer arithmetic in this global allocator implementation is safe when
     /// operating on the prescribed `HEAP_START_ADDRESS` and `HEAP_LENGTH`. Any
     /// other use may overflow and is thus unsupported and at one's own risk.
@@ -321,6 +326,10 @@ impl BumpAllocator {
         debug_assert!(
             arena.len() > size_of::<usize>(),
             "Arena should be larger than usize"
+        );
+        debug_assert!(
+            arena.as_ptr().align_offset(core::mem::align_of::<usize>()) == 0,
+            "Arena must be aligned to `align_of::<usize>()`"
         );
 
         // create a pointer to the start of the arena
@@ -341,6 +350,10 @@ impl BumpAllocator {
     /// This is unsafe in most situations, unless you are totally sure that the
     /// provided start address and length can be written to by the allocator,
     /// and that the memory will be usable for the lifespan of the allocator.
+    ///
+    /// `start` must be aligned to `align_of::<usize>()`, because the allocator
+    /// dereferences `start` as a `*mut usize` to store its bump pointer. An
+    /// unaligned `start` results in undefined behavior.
     ///
     /// For Solana on-chain programs, a certain address range is reserved, so
     /// the allocator can be given those addresses.
@@ -618,5 +631,26 @@ mod test {
             assert_ne!(ptr, null_mut());
             assert_eq!(0, ptr.align_offset(size_of::<u64>()));
         }
+    }
+
+    #[test]
+    #[should_panic(expected = "Arena must be aligned")]
+    fn test_bump_allocator_unaligned_arena_panics() {
+        let mut backing = [0usize; 16];
+        let bytes: &mut [u8] = unsafe {
+            std::slice::from_raw_parts_mut(
+                backing.as_mut_ptr() as *mut u8,
+                backing.len() * size_of::<usize>(),
+            )
+        };
+        let unaligned = &mut bytes[1..];
+        assert_ne!(
+            unaligned
+                .as_ptr()
+                .align_offset(core::mem::align_of::<usize>()),
+            0,
+            "test setup: slice must be misaligned"
+        );
+        let _allocator = unsafe { BumpAllocator::new(unaligned) };
     }
 }

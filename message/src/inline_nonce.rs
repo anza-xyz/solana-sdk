@@ -1,6 +1,7 @@
 //! Inlined nonce instruction information to avoid a dependency on bincode and
 //! solana-system-interface
 use {
+    alloc::vec,
     solana_address::Address,
     solana_instruction::{AccountMeta, Instruction},
     solana_sdk_ids::{system_program, sysvar},

@@ -386,34 +386,6 @@ macro_rules! impl_int_conversion {
                 *self = *self - rhs;
             }
         }
-        impl core::cmp::PartialEq<$I> for $P {
-            #[inline(always)]
-            fn eq(&self, other: &$I) -> bool {
-                let s: $I = (*self).into();
-                s == *other
-            }
-        }
-        impl core::cmp::PartialEq<$P> for $I {
-            #[inline(always)]
-            fn eq(&self, other: &$P) -> bool {
-                let o: $I = (*other).into();
-                *self == o
-            }
-        }
-        impl core::cmp::PartialOrd<$I> for $P {
-            #[inline(always)]
-            fn partial_cmp(&self, other: &$I) -> Option<core::cmp::Ordering> {
-                let s: $I = (*self).into();
-                s.partial_cmp(other)
-            }
-        }
-        impl core::cmp::PartialOrd<$P> for $I {
-            #[inline(always)]
-            fn partial_cmp(&self, other: &$P) -> Option<core::cmp::Ordering> {
-                let o: $I = (*other).into();
-                self.partial_cmp(&o)
-            }
-        }
         impl core::cmp::PartialOrd<$P> for $P {
             #[inline(always)]
             fn partial_cmp(&self, other: &$P) -> Option<core::cmp::Ordering> {
@@ -757,7 +729,6 @@ mod tests {
         MulAssign,
         RemAssign,
         SubAssign,
-        PartialEq,
         PartialOrd,
     }
 
@@ -782,7 +753,6 @@ mod tests {
             #[test_case::test_case(ArithmeticMethod::MulAssign ; "mul_assign")]
             #[test_case::test_case(ArithmeticMethod::RemAssign ; "rem_assign")]
             #[test_case::test_case(ArithmeticMethod::SubAssign ; "sub_assign")]
-            #[test_case::test_case(ArithmeticMethod::PartialEq ; "partial_eq")]
             #[test_case::test_case(ArithmeticMethod::PartialOrd ; "partial_ord")]
             #[allow(clippy::arithmetic_side_effects)]
             fn $test_name(method: ArithmeticMethod) {
@@ -911,26 +881,12 @@ mod tests {
                         value -= two;
                         assert_eq!(value, <$UnalignedType>::from_primitive(forty_two));
                     }
-                    ArithmeticMethod::PartialEq => {
-                        assert_eq!(<$UnalignedType>::from_primitive(forty_two), forty_two);
-                        assert_eq!(
-                            <$UnalignedType>::from_primitive(forty_two),
-                            <$UnalignedType>::from_primitive(forty_two)
-                        );
-                        assert_ne!(<$UnalignedType>::from_primitive(forty_two), forty_three);
-                        assert_ne!(min, max);
-                    }
                     ArithmeticMethod::PartialOrd => {
                         assert!(
                             <$UnalignedType>::from_primitive(forty_one)
                                 < <$UnalignedType>::from_primitive(forty_two)
                         );
-                        assert!(<$UnalignedType>::from_primitive(forty_three) > forty_two);
                         assert!(max > min);
-                        assert_eq!(
-                            <$UnalignedType>::from_primitive(forty_two).partial_cmp(&forty_two),
-                            Some(core::cmp::Ordering::Equal)
-                        );
                     }
                 }
             }

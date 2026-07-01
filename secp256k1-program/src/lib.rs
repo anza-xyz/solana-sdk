@@ -1,4 +1,5 @@
 #![cfg_attr(docsrs, feature(doc_cfg))]
+#![cfg_attr(any(target_os = "solana", target_arch = "bpf"), no_std)]
 //! Instructions for the [secp256k1 native program][np].
 //!
 //! [np]: https://docs.solanalabs.com/runtime/programs#secp256k1-program
@@ -117,12 +118,16 @@
 //! - 0 or more bytes of arbitrary data, which may contain signatures,
 //!   messages or Ethereum addresses.
 //!
-//! The signature offset structure is defined by [`SecpSignatureOffsets`],
-//! and can be serialized to the correct format with [`bincode::serialize_into`].
-//! Note that the bincode format may not be stable,
-//! and callers should ensure they use the same version of `bincode` as the Solana SDK.
-//! This data structure is not provided to Solana programs,
-//! which are expected to interpret the signature offsets manually.
+//! The signature offset structure is defined by [`SecpSignatureOffsets`].
+//! Host clients can serialize it to the correct format with
+//! [`bincode::serialize_into`] by enabling the `bincode` feature. Note that the
+//! bincode format may not be stable, and callers should ensure they use the
+//! same version of `bincode` as the Solana SDK.
+//!
+//! Solana programs can use this crate for the offset structure and layout
+//! constants, but should still parse the 11-byte little-endian wire format
+//! explicitly. [`SecpSignatureOffsets`] is not a packed view of the instruction
+//! data bytes.
 //!
 //! [`bincode::serialize_into`]: https://docs.rs/bincode/1.3.3/bincode/fn.serialize_into.html
 //!
@@ -788,9 +793,13 @@
 
 #[cfg(feature = "serde")]
 use serde_derive::{Deserialize, Serialize};
-#[cfg(feature = "bincode")]
+#[cfg(all(
+    feature = "bincode",
+    not(any(target_os = "solana", target_arch = "bpf"))
+))]
 use solana_instruction::Instruction;
-use {digest::Digest, solana_signature::error::Error};
+#[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
+use solana_signature::error::Error;
 
 pub const SECP256K1_PUBKEY_SIZE: usize = 64;
 pub const SECP256K1_PRIVATE_KEY_SIZE: usize = 32;
@@ -825,24 +834,24 @@ pub struct SecpSignatureOffsets {
 }
 
 /// Signs a message from the given private key bytes
+#[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
 pub fn sign_message(
     priv_key_bytes: &[u8; SECP256K1_PRIVATE_KEY_SIZE],
     message: &[u8],
 ) -> Result<([u8; SIGNATURE_SERIALIZED_SIZE], u8), Error> {
     let priv_key = k256::ecdsa::SigningKey::from_slice(priv_key_bytes)
         .map_err(|e| Error::from_source(format!("{e}")))?;
-    let mut hasher = sha3::Keccak256::new();
-    hasher.update(message);
-    let message_hash = hasher.finalize();
-    let mut message_hash_arr = [0u8; 32];
-    message_hash_arr.copy_from_slice(message_hash.as_slice());
+    let message_hash_arr = solana_keccak_hasher::hash(message).to_bytes();
     let (signature, recovery_id) = priv_key
         .sign_prehash_recoverable(&message_hash_arr)
         .map_err(|e| Error::from_source(format!("{e}")))?;
     Ok((signature.to_bytes().into(), recovery_id.to_byte()))
 }
 
-#[cfg(feature = "bincode")]
+#[cfg(all(
+    feature = "bincode",
+    not(any(target_os = "solana", target_arch = "bpf"))
+))]
 pub fn new_secp256k1_instruction_with_signature(
     message_arr: &[u8],
     signature: &[u8; SIGNATURE_SERIALIZED_SIZE],
@@ -896,8 +905,34 @@ pub fn new_secp256k1_instruction_with_signature(
 pub fn eth_address_from_pubkey(
     pubkey: &[u8; SECP256K1_PUBKEY_SIZE],
 ) -> [u8; HASHED_PUBKEY_SERIALIZED_SIZE] {
+    let pubkey_hash = solana_keccak_hasher::hash(pubkey);
+    let address_offset = solana_keccak_hasher::HASH_BYTES - HASHED_PUBKEY_SERIALIZED_SIZE;
     let mut addr = [0u8; HASHED_PUBKEY_SERIALIZED_SIZE];
-    addr.copy_from_slice(&sha3::Keccak256::digest(pubkey)[12..]);
-    assert_eq!(addr.len(), HASHED_PUBKEY_SERIALIZED_SIZE);
+    addr.copy_from_slice(&pubkey_hash.as_bytes()[address_offset..]);
     addr
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_eth_address_from_pubkey() {
+        // Secp256k1 generator
+        let pubkey = [
+            0x79, 0xbe, 0x66, 0x7e, 0xf9, 0xdc, 0xbb, 0xac, 0x55, 0xa0, 0x62, 0x95, 0xce, 0x87,
+            0x0b, 0x07, 0x02, 0x9b, 0xfc, 0xdb, 0x2d, 0xce, 0x28, 0xd9, 0x59, 0xf2, 0x81, 0x5b,
+            0x16, 0xf8, 0x17, 0x98, 0x48, 0x3a, 0xda, 0x77, 0x26, 0xa3, 0xc4, 0x65, 0x5d, 0xa4,
+            0xfb, 0xfc, 0x0e, 0x11, 0x08, 0xa8, 0xfd, 0x17, 0xb4, 0x48, 0xa6, 0x85, 0x54, 0x19,
+            0x9c, 0x47, 0xd0, 0x8f, 0xfb, 0x10, 0xd4, 0xb8,
+        ];
+        // keccak256(pubkey)[12..32] = 0x7e5f4552091a69125d5dfcb7b8c2659029395bdf
+        assert_eq!(
+            eth_address_from_pubkey(&pubkey),
+            [
+                0x7e, 0x5f, 0x45, 0x52, 0x09, 0x1a, 0x69, 0x12, 0x5d, 0x5d, 0xfc, 0xb7, 0xb8, 0xc2,
+                0x65, 0x90, 0x29, 0x39, 0x5b, 0xdf,
+            ]
+        );
+    }
 }

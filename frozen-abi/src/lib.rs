@@ -1,7 +1,7 @@
 //! # StableAbi
 //!
 //! The `StableAbi` is an optional extension to `frozen-abi` that provides functionality for
-//! detecting unintended encoding changes.
+//! detecting unintended encoding and decoding changes.
 //!
 //! ## How it works?
 //!
@@ -14,8 +14,9 @@
 //!
 //! The macro would generate the `test_abi_digest` test that verifies binary layout stability:
 //! - Initializes a deterministic random number generator with fixed seed
-//! - Generates 10_000 instances of the type via `StableAbi::random()`
-//! - Serializes each instance
+//! - Generates 10_000 instances of the type
+//! - Serializes each instance, then deserializes and reserializes it
+//! - Compares the resulting bytes of first serialization and after roundtrip
 //! - Hashes all serialized bytes together
 //! - Compares the resulting hash against the provided in `abi_digest` attribute
 //!
@@ -29,7 +30,14 @@
 //! Deriving `StableAbi` adds:
 //!
 //! ```rust,ignore
-//! impl ::solana_frozen_abi::stable_abi::StableAbi for MyType {}
+//! impl ::solana_frozen_abi::stable_abi::StableAbi for MyType {
+//!     fn random_with_context(
+//!         rng: &mut (impl ::solana_frozen_abi::rand::RngCore + ?Sized),
+//!         _ctx: (),
+//!     ) -> Self {
+//!         ::solana_frozen_abi::rand::Rng::random::<Self>(rng)
+//!     }
+//! }
 //! ```
 //!
 //! The `StableAbi::random()` default implementation calls `rng.random::<MyType>()`, so your type
@@ -56,6 +64,25 @@
 //! Field override is optional and only needed for fields that cannot be sampled with plain
 //! `rng.random()` (for example `Vec<_>` or `HashMap<_, _>`), or when you want a specific shape.
 //!
+//! `StableAbiSample` also supports passing an explicit context to context-aware types:
+//!
+//! ```rust,ignore
+//! #[derive(StableAbi, StableAbiSample)]
+//! #[frozen_abi(abi_digest = "...")]
+//! struct MyTypeWithCtx {
+//!     #[stable_abi_sample(ctx = SequenceLenMax(32))]
+//!     a: Vec<u8>,
+//!     #[stable_abi_sample(ctx = SequenceLenMax(8))]
+//!     b: std::collections::VecDeque<u16>,
+//!     #[stable_abi_sample(ctx = SequenceLenRange { min: 1, max: 4 })]
+//!     c: std::collections::BTreeMap<u8, u16>,
+//! }
+//! ```
+//!
+//! `ctx = <expr>` evaluates the given expression and forwards it as the context to
+//! `StableAbi::random_with_context(...)`. The expression's type must match a
+//! context type the field's type implements (e.g. `SequenceLenMax` or `SequenceLenRange` for collections).
+//!
 //! ```rust,ignore
 //! #[derive(StableAbi, StableAbiSample)]
 //! #[frozen_abi(abi_digest = "...", abi_serializer = "wincode")]
@@ -68,6 +95,17 @@
 //!     )]
 //!     b: std::collections::HashMap<u64, bool>,
 //!     c: [u8; 32],
+//! }
+//! ```
+//!
+//! `skip` is useful for fields that should be sampled as `Default::default()`:
+//!
+//! ```rust,ignore
+//! #[derive(StableAbi, StableAbiSample)]
+//! #[frozen_abi(abi_digest = "...")]
+//! struct MyTypeWithSkippedFields {
+//!     #[stable_abi_sample(skip)]
+//!     a: Option<u64>,
 //! }
 //! ```
 //!
@@ -90,13 +128,62 @@
 //! For `wincode`-based types, add `abi_serializer = "wincode"` to `#[frozen_abi(...)]`.
 //!
 //! ```rust,ignore
-//! #[derive(StableAbi, StableAbiSample, wincode::SchemaWrite)]
+//! #[derive(StableAbi, StableAbiSample, wincode::SchemaWrite, wincode::SchemaRead)]
 //! #[frozen_abi(
 //!     api_digest = "...",
 //!     abi_digest = "...",
 //!     abi_serializer = "wincode",
 //! )]
 //! struct MyWincodeType {
+//!     a: u64,
+//!     b: bool,
+//! }
+//! ```
+//!
+//! `abi_serializer` also accepts a list of serializers. This is useful for a type that is
+//! serialized with both `bincode` and `wincode`: the ABI is digested with each serializer and
+//! all of them must agree on the shared `abi_digest`. A separate test is generated per serializer
+//! (`test_abi_digest_bincode`, `test_abi_digest_wincode`).
+//!
+//! ```rust,ignore
+//! #[derive(StableAbi, StableAbiSample, serde_derive::Serialize, wincode::SchemaWrite)]
+//! #[frozen_abi(
+//!     api_digest = "...",
+//!     abi_digest = "...",
+//!     abi_serializer = ["bincode", "wincode"],
+//! )]
+//! struct MySharedType {
+//!     a: u64,
+//!     b: bool,
+//! }
+//! ```
+//!
+//! By default, the generated test uses `test_roundtrip = "wire_only"`, which verifies that
+//! deserializing and reserializing produces identical bytes. Use `test_roundtrip = "eq_and_wire"`
+//! to also verify `original == deserialized`, or `test_roundtrip = "no"` to skip roundtrip
+//! verification.
+//!
+//! ```rust,ignore
+//! #[derive(StableAbi, StableAbiSample, wincode::SchemaWrite)]
+//! #[frozen_abi(
+//!     abi_digest = "...",
+//!     abi_serializer = "wincode",
+//!     test_roundtrip = "no",
+//! )]
+//! struct MyRoundtripIncompatibleType {
+//!     a: u64,
+//!     b: bool,
+//! }
+//! ```
+//!
+//! ```rust,ignore
+//! #[derive(PartialEq, StableAbi, StableAbiSample, wincode::SchemaWrite, wincode::SchemaRead)]
+//! #[frozen_abi(
+//!     abi_digest = "...",
+//!     abi_serializer = "wincode",
+//!     test_roundtrip = "eq_and_wire",
+//! )]
+//! struct MyRoundtripType {
 //!     a: u64,
 //!     b: bool,
 //! }

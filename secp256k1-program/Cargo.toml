@@ -20,12 +20,13 @@ dev-context-only-utils = ["bincode"]
 serde = ["dep:serde", "dep:serde_derive"]
 
 [dependencies]
-bincode = { workspace = true, optional = true }
-digest = { workspace = true }
-k256 = { workspace = true, features = ["ecdsa-core"] }
 serde = { workspace = true, optional = true }
 serde_derive = { workspace = true, optional = true }
-sha3 = { workspace = true }
+solana-keccak-hasher = { workspace = true, features = ["sha3"] }
+
+[target.'cfg(not(any(target_os = "solana", target_arch = "bpf")))'.dependencies]
+bincode = { workspace = true, optional = true }
+k256 = { workspace = true, features = ["ecdsa-core"] }
 solana-instruction = { workspace = true, features = ["std"], optional = true }
 solana-sdk-ids = { workspace = true, optional = true }
 solana-signature = { workspace = true, features = ["std"] }
@@ -38,7 +39,9 @@ solana-account-info = { workspace = true }
 solana-example-mocks = { path = "../example-mocks" }
 solana-instruction = { workspace = true }
 solana-instructions-sysvar = { workspace = true }
-solana-keccak-hasher = { workspace = true, features = ["sha3"] }
 solana-msg = { workspace = true, features = ["std"] }
 solana-program-error = { workspace = true }
 solana-secp256k1-program = { path = ".", features = ["bincode"] }
+
+[lints]
+workspace = true

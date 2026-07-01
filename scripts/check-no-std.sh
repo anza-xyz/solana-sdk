@@ -20,6 +20,7 @@ no_std_crates=(
   -p solana-epoch-schedule
   -p solana-epoch-stake
   -p solana-fee-calculator
+  -p solana-get-sysvar
   -p solana-hash
   -p solana-instruction-view
   -p solana-keccak-hasher
@@ -35,9 +36,12 @@ no_std_crates=(
   -p solana-rent
   -p solana-sanitize
   -p solana-sdk-ids
+  -p solana-secp256k1-program
+  -p solana-secp256k1-recover
   -p solana-sha256-hasher
   -p solana-signature
   -p solana-sysvar-id
+  -p solana-transaction-error
   -p solana-zero-copy
 )
 
@@ -48,6 +52,13 @@ no_std_alloc_crates=(
   -p solana-borsh
   -p solana-curve25519
   -p solana-instruction
+  -p solana-instructions-sysvar
+  -p solana-message
+  -p solana-serialize-utils
+  -p solana-signer
+  -p solana-short-vec
+  -p solana-stake-history
+  -p solana-transaction
 )
 
 # Use the upstream BPF target, which doesn't support std, to make sure that our

@@ -2,7 +2,7 @@
 name = "solana-message"
 description = "Solana transaction message types."
 documentation = "https://docs.rs/solana-message"
-version = "4.1.1"
+version = "4.2.4"
 rust-version = { workspace = true }
 authors = { workspace = true }
 repository = { workspace = true }
@@ -16,6 +16,7 @@ all-features = true
 rustdoc-args = ["--cfg=docsrs"]
 
 [features]
+default = ["std"]
 blake3 = ["dep:blake3"]
 dev-context-only-utils = ["blake3", "wincode"]
 frozen-abi = [
@@ -35,6 +36,7 @@ serde = [
     "solana-hash/serde",
     "solana-short-vec/serde",
 ]
+std = []
 wincode = [
     "dep:wincode",
     "solana-short-vec/wincode",
@@ -44,19 +46,18 @@ wincode = [
 
 [dependencies]
 blake3 = { workspace = true, features = ["traits-preview"], optional = true }
-lazy_static = { workspace = true }
 serde = { workspace = true, optional = true }
 serde_derive = { workspace = true, optional = true }
 solana-address = { workspace = true }
-solana-frozen-abi = { workspace = true, optional = true }
+solana-frozen-abi = { workspace = true, optional = true, features = ["frozen-abi"] }
 solana-frozen-abi-macro = { workspace = true, optional = true }
 solana-hash = { workspace = true, features = ["decode", "sanitize"] }
-solana-instruction = { workspace = true, features = ["std"] }
+solana-instruction = { workspace = true }
 solana-sanitize = { workspace = true }
 solana-sdk-ids = { workspace = true }
 solana-short-vec = { workspace = true, optional = true }
 solana-transaction-error = { workspace = true }
-wincode = { workspace = true, optional = true, features = ["std"] }
+wincode = { workspace = true, optional = true, features = ["alloc"] }
 
 [dev-dependencies]
 anyhow = { workspace = true }

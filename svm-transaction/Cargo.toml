@@ -1,0 +1,35 @@
+[package]
+name = "solana-svm-transaction"
+description = "Solana SVM Transaction"
+documentation = "https://docs.rs/solana-svm-transaction"
+version = "4.2.0"
+rust-version = { workspace = true }
+authors = { workspace = true }
+repository = { workspace = true }
+homepage = { workspace = true }
+license = { workspace = true }
+edition = { workspace = true }
+
+[package.metadata.docs.rs]
+targets = ["x86_64-unknown-linux-gnu"]
+all-features = true
+rustdoc-args = ["--cfg=docsrs"]
+
+[dependencies]
+solana-hash = { workspace = true }
+solana-message = { workspace = true }
+solana-pubkey = { workspace = true }
+solana-sdk-ids = { workspace = true }
+solana-signature = { workspace = true }
+solana-transaction = { workspace = true, features = ["std"] }
+
+[dev-dependencies]
+solana-message = { workspace = true, features = ["wincode"] }
+solana-nonce = { workspace = true }
+solana-pubkey = { workspace = true, features = ["std"] }
+solana-system-interface = { workspace = true, features = ["bincode", "wincode"] }
+static_assertions = { workspace = true }
+test-case = { workspace = true }
+
+[lints]
+workspace = true

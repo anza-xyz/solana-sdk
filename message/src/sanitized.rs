@@ -6,13 +6,15 @@ use {
         v1::CachedMessage,
         AccountKeys, AddressLoader, MessageHeader, SanitizedVersionedMessage, VersionedMessage,
     },
+    alloc::{borrow::Cow, vec::Vec},
+    core::convert::TryFrom,
     solana_address::Address,
     solana_hash::Hash,
     solana_instruction::{BorrowedAccountMeta, BorrowedInstruction},
     solana_sanitize::Sanitize,
     solana_sdk_ids::{ed25519_program, secp256k1_program, secp256r1_program},
     solana_transaction_error::SanitizeMessageError,
-    std::{borrow::Cow, collections::HashSet, convert::TryFrom},
+    std::collections::HashSet,
 };
 
 // inlined to avoid solana_nonce dep
@@ -459,7 +461,7 @@ impl TransactionSignatureDetails {
 
 #[cfg(test)]
 mod tests {
-    use {super::*, crate::v0, std::collections::HashSet};
+    use {super::*, crate::v0, alloc::vec, std::collections::HashSet};
 
     #[test]
     fn test_try_from_legacy_message() {

@@ -37,6 +37,13 @@ use {
 )]
 pub const MAX_ENTRIES: usize = 150;
 
+const LEN_PREFIX: usize = size_of::<u64>();
+const ENTRY_SERIALIZED_SIZE: usize = size_of::<Hash>() + size_of::<FeeCalculator>();
+
+/// Serialized size of `RecentBlockhashes` sysvar account.
+pub const SIZE: usize = LEN_PREFIX + (MAX_ENTRIES * ENTRY_SERIALIZED_SIZE);
+const _: () = assert!(SIZE == 6_008);
+
 impl_sysvar_id!(RecentBlockhashes);
 
 #[deprecated(
@@ -158,8 +165,7 @@ impl Sysvar for RecentBlockhashes {}
 #[cfg(feature = "bincode")]
 impl SysvarSerialize for RecentBlockhashes {
     fn size_of() -> usize {
-        // hard-coded so that we don't have to construct an empty
-        6008 // golden, update if MAX_ENTRIES changes
+        SIZE
     }
 }
 

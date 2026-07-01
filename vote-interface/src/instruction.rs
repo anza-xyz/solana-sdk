@@ -1,5 +1,7 @@
 //! Vote program instructions
 
+#[cfg(feature = "frozen-abi")]
+use solana_frozen_abi_macro::{frozen_abi, StableAbi, StableAbiSample};
 use {
     super::state::TowerSync,
     crate::state::{
@@ -16,6 +18,11 @@ use {
     solana_instruction::{AccountMeta, Instruction},
     solana_sdk_ids::sysvar,
 };
+#[cfg(feature = "wincode")]
+use {
+    crate::state::wincode_compact::{CompactTowerSync, CompactVoteStateUpdate},
+    wincode::{SchemaRead, SchemaWrite},
+};
 #[cfg(feature = "serde")]
 use {
     crate::state::{serde_compact_vote_state_update, serde_tower_sync},
@@ -23,14 +30,25 @@ use {
 };
 
 #[repr(u8)]
+#[cfg_attr(feature = "frozen-abi", derive(StableAbi, StableAbiSample))]
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
+#[cfg_attr(feature = "wincode", derive(SchemaWrite, SchemaRead))]
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum CommissionKind {
     InflationRewards = 0,
     BlockRevenue = 1,
 }
 
+#[cfg_attr(
+    feature = "frozen-abi",
+    frozen_abi(
+        abi_digest = "9bqZ5L1KnMFnjQPMoRtfhdgUok3G5W2KKRGuw8uwbkuY",
+        abi_serializer = ["bincode", "wincode"]
+    ),
+    derive(StableAbi, StableAbiSample)
+)]
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
+#[cfg_attr(feature = "wincode", derive(SchemaWrite, SchemaRead))]
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum VoteInstruction {
     /// Initialize a vote account
@@ -161,7 +179,9 @@ pub enum VoteInstruction {
     ///   0. `[Write]` Vote account to vote with
     ///   1. `[SIGNER]` Vote authority
     #[cfg_attr(feature = "serde", serde(with = "serde_compact_vote_state_update"))]
-    CompactUpdateVoteState(VoteStateUpdate),
+    CompactUpdateVoteState(
+        #[cfg_attr(feature = "wincode", wincode(with = "CompactVoteStateUpdate"))] VoteStateUpdate,
+    ),
 
     /// Update the onchain vote state for the signer along with a switching proof.
     ///
@@ -170,6 +190,7 @@ pub enum VoteInstruction {
     ///   1. `[SIGNER]` Vote authority
     CompactUpdateVoteStateSwitch(
         #[cfg_attr(feature = "serde", serde(with = "serde_compact_vote_state_update"))]
+        #[cfg_attr(feature = "wincode", wincode(with = "CompactVoteStateUpdate"))]
         VoteStateUpdate,
         Hash,
     ),
@@ -180,7 +201,7 @@ pub enum VoteInstruction {
     ///   0. `[Write]` Vote account to vote with
     ///   1. `[SIGNER]` Vote authority
     #[cfg_attr(feature = "serde", serde(with = "serde_tower_sync"))]
-    TowerSync(TowerSync),
+    TowerSync(#[cfg_attr(feature = "wincode", wincode(with = "CompactTowerSync"))] TowerSync),
 
     /// Sync the onchain vote state with local tower along with a switching proof
     ///
@@ -188,7 +209,9 @@ pub enum VoteInstruction {
     ///   0. `[Write]` Vote account to vote with
     ///   1. `[SIGNER]` Vote authority
     TowerSyncSwitch(
-        #[cfg_attr(feature = "serde", serde(with = "serde_tower_sync"))] TowerSync,
+        #[cfg_attr(feature = "serde", serde(with = "serde_tower_sync"))]
+        #[cfg_attr(feature = "wincode", wincode(with = "CompactTowerSync"))]
+        TowerSync,
         Hash,
     ),
 
@@ -783,4 +806,32 @@ pub fn withdraw(
     ];
 
     Instruction::new_with_bincode(id(), &VoteInstruction::Withdraw(lamports), account_metas)
+}
+
+#[cfg(all(test, feature = "bincode"))]
+mod tests {
+    use {super::*, crate::state::Lockout, std::collections::VecDeque};
+
+    #[test]
+    fn test_compact_serialize_rejects_confirmation_count_above_u8() {
+        // The compact wire format stores `confirmation_count` as a `u8`, so a
+        // value that does not fit (> 255) must fail to serialize rather than be
+        // silently truncated.
+        let lockouts = VecDeque::from([Lockout::new_with_confirmation_count(1, 256)]);
+        let vote_state_update = VoteStateUpdate::new(lockouts.clone(), None, Hash::default());
+        let tower_sync = TowerSync::new(lockouts, None, Hash::default(), Hash::default());
+
+        for ix in [
+            VoteInstruction::CompactUpdateVoteState(vote_state_update),
+            VoteInstruction::TowerSync(tower_sync),
+        ] {
+            let err = bincode::serialize(&ix).unwrap_err();
+            assert!(
+                err.to_string().contains("Invalid confirmation count"),
+                "unexpected error: {err}"
+            );
+            #[cfg(feature = "wincode")]
+            assert!(wincode::serialize(&ix).is_err());
+        }
+    }
 }

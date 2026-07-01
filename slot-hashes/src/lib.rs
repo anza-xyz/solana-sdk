@@ -35,6 +35,13 @@ pub fn set_entries_for_tests_only(entries: usize) {
 
 pub type SlotHash = (u64, Hash);
 
+const LEN_PREFIX: usize = size_of::<u64>();
+const SLOT_HASH_SERIALIZED_SIZE: usize = size_of::<u64>() + size_of::<Hash>();
+
+/// Serialized size of the `SlotHashes` sysvar account.
+pub const SIZE: usize = LEN_PREFIX + MAX_ENTRIES * SLOT_HASH_SERIALIZED_SIZE;
+const _: () = assert!(SIZE == 20_488);
+
 #[repr(C)]
 #[cfg_attr(
     feature = "serde",
@@ -87,6 +94,15 @@ impl Deref for SlotHashes {
 #[cfg(test)]
 mod tests {
     use {super::*, solana_sha256_hasher::hash};
+
+    #[test]
+    fn test_size_of() {
+        let slot_hashes = SlotHashes(vec![(0, Hash::default()); MAX_ENTRIES]);
+        assert_eq!(
+            wincode::serialized_size(&slot_hashes).unwrap() as usize,
+            SIZE,
+        );
+    }
 
     #[test]
     fn test() {

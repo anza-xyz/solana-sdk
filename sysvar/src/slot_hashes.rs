@@ -2,7 +2,7 @@
 //!
 //! The _slot hashes sysvar_ provides access to the [`SlotHashes`] type.
 //!
-//! The [`SysvarSerialize::from_account_info`] and [`Sysvar::get`] methods always return
+//! The [`SysvarSerialize::from_account_info`] and [`crate::Sysvar::get`] methods always return
 //! [`solana_program_error::ProgramError::UnsupportedSysvar`] because this sysvar account is too large
 //! to process on-chain. Thus this sysvar cannot be accessed on chain, though
 //! one can still use the [`SysvarId::id`], [`SysvarId::check_id`] and
@@ -46,29 +46,25 @@
 //! ```
 #[cfg(feature = "bytemuck")]
 use bytemuck_derive::{Pod, Zeroable};
-use {crate::Sysvar, solana_clock::Slot, solana_hash::Hash};
 #[cfg(feature = "bincode")]
 use {crate::SysvarSerialize, solana_account_info::AccountInfo};
+use {solana_clock::Slot, solana_hash::Hash};
 
 #[cfg(feature = "bytemuck")]
 const U64_SIZE: usize = std::mem::size_of::<u64>();
 
-#[cfg(any(feature = "bytemuck", feature = "bincode"))]
-const SYSVAR_LEN: usize = 20_488; // golden, update if MAX_ENTRIES changes
-
 pub use {
     solana_sdk_ids::sysvar::slot_hashes::{check_id, id, ID},
-    solana_slot_hashes::SlotHashes,
+    solana_slot_hashes::{SlotHashes, SIZE},
     solana_sysvar_id::SysvarId,
 };
 
-impl Sysvar for SlotHashes {}
 #[cfg(feature = "bincode")]
 impl SysvarSerialize for SlotHashes {
     // override
     fn size_of() -> usize {
         // hard-coded so that we don't have to construct an empty
-        SYSVAR_LEN
+        SIZE
     }
     fn from_account_info(
         _account_info: &AccountInfo,
@@ -104,7 +100,7 @@ impl PodSlotHashes {
     /// Fetch all of the raw sysvar data using the `sol_get_sysvar` syscall.
     pub fn fetch() -> Result<Self, solana_program_error::ProgramError> {
         // Allocate an uninitialized buffer for the raw sysvar data.
-        let sysvar_len = SYSVAR_LEN;
+        let sysvar_len = SIZE;
         let mut data = vec![0; sysvar_len];
 
         // Ensure the created buffer is aligned to 8.
@@ -121,6 +117,10 @@ impl PodSlotHashes {
             /* length */ sysvar_len as u64,
         )?;
 
+        Self::from_bytes(data)
+    }
+
+    fn from_bytes(data: Vec<u8>) -> Result<Self, solana_program_error::ProgramError> {
         // Get the number of slot hashes present in the data by reading the
         // `u64` length at the beginning of the data, then use that count to
         // calculate the length of the slot hashes data.
@@ -180,8 +180,8 @@ impl PodSlotHashes {
 #[cfg(test)]
 mod tests {
     use {
-        super::*, crate::tests::mock_get_sysvar_syscall, serial_test::serial, solana_hash::Hash,
-        solana_sha256_hasher::hash, solana_slot_hashes::MAX_ENTRIES, test_case::test_case,
+        super::*, solana_hash::Hash, solana_sha256_hasher::hash, solana_slot_hashes::MAX_ENTRIES,
+        test_case::test_case,
     };
 
     #[test]
@@ -197,13 +197,6 @@ mod tests {
         );
     }
 
-    fn mock_slot_hashes(slot_hashes: &SlotHashes) {
-        // The data is always `SlotHashes::size_of()`.
-        let mut data = vec![0; SlotHashes::size_of()];
-        bincode::serialize_into(&mut data[..], slot_hashes).unwrap();
-        mock_get_sysvar_syscall(&data);
-    }
-
     #[test_case(0)]
     #[test_case(1)]
     #[test_case(2)]
@@ -215,7 +208,6 @@ mod tests {
     #[test_case(256)]
     #[test_case(384)]
     #[test_case(MAX_ENTRIES)]
-    #[serial]
     fn test_pod_slot_hashes(num_entries: usize) {
         let mut slot_hashes = vec![];
         for i in 0..num_entries {
@@ -226,9 +218,8 @@ mod tests {
         }
 
         let check_slot_hashes = SlotHashes::new(&slot_hashes);
-        mock_slot_hashes(&check_slot_hashes);
-
-        let pod_slot_hashes = PodSlotHashes::fetch().unwrap();
+        let pod_slot_hashes =
+            PodSlotHashes::from_bytes(bincode::serialize(&check_slot_hashes).unwrap()).unwrap();
 
         // Assert the slice of `PodSlotHash` has the same length as
         // `SlotHashes`.

@@ -16,3 +16,19 @@ pub trait Nullable: PartialEq + Sized {
         !self.is_none()
     }
 }
+
+macro_rules! nullable_integer {
+    ( $type:tt ) => {
+        #[doc = concat!("Implements `Nullable` for the `", stringify!($type), "` type, reserving `0` as the `NONE` value.")]
+        impl Nullable for $type {
+            const NONE: Self = 0;
+        }
+    };
+}
+
+nullable_integer!(u8);
+nullable_integer!(u16);
+nullable_integer!(u32);
+nullable_integer!(u64);
+#[cfg(not(target_arch = "bpf"))]
+nullable_integer!(u128);

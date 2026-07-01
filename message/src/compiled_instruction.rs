@@ -1,8 +1,8 @@
 #[cfg(feature = "serde")]
 use serde_derive::{Deserialize, Serialize};
 #[cfg(feature = "frozen-abi")]
-use solana_frozen_abi_macro::AbiExample;
-use {solana_address::Address, solana_sanitize::Sanitize};
+use solana_frozen_abi_macro::{frozen_abi, AbiExample, StableAbi, StableAbiSample};
+use {alloc::vec::Vec, solana_address::Address, solana_sanitize::Sanitize};
 #[cfg(feature = "wincode")]
 use {
     solana_short_vec::ShortU16,
@@ -16,7 +16,15 @@ use {
 /// construction of `Message`. Most users will not interact with it directly.
 ///
 /// [`Message`]: crate::Message
-#[cfg_attr(feature = "frozen-abi", derive(AbiExample))]
+#[cfg_attr(
+    feature = "frozen-abi",
+    derive(AbiExample, StableAbi, StableAbiSample),
+    frozen_abi(
+        abi_digest = "ANAoDM13eiKa3WRnfiwYi8jcgaEgC32xHWyA8xVAkUGV",
+        abi_serializer = ["bincode", "wincode"],
+        test_roundtrip = "eq_and_wire"
+    )
+)]
 #[cfg_attr(
     feature = "serde",
     derive(Deserialize, Serialize),

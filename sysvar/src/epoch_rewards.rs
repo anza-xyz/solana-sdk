@@ -15,7 +15,7 @@
 //!   - rewards for the epoch distributed so far, in lamports
 //!   - whether the rewards period is active
 //!
-//! [`EpochRewards`] implements [`Sysvar::get`] and can be loaded efficiently without
+//! [`EpochRewards`] implements [`crate::Sysvar::get`] and can be loaded efficiently without
 //! passing the sysvar account ID to the program.
 //!
 //! See also the Solana [documentation on the epoch rewards sysvar][sdoc].
@@ -156,47 +156,10 @@
 
 #[cfg(feature = "bincode")]
 use crate::SysvarSerialize;
-use crate::{impl_sysvar_get, Sysvar};
 pub use {
-    solana_epoch_rewards::EpochRewards,
+    solana_epoch_rewards::{EpochRewards, SIZE},
     solana_sdk_ids::sysvar::epoch_rewards::{check_id, id, ID},
 };
 
-impl Sysvar for EpochRewards {
-    // SAFETY: upstream invariant: the sysvar data is created exclusively
-    // by the Solana runtime and serializes bool as 0x00 or 0x01, so the final
-    // `bool` field of `EpochRewards` can be re-aligned with padding and read
-    // directly without validation.
-    impl_sysvar_get!(id(), 15);
-}
-
 #[cfg(feature = "bincode")]
 impl SysvarSerialize for EpochRewards {}
-
-#[cfg(test)]
-mod tests {
-    use {super::*, crate::Sysvar, serial_test::serial};
-
-    #[test]
-    #[serial]
-    #[cfg(feature = "bincode")]
-    fn test_epoch_rewards_get() {
-        let expected = EpochRewards {
-            distribution_starting_block_height: 42,
-            num_partitions: 7,
-            parent_blockhash: solana_hash::Hash::new_unique(),
-            total_points: 1234567890,
-            total_rewards: 100,
-            distributed_rewards: 10,
-            active: true,
-        };
-
-        let data = bincode::serialize(&expected).unwrap();
-        assert_eq!(data.len(), 81);
-        assert_eq!(data.len() + 15, core::mem::size_of::<EpochRewards>());
-
-        crate::tests::mock_get_sysvar_syscall(&data);
-        let got = EpochRewards::get().unwrap();
-        assert_eq!(got, expected);
-    }
-}

@@ -23,6 +23,8 @@ pub mod sysvar;
 
 #[cfg(feature = "serde")]
 use serde_derive::{Deserialize, Serialize};
+#[cfg(feature = "frozen-abi")]
+use solana_frozen_abi_macro::{AbiExample, StableAbi, StableAbiSample};
 use solana_sdk_macro::CloneZeroed;
 
 // inlined to avoid solana_clock dep
@@ -47,7 +49,7 @@ pub const MAX_LEADER_SCHEDULE_EPOCH_OFFSET: u64 = 3;
 pub const MINIMUM_SLOTS_PER_EPOCH: u64 = 32;
 
 #[repr(C)]
-#[cfg_attr(feature = "frozen-abi", derive(solana_frozen_abi_macro::AbiExample))]
+#[cfg_attr(feature = "frozen-abi", derive(AbiExample, StableAbi, StableAbiSample))]
 #[cfg_attr(
     feature = "serde",
     derive(Deserialize, Serialize),
@@ -76,6 +78,14 @@ pub struct EpochSchedule {
     /// Basically: `MINIMUM_SLOTS_PER_EPOCH * (2.pow(first_normal_epoch) - 1)`.
     pub first_normal_slot: u64,
 }
+
+/// Serialized size of the `EpochSchedule` sysvar account.
+pub const SIZE: usize = size_of::<u64>() // slots_per_epoch
+    + size_of::<u64>() // leader_schedule_slot_offset
+    + size_of::<bool>() // warmup
+    + size_of::<u64>() // first_normal_epoch
+    + size_of::<u64>(); // first_normal_slot
+const _: () = assert!(SIZE == 33);
 
 impl Default for EpochSchedule {
     fn default() -> Self {
@@ -211,6 +221,14 @@ impl EpochSchedule {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_size_of() {
+        assert_eq!(
+            wincode::serialized_size(&EpochSchedule::default()).unwrap() as usize,
+            SIZE,
+        );
+    }
 
     #[test]
     fn test_epoch_schedule() {

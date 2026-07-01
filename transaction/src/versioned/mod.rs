@@ -1,19 +1,26 @@
 //! Defines a transaction which supports multiple versions of messages.
 
+#[cfg(feature = "frozen-abi")]
+use solana_frozen_abi_macro::{frozen_abi, AbiExample, StableAbi};
 use {
     crate::Transaction,
+    alloc::vec::Vec,
+    core::cmp::Ordering,
     solana_message::{inline_nonce::is_advance_nonce_instruction_data, VersionedMessage},
     solana_sanitize::SanitizeError,
     solana_sdk_ids::system_program,
     solana_signature::Signature,
-    std::cmp::Ordering,
+};
+#[cfg(feature = "wincode")]
+use {
+    alloc::string::ToString,
+    solana_signer::{signers::Signers, SignerError},
 };
 #[cfg(feature = "wincode")]
 use {
     core::mem::MaybeUninit,
     solana_message::{v1::SIGNATURE_SIZE, MESSAGE_VERSION_PREFIX},
     solana_short_vec::ShortU16,
-    solana_signer::{signers::Signers, SignerError},
     wincode::{
         config::Config,
         containers, context,
@@ -58,7 +65,15 @@ impl TransactionVersion {
 
 // NOTE: Serialization-related changes must be paired with the direct read at sigverify.
 /// An atomic transaction
-#[cfg_attr(feature = "frozen-abi", derive(solana_frozen_abi_macro::AbiExample))]
+#[cfg_attr(
+    feature = "frozen-abi",
+    derive(AbiExample, StableAbi),
+    frozen_abi(
+        abi_digest = "DFvqfzN7BvZXod7qDFqR2g3Qo6fXvHNtghaxyAgmuhJX",
+        abi_serializer = "wincode",
+        test_roundtrip = "eq_and_wire"
+    )
+)]
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[cfg_attr(feature = "wincode", derive(UninitBuilder))]
 #[derive(Debug, PartialEq, Default, Eq, Clone)]
@@ -72,6 +87,95 @@ pub struct VersionedTransaction {
     pub signatures: Vec<Signature>,
     /// Message to sign.
     pub message: VersionedMessage,
+}
+
+// `StableAbi` is provided through a manual `Distribution` (rather than the
+// `StableAbiSample` derive) because the sampled value must be self-consistent to
+// survive a serialize/deserialize roundtrip. The component types are still
+// sampled with their derived `StableAbi::random`; only the parts that the wire
+// format couples together are constrained here:
+//   * The legacy message has no version prefix, so its first byte (the header's
+//     `num_required_signatures`) must stay below `MESSAGE_VERSION_PREFIX`,
+//     otherwise it would decode as a versioned message. Legacy is therefore only
+//     selected when the sampled header allows it.
+//   * V0/legacy signatures use a `ShortU16` length prefix; the derived 0..=5
+//     count fits in a single prefix byte, so the derived sampling is reused.
+//   * V1 writes signatures as a fixed-length array sized by the header, so the
+//     signature count must equal `num_required_signatures`.
+#[cfg(feature = "frozen-abi")]
+impl solana_frozen_abi::rand::prelude::Distribution<VersionedTransaction>
+    for solana_frozen_abi::rand::distr::StandardUniform
+{
+    fn sample<R: solana_frozen_abi::rand::Rng + ?Sized>(
+        &self,
+        rng: &mut R,
+    ) -> VersionedTransaction {
+        use {
+            solana_address::Address,
+            solana_frozen_abi::stable_abi::StableAbi,
+            solana_message::{
+                compiled_instruction::CompiledInstruction, v0, v1, Message as LegacyMessage,
+                MessageHeader, MESSAGE_VERSION_PREFIX,
+            },
+        };
+
+        let header = MessageHeader::random(rng);
+        let legacy_representable = header.num_required_signatures & MESSAGE_VERSION_PREFIX == 0;
+
+        // 0 = legacy, 1 = v0, 2 = v1.
+        let version = if legacy_representable {
+            rng.random_range(0u8..3)
+        } else {
+            rng.random_range(1u8..3)
+        };
+
+        // `Vec` has several context-specific `StableAbi` impls, so the element
+        // type is named explicitly to select the default-context one (which draws
+        // a small, single-byte-prefix-sized length); the other fields infer it.
+        let (message, signatures) = match version {
+            0 => (
+                VersionedMessage::Legacy(LegacyMessage {
+                    header,
+                    account_keys: <Vec<Address> as StableAbi>::random(rng),
+                    recent_blockhash: StableAbi::random(rng),
+                    instructions: <Vec<CompiledInstruction> as StableAbi>::random(rng),
+                }),
+                <Vec<Signature> as StableAbi>::random(rng),
+            ),
+            1 => (
+                VersionedMessage::V0(v0::Message {
+                    header,
+                    account_keys: <Vec<Address> as StableAbi>::random(rng),
+                    recent_blockhash: StableAbi::random(rng),
+                    instructions: <Vec<CompiledInstruction> as StableAbi>::random(rng),
+                    address_table_lookups:
+                        <Vec<v0::MessageAddressTableLookup> as StableAbi>::random(rng),
+                }),
+                <Vec<Signature> as StableAbi>::random(rng),
+            ),
+            2 => {
+                let signatures = (0..header.num_required_signatures)
+                    .map(|_| Signature::random(rng))
+                    .collect();
+                (
+                    VersionedMessage::V1(v1::Message {
+                        header,
+                        config: StableAbi::random(rng),
+                        lifetime_specifier: StableAbi::random(rng),
+                        account_keys: <Vec<Address> as StableAbi>::random(rng),
+                        instructions: <Vec<CompiledInstruction> as StableAbi>::random(rng),
+                    }),
+                    signatures,
+                )
+            }
+            _ => unreachable!(),
+        };
+
+        VersionedTransaction {
+            signatures,
+            message,
+        }
+    }
 }
 
 impl From<Transaction> for VersionedTransaction {
@@ -90,7 +194,7 @@ impl VersionedTransaction {
     pub fn try_new<T: Signers + ?Sized>(
         message: VersionedMessage,
         keypairs: &T,
-    ) -> std::result::Result<Self, SignerError> {
+    ) -> Result<Self, SignerError> {
         let static_account_keys = message.static_account_keys();
         if static_account_keys.len() < message.header().num_required_signatures as usize {
             return Err(SignerError::InvalidInput("invalid message".to_string()));
@@ -115,7 +219,7 @@ impl VersionedTransaction {
                     .position(|key| key == signer_key)
                     .ok_or(SignerError::KeypairPubkeyMismatch)
             })
-            .collect::<std::result::Result<_, SignerError>>()?;
+            .collect::<Result<_, SignerError>>()?;
 
         let unordered_signatures = keypairs.try_sign_message(&message_data)?;
         let signatures: Vec<Signature> = signature_indexes
@@ -126,7 +230,7 @@ impl VersionedTransaction {
                     .copied()
                     .ok_or_else(|| SignerError::InvalidInput("invalid keypairs".to_string()))
             })
-            .collect::<std::result::Result<_, SignerError>>()?;
+            .collect::<Result<_, SignerError>>()?;
 
         Ok(Self {
             signatures,
@@ -134,13 +238,13 @@ impl VersionedTransaction {
         })
     }
 
-    pub fn sanitize(&self) -> std::result::Result<(), SanitizeError> {
+    pub fn sanitize(&self) -> Result<(), SanitizeError> {
         self.message.sanitize()?;
         self.sanitize_signatures()?;
         Ok(())
     }
 
-    pub(crate) fn sanitize_signatures(&self) -> std::result::Result<(), SanitizeError> {
+    pub(crate) fn sanitize_signatures(&self) -> Result<(), SanitizeError> {
         Self::sanitize_signatures_inner(
             usize::from(self.message.header().num_required_signatures),
             self.message.static_account_keys().len(),
@@ -152,7 +256,7 @@ impl VersionedTransaction {
         num_required_signatures: usize,
         num_static_account_keys: usize,
         num_signatures: usize,
-    ) -> std::result::Result<(), SanitizeError> {
+    ) -> Result<(), SanitizeError> {
         match num_required_signatures.cmp(&num_signatures) {
             Ordering::Greater => Err(SanitizeError::IndexOutOfBounds),
             Ordering::Less => Err(SanitizeError::InvalidValue),
@@ -362,6 +466,7 @@ unsafe impl<'de, C: Config> SchemaRead<'de, C> for VersionedTransaction {
 mod tests {
     use {
         super::*,
+        alloc::vec,
         solana_address::{Address, ADDRESS_BYTES},
         solana_hash::Hash,
         solana_instruction::{AccountMeta, Instruction},

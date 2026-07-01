@@ -33,7 +33,7 @@ solana-derivation-path = { workspace = true, optional = true }
 solana-seed-derivable = { workspace = true, optional = true }
 solana-seed-phrase = { workspace = true }
 solana-signature = { workspace = true, features = ["std", "verify"] }
-solana-signer = { workspace = true }
+solana-signer = { workspace = true, features = ["std"] }
 
 [dev-dependencies]
 serde_json = { workspace = true }

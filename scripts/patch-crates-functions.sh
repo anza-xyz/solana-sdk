@@ -39,6 +39,7 @@ all_crate_dirs=(
   frozen-abi
   frozen-abi-macro
   genesis-config
+  get-sysvar
   hard-forks
   hash
   hash-512
@@ -95,6 +96,7 @@ all_crate_dirs=(
   slot-hashes
   slot-history
   stable-layout
+  stake-history
   system-transaction
   sysvar
   sysvar-id

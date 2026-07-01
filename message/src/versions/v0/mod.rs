@@ -13,20 +13,21 @@ pub use loaded::*;
 #[cfg(feature = "serde")]
 use serde_derive::{Deserialize, Serialize};
 #[cfg(feature = "frozen-abi")]
-use solana_frozen_abi_macro::AbiExample;
+use solana_frozen_abi_macro::{frozen_abi, AbiExample, StableAbi, StableAbiSample};
 use {
     crate::{
         compiled_instruction::CompiledInstruction,
         compiled_keys::{CompileError, CompiledKeys},
         AccountKeys, AddressLookupTableAccount, MessageHeader,
     },
+    alloc::vec::Vec,
     solana_address::Address,
     solana_hash::Hash,
     solana_instruction::Instruction,
     solana_sanitize::SanitizeError,
-    solana_sdk_ids::bpf_loader_upgradeable,
-    std::collections::HashSet,
 };
+#[cfg(feature = "std")]
+use {solana_sdk_ids::bpf_loader_upgradeable, std::collections::HashSet};
 #[cfg(feature = "wincode")]
 use {
     solana_short_vec::ShortU16,
@@ -37,7 +38,15 @@ mod loaded;
 
 /// Address table lookups describe an on-chain address lookup table to use
 /// for loading more readonly and writable accounts in a single tx.
-#[cfg_attr(feature = "frozen-abi", derive(AbiExample))]
+#[cfg_attr(
+    feature = "frozen-abi",
+    derive(AbiExample, StableAbi, StableAbiSample),
+    frozen_abi(
+        abi_digest = "BgfDMK6KNGWbvzMmSAcwMsMoL25jmE7x7CCzCeYtMnqa",
+        abi_serializer = ["bincode", "wincode"],
+        test_roundtrip = "eq_and_wire"
+    )
+)]
 #[cfg_attr(
     feature = "serde",
     derive(Deserialize, Serialize),
@@ -216,7 +225,8 @@ impl Message {
     /// #     solana_signer,
     /// #     solana_keypair,
     /// # };
-    /// # use std::borrow::Cow;
+    /// # extern crate alloc;
+    /// # use alloc::borrow::Cow;
     /// # use solana_account::Account;
     /// use anyhow::Result;
     /// use solana_address_lookup_table_interface::state::{AddressLookupTable, LookupTableMeta};
@@ -237,7 +247,7 @@ impl Message {
     /// #             pub fn try_new(
     /// #                 message: VersionedMessage,
     /// #                 _keypairs: &[&Keypair],
-    /// #             ) -> std::result::Result<Self, solana_example_mocks::solana_signer::SignerError> {
+    /// #             ) -> core::result::Result<Self, solana_example_mocks::solana_signer::SignerError> {
     /// #                 Ok(VersionedTransaction {
     /// #                     message,
     /// #                 })
@@ -345,6 +355,7 @@ impl Message {
 
     /// Returns true if the account at the specified index was requested to be
     /// writable.  This method should not be used directly.
+    #[cfg(feature = "std")]
     fn is_writable_index(&self, key_index: usize) -> bool {
         let header = &self.header;
         let num_account_keys = self.account_keys.len();
@@ -371,6 +382,7 @@ impl Message {
     }
 
     /// Returns true if any static account key is the bpf upgradeable loader
+    #[cfg(feature = "std")]
     fn is_upgradeable_loader_in_static_keys(&self) -> bool {
         self.account_keys
             .iter()
@@ -382,6 +394,7 @@ impl Message {
     /// so this should not be used by the runtime. The `reserved_account_keys`
     /// param is optional to allow clients to approximate writability without
     /// requiring fetching the latest set of reserved account keys.
+    #[cfg(feature = "std")]
     pub fn is_maybe_writable(
         &self,
         key_index: usize,
@@ -399,6 +412,7 @@ impl Message {
     /// Returns true if the account at the specified index is in the reserved
     /// account keys set. Before loading addresses, we can't detect reserved
     /// account keys properly so this shouldn't be used by the runtime.
+    #[cfg(feature = "std")]
     fn is_account_maybe_reserved(
         &self,
         key_index: usize,
@@ -416,7 +430,7 @@ impl Message {
 
 #[cfg(test)]
 mod tests {
-    use {super::*, crate::VersionedMessage, solana_instruction::AccountMeta};
+    use {super::*, crate::VersionedMessage, alloc::vec, solana_instruction::AccountMeta};
 
     #[test]
     fn test_sanitize() {

@@ -2,7 +2,7 @@
 name = "solana-instruction-error"
 description = "Solana InstructionError type."
 documentation = "https://docs.rs/solana-instruction-error"
-version = "2.3.0"
+version = "2.4.0"
 rust-version = { workspace = true }
 authors = { workspace = true }
 repository = { workspace = true }
@@ -25,10 +25,15 @@ wincode = ["dep:wincode"]
 num-traits = { workspace = true, optional = true }
 serde = { workspace = true, optional = true }
 serde_derive = { workspace = true, optional = true }
-solana-frozen-abi = { workspace = true, optional = true }
+solana-frozen-abi = { workspace = true, optional = true, features = ["frozen-abi"] }
 solana-frozen-abi-macro = { workspace = true, optional = true }
 solana-program-error = { workspace = true }
 wincode = { workspace = true, optional = true }
+
+[dev-dependencies]
+# Self-dependency enabling `wincode` so the `frozen_abi` wincode digest test can
+# serialize `InstructionError` during unit tests.
+solana-instruction-error = { path = ".", features = ["wincode"] }
 
 [lints]
 workspace = true
