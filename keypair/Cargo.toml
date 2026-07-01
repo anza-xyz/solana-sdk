@@ -2,7 +2,7 @@
 name = "solana-keypair"
 description = "Concrete implementation of a Solana `Signer`."
 documentation = "https://docs.rs/solana-keypair"
-version = "3.1.2"
+version = "3.2.0"
 rust-version = { workspace = true }
 authors = { workspace = true }
 repository = { workspace = true }
@@ -17,17 +17,19 @@ rustdoc-args = ["--cfg=docsrs"]
 
 [features]
 seed-derivable = [
+    "dep:hmac",
+    "dep:sha2",
     "dep:solana-derivation-path",
     "dep:solana-seed-derivable",
-    "dep:ed25519-dalek-bip32",
 ]
 
 [dependencies]
-ed25519-dalek = { workspace = true, features = ["rand_core"] }
-ed25519-dalek-bip32 = { workspace = true, optional = true }
+curve25519 = { workspace = true }
 five8 = { workspace = true }
 five8_core = { workspace = true } # needed to force five8 to use the newest version with `core::error::Error` support
+hmac = { workspace = true, optional = true }
 rand = { workspace = true }
+sha2 = { workspace = true, optional = true }
 solana-address = { workspace = true, features = ["decode"] }
 solana-derivation-path = { workspace = true, optional = true }
 solana-seed-derivable = { workspace = true, optional = true }

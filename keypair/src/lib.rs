@@ -1,7 +1,7 @@
 //! Concrete implementation of a Solana `Signer` from raw bytes
 #![cfg_attr(docsrs, feature(doc_cfg))]
 use {
-    ed25519_dalek::Signer as DalekSigner,
+    curve25519::ed_sigs::SigningKey,
     solana_seed_phrase::generate_seed_from_seed_phrase_and_passphrase,
     solana_signer::SignerError,
     std::{
@@ -22,7 +22,7 @@ pub mod signable;
 
 /// A vanilla Ed25519 key pair
 #[derive(Debug)]
-pub struct Keypair(ed25519_dalek::SigningKey);
+pub struct Keypair(SigningKey);
 
 pub const KEYPAIR_LENGTH: usize = 64;
 
@@ -34,22 +34,25 @@ impl Keypair {
     #[allow(clippy::new_without_default)]
     pub fn new() -> Self {
         let secret_bytes = rand::random::<[u8; Self::SECRET_KEY_LENGTH]>();
-        Self(ed25519_dalek::SigningKey::from_bytes(&secret_bytes))
+        Self(SigningKey::from_bytes(&secret_bytes))
     }
 
     /// Constructs a new `Keypair` using secret key bytes
     pub fn new_from_array(secret_key: [u8; 32]) -> Self {
-        Self(ed25519_dalek::SigningKey::from(secret_key))
+        Self(SigningKey::from(secret_key))
     }
 
     /// Returns this `Keypair` as a byte array
     pub fn to_bytes(&self) -> [u8; KEYPAIR_LENGTH] {
-        self.0.to_keypair_bytes()
+        let mut bytes = [0u8; KEYPAIR_LENGTH];
+        bytes[..Self::SECRET_KEY_LENGTH].copy_from_slice(self.secret_bytes());
+        bytes[Self::SECRET_KEY_LENGTH..].copy_from_slice(self.0.verification_key().as_ref());
+        bytes
     }
 
     /// Recovers a `Keypair` from a base58-encoded string
     pub fn try_from_base58_string(s: &str) -> Result<Self, SignatureError> {
-        let mut buf = [0u8; ed25519_dalek::KEYPAIR_LENGTH];
+        let mut buf = [0u8; KEYPAIR_LENGTH];
         five8::decode_64(s, &mut buf).map_err(SignatureError::from_source)?;
         Self::try_from(&buf[..])
     }
@@ -92,29 +95,30 @@ impl TryFrom<&[u8]> for Keypair {
     type Error = SignatureError;
 
     fn try_from(bytes: &[u8]) -> Result<Self, Self::Error> {
-        let keypair_bytes: &[u8; ed25519_dalek::KEYPAIR_LENGTH] =
-            bytes.try_into().map_err(|_| {
-                SignatureError::from_source(String::from(
-                    "candidate keypair byte array is the wrong length",
-                ))
-            })?;
-        ed25519_dalek::SigningKey::from_keypair_bytes(keypair_bytes)
-            .map_err(|_| {
-                SignatureError::from_source(String::from(
-                    "keypair bytes do not specify same pubkey as derived from their secret key",
-                ))
-            })
-            .map(Self)
+        let keypair_bytes: &[u8; KEYPAIR_LENGTH] = bytes.try_into().map_err(|_| {
+            SignatureError::from_source(String::from(
+                "candidate keypair byte array is the wrong length",
+            ))
+        })?;
+        let mut secret_key = [0u8; Keypair::SECRET_KEY_LENGTH];
+        secret_key.copy_from_slice(&keypair_bytes[..Keypair::SECRET_KEY_LENGTH]);
+        let signing_key = SigningKey::from_bytes(&secret_key);
+        if signing_key.verification_key().as_ref() != &keypair_bytes[Keypair::SECRET_KEY_LENGTH..] {
+            return Err(SignatureError::from_source(String::from(
+                "keypair bytes do not specify same pubkey as derived from their secret key",
+            )));
+        }
+        Ok(Self(signing_key))
     }
 }
 
 #[cfg(test)]
-static_assertions::const_assert_eq!(Keypair::SECRET_KEY_LENGTH, ed25519_dalek::SECRET_KEY_LENGTH);
+static_assertions::const_assert_eq!(KEYPAIR_LENGTH, Keypair::SECRET_KEY_LENGTH * 2);
 
 impl Signer for Keypair {
     #[inline]
     fn pubkey(&self) -> Address {
-        Address::from(self.0.verifying_key().to_bytes())
+        Address::from(<[u8; 32]>::from(self.0.verification_key()))
     }
 
     fn try_pubkey(&self) -> Result<Address, SignerError> {
@@ -181,18 +185,13 @@ pub fn read_keypair<R: Read>(reader: &mut R) -> Result<Keypair, Box<dyn error::E
     let contents = &trimmed[1..trimmed.len() - 1];
     let elements_vec: Vec<&str> = contents.split(',').map(|s| s.trim()).collect();
     let len = elements_vec.len();
-    let elements: [&str; ed25519_dalek::KEYPAIR_LENGTH] =
-        elements_vec.try_into().map_err(|_| {
-            std::io::Error::new(
-                std::io::ErrorKind::InvalidData,
-                format!(
-                    "Expected {} elements, found {}",
-                    ed25519_dalek::KEYPAIR_LENGTH,
-                    len
-                ),
-            )
-        })?;
-    let mut out = [0u8; ed25519_dalek::KEYPAIR_LENGTH];
+    let elements: [&str; KEYPAIR_LENGTH] = elements_vec.try_into().map_err(|_| {
+        std::io::Error::new(
+            std::io::ErrorKind::InvalidData,
+            format!("Expected {} elements, found {}", KEYPAIR_LENGTH, len),
+        )
+    })?;
+    let mut out = [0u8; KEYPAIR_LENGTH];
     for (idx, element) in elements.into_iter().enumerate() {
         let parsed: u8 = element.parse()?;
         out[idx] = parsed;
@@ -241,12 +240,12 @@ pub fn write_keypair_file<F: AsRef<Path>>(
 
 /// Constructs a `Keypair` from caller-provided seed entropy
 pub fn keypair_from_seed(seed: &[u8]) -> Result<Keypair, Box<dyn error::Error>> {
-    if seed.len() < ed25519_dalek::SECRET_KEY_LENGTH {
+    if seed.len() < Keypair::SECRET_KEY_LENGTH {
         return Err("Seed is too short".into());
     }
-    // this won't fail as we've already checked the length
-    let secret_key = ed25519_dalek::SecretKey::try_from(&seed[..ed25519_dalek::SECRET_KEY_LENGTH])?;
-    Ok(Keypair(ed25519_dalek::SigningKey::from(secret_key)))
+    let mut secret_key = [0u8; Keypair::SECRET_KEY_LENGTH];
+    secret_key.copy_from_slice(&seed[..Keypair::SECRET_KEY_LENGTH]);
+    Ok(Keypair(SigningKey::from(secret_key)))
 }
 
 pub fn keypair_from_seed_phrase_and_passphrase(

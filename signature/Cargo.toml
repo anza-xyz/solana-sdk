@@ -2,11 +2,7 @@
 name = "solana-signature"
 description = "Solana 64-byte signature type"
 documentation = "https://docs.rs/solana-signature"
-<<<<<<< HEAD
 version = "3.5.0"
-=======
-version = "3.4.1"
->>>>>>> upstream
 rust-version = { workspace = true }
 authors = { workspace = true }
 repository = { workspace = true }
