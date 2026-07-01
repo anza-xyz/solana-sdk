@@ -645,7 +645,9 @@ mod test {
         };
         let unaligned = &mut bytes[1..];
         assert_ne!(
-            unaligned.as_ptr().align_offset(core::mem::align_of::<usize>()),
+            unaligned
+                .as_ptr()
+                .align_offset(core::mem::align_of::<usize>()),
             0,
             "test setup: slice must be misaligned"
         );
