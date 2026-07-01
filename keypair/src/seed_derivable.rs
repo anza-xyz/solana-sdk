@@ -83,41 +83,34 @@ fn bip32_derived_keypair(
 mod tests {
     use super::*;
 
-    fn hex_to_bytes<const N: usize>(hex: &str) -> [u8; N] {
-        assert_eq!(hex.len(), N * 2);
-        let mut bytes = [0u8; N];
-        for (byte, chunk) in bytes.iter_mut().zip(hex.as_bytes().chunks_exact(2)) {
-            let high = hex_value(chunk[0]);
-            let low = hex_value(chunk[1]);
-            *byte = (high << 4) | low;
-        }
-        bytes
-    }
-
-    fn hex_value(byte: u8) -> u8 {
-        match byte {
-            b'0'..=b'9' => byte - b'0',
-            b'a'..=b'f' => byte - b'a' + 10,
-            b'A'..=b'F' => byte - b'A' + 10,
-            _ => panic!("invalid hex byte"),
-        }
-    }
-
     #[test]
     fn test_bip32_derivation_vector() {
-        let seed = hex_to_bytes::<16>("000102030405060708090a0b0c0d0e0f");
+        let seed = [
+            0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d,
+            0x0e, 0x0f,
+        ];
         let path = DerivationPath::from_absolute_path_str("m/0'/1'/2'/2'/1000000000'")
             .expect("valid derivation path");
         let keypair = keypair_from_seed_and_derivation_path(&seed, Some(path)).unwrap();
         let keypair_bytes = keypair.to_bytes();
+        let expected_secret_key = [
+            0x8f, 0x94, 0xd3, 0x94, 0xa8, 0xe8, 0xfd, 0x6b, 0x1b, 0xc2, 0xf3, 0xf4, 0x9f, 0x5c,
+            0x47, 0xe3, 0x85, 0x28, 0x1d, 0x5c, 0x17, 0xe6, 0x53, 0x24, 0xb0, 0xf6, 0x24, 0x83,
+            0xe3, 0x7e, 0x87, 0x93,
+        ];
+        let expected_public_key = [
+            0x3c, 0x24, 0xda, 0x04, 0x94, 0x51, 0x55, 0x5d, 0x51, 0xa7, 0x01, 0x4a, 0x37, 0x33,
+            0x7a, 0xa4, 0xe1, 0x2d, 0x41, 0xe4, 0x85, 0xab, 0xcc, 0xfa, 0x46, 0xb4, 0x7d, 0xfb,
+            0x2a, 0xf5, 0x4b, 0x7a,
+        ];
 
         assert_eq!(
             &keypair_bytes[..Keypair::SECRET_KEY_LENGTH],
-            hex_to_bytes::<32>("8f94d394a8e8fd6b1bc2f3f49f5c47e385281d5c17e65324b0f62483e37e8793")
+            expected_secret_key.as_slice()
         );
         assert_eq!(
             &keypair_bytes[Keypair::SECRET_KEY_LENGTH..],
-            hex_to_bytes::<32>("3c24da049451555d51a7014a37337aa4e12d41e485abccfa46b47dfb2af54b7a")
+            expected_public_key.as_slice()
         );
     }
 }
