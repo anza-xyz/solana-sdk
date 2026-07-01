@@ -150,7 +150,7 @@ impl Signature {
     /// `pubkey_bytes` is the signer's public key, and `message_bytes` is the
     /// exact message that was signed. The iterator must know its exact length.
     ///
-    /// FIXME: since SIMD-0376 activates ZIP-215 verification, we can use batch
+    /// TODO: since SIMD-0376 activates ZIP-215 verification, we can use batch
     /// verification for non-strict verification.
     /// This will be in a follow-up PR.
     ///
