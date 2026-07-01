@@ -89,7 +89,8 @@ impl Signature {
 
 #[cfg(any(test, feature = "verify"))]
 impl Signature {
-    // TODO: switch to non-strict when SIMD-0453 is merged, and switch [`Self::verify`] to call this method.
+    // TODO: switch to non-strict since SIMD-0376 is merged, and switch [`Self::verify`] to call this method.
+    /// This will be in a follow-up PR.
     pub(self) fn verify_verbose(
         &self,
         pubkey_bytes: &[u8],
@@ -101,7 +102,8 @@ impl Signature {
         publickey.verify_dalek(&signature, message_bytes)
     }
 
-    // TODO: remove when SIMD-0453 is merged
+    // TODO: remove since SIMD-0376 is merged
+    /// This will be in a follow-up PR.
     pub(self) fn verify_non_strict_verbose(
         &self,
         pubkey_bytes: &[u8],
@@ -119,7 +121,8 @@ impl Signature {
     /// is the exact message that was signed. Returns `false` if verification
     /// fails or the public key cannot be parsed.
     ///
-    /// TODO: switch to non-strict when SIMD-0453 is merged.
+    /// TODO: switch to zebra since SIMD-0376 is merged.
+    /// This will be in a follow-up PR.
     pub fn verify(&self, pubkey_bytes: &[u8], message_bytes: &[u8]) -> bool {
         self.verify_verbose(pubkey_bytes, message_bytes).is_ok()
     }
@@ -129,7 +132,8 @@ impl Signature {
     /// `pubkey_bytes` is the signer's Ed25519 public key, and `message_bytes`
     /// is the exact message that was signed.
     ///
-    /// TODO: remove when SIMD-0453 is merged.
+    /// TODO: remove since SIMD-0376 is merged.
+    /// This will be in a follow-up PR.
     pub fn verify_non_strict(&self, pubkey_bytes: &[u8], message_bytes: &[u8]) -> bool {
         self.verify_non_strict_verbose(pubkey_bytes, message_bytes)
             .is_ok()
@@ -146,9 +150,9 @@ impl Signature {
     /// `pubkey_bytes` is the signer's public key, and `message_bytes` is the
     /// exact message that was signed. The iterator must know its exact length.
     ///
-    /// Until SIMD-0453 activates ZIP-215 verification, this method verifies
-    /// each item with [`Self::verify`] so batch verification preserves the same
-    /// strict semantics as individual verification.
+    /// FIXME: since SIMD-0376 activates ZIP-215 verification, we can use batch
+    /// verification for non-strict verification.
+    /// This will be in a follow-up PR.
     ///
     /// Returns `false` if any signature fails to verify, any public key or
     /// signature cannot be parsed, or batch verification fails.
