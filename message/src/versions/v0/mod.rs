@@ -74,7 +74,7 @@ pub struct MessageAddressTableLookup {
 ///
 /// See the crate documentation for further description.
 ///
-#[cfg_attr(feature = "frozen-abi", derive(AbiExample))]
+#[cfg_attr(feature = "frozen-abi", derive(AbiExample, StableAbi, StableAbiSample))]
 #[cfg_attr(
     feature = "serde",
     derive(Deserialize, Serialize),

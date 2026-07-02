@@ -14,7 +14,7 @@
 #[cfg(feature = "serde")]
 use serde_derive::{Deserialize, Serialize};
 #[cfg(feature = "frozen-abi")]
-use solana_frozen_abi_macro::{frozen_abi, AbiExample};
+use solana_frozen_abi_macro::{frozen_abi, AbiExample, StableAbi, StableAbiSample};
 #[cfg(feature = "std")]
 use std::collections::HashSet;
 use {
@@ -61,6 +61,25 @@ fn compile_instructions(ixs: &[Instruction], keys: &[Address]) -> Vec<CompiledIn
     ixs.iter().map(|ix| compile_instruction(ix, keys)).collect()
 }
 
+/// Samples a `MessageHeader` whose `num_required_signatures` cannot be mistaken
+/// for a version prefix.
+///
+/// The legacy message format has no version prefix, so its first serialized byte
+/// (the header's `num_required_signatures`) must stay below
+/// `MESSAGE_VERSION_PREFIX`, otherwise it would decode as a versioned message.
+/// Masking the prefix bit keeps a sampled legacy message self-consistent across
+/// a serialize/deserialize roundtrip.
+#[cfg(feature = "frozen-abi")]
+fn sample_legacy_header(
+    rng: &mut (impl solana_frozen_abi::rand::RngCore + ?Sized),
+) -> MessageHeader {
+    use solana_frozen_abi::stable_abi::StableAbi;
+
+    let mut header = MessageHeader::random(rng);
+    header.num_required_signatures &= !crate::MESSAGE_VERSION_PREFIX;
+    header
+}
+
 /// A Solana transaction message (legacy).
 ///
 /// See the crate documentation for further description.
@@ -78,7 +97,7 @@ fn compile_instructions(ixs: &[Instruction], keys: &[Address]) -> Vec<CompiledIn
 #[cfg_attr(
     feature = "frozen-abi",
     frozen_abi(digest = "GXpvLNiMCnjnZpQEDKpc2NBpsqmRnAX7ZTCy9JmvG8Dg"),
-    derive(AbiExample)
+    derive(AbiExample, StableAbi, StableAbiSample)
 )]
 #[cfg_attr(
     feature = "serde",
@@ -90,6 +109,10 @@ fn compile_instructions(ixs: &[Instruction], keys: &[Address]) -> Vec<CompiledIn
 pub struct Message {
     /// The message header, identifying signed and read-only `account_keys`.
     // NOTE: Serialization-related changes must be paired with the direct read at sigverify.
+    #[cfg_attr(
+        feature = "frozen-abi",
+        stable_abi_sample(with = "sample_legacy_header(rng)")
+    )]
     pub header: MessageHeader,
 
     /// All the account keys used by this transaction.
