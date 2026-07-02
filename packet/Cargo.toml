@@ -25,7 +25,12 @@ serde = [
     "dep:serde_with",
     "solana-pubkey/serde",
 ]
-frozen-abi = ["dep:solana-frozen-abi", "dep:solana-frozen-abi-macro"]
+frozen-abi = [
+    "dep:solana-frozen-abi",
+    "dep:solana-frozen-abi-macro",
+    "serde",
+    "solana-pubkey/frozen-abi",
+]
 
 [dependencies]
 bincode = { workspace = true, optional = true }
