@@ -25,19 +25,19 @@ parallel = ["std", "batch-verify", "dep:rayon"]
 rand = ["dep:rand"]
 serde = ["dep:serde", "dep:serde_derive", "dep:serde-big-array"]
 std = ["alloc", "serde?/std", "wincode?/std"]
-verify = ["dep:curve25519"]
+verify = ["dep:solana-ed25519"]
 wincode = ["dep:wincode"]
 
 [dependencies]
 bytemuck = { workspace = true, optional = true }
 bytemuck_derive = { workspace = true, optional = true }
-curve25519 = { workspace = true, optional = true }
 five8 = { workspace = true }
 rand = { workspace = true, optional = true }
 rayon = { workspace = true, optional = true }
 serde = { workspace = true, optional = true }
 serde-big-array = { workspace = true, optional = true }
 serde_derive = { workspace = true, optional = true }
+solana-ed25519 = { workspace = true, optional = true }
 solana-frozen-abi = { workspace = true, optional = true, features = ["frozen-abi"] }
 solana-frozen-abi-macro = { workspace = true, optional = true, features = ["frozen-abi"] }
 solana-sanitize = { workspace = true }
@@ -47,7 +47,7 @@ wincode = { workspace = true, optional = true }
 bincode = { workspace = true }
 bs58 = { workspace = true, features = ["std"] }
 criterion = { workspace = true }
-curve25519 = { workspace = true }
+solana-ed25519 = { workspace = true }
 serde_derive = { workspace = true }
 serde_json = { workspace = true }
 solana-pubkey = { workspace = true, features = ["std"] }
