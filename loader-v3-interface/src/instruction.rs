@@ -233,7 +233,11 @@ unsafe impl<'de, C: ConfigCore, const DEFAULT: bool> SchemaRead<'de, C>
             Ok(0) => false,
             Ok(1) => true,
             Ok(byte) => return Err(invalid_bool_encoding(byte)),
-            Err(_) => DEFAULT,
+            // A reader that reaches the end without any byte means the trailing
+            // `bool` was simply absent, so fall back to `DEFAULT`. Any other read
+            // error is a genuine failure and must be surfaced.
+            Err(wincode::io::ReadError::ReadSizeLimit(_)) => DEFAULT,
+            Err(err) => return Err(err.into()),
         };
         dst.write(value);
         Ok(())
@@ -747,5 +751,48 @@ mod tests {
         data.extend_from_slice(&5u32.to_le_bytes()); // Discriminator
         data.push(2);
         assert_invalid_trailing_bool(&data);
+    }
+
+    /// A read error other than a clean end-of-input (`ReadError::ReadSizeLimit`,
+    /// e.g. the `PermissionDenied` from #808) must be surfaced, not silently
+    /// treated as a missing trailing `bool`.
+    #[test]
+    fn optional_trailing_bool_surfaces_non_eof_read_error() {
+        use {
+            core::mem::MaybeUninit,
+            wincode::io::{BorrowKind, ReadError, ReadResult, Reader},
+        };
+
+        /// Yields `data`, then fails every further read with an error that is not
+        /// `ReadSizeLimit`, standing in for a genuine reader failure.
+        struct FailAfter<'a> {
+            data: &'a [u8],
+        }
+        impl<'a> Reader<'a> for FailAfter<'a> {
+            fn copy_into_slice(&mut self, dst: &mut [MaybeUninit<u8>]) -> ReadResult<()> {
+                if dst.len() > self.data.len() {
+                    return Err(ReadError::UnsupportedBorrow(BorrowKind::CallSite));
+                }
+                let (head, rest) = self.data.split_at(dst.len());
+                for (slot, &byte) in dst.iter_mut().zip(head) {
+                    slot.write(byte);
+                }
+                self.data = rest;
+                Ok(())
+            }
+        }
+
+        // A `DeployWithMaxDataLen` payload missing its trailing `close_buffer`
+        // byte, where reading that byte fails rather than reaching a clean end.
+        let mut prefix = Vec::new();
+        prefix.extend_from_slice(&2u32.to_le_bytes()); // Discriminator
+        prefix.extend_from_slice(&42u64.to_le_bytes()); // max_data_len
+        let reader = FailAfter { data: &prefix };
+
+        let result = wincode::deserialize_from::<UpgradeableLoaderInstruction>(reader);
+        assert!(
+            result.is_err(),
+            "a non-EOF read error must be surfaced, got {result:?}",
+        );
     }
 }
