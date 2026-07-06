@@ -18,6 +18,15 @@ use {
         slice::SliceIndex,
     },
 };
+#[cfg(feature = "wincode")]
+use {
+    core::mem::MaybeUninit,
+    wincode::{
+        config::ConfigCore,
+        io::{Reader, Writer},
+        ReadResult, SchemaRead, SchemaWrite, TypeMeta, WriteResult,
+    },
+};
 #[cfg(feature = "serde")]
 use {
     serde_derive::{Deserialize, Serialize},
@@ -65,6 +74,7 @@ bitflags! {
 }
 
 #[cfg_attr(feature = "frozen-abi", derive(AbiExample, StableAbi, StableAbiSample))]
+#[cfg_attr(feature = "wincode", derive(SchemaWrite, SchemaRead))]
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[derive(Clone, Debug, PartialEq, Eq)]
 #[repr(C)]
@@ -102,6 +112,86 @@ impl ::solana_frozen_abi::stable_abi::StableAbi for PacketFlags {
     }
 }
 
+// `PacketFlags` is transparent over a `u8`, so encode it as its raw bits.
+#[cfg(feature = "wincode")]
+unsafe impl<C: ConfigCore> SchemaWrite<C> for PacketFlags {
+    type Src = Self;
+
+    const TYPE_META: TypeMeta = <u8 as SchemaWrite<C>>::TYPE_META;
+
+    fn size_of(src: &Self::Src) -> WriteResult<usize> {
+        <u8 as SchemaWrite<C>>::size_of(&src.bits())
+    }
+
+    fn write(writer: impl Writer, src: &Self::Src) -> WriteResult<()> {
+        <u8 as SchemaWrite<C>>::write(writer, &src.bits())
+    }
+}
+
+#[cfg(feature = "wincode")]
+unsafe impl<'de, C: ConfigCore> SchemaRead<'de, C> for PacketFlags {
+    type Dst = Self;
+
+    const TYPE_META: TypeMeta = <u8 as SchemaRead<'de, C>>::TYPE_META;
+
+    fn read(reader: impl Reader<'de>, dst: &mut MaybeUninit<Self::Dst>) -> ReadResult<()> {
+        let bits = <u8 as SchemaRead<'de, C>>::get(reader)?;
+        // Reject bytes that set bits not backed by a defined flag.
+        let flags =
+            Self::from_bits(bits).ok_or(wincode::error::invalid_value("invalid PacketFlags"))?;
+        dst.write(flags);
+        Ok(())
+    }
+}
+
+/// Wincode schema adapter for a fixed `[u8; N]` written as bincode serializes it
+/// through `serde`'s `serialize_bytes`: a `u64` length prefix followed by the raw
+/// bytes (a bare `[u8; N]` is otherwise written without a length).
+#[cfg(feature = "wincode")]
+struct LenPrefixedByteArray<const N: usize>;
+
+#[cfg(feature = "wincode")]
+unsafe impl<const N: usize, C: ConfigCore> SchemaWrite<C> for LenPrefixedByteArray<N> {
+    type Src = [u8; N];
+
+    const TYPE_META: TypeMeta = TypeMeta::join_types([
+        <u64 as SchemaWrite<C>>::TYPE_META,
+        <[u8; N] as SchemaWrite<C>>::TYPE_META,
+    ])
+    .keep_zero_copy(false);
+
+    fn size_of(src: &Self::Src) -> WriteResult<usize> {
+        Ok(<u64 as SchemaWrite<C>>::size_of(&(N as u64))?
+            .saturating_add(<[u8; N] as SchemaWrite<C>>::size_of(src)?))
+    }
+
+    fn write(mut writer: impl Writer, src: &Self::Src) -> WriteResult<()> {
+        <u64 as SchemaWrite<C>>::write(writer.by_ref(), &(N as u64))?;
+        <[u8; N] as SchemaWrite<C>>::write(writer, src)
+    }
+}
+
+#[cfg(feature = "wincode")]
+unsafe impl<'de, const N: usize, C: ConfigCore> SchemaRead<'de, C> for LenPrefixedByteArray<N> {
+    type Dst = [u8; N];
+
+    const TYPE_META: TypeMeta = TypeMeta::join_types([
+        <u64 as SchemaRead<'de, C>>::TYPE_META,
+        <[u8; N] as SchemaRead<'de, C>>::TYPE_META,
+    ])
+    .keep_zero_copy(false);
+
+    fn read(mut reader: impl Reader<'de>, dst: &mut MaybeUninit<Self::Dst>) -> ReadResult<()> {
+        let len = <u64 as SchemaRead<'de, C>>::get(reader.by_ref())?;
+        if len != N as u64 {
+            return Err(wincode::error::invalid_value(
+                "unexpected packet buffer length",
+            ));
+        }
+        <[u8; N] as SchemaRead<'de, C>>::read(reader, dst)
+    }
+}
+
 // serde_as is used as a work around because array isn't supported by serde
 // (and serde_bytes).
 //
@@ -136,10 +226,11 @@ impl ::solana_frozen_abi::stable_abi::StableAbi for PacketFlags {
     derive(AbiExample, StableAbi, StableAbiSample),
     frozen_abi(
         abi_digest = "5MtHLJ3g6mJfsz9KfxnUgjksRUXSETinR9jZZiYuE7fh",
-        abi_serializer = "bincode",
+        abi_serializer = ["bincode", "wincode"],
         test_roundtrip = "eq_and_wire"
     )
 )]
+#[cfg_attr(feature = "wincode", derive(SchemaWrite, SchemaRead))]
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[derive(Clone, Eq)]
 #[repr(C)]
@@ -147,6 +238,10 @@ pub struct Packet {
     // Bytes past Packet.meta.size are not valid to read from.
     // Use Packet.data(index) to read from the buffer.
     #[cfg_attr(feature = "serde", serde_as(as = "Bytes"))]
+    #[cfg_attr(
+        feature = "wincode",
+        wincode(with = "LenPrefixedByteArray<PACKET_DATA_SIZE>")
+    )]
     buffer: [u8; PACKET_DATA_SIZE],
     meta: Meta,
 }
