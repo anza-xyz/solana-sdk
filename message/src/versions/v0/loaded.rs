@@ -31,6 +31,25 @@ pub struct LoadedAddresses {
     pub readonly: Vec<Address>,
 }
 
+/// Borrowed view of addresses loaded from on-chain lookup tables, split
+/// by readonly and writable.
+#[derive(Clone, Copy, Default, Debug, PartialEq, Eq)]
+pub struct LoadedAddressesView<'a> {
+    /// List of addresses for writable loaded accounts
+    pub writable: &'a [Address],
+    /// List of addresses for read-only loaded accounts
+    pub readonly: &'a [Address],
+}
+
+impl<'a> From<&'a LoadedAddresses> for LoadedAddressesView<'a> {
+    fn from(loaded_addresses: &'a LoadedAddresses) -> Self {
+        Self {
+            writable: &loaded_addresses.writable,
+            readonly: &loaded_addresses.readonly,
+        }
+    }
+}
+
 impl FromIterator<LoadedAddresses> for LoadedAddresses {
     fn from_iter<T: IntoIterator<Item = LoadedAddresses>>(iter: T) -> Self {
         let (writable, readonly): (Vec<Vec<Address>>, Vec<Vec<Address>>) = iter
