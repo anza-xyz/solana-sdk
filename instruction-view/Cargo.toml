@@ -2,8 +2,8 @@
 name = "solana-instruction-view"
 description = "Lightweight instruction representation"
 documentation = "https://docs.rs/solana-instruction-view"
-version = "1.0.0"
-rust-version = "1.82.0"
+version = "2.1.0"
+rust-version = { workspace = true }
 authors = { workspace = true }
 repository = { workspace = true }
 homepage = { workspace = true }
@@ -26,6 +26,9 @@ solana-program-error = { workspace = true, optional = true }
 
 [target.'cfg(any(target_os = "solana", target_arch = "bpf"))'.dependencies]
 solana-define-syscall = { workspace = true, optional = true }
+
+[dev-dependencies]
+solana-instruction-view = { path = ".", features = ["cpi"] }
 
 [lints]
 workspace = true

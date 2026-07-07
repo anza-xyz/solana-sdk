@@ -2,7 +2,7 @@
 name = "solana-file-download"
 description = "Solana File Download Utility"
 documentation = "https://docs.rs/solana-file-download"
-version = "3.1.0"
+version = "3.1.4"
 authors = { workspace = true }
 repository = { workspace = true }
 homepage = { workspace = true }
@@ -11,9 +11,16 @@ edition = { workspace = true }
 
 [package.metadata.docs.rs]
 targets = ["x86_64-unknown-linux-gnu"]
+all-features = true
+rustdoc-args = ["--cfg=docsrs"]
+
+[features]
+default = ["native-tls"]
+rustls = ["reqwest/rustls"]
+native-tls = ["reqwest/native-tls"]
 
 [dependencies]
 console = { workspace = true }
 indicatif = { workspace = true }
 log = { workspace = true }
-reqwest = { workspace = true, features = ["blocking", "brotli", "deflate", "gzip", "rustls-tls", "json"] }
+reqwest = { workspace = true, features = ["blocking", "brotli", "deflate", "gzip", "json"] }

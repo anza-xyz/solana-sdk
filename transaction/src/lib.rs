@@ -1,5 +1,6 @@
 #![cfg_attr(feature = "frozen-abi", feature(min_specialization))]
 #![cfg_attr(docsrs, feature(doc_cfg))]
+#![no_std]
 //! Atomically-committed sequences of instructions.
 //!
 //! While [`Instruction`]s are the basic unit of computation in Solana, they are
@@ -110,6 +111,20 @@
 //! # Ok::<(), anyhow::Error>(())
 //! ```
 
+extern crate alloc;
+#[cfg(any(feature = "frozen-abi", feature = "std"))]
+extern crate std;
+
+#[cfg(feature = "frozen-abi")]
+use solana_frozen_abi_macro::{frozen_abi, AbiExample, StableAbi};
+#[cfg(feature = "wincode")]
+pub use solana_signer::{signers::Signers, SignerError};
+use {
+    alloc::{vec, vec::Vec},
+    solana_message::inline_nonce::is_advance_nonce_instruction_data,
+    solana_sanitize::{Sanitize, SanitizeError},
+    solana_sdk_ids::system_program,
+};
 #[cfg(feature = "serde")]
 use {
     serde_derive::{Deserialize, Serialize},
@@ -126,16 +141,11 @@ pub use {
 #[cfg(feature = "wincode")]
 pub use {
     solana_hash::Hash,
-    solana_signer::{signers::Signers, SignerError},
-    wincode::{containers, len::ShortU16, SchemaRead, SchemaWrite},
-};
-use {
-    solana_message::inline_nonce::is_advance_nonce_instruction_data,
-    solana_sanitize::{Sanitize, SanitizeError},
-    solana_sdk_ids::system_program,
-    std::result,
+    solana_short_vec::ShortU16,
+    wincode::{containers, SchemaRead, SchemaWrite},
 };
 
+#[cfg(feature = "std")]
 pub mod sanitized;
 pub mod simple_vote_transaction_checker;
 pub mod versioned;
@@ -177,8 +187,12 @@ const NONCED_TX_MARKER_IX_INDEX: u8 = 0;
 /// redundantly specifying the fee-payer is not strictly required.
 #[cfg_attr(
     feature = "frozen-abi",
-    derive(solana_frozen_abi_macro::AbiExample),
-    solana_frozen_abi_macro::frozen_abi(digest = "ADDDuk3dAZJ5hDxue8v4btH7nhEyngxUpXaC7A4k8gyQ")
+    derive(AbiExample, StableAbi),
+    frozen_abi(
+        api_digest = "ADDDuk3dAZJ5hDxue8v4btH7nhEyngxUpXaC7A4k8gyQ",
+        abi_digest = "nqwtny8tEU2TSSJb5Jf46fJjudMN1iWG3GnMLVLjW7X",
+        abi_serializer = "wincode"
+    )
 )]
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[cfg_attr(feature = "wincode", derive(SchemaWrite, SchemaRead))]
@@ -201,8 +215,41 @@ pub struct Transaction {
     pub message: Message,
 }
 
+#[cfg(feature = "frozen-abi")]
+impl solana_frozen_abi::rand::prelude::Distribution<Transaction>
+    for solana_frozen_abi::rand::distr::StandardUniform
+{
+    fn sample<R: solana_frozen_abi::rand::Rng + ?Sized>(&self, rng: &mut R) -> Transaction {
+        let signatures: Vec<Signature> = (0..rng.random_range(1..4))
+            .map(|_| Signature::from(core::array::from_fn(|_| rng.random::<u8>())))
+            .collect();
+        let accounts: Vec<AccountMeta> = (0..rng.random_range(1..6))
+            .map(|_| AccountMeta {
+                pubkey: Address::new_from_array(rng.random()),
+                is_signer: rng.random(),
+                is_writable: rng.random(),
+            })
+            .collect();
+        let data: Vec<u8> = (0..rng.random_range(1..100))
+            .map(|_| rng.random())
+            .collect();
+        let instructions: Vec<Instruction> = (0..rng.random_range(1..6))
+            .map(|_| Instruction {
+                program_id: Address::new_from_array(rng.random()),
+                accounts: accounts.clone(),
+                data: data.clone(),
+            })
+            .collect();
+
+        Transaction {
+            signatures,
+            message: Message::new(&instructions, Some(&Address::new_from_array(rng.random()))),
+        }
+    }
+}
+
 impl Sanitize for Transaction {
-    fn sanitize(&self) -> result::Result<(), SanitizeError> {
+    fn sanitize(&self) -> Result<(), SanitizeError> {
         if self.message.header.num_required_signatures as usize > self.signatures.len() {
             return Err(SanitizeError::IndexOutOfBounds);
         }
@@ -861,7 +908,7 @@ impl Transaction {
         &mut self,
         keypairs: &T,
         recent_blockhash: Hash,
-    ) -> result::Result<(), SignerError> {
+    ) -> Result<(), SignerError> {
         self.try_partial_sign(keypairs, recent_blockhash)?;
 
         if !self.is_signed() {
@@ -925,7 +972,7 @@ impl Transaction {
         &mut self,
         keypairs: &T,
         recent_blockhash: Hash,
-    ) -> result::Result<(), SignerError> {
+    ) -> Result<(), SignerError> {
         let positions: Vec<usize> = self
             .get_signing_keypair_positions(&keypairs.pubkeys())?
             .into_iter()
@@ -953,7 +1000,7 @@ impl Transaction {
         keypairs: &T,
         positions: Vec<usize>,
         recent_blockhash: Hash,
-    ) -> result::Result<(), SignerError> {
+    ) -> Result<(), SignerError> {
         // if you change the blockhash, you're re-signing...
         if recent_blockhash != self.message.recent_blockhash {
             self.message.recent_blockhash = recent_blockhash;
@@ -1110,14 +1157,15 @@ mod tests {
 
     use {
         super::*,
+        alloc::{boxed::Box, vec},
         bincode::{deserialize, serialize, serialized_size},
+        core::mem::size_of,
         solana_instruction::AccountMeta,
         solana_keypair::Keypair,
         solana_presigner::Presigner,
         solana_sha256_hasher::hash,
         solana_signer::Signer,
         solana_system_interface::instruction as system_instruction,
-        std::mem::size_of,
     };
 
     fn get_program_id(tx: &Transaction, instruction_index: usize) -> &Address {

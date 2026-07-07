@@ -1,6 +1,6 @@
 #[cfg(not(target_os = "solana"))]
 use {
-    crate::{error::BlsError, pubkey::VerifiablePubkey},
+    crate::{error::BlsError, pubkey::VerifyPop},
     blstrs::{G2Affine, G2Projective},
 };
 
@@ -15,11 +15,7 @@ pub trait AsProofOfPossessionProjective {
 #[cfg(not(target_os = "solana"))]
 pub trait VerifiableProofOfPossession: AsProofOfPossessionAffine + Sized {
     /// Verifies the proof of possession against any convertible public key type.
-    fn verify<P: VerifiablePubkey>(
-        &self,
-        pubkey: &P,
-        payload: Option<&[u8]>,
-    ) -> Result<(), BlsError> {
+    fn verify<P: VerifyPop>(&self, pubkey: &P, payload: Option<&[u8]>) -> Result<(), BlsError> {
         pubkey.verify_proof_of_possession(self, payload)
     }
 }

@@ -37,7 +37,8 @@ macro_rules! impl_bls_conversions {
         $as_projective_trait:ident, // e.g. AsPubkeyProjective
         $as_affine_trait:ident,     // e.g. AsPubkeyAffine
         $compressed_size:ident,     // e.g. BLS_PUBLIC_KEY_COMPRESSED_SIZE
-        $uncompressed_size:ident    // e.g. BLS_PUBLIC_KEY_AFFINE_SIZE
+        $uncompressed_size:ident,    // e.g. BLS_PUBLIC_KEY_AFFINE_SIZE
+        $reject_identity:expr // e.g. true for public keys, false for signatures
     ) => {
         // Math Conversions (Projective <-> Affine)
         impl From<&$projective> for $affine {
@@ -122,6 +123,11 @@ macro_rules! impl_bls_conversions {
                 let maybe_point: Option<$blstrs_affine> =
                     <$blstrs_affine>::from_uncompressed(&bytes.0).into();
                 let point = maybe_point.ok_or(crate::error::BlsError::PointConversion)?;
+                if $reject_identity
+                    && bool::from(group::prime::PrimeCurveAffine::is_identity(&point))
+                {
+                    return Err(crate::error::BlsError::PointConversion);
+                }
                 Ok(Self(point))
             }
         }
@@ -139,6 +145,11 @@ macro_rules! impl_bls_conversions {
                 let maybe_point: Option<$blstrs_affine> =
                     <$blstrs_affine>::from_compressed(&bytes.0).into();
                 let point = maybe_point.ok_or(crate::error::BlsError::PointConversion)?;
+                if $reject_identity
+                    && bool::from(group::prime::PrimeCurveAffine::is_identity(&point))
+                {
+                    return Err(crate::error::BlsError::PointConversion);
+                }
                 Ok(Self(point))
             }
         }
@@ -460,6 +471,119 @@ macro_rules! impl_add_to_accumulator {
                 let affine = self.try_as_affine()?;
                 acc.0 += affine.0;
                 Ok(())
+            }
+        }
+    };
+}
+
+macro_rules! impl_unchecked_conversions {
+    (
+        $unchecked_type:ident,     // e.g. SignatureAffineUnchecked
+        $validated_type:ident,     // e.g. SignatureAffine
+        $projective_type:ident,    // e.g. SignatureProjective
+        $compressed_type:ident,    // e.g. SignatureCompressed
+        $uncompressed_type:ident,  // e.g. Signature
+        $internal_type:ty          // e.g. G2Affine
+    ) => {
+        // Conversion from Compressed Bytes (Unchecked)
+        #[cfg(not(target_os = "solana"))]
+        impl TryFrom<$compressed_type> for $unchecked_type {
+            type Error = crate::error::BlsError;
+            fn try_from(bytes: $compressed_type) -> Result<Self, Self::Error> {
+                let point = Option::from(<$internal_type>::from_compressed_unchecked(&bytes.0))
+                    .ok_or(crate::error::BlsError::PointConversion)?;
+                Ok(Self(point))
+            }
+        }
+
+        #[cfg(not(target_os = "solana"))]
+        impl TryFrom<&$compressed_type> for $unchecked_type {
+            type Error = crate::error::BlsError;
+            fn try_from(bytes: &$compressed_type) -> Result<Self, Self::Error> {
+                Self::try_from(*bytes)
+            }
+        }
+
+        // Conversion from Uncompressed Bytes (Unchecked)
+        #[cfg(not(target_os = "solana"))]
+        impl TryFrom<$uncompressed_type> for $unchecked_type {
+            type Error = crate::error::BlsError;
+            fn try_from(bytes: $uncompressed_type) -> Result<Self, Self::Error> {
+                let point = Option::from(<$internal_type>::from_uncompressed_unchecked(&bytes.0))
+                    .ok_or(crate::error::BlsError::PointConversion)?;
+                Ok(Self(point))
+            }
+        }
+
+        #[cfg(not(target_os = "solana"))]
+        impl TryFrom<&$uncompressed_type> for $unchecked_type {
+            type Error = crate::error::BlsError;
+            fn try_from(bytes: &$uncompressed_type) -> Result<Self, Self::Error> {
+                Self::try_from(*bytes)
+            }
+        }
+
+        // Conversion from Validated Affine (Always safe)
+        #[cfg(not(target_os = "solana"))]
+        impl From<$validated_type> for $unchecked_type {
+            fn from(item: $validated_type) -> Self {
+                Self(item.0)
+            }
+        }
+
+        #[cfg(not(target_os = "solana"))]
+        impl From<&$validated_type> for $unchecked_type {
+            fn from(item: &$validated_type) -> Self {
+                Self(item.0)
+            }
+        }
+
+        // Conversion from Projective
+        #[cfg(not(target_os = "solana"))]
+        impl From<$projective_type> for $unchecked_type {
+            fn from(item: $projective_type) -> Self {
+                Self(<$internal_type>::from(item.0))
+            }
+        }
+
+        #[cfg(not(target_os = "solana"))]
+        impl From<&$projective_type> for $unchecked_type {
+            fn from(item: &$projective_type) -> Self {
+                Self(<$internal_type>::from(item.0))
+            }
+        }
+    };
+}
+
+#[cfg(not(target_os = "solana"))]
+macro_rules! impl_pubkey_wrapper_delegations {
+    ($wrapper:ident) => {
+        #[cfg(not(target_os = "solana"))]
+        // `VerifySignature` remains public, but this crate only implements it for
+        // wrappers whose construction represents the PoP-verified safety boundary.
+        impl<T: AsPubkeyAffine + ?Sized> VerifySignature for $wrapper<T> {}
+
+        #[cfg(not(target_os = "solana"))]
+        impl<T: AsPubkeyAffine + ?Sized> AsPubkeyAffine for $wrapper<T> {
+            fn try_as_affine(&self) -> Result<PubkeyAffine, crate::error::BlsError> {
+                self.0.try_as_affine()
+            }
+        }
+
+        #[cfg(not(target_os = "solana"))]
+        impl<T: AsPubkeyProjective + ?Sized> AsPubkeyProjective for $wrapper<T> {
+            fn try_as_projective(&self) -> Result<PubkeyProjective, crate::error::BlsError> {
+                self.0.try_as_projective()
+            }
+        }
+
+        #[cfg(not(target_os = "solana"))]
+        impl<T: AddToPubkeyProjective + ?Sized> AddToPubkeyProjective for $wrapper<T> {
+            fn add_to_accumulator(
+                &self,
+                acc: &mut PubkeyProjective,
+            ) -> Result<(), crate::error::BlsError> {
+                self.0.add_to_accumulator(acc)
             }
         }
     };

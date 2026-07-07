@@ -55,7 +55,93 @@ pub mod logger;
 mod wrapper;
 
 #[cfg(feature = "macro")]
-pub use solana_program_log_macro::*;
+#[doc(hidden)]
+pub mod __macro_reexports {
+    pub use solana_program_log_macro::log;
+}
+
+#[cfg(feature = "macro")]
+pub use solana_program_log_macro::log_cu_usage;
+
+#[cfg(feature = "macro")]
+/// Companion `log!` macro.
+///
+/// The macro automates the creation of a `Logger` object to log a message.
+/// It support a limited subset of the [`format!`](https://doc.rust-lang.org/std/fmt/) syntax.
+/// The macro parses the format string at compile time and generates the calls to a `Logger`
+/// object to generate the corresponding formatted message.
+///
+/// # Arguments
+///
+/// - `buffer_len`: The length of the buffer to use for the logger (default to `200`). This is an optional argument.
+/// - `format_string`: The literal string to log. This string can contain placeholders `{}` to be replaced by the arguments.
+/// - `args`: The arguments to replace the placeholders in the format string. The arguments must implement the `Log` trait.
+///
+/// # Examples
+///
+/// Log a static string:
+///
+/// ```
+/// use solana_program_log::log;
+///
+/// log!("a simple log");
+/// ```
+///
+/// Log a formatted value:
+///
+/// ```
+/// use solana_program_log::log;
+///
+/// let lamports = 1_000_000_000u64;
+/// log!("lamports={}", lamports);
+/// ```
+///
+/// Increase the logger buffer size for larger messages:
+///
+/// ```
+/// use solana_program_log::log;
+///
+/// let lamports = 1_000_000_000u64;
+/// log!(500, "lamports={}", lamports);
+/// ```
+///
+/// Apply precision formatting to integer values:
+///
+/// ```
+/// use solana_program_log::log;
+///
+/// let lamports = 1_000_000_000u64;
+/// log!("lamports (SOL)={:.9}", lamports);
+/// ```
+///
+/// Truncate string values from the start or end:
+///
+/// ```
+/// use solana_program_log::log;
+///
+/// let program_name = "solana-program";
+/// log!("{:<.10}", program_name);
+/// log!("{:>.10}", program_name);
+/// ```
+///
+/// Pass any types that implements `Log`, including slices:
+///
+/// ```
+/// use solana_program_log::log;
+///
+/// let balances = [1u64, 2u64];
+/// log!("lamports={}", &balances);
+/// ```
+#[macro_export]
+macro_rules! log {
+    ( $len:literal, $message:literal $(, $args:expr )* $(,)? ) => {
+        $crate::__macro_reexports::log!($crate, $len, $message $(, $args )*)
+    };
+    ( $message:literal $(, $args:expr )* $(,)? ) => {
+        $crate::__macro_reexports::log!($crate, $message $(, $args )*)
+    };
+}
+
 pub use {
     logger::{Argument, Logger},
     wrapper::*,

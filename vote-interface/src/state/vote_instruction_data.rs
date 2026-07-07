@@ -1,5 +1,5 @@
 #[cfg(feature = "frozen-abi")]
-use solana_frozen_abi_macro::{frozen_abi, AbiExample};
+use solana_frozen_abi_macro::{frozen_abi, AbiExample, StableAbi, StableAbiSample};
 use {
     crate::state::{
         Lockout, BLS_PROOF_OF_POSSESSION_COMPRESSED_SIZE, BLS_PUBLIC_KEY_COMPRESSED_SIZE,
@@ -18,10 +18,15 @@ use {
 
 #[cfg_attr(
     feature = "frozen-abi",
-    frozen_abi(digest = "GvUzgtcxhKVVxPAjSntXGPqjLZK5ovgZzCiUP1tDpB9q"),
-    derive(AbiExample)
+    frozen_abi(
+        api_digest = "GvUzgtcxhKVVxPAjSntXGPqjLZK5ovgZzCiUP1tDpB9q",
+        abi_digest = "6kXER3mQxF3R1Th74tQFGfYUWJfBakNZZVyU4rTrNEek",
+        abi_serializer = ["bincode", "wincode"]
+    ),
+    derive(AbiExample, StableAbi, StableAbiSample)
 )]
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
+#[cfg_attr(feature = "wincode", derive(wincode::SchemaWrite, wincode::SchemaRead))]
 #[derive(Default, Debug, PartialEq, Eq, Clone)]
 pub struct Vote {
     /// A stack of votes starting with the oldest vote
@@ -48,15 +53,28 @@ impl Vote {
 
 #[cfg_attr(
     feature = "frozen-abi",
-    frozen_abi(digest = "CxyuwbaEdzP7jDCZyxjgQvLGXadBUZF3LoUvbSpQ6tYN"),
-    derive(AbiExample)
+    frozen_abi(
+        api_digest = "CxyuwbaEdzP7jDCZyxjgQvLGXadBUZF3LoUvbSpQ6tYN",
+        abi_digest = "VRLZyFD5255zgCbMPBFExQyw2wyY41U6h4yCe5oT9tR",
+        abi_serializer = ["bincode", "wincode"]
+    ),
+    derive(AbiExample, StableAbi, StableAbiSample)
 )]
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
+#[cfg_attr(feature = "wincode", derive(wincode::SchemaWrite, wincode::SchemaRead))]
 #[derive(Default, Debug, PartialEq, Eq, Clone)]
 pub struct VoteStateUpdate {
     /// The proposed tower
+    #[cfg_attr(
+        feature = "frozen-abi",
+        stable_abi_sample(with = "super::sampling::sample_lockouts(rng)")
+    )]
     pub lockouts: VecDeque<Lockout>,
     /// The proposed root
+    #[cfg_attr(
+        feature = "frozen-abi",
+        stable_abi_sample(with = "super::sampling::sample_root(rng)")
+    )]
     pub root: Option<Slot>,
     /// signature of the bank's state at the last slot
     pub hash: Hash,
@@ -102,15 +120,28 @@ impl VoteStateUpdate {
 
 #[cfg_attr(
     feature = "frozen-abi",
-    frozen_abi(digest = "6UDiQMH4wbNwkMHosPMtekMYu2Qa6CHPZ2ymK4mc6FGu"),
-    derive(AbiExample)
+    frozen_abi(
+        api_digest = "6UDiQMH4wbNwkMHosPMtekMYu2Qa6CHPZ2ymK4mc6FGu",
+        abi_digest = "FUbrVcYe9LvPfr6PEk3E27YybVodHTfgZ7SnVzi3bR7",
+        abi_serializer = ["bincode", "wincode"]
+    ),
+    derive(AbiExample, StableAbi, StableAbiSample)
 )]
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
+#[cfg_attr(feature = "wincode", derive(wincode::SchemaWrite, wincode::SchemaRead))]
 #[derive(Default, Debug, PartialEq, Eq, Clone)]
 pub struct TowerSync {
     /// The proposed tower
+    #[cfg_attr(
+        feature = "frozen-abi",
+        stable_abi_sample(with = "super::sampling::sample_lockouts(rng)")
+    )]
     pub lockouts: VecDeque<Lockout>,
     /// The proposed root
+    #[cfg_attr(
+        feature = "frozen-abi",
+        stable_abi_sample(with = "super::sampling::sample_root(rng)")
+    )]
     pub root: Option<Slot>,
     /// signature of the bank's state at the last slot
     pub hash: Hash,
@@ -198,7 +229,9 @@ impl TowerSync {
     }
 }
 
+#[cfg_attr(feature = "frozen-abi", derive(StableAbi, StableAbiSample))]
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
+#[cfg_attr(feature = "wincode", derive(wincode::SchemaWrite, wincode::SchemaRead))]
 #[derive(Default, Debug, PartialEq, Eq, Clone, Copy)]
 pub struct VoteInit {
     pub node_pubkey: Pubkey,
@@ -209,6 +242,8 @@ pub struct VoteInit {
 
 #[cfg_attr(feature = "serde", cfg_eval::cfg_eval, serde_as)]
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
+#[cfg_attr(feature = "wincode", derive(wincode::SchemaWrite, wincode::SchemaRead))]
+#[cfg_attr(feature = "frozen-abi", derive(StableAbi, StableAbiSample))]
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub struct VoteInitV2 {
     pub node_pubkey: Pubkey,
@@ -225,9 +260,7 @@ pub struct VoteInitV2 {
     pub authorized_voter_bls_proof_of_possession: [u8; BLS_PROOF_OF_POSSESSION_COMPRESSED_SIZE],
     pub authorized_withdrawer: Pubkey,
     pub inflation_rewards_commission_bps: u16,
-    pub inflation_rewards_collector: Pubkey,
     pub block_revenue_commission_bps: u16,
-    pub block_revenue_collector: Pubkey,
 }
 
 impl Default for VoteInitV2 {
@@ -240,15 +273,15 @@ impl Default for VoteInitV2 {
                 BLS_PROOF_OF_POSSESSION_COMPRESSED_SIZE],
             authorized_withdrawer: Pubkey::default(),
             inflation_rewards_commission_bps: 0,
-            inflation_rewards_collector: Pubkey::default(),
             block_revenue_commission_bps: 0,
-            block_revenue_collector: Pubkey::default(),
         }
     }
 }
 
 #[cfg_attr(feature = "serde", cfg_eval::cfg_eval, serde_as)]
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
+#[cfg_attr(feature = "wincode", derive(wincode::SchemaWrite, wincode::SchemaRead))]
+#[cfg_attr(feature = "frozen-abi", derive(StableAbi, StableAbiSample))]
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub struct VoterWithBLSArgs {
     #[cfg_attr(
@@ -272,7 +305,9 @@ impl Default for VoterWithBLSArgs {
     }
 }
 
+#[cfg_attr(feature = "frozen-abi", derive(StableAbi, StableAbiSample))]
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
+#[cfg_attr(feature = "wincode", derive(wincode::SchemaWrite, wincode::SchemaRead))]
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum VoteAuthorize {
     Voter,
@@ -280,7 +315,9 @@ pub enum VoteAuthorize {
     VoterWithBLS(VoterWithBLSArgs),
 }
 
+#[cfg_attr(feature = "frozen-abi", derive(StableAbi, StableAbiSample))]
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
+#[cfg_attr(feature = "wincode", derive(wincode::SchemaWrite, wincode::SchemaRead))]
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct VoteAuthorizeWithSeedArgs {
     pub authorization_type: VoteAuthorize,
@@ -289,7 +326,9 @@ pub struct VoteAuthorizeWithSeedArgs {
     pub new_authority: Pubkey,
 }
 
+#[cfg_attr(feature = "frozen-abi", derive(StableAbi, StableAbiSample))]
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
+#[cfg_attr(feature = "wincode", derive(wincode::SchemaWrite, wincode::SchemaRead))]
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct VoteAuthorizeCheckedWithSeedArgs {
     pub authorization_type: VoteAuthorize,

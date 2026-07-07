@@ -2,8 +2,8 @@
 name = "solana-address-lookup-table-interface"
 description = "Solana address lookup table interface."
 documentation = "https://docs.rs/solana-address-lookup-table-interface"
-version = "3.0.1"
-rust-version = "1.81.0"
+version = "3.1.0"
+rust-version = { workspace = true }
 authors = { workspace = true }
 repository = { workspace = true }
 homepage = { workspace = true }
@@ -24,9 +24,17 @@ bincode = [
     "solana-instruction/bincode",
 ]
 bytemuck = ["dep:bytemuck", "solana-pubkey/bytemuck"]
-dev-context-only-utils = ["bincode", "bytemuck"]
+dev-context-only-utils = ["wincode", "bytemuck"]
 frozen-abi = ["dep:solana-frozen-abi", "dep:solana-frozen-abi-macro", "serde"]
 serde = ["dep:serde", "dep:serde_derive", "serde/alloc", "solana-pubkey/serde"]
+wincode = [
+    "dep:wincode",
+    "dep:solana-instruction",
+    "dep:solana-instruction-error",
+    "wincode/alloc",
+    "solana-pubkey/wincode",
+    "solana-instruction/wincode",
+]
 
 [dependencies]
 bincode = { workspace = true, optional = true }
@@ -41,14 +49,13 @@ solana-instruction-error = { workspace = true, optional = true }
 solana-pubkey = { workspace = true }
 solana-sdk-ids = { workspace = true }
 solana-slot-hashes = { workspace = true }
+wincode = { workspace = true, optional = true }
 
 [target.'cfg(not(target_os = "solana"))'.dependencies]
 solana-pubkey = { workspace = true, features = ["curve25519"] }
 
 [dev-dependencies]
-solana-address-lookup-table-interface = { path = ".", features = [
-    "dev-context-only-utils",
-] }
+solana-address-lookup-table-interface = { path = ".", features = ["dev-context-only-utils"] }
 solana-hash = { workspace = true, features = ["atomic"] }
 solana-pubkey = { workspace = true, features = ["std"] }
 

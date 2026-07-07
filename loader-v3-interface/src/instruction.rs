@@ -1,19 +1,35 @@
 //! Instructions for the upgradable BPF loader.
 
-#[cfg(feature = "bincode")]
+#[cfg(feature = "wincode")]
 use {
     crate::{get_program_data_address, state::UpgradeableLoaderState},
+    core::mem::MaybeUninit,
     solana_instruction::{error::InstructionError, AccountMeta, Instruction},
     solana_pubkey::Pubkey,
-    solana_sdk_ids::{bpf_loader_upgradeable::id, loader_v4, sysvar},
+    solana_sdk_ids::{bpf_loader_upgradeable::id, sysvar},
     solana_system_interface::instruction as system_instruction,
+    wincode::{
+        config::ConfigCore,
+        error::invalid_bool_encoding,
+        io::{Reader, Writer},
+        ReadResult, SchemaRead, SchemaWrite, TypeMeta, WriteResult,
+    },
 };
+
+/// Minimum number of bytes for an `ExtendProgram` instruction.
+///
+/// After the SIMD-0431 feature gate is activated, `ExtendProgram` will
+/// reject requests smaller than this value, unless the program data
+/// account is within this many bytes of the max permitted data length of
+/// an account: 10 MiB.
+pub const MINIMUM_EXTEND_PROGRAM_BYTES: u32 = 10_240;
 
 #[repr(u8)]
 #[cfg_attr(
     feature = "serde",
     derive(serde_derive::Deserialize, serde_derive::Serialize)
 )]
+#[cfg_attr(feature = "wincode", derive(SchemaRead, SchemaWrite))]
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum UpgradeableLoaderInstruction {
     /// Initialize a Buffer account.
@@ -90,6 +106,12 @@ pub enum UpgradeableLoaderInstruction {
     DeployWithMaxDataLen {
         /// Maximum length that the program can be upgraded to.
         max_data_len: usize,
+        /// SIMD-0430: Whether to close the buffer account after deployment.
+        ///
+        /// Optional on the wire: when the trailing byte is absent, this
+        /// decodes to `true`.
+        #[cfg_attr(feature = "wincode", wincode(with = "OptionalTrailingBool<true>"))]
+        close_buffer: bool,
     },
 
     /// Upgrade a program.
@@ -112,7 +134,14 @@ pub enum UpgradeableLoaderInstruction {
     ///   4. `[]` Rent sysvar.
     ///   5. `[]` Clock sysvar.
     ///   6. `[signer]` The program's authority.
-    Upgrade,
+    Upgrade {
+        /// SIMD-0430: Whether to close the buffer account after upgrade.
+        ///
+        /// Optional on the wire: when the trailing byte is absent, this
+        /// decodes to `true`.
+        #[cfg_attr(feature = "wincode", wincode(with = "OptionalTrailingBool<true>"))]
+        close_buffer: bool,
+    },
 
     /// Set a new authority that is allowed to write the buffer or upgrade the
     /// program.  To permanently make the buffer immutable or disable program
@@ -137,10 +166,24 @@ pub enum UpgradeableLoaderInstruction {
     ///      initialized accounts.
     ///   3. `[writable]` The associated Program account if the account to close
     ///      is a ProgramData account.
-    Close,
+    Close {
+        /// SIMD-0432: Whether to tombstone the program account instead of
+        /// reclaiming its address.
+        ///
+        /// Optional on the wire: when the trailing byte is absent, this
+        /// decodes to `false`.
+        #[cfg_attr(feature = "wincode", wincode(with = "OptionalTrailingBool<false>"))]
+        tombstone: bool,
+    },
 
     /// Extend a program's ProgramData account by the specified number of bytes.
     /// Only upgradeable programs can be extended.
+    ///
+    /// After the SIMD-0431 feature gate is activated, `additional_bytes`
+    /// must be at least [`MINIMUM_EXTEND_PROGRAM_BYTES`] (10 KiB).
+    /// The minimum does not apply when the program data account is
+    /// within [`MINIMUM_EXTEND_PROGRAM_BYTES`] of the max permitted
+    /// data length of an account: 10 MiB.
     ///
     /// The payer account must contain sufficient lamports to fund the
     /// ProgramData account to be rent-exempt. If the ProgramData account
@@ -171,36 +214,52 @@ pub enum UpgradeableLoaderInstruction {
     ///   1. `[signer]` The current authority.
     ///   2. `[signer]` The new authority.
     SetAuthorityChecked,
-
-    /// Migrate the program to loader-v4.
-    ///
-    /// # Account references
-    ///   0. `[writable]` The ProgramData account.
-    ///   1. `[writable]` The Program account.
-    ///   2. `[signer]` The current authority.
-    Migrate,
-
-    /// Extend a program's ProgramData account by the specified number of bytes.
-    /// Only upgradeable programs can be extended.
-    ///
-    /// This instruction differs from ExtendProgram in that the authority is a
-    /// required signer.
-    ///
-    /// # Account references
-    ///   0. `[writable]` The ProgramData account.
-    ///   1. `[writable]` The ProgramData account's associated Program account.
-    ///   2. `[signer]` The authority.
-    ///   3. `[]` System program (`solana_sdk::system_program::id()`), optional, used to transfer
-    ///      lamports from the payer to the ProgramData account.
-    ///   4. `[signer]` The payer account, optional, that will pay necessary rent exemption costs
-    ///      for the increased storage size.
-    ExtendProgramChecked {
-        /// Number of bytes to extend the program data.
-        additional_bytes: u32,
-    },
 }
 
-#[cfg(feature = "bincode")]
+/// A wincode schema for a `bool` that may be absent from the end of the
+/// wire payload. On write, the byte is always emitted. On read, an
+/// exhausted reader yields `DEFAULT`.
+#[cfg(feature = "wincode")]
+pub struct OptionalTrailingBool<const DEFAULT: bool>;
+
+#[cfg(feature = "wincode")]
+unsafe impl<'de, C: ConfigCore, const DEFAULT: bool> SchemaRead<'de, C>
+    for OptionalTrailingBool<DEFAULT>
+{
+    type Dst = bool;
+
+    fn read(mut reader: impl Reader<'de>, dst: &mut MaybeUninit<Self::Dst>) -> ReadResult<()> {
+        let value = match reader.take_byte() {
+            Ok(0) => false,
+            Ok(1) => true,
+            Ok(byte) => return Err(invalid_bool_encoding(byte)),
+            Err(_) => DEFAULT,
+        };
+        dst.write(value);
+        Ok(())
+    }
+}
+
+#[cfg(feature = "wincode")]
+unsafe impl<C: ConfigCore, const DEFAULT: bool> SchemaWrite<C> for OptionalTrailingBool<DEFAULT> {
+    type Src = bool;
+
+    const TYPE_META: TypeMeta = TypeMeta::Static {
+        size: 1,
+        zero_copy: false,
+    };
+
+    fn size_of(_src: &Self::Src) -> WriteResult<usize> {
+        Ok(1)
+    }
+
+    fn write(mut writer: impl Writer, src: &Self::Src) -> WriteResult<()> {
+        writer.write(&[u8::from(*src)])?;
+        Ok(())
+    }
+}
+
+#[cfg(feature = "wincode")]
 /// Returns the instructions required to initialize a Buffer account.
 pub fn create_buffer(
     payer_address: &Pubkey,
@@ -217,7 +276,7 @@ pub fn create_buffer(
             UpgradeableLoaderState::size_of_buffer(program_len) as u64,
             &id(),
         ),
-        Instruction::new_with_bincode(
+        Instruction::new_with_wincode(
             id(),
             &UpgradeableLoaderInstruction::InitializeBuffer,
             vec![
@@ -228,7 +287,7 @@ pub fn create_buffer(
     ])
 }
 
-#[cfg(feature = "bincode")]
+#[cfg(feature = "wincode")]
 /// Returns the instructions required to write a chunk of program data to a
 /// buffer account.
 pub fn write(
@@ -237,7 +296,7 @@ pub fn write(
     offset: u32,
     bytes: Vec<u8>,
 ) -> Instruction {
-    Instruction::new_with_bincode(
+    Instruction::new_with_wincode(
         id(),
         &UpgradeableLoaderInstruction::Write { offset, bytes },
         vec![
@@ -247,8 +306,7 @@ pub fn write(
     )
 }
 
-#[deprecated(since = "2.2.0", note = "Use loader-v4 instead")]
-#[cfg(feature = "bincode")]
+#[cfg(feature = "wincode")]
 /// Returns the instructions required to deploy a program with a specified
 /// maximum program length.  The maximum length must be large enough to
 /// accommodate any future upgrades.
@@ -259,6 +317,7 @@ pub fn deploy_with_max_program_len(
     upgrade_authority_address: &Pubkey,
     program_lamports: u64,
     max_data_len: usize,
+    close_buffer: bool,
 ) -> Result<Vec<Instruction>, InstructionError> {
     let programdata_address = get_program_data_address(program_address);
     Ok(vec![
@@ -269,9 +328,12 @@ pub fn deploy_with_max_program_len(
             UpgradeableLoaderState::size_of_program() as u64,
             &id(),
         ),
-        Instruction::new_with_bincode(
+        Instruction::new_with_wincode(
             id(),
-            &UpgradeableLoaderInstruction::DeployWithMaxDataLen { max_data_len },
+            &UpgradeableLoaderInstruction::DeployWithMaxDataLen {
+                max_data_len,
+                close_buffer,
+            },
             vec![
                 AccountMeta::new(*payer_address, true),
                 AccountMeta::new(programdata_address, false),
@@ -286,18 +348,19 @@ pub fn deploy_with_max_program_len(
     ])
 }
 
-#[cfg(feature = "bincode")]
+#[cfg(feature = "wincode")]
 /// Returns the instructions required to upgrade a program.
 pub fn upgrade(
     program_address: &Pubkey,
     buffer_address: &Pubkey,
     authority_address: &Pubkey,
     spill_address: &Pubkey,
+    close_buffer: bool,
 ) -> Instruction {
     let programdata_address = get_program_data_address(program_address);
-    Instruction::new_with_bincode(
+    Instruction::new_with_wincode(
         id(),
-        &UpgradeableLoaderInstruction::Upgrade,
+        &UpgradeableLoaderInstruction::Upgrade { close_buffer },
         vec![
             AccountMeta::new(programdata_address, false),
             AccountMeta::new(*program_address, false),
@@ -326,22 +389,14 @@ pub fn is_set_authority_checked_instruction(instruction_data: &[u8]) -> bool {
     !instruction_data.is_empty() && 7 == instruction_data[0]
 }
 
-pub fn is_migrate_instruction(instruction_data: &[u8]) -> bool {
-    !instruction_data.is_empty() && 8 == instruction_data[0]
-}
-
-pub fn is_extend_program_checked_instruction(instruction_data: &[u8]) -> bool {
-    !instruction_data.is_empty() && 9 == instruction_data[0]
-}
-
-#[cfg(feature = "bincode")]
+#[cfg(feature = "wincode")]
 /// Returns the instructions required to set a buffers's authority.
 pub fn set_buffer_authority(
     buffer_address: &Pubkey,
     current_authority_address: &Pubkey,
     new_authority_address: &Pubkey,
 ) -> Instruction {
-    Instruction::new_with_bincode(
+    Instruction::new_with_wincode(
         id(),
         &UpgradeableLoaderInstruction::SetAuthority,
         vec![
@@ -352,7 +407,7 @@ pub fn set_buffer_authority(
     )
 }
 
-#[cfg(feature = "bincode")]
+#[cfg(feature = "wincode")]
 /// Returns the instructions required to set a buffers's authority. If using this instruction, the new authority
 /// must sign.
 pub fn set_buffer_authority_checked(
@@ -360,7 +415,7 @@ pub fn set_buffer_authority_checked(
     current_authority_address: &Pubkey,
     new_authority_address: &Pubkey,
 ) -> Instruction {
-    Instruction::new_with_bincode(
+    Instruction::new_with_wincode(
         id(),
         &UpgradeableLoaderInstruction::SetAuthorityChecked,
         vec![
@@ -371,7 +426,7 @@ pub fn set_buffer_authority_checked(
     )
 }
 
-#[cfg(feature = "bincode")]
+#[cfg(feature = "wincode")]
 /// Returns the instructions required to set a program's authority.
 pub fn set_upgrade_authority(
     program_address: &Pubkey,
@@ -387,10 +442,10 @@ pub fn set_upgrade_authority(
     if let Some(address) = new_authority_address {
         metas.push(AccountMeta::new_readonly(*address, false));
     }
-    Instruction::new_with_bincode(id(), &UpgradeableLoaderInstruction::SetAuthority, metas)
+    Instruction::new_with_wincode(id(), &UpgradeableLoaderInstruction::SetAuthority, metas)
 }
 
-#[cfg(feature = "bincode")]
+#[cfg(feature = "wincode")]
 /// Returns the instructions required to set a program's authority. If using this instruction, the new authority
 /// must sign.
 pub fn set_upgrade_authority_checked(
@@ -405,35 +460,38 @@ pub fn set_upgrade_authority_checked(
         AccountMeta::new_readonly(*current_authority_address, true),
         AccountMeta::new_readonly(*new_authority_address, true),
     ];
-    Instruction::new_with_bincode(
+    Instruction::new_with_wincode(
         id(),
         &UpgradeableLoaderInstruction::SetAuthorityChecked,
         metas,
     )
 }
 
-#[cfg(feature = "bincode")]
+#[cfg(feature = "wincode")]
 /// Returns the instructions required to close a buffer account
 pub fn close(
     close_address: &Pubkey,
     recipient_address: &Pubkey,
     authority_address: &Pubkey,
+    tombstone: bool,
 ) -> Instruction {
     close_any(
         close_address,
         recipient_address,
         Some(authority_address),
         None,
+        tombstone,
     )
 }
 
-#[cfg(feature = "bincode")]
+#[cfg(feature = "wincode")]
 /// Returns the instructions required to close program, buffer, or uninitialized account
 pub fn close_any(
     close_address: &Pubkey,
     recipient_address: &Pubkey,
     authority_address: Option<&Pubkey>,
     program_address: Option<&Pubkey>,
+    tombstone: bool,
 ) -> Instruction {
     let mut metas = vec![
         AccountMeta::new(*close_address, false),
@@ -445,12 +503,20 @@ pub fn close_any(
     if let Some(program_address) = program_address {
         metas.push(AccountMeta::new(*program_address, false));
     }
-    Instruction::new_with_bincode(id(), &UpgradeableLoaderInstruction::Close, metas)
+    Instruction::new_with_wincode(
+        id(),
+        &UpgradeableLoaderInstruction::Close { tombstone },
+        metas,
+    )
 }
 
-#[cfg(feature = "bincode")]
+#[cfg(feature = "wincode")]
 /// Returns the instruction required to extend the size of a program's
-/// executable data account
+/// executable data account.
+///
+/// After SIMD-0431 activation, `additional_bytes` must be at least
+/// [`MINIMUM_EXTEND_PROGRAM_BYTES`] unless the account is near the
+/// max permitted data length of an account: 10 MiB.
 pub fn extend_program(
     program_address: &Pubkey,
     payer_address: Option<&Pubkey>,
@@ -468,62 +534,16 @@ pub fn extend_program(
         ));
         metas.push(AccountMeta::new(*payer_address, true));
     }
-    Instruction::new_with_bincode(
+    Instruction::new_with_wincode(
         id(),
         &UpgradeableLoaderInstruction::ExtendProgram { additional_bytes },
         metas,
     )
 }
 
-/// Returns the instructions required to migrate a program to loader-v4.
-#[cfg(feature = "bincode")]
-pub fn migrate_program(
-    programdata_address: &Pubkey,
-    program_address: &Pubkey,
-    authority: &Pubkey,
-) -> Instruction {
-    let accounts = vec![
-        AccountMeta::new(*programdata_address, false),
-        AccountMeta::new(*program_address, false),
-        AccountMeta::new_readonly(*authority, true),
-        AccountMeta::new_readonly(loader_v4::id(), false),
-    ];
-
-    Instruction::new_with_bincode(id(), &UpgradeableLoaderInstruction::Migrate, accounts)
-}
-
-/// Returns the instruction required to extend the size of a program's
-/// executable data account
-#[cfg(feature = "bincode")]
-pub fn extend_program_checked(
-    program_address: &Pubkey,
-    authority_address: &Pubkey,
-    payer_address: Option<&Pubkey>,
-    additional_bytes: u32,
-) -> Instruction {
-    let program_data_address = get_program_data_address(program_address);
-    let mut metas = vec![
-        AccountMeta::new(program_data_address, false),
-        AccountMeta::new(*program_address, false),
-        AccountMeta::new(*authority_address, true),
-    ];
-    if let Some(payer_address) = payer_address {
-        metas.push(AccountMeta::new_readonly(
-            solana_sdk_ids::system_program::id(),
-            false,
-        ));
-        metas.push(AccountMeta::new(*payer_address, true));
-    }
-    Instruction::new_with_bincode(
-        id(),
-        &UpgradeableLoaderInstruction::ExtendProgramChecked { additional_bytes },
-        metas,
-    )
-}
-
-#[cfg(test)]
+#[cfg(all(test, feature = "wincode"))]
 mod tests {
-    use super::*;
+    use {super::*, test_case::test_case};
 
     fn assert_is_instruction<F>(
         is_instruction_fn: F,
@@ -532,7 +552,7 @@ mod tests {
         F: Fn(&[u8]) -> bool,
     {
         let result = is_instruction_fn(
-            &bincode::serialize(&UpgradeableLoaderInstruction::InitializeBuffer).unwrap(),
+            &wincode::serialize(&UpgradeableLoaderInstruction::InitializeBuffer).unwrap(),
         );
         let expected_result = matches!(
             expected_instruction,
@@ -541,7 +561,7 @@ mod tests {
         assert_eq!(expected_result, result);
 
         let result = is_instruction_fn(
-            &bincode::serialize(&UpgradeableLoaderInstruction::Write {
+            &wincode::serialize(&UpgradeableLoaderInstruction::Write {
                 offset: 0,
                 bytes: vec![],
             })
@@ -557,24 +577,30 @@ mod tests {
         assert_eq!(expected_result, result);
 
         let result = is_instruction_fn(
-            &bincode::serialize(&UpgradeableLoaderInstruction::DeployWithMaxDataLen {
+            &wincode::serialize(&UpgradeableLoaderInstruction::DeployWithMaxDataLen {
                 max_data_len: 0,
+                close_buffer: true,
             })
             .unwrap(),
         );
         let expected_result = matches!(
             expected_instruction,
-            UpgradeableLoaderInstruction::DeployWithMaxDataLen { max_data_len: _ }
+            UpgradeableLoaderInstruction::DeployWithMaxDataLen { .. }
         );
         assert_eq!(expected_result, result);
 
-        let result =
-            is_instruction_fn(&bincode::serialize(&UpgradeableLoaderInstruction::Upgrade).unwrap());
-        let expected_result = matches!(expected_instruction, UpgradeableLoaderInstruction::Upgrade);
+        let result = is_instruction_fn(
+            &wincode::serialize(&UpgradeableLoaderInstruction::Upgrade { close_buffer: true })
+                .unwrap(),
+        );
+        let expected_result = matches!(
+            expected_instruction,
+            UpgradeableLoaderInstruction::Upgrade { .. }
+        );
         assert_eq!(expected_result, result);
 
         let result = is_instruction_fn(
-            &bincode::serialize(&UpgradeableLoaderInstruction::SetAuthority).unwrap(),
+            &wincode::serialize(&UpgradeableLoaderInstruction::SetAuthority).unwrap(),
         );
         let expected_result = matches!(
             expected_instruction,
@@ -582,9 +608,13 @@ mod tests {
         );
         assert_eq!(expected_result, result);
 
-        let result =
-            is_instruction_fn(&bincode::serialize(&UpgradeableLoaderInstruction::Close).unwrap());
-        let expected_result = matches!(expected_instruction, UpgradeableLoaderInstruction::Close);
+        let result = is_instruction_fn(
+            &wincode::serialize(&UpgradeableLoaderInstruction::Close { tombstone: false }).unwrap(),
+        );
+        let expected_result = matches!(
+            expected_instruction,
+            UpgradeableLoaderInstruction::Close { .. }
+        );
         assert_eq!(expected_result, result);
     }
 
@@ -611,27 +641,111 @@ mod tests {
         assert!(!is_upgrade_instruction(&[]));
         assert_is_instruction(
             is_upgrade_instruction,
-            UpgradeableLoaderInstruction::Upgrade {},
+            UpgradeableLoaderInstruction::Upgrade { close_buffer: true },
         );
     }
 
+    /// Verify that wincode produces the exact same bytes as bincode for
+    /// every instruction variant, and that both round-trip correctly.
+    #[test_case(UpgradeableLoaderInstruction::InitializeBuffer)]
+    #[test_case(UpgradeableLoaderInstruction::Write { offset: 42, bytes: vec![1, 2, 3, 4, 5] })]
+    #[test_case(UpgradeableLoaderInstruction::Write { offset: 0, bytes: vec![] })]
+    #[test_case(UpgradeableLoaderInstruction::DeployWithMaxDataLen { max_data_len: 1_000_000, close_buffer: true })]
+    #[test_case(UpgradeableLoaderInstruction::DeployWithMaxDataLen { max_data_len: 0, close_buffer: false })]
+    #[test_case(UpgradeableLoaderInstruction::Upgrade { close_buffer: true })]
+    #[test_case(UpgradeableLoaderInstruction::Upgrade { close_buffer: false })]
+    #[test_case(UpgradeableLoaderInstruction::SetAuthority)]
+    #[test_case(UpgradeableLoaderInstruction::Close { tombstone: false })]
+    #[test_case(UpgradeableLoaderInstruction::Close { tombstone: true })]
+    #[test_case(UpgradeableLoaderInstruction::ExtendProgram { additional_bytes: 10_240 })]
+    #[test_case(UpgradeableLoaderInstruction::ExtendProgram { additional_bytes: 0 })]
+    #[test_case(UpgradeableLoaderInstruction::SetAuthorityChecked)]
+    fn wire_compat_bincode_vs_wincode(instr: UpgradeableLoaderInstruction) {
+        let bincode_bytes = bincode::serialize(&instr).unwrap();
+        let wincode_bytes = wincode::serialize(&instr).unwrap();
+        assert_eq!(bincode_bytes, wincode_bytes);
+
+        let from_bincode: UpgradeableLoaderInstruction =
+            bincode::deserialize(&bincode_bytes).unwrap();
+        let from_wincode: UpgradeableLoaderInstruction =
+            wincode::deserialize(&wincode_bytes).unwrap();
+        assert_eq!(from_bincode, instr);
+        assert_eq!(from_wincode, instr);
+    }
+
+    /// Legacy `DeployWithMaxDataLen` payloads omit the trailing
+    /// `close_buffer` byte; wincode must decode these to `close_buffer: true`.
     #[test]
-    fn test_is_migrate_instruction() {
-        assert!(!is_migrate_instruction(&[]));
-        assert_is_instruction(
-            is_migrate_instruction,
-            UpgradeableLoaderInstruction::Migrate {},
+    fn legacy_deploy_decodes_close_buffer_as_true() {
+        let mut data = Vec::new();
+        data.extend_from_slice(&2u32.to_le_bytes()); // Discriminator
+        data.extend_from_slice(&42u64.to_le_bytes()); // max_data_len
+        let decoded: UpgradeableLoaderInstruction = wincode::deserialize(&data).unwrap();
+        assert_eq!(
+            decoded,
+            UpgradeableLoaderInstruction::DeployWithMaxDataLen {
+                max_data_len: 42,
+                close_buffer: true, // <-- Default value
+            }
         );
     }
 
+    /// Legacy `Upgrade` payloads omit the trailing `close_buffer` byte;
+    /// wincode must decode these to `close_buffer: true`.
     #[test]
-    fn test_is_extend_program_checked_instruction() {
-        assert!(!is_extend_program_checked_instruction(&[]));
-        assert_is_instruction(
-            is_extend_program_checked_instruction,
-            UpgradeableLoaderInstruction::ExtendProgramChecked {
-                additional_bytes: 0,
-            },
+    fn legacy_upgrade_decodes_close_buffer_as_true() {
+        let data = 3u32.to_le_bytes(); // Discriminator
+        let decoded: UpgradeableLoaderInstruction = wincode::deserialize(&data).unwrap();
+        assert_eq!(
+            decoded,
+            UpgradeableLoaderInstruction::Upgrade {
+                close_buffer: true, // <-- Default value
+            }
         );
+    }
+
+    /// Legacy `Close` payloads omit the trailing `tombstone` byte; wincode
+    /// must decode these to `tombstone: false`.
+    #[test]
+    fn legacy_close_decodes_tombstone_as_false() {
+        let data = 5u32.to_le_bytes(); // Discriminator
+        let decoded: UpgradeableLoaderInstruction = wincode::deserialize(&data).unwrap();
+        assert_eq!(
+            decoded,
+            UpgradeableLoaderInstruction::Close {
+                tombstone: false, // <-- Default value
+            }
+        );
+    }
+
+    /// `OptionalTrailingBool` must reject a trailing byte that is not `0` or `1`.
+    #[test]
+    fn invalid_optional_trailing_bool_byte_errors() {
+        let assert_invalid_trailing_bool = |data: &[u8]| {
+            let err = wincode::deserialize::<UpgradeableLoaderInstruction>(data).unwrap_err();
+            assert!(
+                matches!(err, wincode::ReadError::InvalidBoolEncoding(2)),
+                "expected InvalidBoolEncoding(2), got {err:?}",
+            );
+        };
+
+        // `DeployWithMaxDataLen`
+        let mut data = Vec::new();
+        data.extend_from_slice(&2u32.to_le_bytes()); // Discriminator
+        data.extend_from_slice(&42u64.to_le_bytes()); // max_data_len
+        data.push(2);
+        assert_invalid_trailing_bool(&data);
+
+        // `Upgrade`
+        let mut data = Vec::new();
+        data.extend_from_slice(&3u32.to_le_bytes()); // Discriminator
+        data.push(2);
+        assert_invalid_trailing_bool(&data);
+
+        // `Close`
+        let mut data = Vec::new();
+        data.extend_from_slice(&5u32.to_le_bytes()); // Discriminator
+        data.push(2);
+        assert_invalid_trailing_bool(&data);
     }
 }

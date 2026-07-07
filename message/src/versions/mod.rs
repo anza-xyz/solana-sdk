@@ -1,5 +1,9 @@
+#[cfg(any(feature = "wincode", feature = "serde"))]
+use alloc::vec::Vec;
 #[cfg(feature = "frozen-abi")]
-use solana_frozen_abi_macro::{frozen_abi, AbiEnumVisitor, AbiExample};
+use solana_frozen_abi_macro::{frozen_abi, AbiEnumVisitor, AbiExample, StableAbi, StableAbiSample};
+#[cfg(feature = "std")]
+use std::collections::HashSet;
 use {
     crate::{
         compiled_instruction::CompiledInstruction, legacy::Message as LegacyMessage,
@@ -8,30 +12,24 @@ use {
     solana_address::Address,
     solana_hash::Hash,
     solana_sanitize::{Sanitize, SanitizeError},
-    std::collections::HashSet,
-};
-#[cfg(feature = "wincode")]
-use {
-    crate::{
-        legacy::MessageUninitBuilder as LegacyMessageUninitBuilder,
-        v1::{deserialize, serialize_into},
-        MessageHeaderUninitBuilder,
-    },
-    core::mem::MaybeUninit,
-    wincode::{
-        config::Config,
-        io::{Reader, Writer},
-        ReadResult, SchemaRead, SchemaWrite, WriteResult,
-    },
 };
 #[cfg(feature = "serde")]
 use {
+    core::fmt,
     serde::{
         de::{self, Deserializer, SeqAccess, Unexpected, Visitor},
         ser::{SerializeTuple, Serializer},
     },
     serde_derive::{Deserialize, Serialize},
-    std::fmt,
+};
+#[cfg(feature = "wincode")]
+use {
+    core::mem::MaybeUninit,
+    wincode::{
+        config::Config,
+        io::{Reader, Writer},
+        ReadResult, SchemaRead, SchemaReadContext, SchemaWrite, WriteResult,
+    },
 };
 
 mod sanitized;
@@ -53,8 +51,13 @@ pub const MESSAGE_VERSION_PREFIX: u8 = 0x80;
 /// format.
 #[cfg_attr(
     feature = "frozen-abi",
-    frozen_abi(digest = "6CoVPUxkUvDrAvAkfyVXwVDHCSf77aufm7DEZy5mBVeX"),
-    derive(AbiEnumVisitor, AbiExample)
+    derive(AbiEnumVisitor, AbiExample, StableAbi, StableAbiSample),
+    frozen_abi(
+        digest = "9xQQLkQntX2QKgwxbbpeuNrs5V2WopsBa11su46WWCro",
+        abi_digest = "4F9XrnBYkNKecPExdyPDpQSSpegDoSHpaAmgvpWUmT3g",
+        abi_serializer = "wincode",
+        test_roundtrip = "eq_and_wire"
+    )
 )]
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum VersionedMessage {
@@ -106,6 +109,7 @@ impl VersionedMessage {
     /// instructions in this message. Since dynamically loaded addresses can't
     /// have write locks demoted without loading addresses, this shouldn't be
     /// used in the runtime.
+    #[cfg(feature = "std")]
     pub fn is_maybe_writable(
         &self,
         index: usize,
@@ -400,39 +404,30 @@ unsafe impl<C: Config> SchemaWrite<C> for VersionedMessage {
                 <v0::Message as SchemaWrite<C>>::write(writer, message)
             }
             VersionedMessage::V1(message) => {
-                let total = message.size();
-                let mut buffer: Vec<u8> = Vec::with_capacity(1 + total);
-                // SAFETY: buffer has sufficient capacity for serialization.
-                unsafe {
-                    let ptr = buffer.as_mut_ptr();
-                    ptr.write(crate::v1::V1_PREFIX);
-                    serialize_into(message, ptr.add(1));
-                    buffer.set_len(1 + total);
-
-                    writer
-                        .write_slice_t(&buffer)
-                        .map_err(wincode::WriteError::Io)
-                }
+                <u8 as SchemaWrite<C>>::write(writer.by_ref(), &crate::v1::V1_PREFIX)?;
+                <v1::Message as SchemaWrite<C>>::write(writer, message)
             }
         }
     }
 }
 
 #[cfg(feature = "wincode")]
-unsafe impl<'de, C: Config> SchemaRead<'de, C> for VersionedMessage {
+unsafe impl<'de, C: Config> SchemaReadContext<'de, C, u8> for VersionedMessage {
     type Dst = Self;
 
-    fn read(mut reader: impl Reader<'de>, dst: &mut MaybeUninit<Self::Dst>) -> ReadResult<()> {
+    fn read_with_context(
+        discriminant: u8,
+        reader: impl Reader<'de>,
+        dst: &mut MaybeUninit<Self::Dst>,
+    ) -> ReadResult<()> {
         // If the first bit is set, the remaining 7 bits will be used to determine
         // which message version is serialized starting from version `0`. If the first
         // is bit is not set, all bytes are used to encode the legacy `Message`
         // format.
-        let variant = <u8 as SchemaRead<C>>::get(&mut reader)?;
-
-        if variant & MESSAGE_VERSION_PREFIX != 0 {
+        if discriminant & MESSAGE_VERSION_PREFIX != 0 {
             use wincode::error::invalid_tag_encoding;
 
-            let version = variant & !MESSAGE_VERSION_PREFIX;
+            let version = discriminant & !MESSAGE_VERSION_PREFIX;
             return match version {
                 0 => {
                     let msg = <v0::Message as SchemaRead<C>>::get(reader)?;
@@ -440,45 +435,29 @@ unsafe impl<'de, C: Config> SchemaRead<'de, C> for VersionedMessage {
                     Ok(())
                 }
                 1 => {
-                    // -1 for already-read variant byte
-                    let bytes = reader.fill_buf(v1::MAX_TRANSACTION_SIZE - 1)?;
-                    let (message, consumed) =
-                        deserialize(bytes).map_err(|_| invalid_tag_encoding(1))?;
-
-                    // SAFETY: `deserialize` validates that we read `consumed` bytes.
-                    unsafe { reader.consume_unchecked(consumed) };
-
+                    let message = <v1::Message as SchemaRead<C>>::get(reader)?;
                     dst.write(VersionedMessage::V1(message));
 
                     Ok(())
                 }
                 _ => Err(invalid_tag_encoding(version as usize)),
             };
-        }
-
-        let mut msg = MaybeUninit::<LegacyMessage>::uninit();
-        let mut msg_builder = LegacyMessageUninitBuilder::<C>::from_maybe_uninit_mut(&mut msg);
-        // We've already read the variant byte which, in the legacy case, represents
-        // the `num_required_signatures` field.
-        // As such, we need to write the remaining fields into the message manually,
-        // as calling `LegacyMessage::read` will miss the first field.
-        let mut header_builder =
-            MessageHeaderUninitBuilder::<C>::from_maybe_uninit_mut(msg_builder.uninit_header_mut());
-        header_builder.write_num_required_signatures(variant);
-        header_builder.read_num_readonly_signed_accounts(&mut reader)?;
-        header_builder.read_num_readonly_unsigned_accounts(&mut reader)?;
-        header_builder.finish();
-        unsafe { msg_builder.assume_init_header() };
-
-        msg_builder.read_account_keys(&mut reader)?;
-        msg_builder.read_recent_blockhash(&mut reader)?;
-        msg_builder.read_instructions(reader)?;
-        msg_builder.finish();
-
-        let msg = unsafe { msg.assume_init() };
-        dst.write(VersionedMessage::Legacy(msg));
+        };
+        let legacy =
+            <LegacyMessage as SchemaReadContext<C, _>>::get_with_context(discriminant, reader)?;
+        dst.write(VersionedMessage::Legacy(legacy));
 
         Ok(())
+    }
+}
+#[cfg(feature = "wincode")]
+unsafe impl<'de, C: Config> SchemaRead<'de, C> for VersionedMessage {
+    type Dst = Self;
+
+    #[inline]
+    fn read(mut reader: impl Reader<'de>, dst: &mut MaybeUninit<Self::Dst>) -> ReadResult<()> {
+        let discriminant = reader.take_byte()?;
+        <VersionedMessage as SchemaReadContext<C, _>>::read_with_context(discriminant, reader, dst)
     }
 }
 
@@ -486,13 +465,16 @@ unsafe impl<'de, C: Config> SchemaRead<'de, C> for VersionedMessage {
 mod tests {
     use {
         super::*,
-        crate::{v0::MessageAddressTableLookup, v1::V1_PREFIX},
+        crate::{
+            v0::MessageAddressTableLookup,
+            v1::{MAX_HEAP_SIZE, MIN_HEAP_SIZE, V1_PREFIX},
+        },
+        alloc::vec,
         proptest::{
             collection::vec,
             option::of,
             prelude::{any, Just},
             prop_compose, proptest,
-            strategy::Strategy,
         },
         solana_instruction::{AccountMeta, Instruction},
     };
@@ -607,7 +589,9 @@ mod tests {
                 priority_fee in of(any::<u64>()),
                 compute_unit_limit in of(0..=1_400_000u32),
                 loaded_accounts_data_size_limit in of(0..=20_480u32),
-                heap_size in of((0..=32u32).prop_map(|n| n.saturating_mul(1024))),
+                // heap size must be a multiple of 1024 and between MIN_HEAP_SIZE
+                // and MAX_HEAP_SIZE if specified.
+                heap_size in of(MIN_HEAP_SIZE.saturating_div(1024)..=MAX_HEAP_SIZE.saturating_div(1024)),
                 required_signatures in 1..=12u8,
             )
             (
@@ -626,7 +610,7 @@ mod tests {
                 priority_fee in Just(priority_fee),
                 compute_unit_limit in Just(compute_unit_limit),
                 loaded_accounts_data_size_limit in Just(loaded_accounts_data_size_limit),
-                heap_size in Just(heap_size),
+                heap_size in Just(heap_size.map(|size| size.saturating_mul(1024))),
                 required_signatures in Just(required_signatures),
             ) -> TestMessageData
         {
@@ -678,13 +662,14 @@ mod tests {
 
             let message = builder.build().unwrap();
 
-            // Serialize V1 to raw bytes.
-            let bytes = v1::serialize(&message);
+            // Serialize V1 to raw bytes (without the version prefix).
+            let bytes = wincode::serialize(&message).unwrap();
             // Deserialize from raw bytes.
-            let (parsed, _) = v1::deserialize(&bytes).unwrap();
+            let parsed = v1::deserialize(&bytes).unwrap();
 
             // Messages should match.
             assert_eq!(message, parsed);
+            assert_eq!(message, wincode::deserialize(&bytes).unwrap());
 
             // Wrap in VersionedMessage and test `serialize()`.
             let versioned = VersionedMessage::V1(message);

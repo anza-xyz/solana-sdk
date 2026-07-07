@@ -77,56 +77,72 @@ runs:
 
     - name: Install stable toolchain
       if: ${{ inputs.stable-toolchain == 'true' }}
-      uses: dtolnay/rust-toolchain@master
+      uses: actions-rust-lang/setup-rust-toolchain@46268bd060767258de96ed93c1251119784f2ab6  # v1.16.1
       with:
         toolchain: ${{ env.RUST_STABLE }}
+        cache: false
+        rustflags: ""
 
     - name: Install minimum toolchain
       if: ${{ inputs.minimum-toolchain == 'true' }}
-      uses: dtolnay/rust-toolchain@master
+      uses: actions-rust-lang/setup-rust-toolchain@46268bd060767258de96ed93c1251119784f2ab6  # v1.16.1
       with:
         toolchain: ${{ env.RUST_MINIMUM }}
+        cache: false
+        rustflags: ""
 
     - name: Install nightly toolchain
       if: ${{ inputs.nightly-toolchain == 'true' }}
-      uses: dtolnay/rust-toolchain@master
+      uses: actions-rust-lang/setup-rust-toolchain@46268bd060767258de96ed93c1251119784f2ab6  # v1.16.1
       with:
         toolchain: ${{ env.RUST_NIGHTLY }}
+        cache: false
+        rustflags: ""
 
     - name: Install Rustfmt
       if: ${{ inputs.rustfmt == 'true' }}
-      uses: dtolnay/rust-toolchain@master
+      uses: actions-rust-lang/setup-rust-toolchain@46268bd060767258de96ed93c1251119784f2ab6  # v1.16.1
       with:
         toolchain: ${{ env.RUST_NIGHTLY }}
         components: rustfmt
+        cache: false
+        rustflags: ""
 
     - name: Install Clippy
       if: ${{ inputs.clippy == 'true' }}
-      uses: dtolnay/rust-toolchain@master
+      uses: actions-rust-lang/setup-rust-toolchain@46268bd060767258de96ed93c1251119784f2ab6  # v1.16.1
       with:
         toolchain: ${{ env.RUST_NIGHTLY }}
         components: clippy
+        cache: false
+        rustflags: ""
 
     - name: Install Miri
       if: ${{ inputs.miri == 'true' }}
-      uses: dtolnay/rust-toolchain@master
+      uses: actions-rust-lang/setup-rust-toolchain@46268bd060767258de96ed93c1251119784f2ab6  # v1.16.1
       with:
         toolchain: ${{ env.RUST_NIGHTLY }}
         components: miri
+        cache: false
+        rustflags: ""
 
     - name: Install llvm-tools-preview
       if: ${{ inputs.llvm-tools-preview == 'true' }}
-      uses: dtolnay/rust-toolchain@master
+      uses: actions-rust-lang/setup-rust-toolchain@46268bd060767258de96ed93c1251119784f2ab6  # v1.16.1
       with:
         toolchain: ${{ env.RUST_NIGHTLY }}
         components: llvm-tools-preview
+        cache: false
+        rustflags: ""
 
     - name: Install rust-src
       if: ${{ inputs.rust-src == 'true' }}
-      uses: dtolnay/rust-toolchain@master
+      uses: actions-rust-lang/setup-rust-toolchain@46268bd060767258de96ed93c1251119784f2ab6  # v1.16.1
       with:
         toolchain: ${{ env.RUST_NIGHTLY }}
         components: rust-src
+        cache: false
+        rustflags: ""
 
     - name: Install Agave build dependencies
       if: ${{ inputs.agave == 'true' }}
@@ -135,7 +151,7 @@ runs:
 
     - name: Cache Cargo Dependencies
       if: ${{ inputs.cargo-cache-key && !inputs.cargo-cache-fallback-key }}
-      uses: actions/cache@v4
+      uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830  # v4.3.0
       with:
         path: |
           ~/.cargo/bin/
@@ -148,7 +164,7 @@ runs:
 
     - name: Cache Cargo Dependencies With Fallback
       if: ${{ inputs.cargo-cache-key && inputs.cargo-cache-fallback-key }}
-      uses: actions/cache@v4
+      uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830  # v4.3.0
       with:
         path: |
           ~/.cargo/bin/
@@ -164,7 +180,7 @@ runs:
 
     - name: Cache Local Cargo Dependencies
       if: ${{ inputs.cargo-cache-local-key }}
-      uses: actions/cache@v4
+      uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830  # v4.3.0
       with:
         path: |
           .cargo/bin/

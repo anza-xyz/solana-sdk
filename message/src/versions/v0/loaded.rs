@@ -1,11 +1,12 @@
 #[cfg(feature = "serde")]
 use serde_derive::{Deserialize, Serialize};
 use {
-    crate::{v0, AccountKeys},
+    crate::v0,
+    alloc::{borrow::Cow, vec::Vec},
     solana_address::Address,
-    solana_sdk_ids::bpf_loader_upgradeable,
-    std::{borrow::Cow, collections::HashSet},
 };
+#[cfg(feature = "std")]
+use {crate::AccountKeys, solana_sdk_ids::bpf_loader_upgradeable, std::collections::HashSet};
 
 /// Combination of a version #0 message and its loaded addresses
 #[derive(Debug, Clone, Eq, PartialEq)]
@@ -55,6 +56,7 @@ impl LoadedAddresses {
     }
 }
 
+#[cfg(feature = "std")]
 impl<'a> LoadedMessage<'a> {
     pub fn new(
         message: v0::Message,
@@ -91,7 +93,7 @@ impl<'a> LoadedMessage<'a> {
             .enumerate()
             .map(|(i, _key)| self.is_writable_internal(i, reserved_account_keys))
             .collect::<Vec<_>>();
-        let _ = std::mem::replace(
+        let _ = core::mem::replace(
             &mut self.is_writable_account_cache,
             is_writable_account_cache,
         );
@@ -189,6 +191,7 @@ mod tests {
     use {
         super::*,
         crate::{compiled_instruction::CompiledInstruction, MessageHeader},
+        alloc::vec,
         itertools::Itertools,
         solana_sdk_ids::{system_program, sysvar},
     };

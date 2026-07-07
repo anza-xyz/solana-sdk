@@ -1,5 +1,7 @@
 #[cfg(feature = "bytemuck")]
 use bytemuck::{Pod, PodInOption, Zeroable, ZeroableInOption};
+#[cfg(feature = "wincode")]
+use wincode::{SchemaRead, SchemaWrite};
 use {
     base64::{prelude::BASE64_STANDARD, Engine},
     core::fmt,
@@ -26,18 +28,13 @@ pub const BLS_SIGNATURE_AFFINE_BASE64_SIZE: usize = 256;
 #[cfg_attr(feature = "frozen-abi", derive(solana_frozen_abi_macro::AbiExample))]
 #[cfg_attr(feature = "serde", cfg_eval::cfg_eval, serde_as)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "wincode", derive(SchemaRead, SchemaWrite))]
 #[derive(Clone, Copy, Debug, Hash, Eq, Ord, PartialEq, PartialOrd)]
 #[repr(transparent)]
 pub struct SignatureCompressed(
     #[cfg_attr(feature = "serde", serde_as(as = "[_; BLS_SIGNATURE_COMPRESSED_SIZE]"))]
     pub  [u8; BLS_SIGNATURE_COMPRESSED_SIZE],
 );
-
-impl Default for SignatureCompressed {
-    fn default() -> Self {
-        Self([0; BLS_SIGNATURE_COMPRESSED_SIZE])
-    }
-}
 
 impl fmt::Display for SignatureCompressed {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -55,18 +52,13 @@ impl_from_str!(
 #[cfg_attr(feature = "frozen-abi", derive(solana_frozen_abi_macro::AbiExample))]
 #[cfg_attr(feature = "serde", cfg_eval::cfg_eval, serde_as)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "wincode", derive(SchemaRead, SchemaWrite))]
 #[derive(Clone, Copy, Debug, Hash, Eq, Ord, PartialEq, PartialOrd)]
 #[repr(transparent)]
 pub struct Signature(
     #[cfg_attr(feature = "serde", serde_as(as = "[_; BLS_SIGNATURE_AFFINE_SIZE]"))]
     pub  [u8; BLS_SIGNATURE_AFFINE_SIZE],
 );
-
-impl Default for Signature {
-    fn default() -> Self {
-        Self([0; BLS_SIGNATURE_AFFINE_SIZE])
-    }
-}
 
 impl fmt::Display for Signature {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {

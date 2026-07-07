@@ -1,4 +1,6 @@
 use solana_pubkey::Pubkey;
+#[cfg(feature = "wincode")]
+use wincode::{SchemaRead, SchemaWrite};
 
 /// Upgradeable loader account states
 #[cfg_attr(feature = "frozen-abi", derive(solana_frozen_abi_macro::AbiExample))]
@@ -6,6 +8,7 @@ use solana_pubkey::Pubkey;
     feature = "serde",
     derive(serde_derive::Deserialize, serde_derive::Serialize)
 )]
+#[cfg_attr(feature = "wincode", derive(SchemaRead, SchemaWrite))]
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum UpgradeableLoaderState {
     /// Account is not initialized.
@@ -64,23 +67,23 @@ impl UpgradeableLoaderState {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "wincode"))]
 mod tests {
-    use {super::*, bincode::serialized_size};
+    use {super::*, test_case::test_case};
 
     #[test]
     fn test_state_size_of_uninitialized() {
-        let buffer_state = UpgradeableLoaderState::Uninitialized;
-        let size = serialized_size(&buffer_state).unwrap();
+        let state = UpgradeableLoaderState::Uninitialized;
+        let size = wincode::serialized_size(&state).unwrap();
         assert_eq!(UpgradeableLoaderState::size_of_uninitialized() as u64, size);
     }
 
     #[test]
     fn test_state_size_of_buffer_metadata() {
-        let buffer_state = UpgradeableLoaderState::Buffer {
+        let state = UpgradeableLoaderState::Buffer {
             authority_address: Some(Pubkey::default()),
         };
-        let size = serialized_size(&buffer_state).unwrap();
+        let size = wincode::serialized_size(&state).unwrap();
         assert_eq!(
             UpgradeableLoaderState::size_of_buffer_metadata() as u64,
             size
@@ -89,11 +92,11 @@ mod tests {
 
     #[test]
     fn test_state_size_of_programdata_metadata() {
-        let programdata_state = UpgradeableLoaderState::ProgramData {
+        let state = UpgradeableLoaderState::ProgramData {
             upgrade_authority_address: Some(Pubkey::default()),
             slot: 0,
         };
-        let size = serialized_size(&programdata_state).unwrap();
+        let size = wincode::serialized_size(&state).unwrap();
         assert_eq!(
             UpgradeableLoaderState::size_of_programdata_metadata() as u64,
             size
@@ -102,10 +105,29 @@ mod tests {
 
     #[test]
     fn test_state_size_of_program() {
-        let program_state = UpgradeableLoaderState::Program {
+        let state = UpgradeableLoaderState::Program {
             programdata_address: Pubkey::default(),
         };
-        let size = serialized_size(&program_state).unwrap();
+        let size = wincode::serialized_size(&state).unwrap();
         assert_eq!(UpgradeableLoaderState::size_of_program() as u64, size);
+    }
+
+    /// Verify that wincode produces the exact same bytes as bincode for
+    /// every state variant, and that both round-trip correctly.
+    #[test_case(UpgradeableLoaderState::Uninitialized)]
+    #[test_case(UpgradeableLoaderState::Buffer { authority_address: Some(Pubkey::default()) })]
+    #[test_case(UpgradeableLoaderState::Buffer { authority_address: None })]
+    #[test_case(UpgradeableLoaderState::Program { programdata_address: Pubkey::default() })]
+    #[test_case(UpgradeableLoaderState::ProgramData { slot: 123_456_789, upgrade_authority_address: Some(Pubkey::default()) })]
+    #[test_case(UpgradeableLoaderState::ProgramData { slot: 0, upgrade_authority_address: None })]
+    fn wire_compat_bincode_vs_wincode(state: UpgradeableLoaderState) {
+        let bincode_bytes = bincode::serialize(&state).unwrap();
+        let wincode_bytes = wincode::serialize(&state).unwrap();
+        assert_eq!(bincode_bytes, wincode_bytes);
+
+        let from_bincode: UpgradeableLoaderState = bincode::deserialize(&bincode_bytes).unwrap();
+        let from_wincode: UpgradeableLoaderState = wincode::deserialize(&wincode_bytes).unwrap();
+        assert_eq!(from_bincode, state);
+        assert_eq!(from_wincode, state);
     }
 }

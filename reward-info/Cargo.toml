@@ -2,7 +2,7 @@
 name = "solana-reward-info"
 description = "Solana vote reward info types"
 documentation = "https://docs.rs/solana-reward-info"
-version = "4.0.0"
+version = "6.2.0"
 authors = { workspace = true }
 repository = { workspace = true }
 homepage = { workspace = true }
@@ -11,13 +11,17 @@ edition = { workspace = true }
 
 [package.metadata.docs.rs]
 targets = ["x86_64-unknown-linux-gnu"]
+all-features = true
+rustdoc-args = ["--cfg=docsrs"]
 
 [features]
 frozen-abi = ["dep:solana-frozen-abi", "dep:solana-frozen-abi-macro", "serde"]
 serde = ["dep:serde", "dep:serde_derive"]
+wincode = ["dep:wincode"]
 
 [dependencies]
 serde = { workspace = true, optional = true }
 serde_derive = { workspace = true, optional = true }
-solana-frozen-abi = { workspace = true, optional = true }
+solana-frozen-abi = { workspace = true, optional = true, features = ["frozen-abi"] }
 solana-frozen-abi-macro = { workspace = true, optional = true }
+wincode = { workspace = true, optional = true }

@@ -2,7 +2,7 @@
 name = "solana-instruction"
 description = "Types for directing the execution of Solana programs."
 documentation = "https://docs.rs/solana-instruction"
-version = "3.1.0"
+version = "3.4.0"
 authors = { workspace = true }
 repository = { workspace = true }
 homepage = { workspace = true }
@@ -18,20 +18,22 @@ rustdoc-args = ["--cfg=docsrs"]
 bincode = ["dep:bincode", "dep:serde"]
 borsh = ["dep:borsh"]
 default = ["std"]
-frozen-abi = ["dep:solana-frozen-abi", "dep:solana-frozen-abi-macro", "serde", "std"]
-serde = ["dep:serde", "dep:serde_derive", "solana-pubkey/serde"]
-std = ["serde?/std", "borsh?/std"]
-syscalls = ["std"]
+# The `frozen-abi` feature is unused. Remove with the next breaking release.
+frozen-abi = []
+serde = ["serde/alloc", "dep:serde_derive", "solana-pubkey/serde"]
+# The `std` feature is currently unused and retained for backwards compatibility.
+std = []
+syscalls = []
+wincode = ["dep:wincode", "solana-pubkey/wincode"]
 
 [dependencies]
 bincode = { workspace = true, optional = true }
 borsh = { workspace = true, optional = true }
 serde = { workspace = true, optional = true }
 serde_derive = { workspace = true, optional = true }
-solana-frozen-abi = { workspace = true, optional = true }
-solana-frozen-abi-macro = { workspace = true, optional = true }
 solana-instruction-error = { workspace = true, features = ["num-traits"] }
 solana-pubkey = { workspace = true, default-features = false }
+wincode = { workspace = true, features = ["alloc"], optional = true }
 
 [target.'cfg(target_os = "solana")'.dependencies]
 solana-define-syscall = { workspace = true }

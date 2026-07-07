@@ -14,19 +14,29 @@
 #[cfg(feature = "serde")]
 use serde_derive::{Deserialize, Serialize};
 #[cfg(feature = "frozen-abi")]
-use solana_frozen_abi_macro::{frozen_abi, AbiExample};
-#[cfg(feature = "wincode")]
-use wincode::{containers, len::ShortU16, SchemaRead, SchemaWrite};
+use solana_frozen_abi_macro::{frozen_abi, AbiExample, StableAbi, StableAbiSample};
+#[cfg(feature = "std")]
+use std::collections::HashSet;
 use {
     crate::{
         compiled_instruction::CompiledInstruction, compiled_keys::CompiledKeys,
         inline_nonce::advance_nonce_account_instruction, MessageHeader,
     },
+    alloc::vec::Vec,
+    core::convert::TryFrom,
     solana_address::Address,
     solana_hash::Hash,
     solana_instruction::Instruction,
     solana_sanitize::{Sanitize, SanitizeError},
-    std::{collections::HashSet, convert::TryFrom},
+};
+#[cfg(feature = "wincode")]
+use {
+    core::mem::MaybeUninit,
+    solana_short_vec::ShortU16,
+    wincode::{
+        config::Config, containers, io::Reader, ReadResult, SchemaRead, SchemaReadContext,
+        SchemaWrite,
+    },
 };
 
 fn position(keys: &[Address], key: &Address) -> u8 {
@@ -51,6 +61,25 @@ fn compile_instructions(ixs: &[Instruction], keys: &[Address]) -> Vec<CompiledIn
     ixs.iter().map(|ix| compile_instruction(ix, keys)).collect()
 }
 
+/// Samples a `MessageHeader` whose `num_required_signatures` cannot be mistaken
+/// for a version prefix.
+///
+/// The legacy message format has no version prefix, so its first serialized byte
+/// (the header's `num_required_signatures`) must stay below
+/// `MESSAGE_VERSION_PREFIX`, otherwise it would decode as a versioned message.
+/// Masking the prefix bit keeps a sampled legacy message self-consistent across
+/// a serialize/deserialize roundtrip.
+#[cfg(feature = "frozen-abi")]
+fn sample_legacy_header(
+    rng: &mut (impl solana_frozen_abi::rand::RngCore + ?Sized),
+) -> MessageHeader {
+    use solana_frozen_abi::stable_abi::StableAbi;
+
+    let mut header = MessageHeader::random(rng);
+    header.num_required_signatures &= !crate::MESSAGE_VERSION_PREFIX;
+    header
+}
+
 /// A Solana transaction message (legacy).
 ///
 /// See the crate documentation for further description.
@@ -68,22 +97,22 @@ fn compile_instructions(ixs: &[Instruction], keys: &[Address]) -> Vec<CompiledIn
 #[cfg_attr(
     feature = "frozen-abi",
     frozen_abi(digest = "GXpvLNiMCnjnZpQEDKpc2NBpsqmRnAX7ZTCy9JmvG8Dg"),
-    derive(AbiExample)
+    derive(AbiExample, StableAbi, StableAbiSample)
 )]
 #[cfg_attr(
     feature = "serde",
     derive(Deserialize, Serialize),
     serde(rename_all = "camelCase")
 )]
-#[cfg_attr(
-    feature = "wincode",
-    derive(SchemaWrite, SchemaRead),
-    wincode(struct_extensions)
-)]
+#[cfg_attr(feature = "wincode", derive(SchemaWrite, SchemaRead))]
 #[derive(Default, Debug, PartialEq, Eq, Clone)]
 pub struct Message {
     /// The message header, identifying signed and read-only `account_keys`.
     // NOTE: Serialization-related changes must be paired with the direct read at sigverify.
+    #[cfg_attr(
+        feature = "frozen-abi",
+        stable_abi_sample(with = "sample_legacy_header(rng)")
+    )]
     pub header: MessageHeader,
 
     /// All the account keys used by this transaction.
@@ -101,8 +130,40 @@ pub struct Message {
     pub instructions: Vec<CompiledInstruction>,
 }
 
+#[cfg(feature = "wincode")]
+unsafe impl<'de, C: Config> SchemaReadContext<'de, C, u8> for Message {
+    type Dst = Self;
+
+    fn read_with_context(
+        num_required_signatures: u8,
+        mut reader: impl Reader<'de>,
+        dst: &mut MaybeUninit<Self::Dst>,
+    ) -> ReadResult<()> {
+        let header = {
+            let mut reader = unsafe { reader.as_trusted_for(2) }?;
+            MessageHeader {
+                num_required_signatures,
+                num_readonly_signed_accounts: reader.take_byte()?,
+                num_readonly_unsigned_accounts: reader.take_byte()?,
+            }
+        };
+        let account_keys =
+            <containers::Vec<Address, ShortU16> as SchemaRead<C>>::get(reader.by_ref())?;
+        let recent_blockhash = <Hash as SchemaRead<C>>::get(reader.by_ref())?;
+        let instructions =
+            <containers::Vec<CompiledInstruction, ShortU16> as SchemaRead<C>>::get(reader)?;
+        dst.write(Message {
+            header,
+            account_keys,
+            recent_blockhash,
+            instructions,
+        });
+        Ok(())
+    }
+}
+
 impl Sanitize for Message {
-    fn sanitize(&self) -> std::result::Result<(), SanitizeError> {
+    fn sanitize(&self) -> Result<(), SanitizeError> {
         // signing area and read-only non-signing area should not overlap
         if self.header.num_required_signatures as usize
             + self.header.num_readonly_unsigned_accounts as usize
@@ -437,14 +498,14 @@ impl Message {
     }
 
     /// Compute the blake3 hash of this transaction's message.
-    #[cfg(all(not(target_os = "solana"), feature = "wincode", feature = "blake3"))]
+    #[cfg(all(feature = "wincode", feature = "blake3"))]
     pub fn hash(&self) -> Hash {
         let message_bytes = self.serialize();
         Self::hash_raw_message(&message_bytes)
     }
 
     /// Compute the blake3 hash of a raw transaction message.
-    #[cfg(all(not(target_os = "solana"), feature = "blake3"))]
+    #[cfg(feature = "blake3")]
     pub fn hash_raw_message(message_bytes: &[u8]) -> Hash {
         use {blake3::traits::digest::Digest, solana_hash::HASH_BYTES};
         let mut hasher = blake3::Hasher::new();
@@ -513,6 +574,7 @@ impl Message {
 
     /// Returns true if the account at the specified index was requested to be
     /// writable. This method should not be used directly.
+    #[cfg(feature = "std")]
     pub(super) fn is_writable_index(&self, i: usize) -> bool {
         super::is_writable_index(i, self.header, &self.account_keys)
     }
@@ -523,6 +585,7 @@ impl Message {
     /// fetching the latest set of reserved account keys. If this method is
     /// called by the runtime, the latest set of reserved account keys must be
     /// passed.
+    #[cfg(feature = "std")]
     pub fn is_maybe_writable(
         &self,
         i: usize,
@@ -573,10 +636,8 @@ impl Message {
 #[cfg(test)]
 mod tests {
     use {
-        super::*,
-        crate::MESSAGE_HEADER_LENGTH,
-        solana_instruction::AccountMeta,
-        std::{collections::HashSet, str::FromStr},
+        super::*, crate::MESSAGE_HEADER_LENGTH, alloc::vec, core::str::FromStr,
+        solana_instruction::AccountMeta, std::collections::HashSet,
     };
 
     #[test]

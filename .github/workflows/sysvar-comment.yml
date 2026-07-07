@@ -14,6 +14,7 @@ on:
       - 'rent/src/**'
       - 'slot-hashes/src/**'
       - 'slot-history/src/**'
+      - 'stake-history/src/**'
       - 'sysvar/src/**'
       - 'sysvar-id/src/**'
 
@@ -25,7 +26,7 @@ jobs:
       pull-requests: write
     steps:
       - name: Git Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
 
       - name: PR Comment
         run:

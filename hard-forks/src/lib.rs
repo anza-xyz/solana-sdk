@@ -4,11 +4,15 @@
 #![cfg_attr(docsrs, feature(doc_cfg))]
 #![cfg_attr(feature = "frozen-abi", feature(min_specialization))]
 
-#[cfg_attr(feature = "frozen-abi", derive(solana_frozen_abi_macro::AbiExample))]
+#[cfg(feature = "frozen-abi")]
+use solana_frozen_abi_macro::{AbiExample, StableAbi, StableAbiSample};
+
+#[cfg_attr(feature = "frozen-abi", derive(AbiExample, StableAbi, StableAbiSample))]
 #[cfg_attr(
     feature = "serde",
     derive(serde_derive::Deserialize, serde_derive::Serialize)
 )]
+#[cfg_attr(feature = "wincode", derive(wincode::SchemaWrite, wincode::SchemaRead))]
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct HardForks {
     hard_forks: Vec<(u64, usize)>,

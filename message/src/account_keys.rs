@@ -1,8 +1,9 @@
 use {
     crate::{compiled_instruction::CompiledInstruction, v0::LoadedAddresses, CompileError},
+    alloc::{collections::BTreeMap, vec::Vec},
+    core::ops::Index,
     solana_address::Address,
     solana_instruction::Instruction,
-    std::{collections::BTreeMap, iter::zip, ops::Index},
 };
 
 /// Collection of static and dynamically loaded keys used to load accounts
@@ -144,13 +145,13 @@ impl<'a> AccountKeys<'a> {
 
 impl PartialEq for AccountKeys<'_> {
     fn eq(&self, other: &Self) -> bool {
-        zip(self.iter(), other.iter()).all(|(a, b)| a == b)
+        self.iter().eq(other.iter())
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use {super::*, solana_instruction::AccountMeta};
+    use {super::*, alloc::vec, solana_instruction::AccountMeta};
 
     fn test_account_keys() -> [Address; 6] {
         let key0 = Address::new_unique();
@@ -229,6 +230,45 @@ mod tests {
         let account_keys = AccountKeys::new(&static_keys, Some(&dynamic_keys));
 
         assert!(account_keys.iter().eq(keys.iter()));
+    }
+
+    #[test]
+    fn test_eq() {
+        let keys = test_account_keys();
+
+        let static_keys = vec![keys[0], keys[1], keys[2]];
+        let split_static_keys = vec![keys[0]];
+        let split_dynamic_keys = LoadedAddresses {
+            writable: vec![keys[1]],
+            readonly: vec![keys[2]],
+        };
+
+        assert_eq!(
+            AccountKeys::new(&static_keys, None),
+            AccountKeys::new(&split_static_keys, Some(&split_dynamic_keys)),
+        );
+    }
+
+    #[test]
+    fn test_ne_with_different_lengths() {
+        let keys = test_account_keys();
+
+        let short_static_keys = vec![keys[0]];
+        let long_static_keys = vec![keys[0], keys[1]];
+        let long_dynamic_keys = LoadedAddresses {
+            writable: vec![keys[1]],
+            readonly: vec![],
+        };
+
+        let short_account_keys = AccountKeys::new(&short_static_keys, None);
+        let long_static_account_keys = AccountKeys::new(&long_static_keys, None);
+        let long_dynamic_account_keys =
+            AccountKeys::new(&short_static_keys, Some(&long_dynamic_keys));
+
+        assert_ne!(short_account_keys, long_static_account_keys);
+        assert_ne!(long_static_account_keys, short_account_keys);
+        assert_ne!(short_account_keys, long_dynamic_account_keys);
+        assert_ne!(long_dynamic_account_keys, short_account_keys);
     }
 
     #[test]

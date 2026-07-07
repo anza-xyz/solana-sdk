@@ -2,8 +2,8 @@
 name = "solana-system-transaction"
 description = "Functionality for creating system transactions."
 documentation = "https://docs.rs/solana-system-transaction"
-version = "3.0.0"
-rust-version = "1.85.0"
+version = "4.0.0"
+rust-version = { workspace = true }
 authors = { workspace = true }
 repository = { workspace = true }
 homepage = { workspace = true }
@@ -12,6 +12,8 @@ edition = { workspace = true }
 
 [package.metadata.docs.rs]
 targets = ["x86_64-unknown-linux-gnu"]
+all-features = true
+rustdoc-args = ["--cfg=docsrs"]
 
 [dependencies]
 solana-hash = { workspace = true }
@@ -20,4 +22,4 @@ solana-message = { workspace = true }
 solana-pubkey = { workspace = true }
 solana-signer = { workspace = true }
 solana-system-interface = { workspace = true, features = ["bincode"] }
-solana-transaction = { workspace = true, features = ["wincode"] }
+solana-transaction = { workspace = true, features = ["std", "wincode"] }

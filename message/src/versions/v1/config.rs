@@ -1,10 +1,17 @@
 #[cfg(feature = "serde")]
 use serde_derive::{Deserialize, Serialize};
 #[cfg(feature = "frozen-abi")]
-use solana_frozen_abi_macro::AbiExample;
+use solana_frozen_abi_macro::{frozen_abi, AbiExample, StableAbi, StableAbiSample};
 
 /// Compute budget configuration for V1 transactions.
-#[cfg_attr(feature = "frozen-abi", derive(AbiExample))]
+#[cfg_attr(
+    feature = "frozen-abi",
+    derive(AbiExample, StableAbi, StableAbiSample),
+    frozen_abi(
+        abi_digest = "7vsBq6gqhX7ZZE6LHVDjiwK5YmSA9Dvc5rCXgLyr32UP",
+        test_roundtrip = "eq_and_wire"
+    )
+)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),

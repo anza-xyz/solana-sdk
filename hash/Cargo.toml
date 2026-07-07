@@ -2,8 +2,8 @@
 name = "solana-hash"
 description = "Solana wrapper for the 32-byte output of a hashing algorithm."
 documentation = "https://docs.rs/solana-hash"
-version = "4.1.0"
-rust-version = "1.81.0"
+version = "4.4.0"
+rust-version = { workspace = true }
 authors = { workspace = true }
 repository = { workspace = true }
 homepage = { workspace = true }
@@ -22,10 +22,10 @@ bytemuck = ["copy", "dep:bytemuck", "dep:bytemuck_derive"]
 copy = []
 decode = ["dep:five8"]
 default = []
-frozen-abi = ["dep:solana-frozen-abi", "dep:solana-frozen-abi-macro", "std"]
+frozen-abi = ["dep:solana-frozen-abi", "dep:solana-frozen-abi-macro"]
 sanitize = ["dep:solana-sanitize"]
 serde = ["dep:serde", "dep:serde_derive"]
-std = ["borsh?/std", "serde?/std", "wincode?/std"]
+std = []
 wincode = ["dep:wincode"]
 
 [dependencies]

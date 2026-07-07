@@ -24,5 +24,6 @@ impl_bls_conversions!(
     AsProofOfPossessionProjective,
     AsProofOfPossessionAffine,
     BLS_PROOF_OF_POSSESSION_COMPRESSED_SIZE,
-    BLS_PROOF_OF_POSSESSION_AFFINE_SIZE
+    BLS_PROOF_OF_POSSESSION_AFFINE_SIZE,
+    false
 );

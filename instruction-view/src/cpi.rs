@@ -12,8 +12,14 @@ pub use solana_define_syscall::{
 };
 use {
     crate::InstructionView,
-    core::{marker::PhantomData, mem::MaybeUninit, ops::Deref, slice::from_raw_parts},
-    solana_account_view::AccountView,
+    core::{
+        marker::PhantomData,
+        mem::{offset_of, size_of, MaybeUninit},
+        ops::Deref,
+        ptr::{addr_of, addr_of_mut, copy_nonoverlapping},
+        slice::from_raw_parts,
+    },
+    solana_account_view::{AccountView, RuntimeAccount},
     solana_address::Address,
     solana_program_error::{ProgramError, ProgramResult},
 };
@@ -33,7 +39,7 @@ pub const MAX_CPI_ACCOUNTS: usize = 128;
 /// the memory layout as expected by `sol_invoke_signed_c` syscall.
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
-pub struct CpiAccount<'a> {
+pub struct CpiAccount<'account> {
     /// Address of the account.
     address: *const Address,
 
@@ -53,41 +59,87 @@ pub struct CpiAccount<'a> {
     rent_epoch: u64,
 
     /// Transaction was signed by this account's key?
-    is_signer: bool,
+    is_signer: u8,
 
     /// Is the account writable?
-    is_writable: bool,
+    is_writable: u8,
 
     /// This account's data contains a loaded program (and is now read-only).
-    executable: bool,
+    executable: u8,
+
+    /// Padding so the last 4 bytes can be seen as a `u32`.
+    _padding: u8,
 
     /// The pointers to the `AccountView` data are only valid for as long as the
-    /// `&'a AccountView` lives. Instead of holding a reference to the actual `AccountView`,
+    /// `&'account AccountView` lives. Instead of holding a reference to the actual `AccountView`,
     /// which would increase the size of the type, we claim to hold a reference without
-    /// actually holding one using a `PhantomData<&'a AccountView>`.
-    _account_view: PhantomData<&'a AccountView>,
+    /// actually holding one using a `PhantomData<&'account AccountView>`.
+    _account_view: PhantomData<&'account AccountView>,
 }
 
-impl<'a> From<&'a AccountView> for CpiAccount<'a> {
-    fn from(account: &'a AccountView) -> Self {
-        CpiAccount {
-            address: account.address(),
-            // SAFETY:  Dereferencing `account.account_ptr()` to access its
-            // `lamports` field.
-            lamports: unsafe { &(*account.account_ptr()).lamports },
-            data_len: account.data_len() as u64,
-            data: account.data_ptr(),
-            // SAFETY: `account.owner()` is not expected to be updated between
-            // the creation of the CPI account and invocation of the program.
-            owner: unsafe { account.owner() },
+// Make sure the layout of `CpiAccount` and `RuntimeAccount` are compatible for the fields
+// that are copied over as a single value in `CpiAccount::init_from_account_view`.
+#[allow(clippy::arithmetic_side_effects)]
+const _: () = {
+    const RUNTIME_SIGNER_OFFSET: usize = offset_of!(RuntimeAccount, is_signer);
+    const CPI_SIGNER_OFFSET: usize = offset_of!(CpiAccount<'static>, is_signer);
+
+    assert!(
+        offset_of!(RuntimeAccount, is_writable) - RUNTIME_SIGNER_OFFSET
+            == offset_of!(CpiAccount<'static>, is_writable) - CPI_SIGNER_OFFSET
+    );
+
+    assert!(
+        offset_of!(RuntimeAccount, executable) - RUNTIME_SIGNER_OFFSET
+            == offset_of!(CpiAccount<'static>, executable) - CPI_SIGNER_OFFSET
+    );
+
+    assert!(
+        offset_of!(RuntimeAccount, padding) - RUNTIME_SIGNER_OFFSET
+            == offset_of!(CpiAccount<'static>, _padding) - CPI_SIGNER_OFFSET
+    );
+};
+
+impl<'account> From<&'account AccountView> for CpiAccount<'account> {
+    fn from(account: &'account AccountView) -> Self {
+        let mut uninit = MaybeUninit::<Self>::uninit();
+        Self::init_from_account_view(account, &mut uninit);
+        // SAFETY: `init_from_account_view` initializes all fields of the struct.
+        unsafe { uninit.assume_init() }
+    }
+}
+
+impl<'account> CpiAccount<'account> {
+    /// Initialize a `CpiAccount` struct with information from an `AccountView`.
+    ///
+    /// After this function is called, the `uninit` parameter will be initialized
+    /// with the information from the `account_view`.
+    #[inline(always)]
+    pub fn init_from_account_view(
+        account_view: &'account AccountView,
+        uninit: &mut MaybeUninit<Self>,
+    ) {
+        let uninit_ptr = uninit.as_mut_ptr();
+        let account_view_ptr = account_view.account_ptr();
+
+        // SAFETY: `uninit_ptr` is valid for writes and `account_view_ptr` is valid for reads
+        // since they have been obtained from references.
+        unsafe {
+            (*uninit_ptr).address = addr_of!((*account_view_ptr).address);
+            (*uninit_ptr).lamports = addr_of!((*account_view_ptr).lamports);
+            (*uninit_ptr).data_len = (*account_view_ptr).data_len;
+            (*uninit_ptr).data = account_view_ptr.add(1) as *const u8;
+            (*uninit_ptr).owner = addr_of!((*account_view_ptr).owner);
             // The `rent_epoch` field is not present in the `AccountView` struct,
             // since the value occurs after the variable data of the account in
             // the runtime input data.
-            rent_epoch: 0,
-            is_signer: account.is_signer(),
-            is_writable: account.is_writable(),
-            executable: account.executable(),
-            _account_view: PhantomData::<&'a AccountView>,
+            (*uninit_ptr).rent_epoch = 0;
+            // The `is_signer`, `is_writable`, and `executable` fields are contiguous in memory,
+            // so we can write them with a single operation. We copy an extra byte on purpose so
+            // it translates to 32-bit load/store operations.
+            let src = addr_of!((*account_view_ptr).is_signer);
+            let dst = addr_of_mut!((*uninit_ptr).is_signer);
+            copy_nonoverlapping(src, dst, size_of::<u32>());
         }
     }
 }
@@ -99,22 +151,22 @@ impl<'a> From<&'a AccountView> for CpiAccount<'a> {
 /// syscall.
 #[repr(C)]
 #[derive(Debug, Clone)]
-pub struct Seed<'a> {
+pub struct Seed<'bytes> {
     /// Seed bytes.
     pub(crate) seed: *const u8,
 
     /// Length of the seed bytes.
     pub(crate) len: u64,
 
-    /// The pointer to the seed bytes is only valid while the `&'a [u8]` lives. Instead
+    /// The pointer to the seed bytes is only valid while the `&'bytes [u8]` lives. Instead
     /// of holding a reference to the actual `[u8]`, which would increase the size of the
     /// type, we claim to hold a reference without actually holding one using a
-    /// `PhantomData<&'a [u8]>`.
-    _bytes: PhantomData<&'a [u8]>,
+    /// `PhantomData<&'bytes [u8]>`.
+    _bytes: PhantomData<&'bytes [u8]>,
 }
 
-impl<'a> From<&'a [u8]> for Seed<'a> {
-    fn from(value: &'a [u8]) -> Self {
+impl<'bytes> From<&'bytes [u8]> for Seed<'bytes> {
+    fn from(value: &'bytes [u8]) -> Self {
         Self {
             seed: value.as_ptr(),
             len: value.len() as u64,
@@ -123,8 +175,8 @@ impl<'a> From<&'a [u8]> for Seed<'a> {
     }
 }
 
-impl<'a, const SIZE: usize> From<&'a [u8; SIZE]> for Seed<'a> {
-    fn from(value: &'a [u8; SIZE]) -> Self {
+impl<'bytes, const SIZE: usize> From<&'bytes [u8; SIZE]> for Seed<'bytes> {
+    fn from(value: &'bytes [u8; SIZE]) -> Self {
         Self {
             seed: value.as_ptr(),
             len: value.len() as u64,
@@ -147,36 +199,38 @@ impl Deref for Seed<'_> {
 /// [pda]: https://solana.com/docs/core/cpi#program-derived-addresses
 #[repr(C)]
 #[derive(Debug, Clone)]
-pub struct Signer<'a, 'b> {
+pub struct Signer<'bytes, 'seeds> {
     /// Signer seeds.
-    pub(crate) seeds: *const Seed<'a>,
+    pub(crate) seeds: *const Seed<'bytes>,
 
     /// Number of seeds.
     pub(crate) len: u64,
 
-    /// The pointer to the seeds is only valid while the `&'b [Seed<'a>]` lives. Instead
-    /// of holding a reference to the actual `[Seed<'a>]`, which would increase the size
+    /// The pointer to the seeds is only valid while the `&'seeds [Seed<'bytes>]` lives. Instead
+    /// of holding a reference to the actual `[Seed<'bytes>]`, which would increase the size
     /// of the type, we claim to hold a reference without actually holding one using a
-    /// `PhantomData<&'b [Seed<'a>]>`.
-    _seeds: PhantomData<&'b [Seed<'a>]>,
+    /// `PhantomData<&'seeds [Seed<'bytes>]>`.
+    _seeds: PhantomData<&'seeds [Seed<'bytes>]>,
 }
 
-impl<'a, 'b> From<&'b [Seed<'a>]> for Signer<'a, 'b> {
-    fn from(value: &'b [Seed<'a>]) -> Self {
+impl<'bytes, 'seeds> From<&'seeds [Seed<'bytes>]> for Signer<'bytes, 'seeds> {
+    fn from(value: &'seeds [Seed<'bytes>]) -> Self {
         Self {
             seeds: value.as_ptr(),
             len: value.len() as u64,
-            _seeds: PhantomData::<&'b [Seed<'a>]>,
+            _seeds: PhantomData::<&'seeds [Seed<'bytes>]>,
         }
     }
 }
 
-impl<'a, 'b, const SIZE: usize> From<&'b [Seed<'a>; SIZE]> for Signer<'a, 'b> {
-    fn from(value: &'b [Seed<'a>; SIZE]) -> Self {
+impl<'bytes, 'seeds, const SIZE: usize> From<&'seeds [Seed<'bytes>; SIZE]>
+    for Signer<'bytes, 'seeds>
+{
+    fn from(value: &'seeds [Seed<'bytes>; SIZE]) -> Self {
         Self {
             seeds: value.as_ptr(),
             len: value.len() as u64,
-            _seeds: PhantomData::<&'b [Seed<'a>]>,
+            _seeds: PhantomData::<&'seeds [Seed<'bytes>]>,
         }
     }
 }
@@ -223,11 +277,11 @@ macro_rules! seeds {
 /// accounts, it is necessary to pass a duplicated reference to the same account
 /// to maintain the 1:1 relationship between accounts and instruction accounts.
 #[inline(always)]
-pub fn invoke<const ACCOUNTS: usize>(
+pub fn invoke<const ACCOUNTS: usize, A: AsRef<AccountView>>(
     instruction: &InstructionView,
-    account_views: &[&AccountView; ACCOUNTS],
+    account_views: &[A; ACCOUNTS],
 ) -> ProgramResult {
-    invoke_signed::<ACCOUNTS>(instruction, account_views, &[])
+    invoke_signed::<ACCOUNTS, A>(instruction, account_views, &[])
 }
 
 /// Invoke a cross-program instruction from a slice of `AccountView`s.
@@ -256,11 +310,11 @@ pub fn invoke<const ACCOUNTS: usize>(
 /// accounts, it is necessary to pass a duplicated reference to the same account
 /// to maintain the 1:1 relationship between accounts and instruction accounts.
 #[inline(always)]
-pub fn invoke_with_bounds<const MAX_ACCOUNTS: usize>(
+pub fn invoke_with_bounds<const MAX_ACCOUNTS: usize, A: AsRef<AccountView>>(
     instruction: &InstructionView,
-    account_views: &[&AccountView],
+    account_views: &[A],
 ) -> ProgramResult {
-    invoke_signed_with_bounds::<MAX_ACCOUNTS>(instruction, account_views, &[])
+    invoke_signed_with_bounds::<MAX_ACCOUNTS, A>(instruction, account_views, &[])
 }
 
 #[cfg(feature = "slice-cpi")]
@@ -279,9 +333,9 @@ pub fn invoke_with_bounds<const MAX_ACCOUNTS: usize>(
 /// accounts, it is necessary to pass a duplicated reference to the same account
 /// to maintain the 1:1 relationship between accounts and instruction accounts.
 #[inline(always)]
-pub fn invoke_with_slice(
+pub fn invoke_with_slice<A: AsRef<AccountView>>(
     instruction: &InstructionView,
-    account_views: &[&AccountView],
+    account_views: &[A],
 ) -> ProgramResult {
     invoke_signed_with_slice(instruction, account_views, &[])
 }
@@ -315,9 +369,9 @@ pub fn invoke_with_slice(
 /// accounts, it is necessary to pass a duplicated reference to the same account
 /// to maintain the 1:1 relationship between accounts and instruction accounts.
 #[inline(always)]
-pub fn invoke_signed<const ACCOUNTS: usize>(
+pub fn invoke_signed<const ACCOUNTS: usize, A: AsRef<AccountView>>(
     instruction: &InstructionView,
-    account_views: &[&AccountView; ACCOUNTS],
+    account_views: &[A; ACCOUNTS],
     signers_seeds: &[Signer],
 ) -> ProgramResult {
     // Check that the number of `ACCOUNTS` provided is not greater than
@@ -329,15 +383,19 @@ pub fn invoke_signed<const ACCOUNTS: usize>(
         );
     }
 
-    const UNINIT: MaybeUninit<CpiAccount> = MaybeUninit::<CpiAccount>::uninit();
-    let mut accounts = [UNINIT; ACCOUNTS];
+    let mut accounts = [const { MaybeUninit::<CpiAccount>::uninit() }; ACCOUNTS];
 
     // SAFETY: The array of `AccountView`s will be checked to ensure that it has
     // the same number of accounts as the instruction – this indirectly validates
     // that the stack allocated account storage `ACCOUNTS` is sufficient for the
     // number of accounts expected by the instruction.
     unsafe {
-        inner_invoke_signed_with_slice(instruction, account_views, &mut accounts, signers_seeds)
+        inner_invoke_signed_with_slice::<A>(
+            instruction,
+            account_views.as_slice(),
+            accounts.as_mut_slice(),
+            signers_seeds,
+        )
     }
 }
 
@@ -379,9 +437,9 @@ pub fn invoke_signed<const ACCOUNTS: usize>(
 /// accounts, it is necessary to pass a duplicated reference to the same account
 /// to maintain the 1:1 relationship between accounts and instruction accounts.
 #[inline(always)]
-pub fn invoke_signed_with_bounds<const MAX_ACCOUNTS: usize>(
+pub fn invoke_signed_with_bounds<const MAX_ACCOUNTS: usize, A: AsRef<AccountView>>(
     instruction: &InstructionView,
-    account_views: &[&AccountView],
+    account_views: &[A],
     signers_seeds: &[Signer],
 ) -> ProgramResult {
     // Check that the number of `MAX_ACCOUNTS` provided is not greater than
@@ -399,13 +457,17 @@ pub fn invoke_signed_with_bounds<const MAX_ACCOUNTS: usize>(
         return Err(ProgramError::InvalidArgument);
     }
 
-    const UNINIT: MaybeUninit<CpiAccount> = MaybeUninit::<CpiAccount>::uninit();
-    let mut accounts = [UNINIT; MAX_ACCOUNTS];
+    let mut accounts = [const { MaybeUninit::<CpiAccount>::uninit() }; MAX_ACCOUNTS];
 
     // SAFETY: The stack allocated account storage `MAX_ACCOUNTS` was validated
     // to be sufficient for the number of accounts expected by the instruction.
     unsafe {
-        inner_invoke_signed_with_slice(instruction, account_views, &mut accounts, signers_seeds)
+        inner_invoke_signed_with_slice::<A>(
+            instruction,
+            account_views,
+            accounts.as_mut_slice(),
+            signers_seeds,
+        )
     }
 }
 
@@ -437,9 +499,9 @@ pub fn invoke_signed_with_bounds<const MAX_ACCOUNTS: usize>(
 /// accounts, it is necessary to pass a duplicated reference to the same account
 /// to maintain the 1:1 relationship between accounts and instruction accounts.
 #[inline(always)]
-pub fn invoke_signed_with_slice(
+pub fn invoke_signed_with_slice<A: AsRef<AccountView>>(
     instruction: &InstructionView,
-    account_views: &[&AccountView],
+    account_views: &[A],
     signers_seeds: &[Signer],
 ) -> ProgramResult {
     // Check that the number of instruction accounts does not exceed
@@ -453,7 +515,12 @@ pub fn invoke_signed_with_slice(
     // SAFETY: The allocated `accounts` slice has the same size as the expected number
     // of instruction accounts.
     unsafe {
-        inner_invoke_signed_with_slice(instruction, account_views, &mut accounts, signers_seeds)
+        inner_invoke_signed_with_slice::<A>(
+            instruction,
+            account_views,
+            &mut accounts,
+            signers_seeds,
+        )
     }
 }
 
@@ -475,15 +542,12 @@ pub fn invoke_signed_with_slice(
 /// shorter than the number of accounts expected by the instruction will result in
 /// undefined behavior.
 #[inline(always)]
-unsafe fn inner_invoke_signed_with_slice<'account, 'cpi>(
+unsafe fn inner_invoke_signed_with_slice<'account, A: AsRef<AccountView>>(
     instruction: &InstructionView,
-    account_views: &[&'account AccountView],
-    accounts: &mut [MaybeUninit<CpiAccount<'cpi>>],
+    account_views: &'account [A],
+    accounts: &mut [MaybeUninit<CpiAccount<'account>>],
     signers_seeds: &[Signer],
-) -> ProgramResult
-where
-    'account: 'cpi,
-{
+) -> ProgramResult {
     // Check that the number of accounts provided is not less than
     // the number of accounts expected by the instruction.
     if account_views.len() < instruction.accounts.len() {
@@ -498,27 +562,19 @@ where
             // In order to check whether the borrow state is compatible
             // with the invocation, we need to check that we have the
             // correct account view and instruction account pair.
-            if account_view.address() != instruction_account.address {
+            if account_view.as_ref().address() != instruction_account.address {
                 return Err(ProgramError::InvalidArgument);
             }
 
             // Determines the borrow state that would be invalid according
             // to their mutability on the instruction.
-            let borrowed = if instruction_account.is_writable {
+            if instruction_account.is_writable {
                 // If the account is required to be writable, it cannot
                 //  be currently borrowed.
-                account_view.is_borrowed()
-            } else {
-                // If the account is required to be read-only, it cannot
-                // be currently mutably borrowed.
-                account_view.is_borrowed_mut()
-            };
-
-            if borrowed {
-                return Err(ProgramError::AccountBorrowFailed);
+                account_view.as_ref().check_borrow_mut()?;
             }
 
-            account.write(CpiAccount::from(*account_view));
+            CpiAccount::init_from_account_view(account_view.as_ref(), account);
 
             Ok(())
         })?;
@@ -592,12 +648,12 @@ pub unsafe fn invoke_signed_unchecked(
         /// only be limited to the stack where `sol_invoke_signed_c` happens and then
         /// discarded immediately after.
         #[repr(C)]
-        struct CInstruction<'a> {
+        struct CInstruction<'account> {
             /// Public key of the program.
             program_id: *const Address,
 
             /// Accounts expected by the program instruction.
-            accounts: *const InstructionAccount<'a>,
+            accounts: *const InstructionAccount<'account>,
 
             /// Number of accounts expected by the program instruction.
             accounts_len: u64,
@@ -616,6 +672,12 @@ pub unsafe fn invoke_signed_unchecked(
             data: instruction.data.as_ptr(),
             data_len: instruction.data.len() as u64,
         };
+
+        // Force the compiler to materialise all memory operations before entering
+        // a CPI call. Although the risk of it optimising something across a CPI
+        // call is minimal, it seems a good practice to do this regardless of what
+        // the calling code might be doing.
+        core::sync::atomic::compiler_fence(core::sync::atomic::Ordering::SeqCst);
 
         unsafe {
             sol_invoke_signed_c(
@@ -735,5 +797,59 @@ impl ReturnData {
     /// Return the data set by the program.
     pub fn as_slice(&self) -> &[u8] {
         unsafe { from_raw_parts(self.data.as_ptr() as _, self.size) }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use {
+        super::*,
+        solana_account_view::{RuntimeAccount, NOT_BORROWED},
+    };
+
+    #[test]
+    #[allow(clippy::used_underscore_binding)]
+    fn test_write_from_account_view() {
+        // 8-byte aligned `RuntimeAccount` header plus 8 bytes of account data.
+        let mut raw = [0u64; size_of::<RuntimeAccount>() / size_of::<u64>() + 1];
+        let account = raw.as_mut_ptr() as *mut RuntimeAccount;
+
+        // SAFETY: `account` is a pointer to an array of 96 bytes.
+        unsafe {
+            (*account).borrow_state = NOT_BORROWED;
+            (*account).is_signer = 1;
+            (*account).is_writable = 0;
+            (*account).executable = 0;
+            (*account).padding = [2; 4];
+            (*account).address = Address::from([1u8; 32]);
+            (*account).owner = Address::from([2u8; 32]);
+            (*account).lamports = 42;
+            (*account).data_len = 8;
+            // Add some data to the account.
+            let data = (account as *mut u8).add(size_of::<RuntimeAccount>());
+            data.copy_from_nonoverlapping([9u8; 8].as_ptr(), 8);
+        }
+
+        // SAFETY: `account` was initialized as a `RuntimeAccount`.
+        let account_view = unsafe { AccountView::new_unchecked(account) };
+        let mut cpi_account = MaybeUninit::<CpiAccount>::uninit();
+
+        CpiAccount::init_from_account_view(&account_view, &mut cpi_account);
+        // SAFETY: `cpi_account` was initialized by `CpiAccount::init_from_account_view`.
+        let cpi_account = unsafe { cpi_account.assume_init() };
+
+        assert_eq!(cpi_account.address, unsafe { addr_of!((*account).address) });
+        assert_eq!(cpi_account.lamports, unsafe {
+            addr_of!((*account).lamports)
+        });
+        assert_eq!(cpi_account.data_len, 8);
+        assert_eq!(cpi_account.data, account_view.data_ptr());
+        assert_eq!(cpi_account.owner, unsafe { addr_of!((*account).owner) });
+        assert_eq!(cpi_account.rent_epoch, 0);
+        assert_eq!(cpi_account.is_signer, 1);
+        assert_eq!(cpi_account.is_writable, 0);
+        assert_eq!(cpi_account.executable, 0);
+        // The padding field should have the first byte from the `RuntimeAccount` padding.
+        assert_eq!(cpi_account._padding, 2);
     }
 }

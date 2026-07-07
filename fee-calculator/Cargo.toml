@@ -2,7 +2,7 @@
 name = "solana-fee-calculator"
 description = "Solana transaction fee calculation"
 documentation = "https://docs.rs/solana-fee-calculator"
-version = "3.0.0"
+version = "3.2.2"
 authors = { workspace = true }
 repository = { workspace = true }
 homepage = { workspace = true }
@@ -23,7 +23,7 @@ wincode = ["dep:wincode"]
 log = { workspace = true }
 serde = { workspace = true, optional = true }
 serde_derive = { workspace = true, optional = true }
-solana-frozen-abi = { workspace = true, optional = true }
+solana-frozen-abi = { workspace = true, optional = true, features = ["frozen-abi"] }
 solana-frozen-abi-macro = { workspace = true, optional = true }
 wincode = { workspace = true, optional = true }
 

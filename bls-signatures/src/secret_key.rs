@@ -1,28 +1,66 @@
 use {
     crate::{
         error::BlsError,
-        hash::{hash_message_to_projective, hash_pop_to_projective},
+        hash::{hash_bound_pop_to_projective, hash_message_to_projective},
         proof_of_possession::ProofOfPossessionProjective,
         pubkey::PubkeyProjective,
         signature::SignatureProjective,
     },
     blst::{blst_keygen, blst_scalar},
     blstrs::Scalar,
-    core::ptr,
+    core::{ptr, sync::atomic},
     ff::Field,
     rand::rngs::OsRng,
+    zeroize::{Zeroize, ZeroizeOnDrop, Zeroizing},
 };
 #[cfg(feature = "solana-signer-derive")]
-use {solana_signature::Signature, solana_signer::Signer, subtle::ConstantTimeEq};
+use {
+    solana_signature::{Signature, SIGNATURE_BYTES},
+    solana_signer::Signer,
+    subtle::ConstantTimeEq,
+};
 
 /// Size of BLS secret key in bytes
 pub const BLS_SECRET_KEY_SIZE: usize = 32;
 
 /// A BLS secret key
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Eq, PartialEq)]
 pub struct SecretKey(pub(crate) Scalar);
 
+impl core::fmt::Debug for SecretKey {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        write!(f, "SecretKey(<hidden>)")
+    }
+}
+
+impl Zeroize for SecretKey {
+    fn zeroize(&mut self) {
+        unsafe {
+            ptr::write_volatile(&mut self.0, Scalar::ZERO);
+        }
+        atomic::compiler_fence(atomic::Ordering::SeqCst);
+    }
+}
+
+impl Drop for SecretKey {
+    fn drop(&mut self) {
+        self.zeroize();
+    }
+}
+
+impl ZeroizeOnDrop for SecretKey {}
+
 impl SecretKey {
+    /// Parses a canonical, non-zero secret scalar from little-endian bytes.
+    fn parse_scalar(bytes: &Zeroizing<[u8; BLS_SECRET_KEY_SIZE]>) -> Result<Scalar, BlsError> {
+        let scalar: Option<Scalar> = Scalar::from_bytes_le(bytes).into();
+        let scalar = scalar.ok_or(BlsError::FieldDecode)?;
+        if bool::from(scalar.is_zero()) {
+            return Err(BlsError::FieldDecode);
+        }
+        Ok(scalar)
+    }
+
     /// Constructs a new, random `BlsSecretKey` using `OsRng`
     #[allow(clippy::new_without_default)]
     pub fn new() -> Self {
@@ -32,74 +70,89 @@ impl SecretKey {
 
     /// Derive a `BlsSecretKey` from a seed (input key material)
     pub fn derive(ikm: &[u8]) -> Result<Self, BlsError> {
-        let mut scalar = blst_scalar::default();
+        if ikm.len() < 32 {
+            return Err(BlsError::KeyDerivation);
+        }
+        let mut scalar = Zeroizing::new(blst_scalar::default());
         unsafe {
             blst_keygen(
-                &mut scalar as *mut blst_scalar,
+                &mut *scalar as *mut blst_scalar,
                 ikm.as_ptr(),
                 ikm.len(),
                 ptr::null(),
                 0,
             );
         }
-        scalar
-            .try_into()
-            .map(Self)
-            .map_err(|_| BlsError::FieldDecode)
+        let bytes = Zeroizing::new(scalar.b);
+        Self::parse_scalar(&bytes).map(Self)
     }
 
     /// Derive a `BlsSecretKey` from a Solana signer
     #[cfg(feature = "solana-signer-derive")]
     pub fn derive_from_signer(signer: &dyn Signer, public_seed: &[u8]) -> Result<Self, BlsError> {
         let message = [b"bls-key-derive-", public_seed].concat();
-        let signature = signer
-            .try_sign_message(&message)
-            .map_err(|_| BlsError::KeyDerivation)?;
+        let signature = Zeroizing::new(<[u8; SIGNATURE_BYTES]>::from(
+            signer
+                .try_sign_message(&message)
+                .map_err(|_| BlsError::KeyDerivation)?,
+        ));
 
         // Some `Signer` implementations return the default signature, which is not suitable for
         // use as key material
-        if bool::from(signature.as_ref().ct_eq(Signature::default().as_ref())) {
+        if bool::from(signature.as_slice().ct_eq(Signature::default().as_ref())) {
             return Err(BlsError::KeyDerivation);
         }
 
-        Self::derive(signature.as_ref())
+        Self::derive(signature.as_slice())
     }
 
     /// Generate a proof of possession for the corresponding pubkey
     #[allow(clippy::arithmetic_side_effects)]
+    #[allow(clippy::op_ref)]
     pub fn proof_of_possession(&self, payload: Option<&[u8]>) -> ProofOfPossessionProjective {
-        let hashed_point = if let Some(bytes) = payload {
-            hash_pop_to_projective(bytes)
-        } else {
-            let pubkey = PubkeyProjective::from_secret(self);
-            let pubkey_bytes = pubkey.to_bytes_compressed();
-            hash_pop_to_projective(&pubkey_bytes)
-        };
-        ProofOfPossessionProjective(hashed_point * self.0)
+        let pubkey = PubkeyProjective::from_secret(self);
+        let pubkey_bytes = pubkey.to_bytes_compressed();
+        let hashed_point = hash_bound_pop_to_projective(payload.unwrap_or(&[]), &pubkey_bytes);
+        ProofOfPossessionProjective(hashed_point * &self.0)
     }
 
     /// Sign a message using the provided secret key
     #[allow(clippy::arithmetic_side_effects)]
+    #[allow(clippy::op_ref)]
     pub fn sign(&self, message: &[u8]) -> SignatureProjective {
         let hashed_message = hash_message_to_projective(message);
-        SignatureProjective(hashed_message * self.0)
+        SignatureProjective(hashed_message * &self.0)
     }
 }
 
 impl TryFrom<&[u8]> for SecretKey {
     type Error = BlsError;
-    fn try_from(bytes: &[u8]) -> Result<Self, Self::Error> {
-        if bytes.len() != BLS_SECRET_KEY_SIZE {
+    fn try_from(src: &[u8]) -> Result<Self, Self::Error> {
+        if src.len() != BLS_SECRET_KEY_SIZE {
             return Err(BlsError::ParseFromBytes);
         }
-        // unwrap safe due to the length check above
-        let scalar: Option<Scalar> = Scalar::from_bytes_le(bytes.try_into().unwrap()).into();
-        scalar.ok_or(BlsError::FieldDecode).map(Self)
+        let mut bytes = Zeroizing::new([0u8; BLS_SECRET_KEY_SIZE]);
+        bytes.copy_from_slice(src);
+        Self::parse_scalar(&bytes).map(Self)
     }
 }
 
-impl From<&SecretKey> for [u8; BLS_SECRET_KEY_SIZE] {
+/// Converts a secret key into a zeroizing little-endian byte buffer.
+///
+/// If a caller explicitly needs a plain `[u8; BLS_SECRET_KEY_SIZE]`, they can
+/// copy it out of the zeroizing wrapper:
+///
+/// ```
+/// use zeroize::Zeroizing;
+/// use solana_bls_signatures::secret_key::{SecretKey, BLS_SECRET_KEY_SIZE};
+///
+/// let secret_key = SecretKey::new();
+/// let zeroizing_bytes: Zeroizing<[u8; BLS_SECRET_KEY_SIZE]> = (&secret_key).into();
+/// let mut raw_bytes = [0u8; BLS_SECRET_KEY_SIZE];
+/// raw_bytes.copy_from_slice(zeroizing_bytes.as_slice());
+/// ```
+impl From<&SecretKey> for Zeroizing<[u8; BLS_SECRET_KEY_SIZE]> {
     fn from(secret_key: &SecretKey) -> Self {
-        secret_key.0.to_bytes_le()
+        Zeroizing::new(secret_key.0.to_bytes_le())
     }
 }

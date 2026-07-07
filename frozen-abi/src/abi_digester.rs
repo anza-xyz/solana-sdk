@@ -533,7 +533,11 @@ impl SerializeStructVariant for AbiDigester {
 
 #[cfg(test)]
 mod tests {
-    use std::{collections::HashMap, sync::atomic::AtomicIsize};
+    use std::{
+        collections::HashMap,
+        rc::Rc,
+        sync::{atomic::AtomicIsize, Arc},
+    };
 
     #[frozen_abi(digest = "CQiGCzsGquChkwffHjZKFqa3tCYtS3GWYRRYX7iDR38Q")]
     type TestTypeAlias = i32;
@@ -605,6 +609,51 @@ mod tests {
     #[derive(serde_derive::Serialize, AbiExample)]
     struct TestVecEnum {
         enums: Vec<TestTupleVariant>,
+    }
+
+    #[derive(serde_derive::Serialize, AbiExample, AbiEnumVisitor)]
+    enum TestSmartPointerEnum {
+        Newtype(u8),
+        Unit,
+    }
+
+    #[derive(serde_derive::Serialize, AbiExample)]
+    struct TestSmartPointerFields {
+        arc: Arc<TestSmartPointerEnum>,
+        boxed: Box<TestSmartPointerEnum>,
+        rc: Rc<TestSmartPointerEnum>,
+    }
+
+    #[derive(serde_derive::Serialize, AbiExample, AbiEnumVisitor)]
+    enum TestSmartPointerEnumFields {
+        Arc(Arc<TestSmartPointerEnum>),
+        Boxed(Box<TestSmartPointerEnum>),
+        Rc(Rc<TestSmartPointerEnum>),
+    }
+
+    fn digest<T>() -> crate::hash::Hash
+    where
+        T: serde::Serialize + crate::abi_example::AbiExample + crate::abi_example::AbiEnumVisitor,
+    {
+        use crate::abi_example::AbiEnumVisitor;
+
+        let mut digester = super::AbiDigester::create();
+        let example = T::example();
+        <_>::visit_for_abi(&&example, &mut digester).unwrap();
+        digester.finalize()
+    }
+
+    #[test]
+    fn smart_pointers_forward_abi_enum_visitor() {
+        digest::<TestSmartPointerEnumFields>();
+
+        let enum_digest = digest::<TestSmartPointerEnum>();
+
+        assert_eq!(enum_digest, digest::<Arc<TestSmartPointerEnum>>());
+        assert_eq!(enum_digest, digest::<Box<TestSmartPointerEnum>>());
+        assert_eq!(enum_digest, digest::<Rc<TestSmartPointerEnum>>());
+
+        digest::<TestSmartPointerFields>();
     }
 
     #[derive(serde_derive::Serialize, AbiExample)]

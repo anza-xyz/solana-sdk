@@ -22,6 +22,7 @@ use {solana_hash::Hash, solana_sdk_macro::CloneZeroed};
 #[repr(C, align(16))]
 #[cfg_attr(feature = "frozen-abi", derive(solana_frozen_abi_macro::AbiExample))]
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
+#[cfg_attr(feature = "wincode", derive(wincode::SchemaWrite, wincode::SchemaRead))]
 #[derive(Debug, PartialEq, Eq, Default, CloneZeroed)]
 pub struct EpochRewards {
     /// The starting block height of the rewards distribution in the current
@@ -57,6 +58,16 @@ pub struct EpochRewards {
     pub active: bool,
 }
 
+/// Serialized size of the `EpochRewards` sysvar account.
+pub const SIZE: usize = size_of::<u64>() // distribution_starting_block_height
+    + size_of::<u64>() // num_partitions
+    + size_of::<Hash>() // parent_blockhash
+    + size_of::<u128>() // total_points
+    + size_of::<u64>() // total_rewards
+    + size_of::<u64>() // distributed_rewards
+    + size_of::<bool>(); // active
+const _: () = assert!(SIZE == 81);
+
 impl EpochRewards {
     pub fn distribute(&mut self, amount: u64) {
         let new_distributed_rewards = self.distributed_rewards.saturating_add(amount);
@@ -68,6 +79,14 @@ impl EpochRewards {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_size_of() {
+        assert_eq!(
+            wincode::serialized_size(&EpochRewards::default()).unwrap() as usize,
+            SIZE,
+        );
+    }
 
     impl EpochRewards {
         pub fn new(

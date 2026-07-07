@@ -2,7 +2,7 @@
 use serde_derive::{Deserialize, Serialize};
 #[cfg(feature = "frozen-abi")]
 use solana_frozen_abi_macro::{AbiEnumVisitor, AbiExample};
-#[cfg(feature = "bincode")]
+#[cfg(all(not(feature = "wincode"), feature = "bincode"))]
 use solana_instruction_error::InstructionError;
 use {
     crate::error::AddressLookupError,
@@ -10,6 +10,11 @@ use {
     solana_pubkey::Pubkey,
     solana_slot_hashes::{get_entries, SlotHashes, MAX_ENTRIES},
     std::borrow::Cow,
+};
+#[cfg(feature = "wincode")]
+use {
+    solana_instruction_error::InstructionError,
+    wincode::{SchemaRead, SchemaWrite},
 };
 
 /// The lookup table may be in a deactivating state until
@@ -42,6 +47,7 @@ pub enum LookupTableStatus {
 /// Address lookup table metadata
 #[cfg_attr(feature = "frozen-abi", derive(AbiExample))]
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
+#[cfg_attr(feature = "wincode", derive(SchemaRead, SchemaWrite))]
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct LookupTableMeta {
     /// Lookup tables cannot be closed until the deactivation slot is
@@ -121,6 +127,7 @@ impl LookupTableMeta {
 /// Program account states
 #[cfg_attr(feature = "frozen-abi", derive(AbiEnumVisitor, AbiExample))]
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
+#[cfg_attr(feature = "wincode", derive(SchemaRead, SchemaWrite))]
 #[derive(Debug, PartialEq, Eq, Clone)]
 #[allow(clippy::large_enum_variant)]
 pub enum ProgramState {
@@ -140,7 +147,7 @@ pub struct AddressLookupTable<'a> {
 impl<'a> AddressLookupTable<'a> {
     /// Serialize an address table's updated meta data and zero
     /// any leftover bytes.
-    #[cfg(feature = "bincode")]
+    #[cfg(any(feature = "wincode", feature = "bincode"))]
     pub fn overwrite_meta_data(
         data: &mut [u8],
         lookup_table_meta: LookupTableMeta,
@@ -149,6 +156,10 @@ impl<'a> AddressLookupTable<'a> {
             .get_mut(0..LOOKUP_TABLE_META_SIZE)
             .ok_or(InstructionError::InvalidAccountData)?;
         meta_data.fill(0);
+        #[cfg(feature = "wincode")]
+        wincode::serialize_into(meta_data, &ProgramState::LookupTable(lookup_table_meta))
+            .map_err(|_| InstructionError::GenericError)?;
+        #[cfg(all(not(feature = "wincode"), feature = "bincode"))]
         bincode::serialize_into(meta_data, &ProgramState::LookupTable(lookup_table_meta))
             .map_err(|_| InstructionError::GenericError)?;
         Ok(())
@@ -215,7 +226,7 @@ impl<'a> AddressLookupTable<'a> {
     }
 
     /// Serialize an address table including its addresses
-    #[cfg(feature = "bincode")]
+    #[cfg(any(feature = "wincode", feature = "bincode"))]
     pub fn serialize_for_tests(self) -> Result<Vec<u8>, InstructionError> {
         let mut data = vec![0; LOOKUP_TABLE_META_SIZE];
         Self::overwrite_meta_data(&mut data, self.meta)?;
@@ -227,10 +238,14 @@ impl<'a> AddressLookupTable<'a> {
 
     /// Efficiently deserialize an address table without allocating
     /// for stored addresses.
-    #[cfg(all(feature = "bincode", feature = "bytemuck"))]
+    #[cfg(all(any(feature = "wincode", feature = "bincode"), feature = "bytemuck"))]
     pub fn deserialize(data: &'a [u8]) -> Result<AddressLookupTable<'a>, InstructionError> {
+        #[cfg(all(not(feature = "wincode"), feature = "bincode"))]
         let program_state: ProgramState =
             bincode::deserialize(data).map_err(|_| InstructionError::InvalidAccountData)?;
+        #[cfg(feature = "wincode")]
+        let program_state: ProgramState =
+            wincode::deserialize(data).map_err(|_| InstructionError::InvalidAccountData)?;
 
         let meta = match program_state {
             ProgramState::LookupTable(meta) => Ok(meta),
@@ -282,12 +297,18 @@ mod tests {
     #[test]
     fn test_lookup_table_meta_size() {
         let lookup_table = ProgramState::LookupTable(LookupTableMeta::new_for_tests());
+        #[cfg(all(not(feature = "wincode"), feature = "bincode"))]
         let meta_size = bincode::serialized_size(&lookup_table).unwrap();
+        #[cfg(feature = "wincode")]
+        let meta_size = wincode::serialized_size(&lookup_table).unwrap();
         assert!(meta_size as usize <= LOOKUP_TABLE_META_SIZE);
         assert_eq!(meta_size as usize, 56);
 
         let lookup_table = ProgramState::LookupTable(LookupTableMeta::default());
+        #[cfg(all(not(feature = "wincode"), feature = "bincode"))]
         let meta_size = bincode::serialized_size(&lookup_table).unwrap();
+        #[cfg(feature = "wincode")]
+        let meta_size = wincode::serialized_size(&lookup_table).unwrap();
         assert!(meta_size as usize <= LOOKUP_TABLE_META_SIZE);
         assert_eq!(meta_size as usize, 24);
     }
@@ -364,7 +385,10 @@ mod tests {
     fn test_overwrite_meta_data() {
         let meta = LookupTableMeta::new_for_tests();
         let empty_table = ProgramState::LookupTable(meta.clone());
+        #[cfg(all(not(feature = "wincode"), feature = "bincode"))]
         let mut serialized_table_1 = bincode::serialize(&empty_table).unwrap();
+        #[cfg(feature = "wincode")]
+        let mut serialized_table_1 = wincode::serialize(&empty_table).unwrap();
         serialized_table_1.resize(LOOKUP_TABLE_META_SIZE, 0);
 
         let address_table = AddressLookupTable::new_for_tests(meta, 0);

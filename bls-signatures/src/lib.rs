@@ -9,13 +9,18 @@ extern crate std;
 #[cfg(not(target_os = "solana"))]
 pub use crate::{
     error::BlsError,
+    hash::{HashedMessage, PreparedHashedMessage},
     keypair::Keypair,
     proof_of_possession::{
         AsProofOfPossessionProjective, ProofOfPossessionProjective, VerifiableProofOfPossession,
     },
-    pubkey::{AsPubkeyProjective, PubkeyProjective, VerifiablePubkey},
+    pubkey::{
+        AsPubkeyProjective, PubkeyAffineUnchecked, PubkeyProjective, VerifyPop, VerifySignature,
+    },
     secret_key::{SecretKey, BLS_SECRET_KEY_SIZE},
-    signature::{AsSignatureProjective, SignatureProjective, VerifiableSignature},
+    signature::{
+        AsSignatureProjective, SignatureAffineUnchecked, SignatureProjective, VerifiableSignature,
+    },
 };
 pub use crate::{
     proof_of_possession::{

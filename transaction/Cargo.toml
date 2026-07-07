@@ -2,8 +2,8 @@
 name = "solana-transaction"
 description = "Solana transaction-types"
 documentation = "https://docs.rs/solana-transaction"
-version = "3.1.0"
-rust-version = "1.85.0"
+version = "4.1.5"
+rust-version = { workspace = true }
 authors = { workspace = true }
 repository = { workspace = true }
 homepage = { workspace = true }
@@ -16,6 +16,7 @@ all-features = true
 rustdoc-args = ["--cfg=docsrs"]
 
 [features]
+default = ["std"]
 blake3 = ["solana-message/blake3", "wincode"]
 dev-context-only-utils = ["blake3", "serde", "verify", "solana-hash/atomic"]
 frozen-abi = [
@@ -34,10 +35,12 @@ serde = [
     "solana-transaction-error/serde",
     "solana-short-vec/serde",
 ]
+std = ["solana-message/std"]
 verify = ["blake3", "solana-signature/verify"]
 wincode = [
     "dep:solana-signer",
     "dep:wincode",
+    "solana-short-vec/wincode",
     "solana-message/wincode",
     "solana-signature/wincode",
 ]
@@ -58,10 +61,7 @@ solana-short-vec = { workspace = true, optional = true }
 solana-signature = { workspace = true }
 solana-signer = { workspace = true, optional = true }
 solana-transaction-error = { workspace = true }
-wincode = { workspace = true, optional = true, features = [
-    "solana-short-vec",
-    "alloc",
-] }
+wincode = { workspace = true, optional = true, features = ["alloc"] }
 
 [dev-dependencies]
 anyhow = { workspace = true }
@@ -78,10 +78,7 @@ solana-presigner = { workspace = true }
 solana-pubkey = { workspace = true, features = ["rand"] }
 solana-sha256-hasher = { workspace = true, features = ["sha2"] }
 solana-system-interface = { workspace = true, features = ["bincode"] }
-solana-transaction = { path = ".", features = [
-    "dev-context-only-utils",
-    "wincode",
-] }
+solana-transaction = { path = ".", features = ["dev-context-only-utils", "wincode"] }
 solana-vote-interface = { workspace = true, features = ["bincode"] }
 static_assertions = { workspace = true }
 test-case = { workspace = true }

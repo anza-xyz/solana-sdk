@@ -2,7 +2,7 @@
 name = "solana-borsh"
 description = "Solana Borsh utilities"
 documentation = "https://docs.rs/solana-borsh"
-version = "3.0.0"
+version = "3.0.2"
 authors = { workspace = true }
 repository = { workspace = true }
 homepage = { workspace = true }
@@ -11,9 +11,11 @@ edition = { workspace = true }
 
 [package.metadata.docs.rs]
 targets = ["x86_64-unknown-linux-gnu"]
+all-features = true
+rustdoc-args = ["--cfg=docsrs"]
 
 [dependencies]
-borsh = { workspace = true, features = ["std"] }
+borsh = { workspace = true }
 
 [lints]
 workspace = true

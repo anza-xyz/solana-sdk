@@ -1,6 +1,6 @@
 //! Debug-formatting of account data.
 
-use std::{cmp, fmt};
+use core::{cmp, fmt};
 
 pub(crate) const MAX_DEBUG_ACCOUNT_DATA: usize = 64;
 

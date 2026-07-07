@@ -2,7 +2,7 @@
 name = "solana-genesis-config"
 description = "A Solana network's genesis config."
 documentation = "https://docs.rs/solana-genesis-config"
-version = "3.0.0"
+version = "4.0.0"
 authors = { workspace = true }
 repository = { workspace = true }
 homepage = { workspace = true }
@@ -15,7 +15,18 @@ all-features = true
 rustdoc-args = ["--cfg=docsrs"]
 
 [features]
-frozen-abi = ["dep:solana-frozen-abi", "dep:solana-frozen-abi-macro"]
+frozen-abi = [
+    "dep:solana-frozen-abi",
+    "dep:solana-frozen-abi-macro",
+    "solana-account/frozen-abi",
+    "solana-cluster-type/frozen-abi",
+    "solana-epoch-schedule/frozen-abi",
+    "solana-fee-calculator/frozen-abi",
+    "solana-inflation/frozen-abi",
+    "solana-poh-config/frozen-abi",
+    "solana-pubkey/frozen-abi",
+    "solana-rent/frozen-abi",
+]
 serde = [
     "dep:serde",
     "dep:serde_derive",
@@ -40,7 +51,7 @@ solana-clock = { workspace = true }
 solana-cluster-type = { workspace = true }
 solana-epoch-schedule = { workspace = true }
 solana-fee-calculator = { workspace = true }
-solana-frozen-abi = { workspace = true, optional = true }
+solana-frozen-abi = { workspace = true, optional = true, features = ["frozen-abi"] }
 solana-frozen-abi-macro = { workspace = true, optional = true }
 solana-hash = { workspace = true }
 solana-inflation = { workspace = true }
@@ -49,7 +60,7 @@ solana-poh-config = { workspace = true }
 solana-pubkey = { workspace = true }
 solana-rent = { workspace = true }
 solana-sdk-ids = { workspace = true }
-solana-sha256-hasher = { workspace = true }
+solana-sha256-hasher = { workspace = true, features = ["sha2"] }
 solana-shred-version = { workspace = true }
 solana-signer = { workspace = true }
 solana-time-utils = { workspace = true }

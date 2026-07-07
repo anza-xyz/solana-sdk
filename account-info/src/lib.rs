@@ -1,15 +1,21 @@
 //! Account information.
+#![no_std]
 #![cfg_attr(docsrs, feature(doc_cfg))]
+
+extern crate alloc;
+
+#[cfg(feature = "bincode")]
+use alloc::boxed::Box;
 use {
+    alloc::rc::Rc,
+    core::{
+        cell::{Ref, RefCell, RefMut},
+        fmt,
+        slice::from_raw_parts_mut,
+    },
     solana_address::Address,
     solana_program_error::ProgramError,
     solana_program_memory::sol_memset,
-    std::{
-        cell::{Ref, RefCell, RefMut},
-        fmt,
-        rc::Rc,
-        slice::from_raw_parts_mut,
-    },
 };
 pub mod debug_account_data;
 
@@ -185,7 +191,7 @@ impl<'a> AccountInfo<'a> {
     pub fn assign(&self, new_owner: &Address) {
         // Set the non-mut owner field
         unsafe {
-            std::ptr::write_volatile(
+            core::ptr::write_volatile(
                 self.owner as *const Address as *mut [u8; 32],
                 new_owner.to_bytes(),
             );
@@ -372,7 +378,7 @@ pub fn next_account_info<'a, 'b, I: Iterator<Item = &'a AccountInfo<'b>>>(
 /// # Ok::<(), ProgramError>(())
 /// ```
 pub fn next_account_infos<'a, 'b: 'a>(
-    iter: &mut std::slice::Iter<'a, AccountInfo<'b>>,
+    iter: &mut core::slice::Iter<'a, AccountInfo<'b>>,
     count: usize,
 ) -> Result<&'a [AccountInfo<'b>], ProgramError> {
     let accounts = iter.as_slice();
@@ -393,7 +399,7 @@ impl<'a> AsRef<AccountInfo<'a>> for AccountInfo<'a> {
 #[doc(hidden)]
 #[allow(clippy::arithmetic_side_effects)]
 pub fn check_type_assumptions() {
-    use std::mem::offset_of;
+    use {alloc::vec, core::mem::offset_of};
 
     let key = Address::new_from_array([10; 32]);
     let mut lamports = 31;
@@ -467,6 +473,7 @@ mod tests {
     use {
         super::*,
         crate::debug_account_data::{Hex, MAX_DEBUG_ACCOUNT_DATA},
+        alloc::{format, vec},
     };
 
     #[test]

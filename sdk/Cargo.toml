@@ -3,8 +3,8 @@ name = "solana-sdk"
 description = "Solana SDK"
 documentation = "https://docs.rs/solana-sdk"
 readme = "README.md"
-version = "3.0.0"
-rust-version = "1.85.0"
+version = "4.0.1"
+rust-version = { workspace = true }
 authors = { workspace = true }
 repository = { workspace = true }
 homepage = { workspace = true }
@@ -23,7 +23,8 @@ crate-type = ["rlib"]
 [features]
 default = [
     "borsh",
-    "full",  # functionality that is not compatible or needed for on-chain programs
+    # functionality that is not compatible or needed for on-chain programs
+    "full",
 ]
 full = [
     "solana-signature",
@@ -64,17 +65,13 @@ solana-epoch-info = { workspace = true, features = ["serde"] }
 solana-epoch-rewards-hasher = { workspace = true }
 solana-fee-structure = { workspace = true, features = ["serde"] }
 solana-inflation = { workspace = true, features = ["serde"] }
-solana-keypair = { workspace = true, optional = true, features = [
-    "seed-derivable",
-] }
+solana-keypair = { workspace = true, optional = true, features = ["seed-derivable"] }
 solana-message = { workspace = true, features = ["serde"] }
 solana-offchain-message = { workspace = true, optional = true, features = ["verify"] }
 solana-presigner = { workspace = true, optional = true }
 solana-program = { workspace = true }
 solana-program-memory = { workspace = true }
-solana-pubkey = { workspace = true, default-features = false, features = [
-    "std",
-] }
+solana-pubkey = { workspace = true, default-features = false, features = ["std"] }
 solana-sanitize = { workspace = true }
 solana-sdk-ids = { workspace = true }
 solana-sdk-macro = { workspace = true }
@@ -84,22 +81,11 @@ solana-serde = { workspace = true }
 solana-serde-varint = { workspace = true }
 solana-short-vec = { workspace = true }
 solana-shred-version = { workspace = true, optional = true }
-solana-signature = { workspace = true, features = [
-    "rand",
-    "serde",
-    "std",
-    "verify",
-], optional = true }
+solana-signature = { workspace = true, features = ["rand", "serde", "std", "verify"], optional = true }
 solana-signer = { workspace = true, optional = true }
 solana-time-utils = { workspace = true }
-solana-transaction = { workspace = true, features = [
-    "blake3",
-    "serde",
-    "verify"
-], optional = true }
-solana-transaction-error = { workspace = true, features = [
-    "serde",
-], optional = true }
+solana-transaction = { workspace = true, features = ["blake3", "serde", "std", "verify"], optional = true }
+solana-transaction-error = { workspace = true, features = ["serde"], optional = true }
 thiserror = { workspace = true }
 
 [dev-dependencies]

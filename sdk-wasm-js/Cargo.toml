@@ -2,8 +2,8 @@
 name = "solana-sdk-wasm-js"
 description = "Solana SDK Wasm JS"
 documentation = "https://docs.rs/solana-sdk-wasm-js"
-version = "1.0.0"
-rust-version = "1.85.0"
+version = "2.0.0"
+rust-version = { workspace = true }
 authors = { workspace = true }
 repository = { workspace = true }
 homepage = { workspace = true }
@@ -27,7 +27,7 @@ solana-message = { workspace = true }
 solana-packet = { workspace = true }
 solana-signature = { workspace = true }
 solana-signer = { workspace = true }
-solana-transaction = { workspace = true, features = ["verify", "wincode"] }
+solana-transaction = { workspace = true, features = ["std", "verify", "wincode"] }
 wincode = { workspace = true }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]

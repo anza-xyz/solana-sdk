@@ -1,3 +1,4 @@
+#![no_std]
 #![cfg_attr(feature = "frozen-abi", feature(min_specialization))]
 #![cfg_attr(docsrs, feature(doc_cfg))]
 //! Public key recovery from [secp256k1] ECDSA signatures.
@@ -26,6 +27,12 @@
 //! [sp]: https://docs.rs/solana-program/latest/solana_program/secp256k1_program/
 //! [`ecrecover`]: https://docs.soliditylang.org/en/v0.8.14/units-and-global-variables.html?highlight=ecrecover#mathematical-and-cryptographic-functions
 
+#[cfg(feature = "borsh")]
+extern crate alloc;
+#[cfg(feature = "frozen-abi")]
+extern crate std;
+#[cfg(feature = "borsh")]
+use alloc::string::ToString;
 #[cfg(feature = "borsh")]
 use borsh::{BorshDeserialize, BorshSchema, BorshSerialize};
 use {core::convert::TryFrom, thiserror::Error};

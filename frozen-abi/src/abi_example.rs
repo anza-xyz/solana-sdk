@@ -431,6 +431,21 @@ impl<
     }
 }
 
+#[cfg(not(target_os = "solana"))]
+impl<K, V, S, P> AbiExample for imbl::GenericHashMap<K, V, S, P>
+where
+    K: Clone + Eq + std::hash::Hash + AbiExample,
+    V: Clone + AbiExample,
+    S: Clone + std::hash::BuildHasher + Default,
+    P: imbl::shared_ptr::SharedPointerKind,
+{
+    fn example() -> Self {
+        let mut map = Self::default();
+        map.insert(K::example(), V::example());
+        map
+    }
+}
+
 impl<T: std::cmp::Ord + AbiExample, S: AbiExample> AbiExample for BTreeMap<T, S> {
     fn example() -> Self {
         println!("AbiExample for (BTreeMap<T, S>): {}", type_name::<Self>());
@@ -606,6 +621,27 @@ impl<O: AbiEnumVisitor, E: AbiEnumVisitor> AbiEnumVisitor for Result<O, E> {
         variant.serialize(digester.create_enum_child()?)?;
 
         digester.create_child()
+    }
+}
+
+impl<T: AbiEnumVisitor> AbiEnumVisitor for Box<T> {
+    fn visit_for_abi(&self, digester: &mut AbiDigester) -> DigestResult {
+        println!("AbiEnumVisitor for (Box<T>): {}", type_name::<Self>());
+        <&T>::visit_for_abi(&self.as_ref(), digester)
+    }
+}
+
+impl<T: AbiEnumVisitor> AbiEnumVisitor for std::sync::Arc<T> {
+    fn visit_for_abi(&self, digester: &mut AbiDigester) -> DigestResult {
+        println!("AbiEnumVisitor for (Arc<T>): {}", type_name::<Self>());
+        <&T>::visit_for_abi(&self.as_ref(), digester)
+    }
+}
+
+impl<T: AbiEnumVisitor> AbiEnumVisitor for std::rc::Rc<T> {
+    fn visit_for_abi(&self, digester: &mut AbiDigester) -> DigestResult {
+        println!("AbiEnumVisitor for (Rc<T>): {}", type_name::<Self>());
+        <&T>::visit_for_abi(&self.as_ref(), digester)
     }
 }
 

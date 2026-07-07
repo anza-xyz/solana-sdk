@@ -215,6 +215,16 @@ fn decode_impl_base2(data_bytes: &[u8], total_bits: usize) -> Result<Decoded, De
         return Err(DecodeError::CorruptDataPayload);
     }
 
+    // require all unused bits set to 0 and fail decoding otherwise.
+    let remainder = total_bits % 8;
+    if remainder != 0 {
+        if let Some(&last_byte) = data_bytes.last() {
+            if last_byte >> remainder != 0 {
+                return Err(DecodeError::CorruptDataPayload);
+            }
+        }
+    }
+
     let mut bit_vec = BitVec::from_slice(data_bytes);
     bit_vec.truncate(total_bits);
 
@@ -263,6 +273,11 @@ fn decode_impl_base3(data_bytes: &[u8], total_bits: usize) -> Result<Decoded, De
             if fallback_bit {
                 fallback_bytes[byte_idx] |= 1 << bit_idx;
             }
+        }
+
+        // require remainder block_num to be exactly zero
+        if block_num != 0 {
+            return Err(DecodeError::CorruptDataPayload);
         }
     }
 
@@ -417,5 +432,156 @@ mod tests {
         encoded.pop(); // Corrupt the payload by removing a byte
         let result = decode(&encoded, 10);
         assert_eq!(result, Err(DecodeError::CorruptDataPayload));
+    }
+
+    #[test]
+    fn test_decode_base2_non_canonical_padding_bits_rejected() {
+        // A 3-bit vector [1, 0, 1]. Only the low 3 bits of the single data byte
+        // are meaningful; the canonical encoding stores them as 0b0000_0101 = 5
+        let expected = bitvec![u8, Lsb0; 1, 0, 1];
+        let canonical = vec![Version::Base2 as u8, 3, 0, 0b0000_0101];
+
+        // Same header and same byte count, but the 5 padding bits (3..8) are
+        // set. The length check still passes, but the padding check fails.
+        let non_canonical = vec![Version::Base2 as u8, 3, 0, 0b1111_1101];
+
+        assert_ne!(canonical, non_canonical);
+        assert_eq!(
+            decode(&canonical, 3).unwrap(),
+            Decoded::Base2(expected.clone()),
+        );
+        // The different byte array decoding to the same value is now rejected.
+        assert_eq!(
+            decode(&non_canonical, 3),
+            Err(DecodeError::CorruptDataPayload)
+        );
+
+        let too_short = vec![Version::Base2 as u8, 3, 0]; // data_bytes is empty
+        let too_long = vec![Version::Base2 as u8, 3, 0, 0b0000_0101, 0xFF];
+        assert_eq!(decode(&too_short, 3), Err(DecodeError::CorruptDataPayload));
+        assert_eq!(decode(&too_long, 3), Err(DecodeError::CorruptDataPayload));
+    }
+
+    #[test]
+    fn test_decode_base3_non_canonical_high_symbols_rejected() {
+        // 3 bits -> 1 chunk byte; only the low 3 base-3 symbols are decoded.
+        // 4 = symbols [1, 1, 0, 0, 0] -> base [1, 1, 0], fallback [0, 0, 0].
+        let expected_base = bitvec![u8, Lsb0; 1, 1, 0];
+        let expected_fallback = bitvec![u8, Lsb0; 0, 0, 0];
+        let canonical = vec![Version::Base3 as u8, 3, 0, 4];
+
+        // 4 + 27 = 31 differs only in the unused 4th symbol (27 = 3^3), which
+        // is now verified to be zero, rejecting the tampered chunk.
+        let non_canonical = vec![Version::Base3 as u8, 3, 0, 31];
+
+        assert_ne!(canonical, non_canonical);
+        let expected = Decoded::Base3(expected_base, expected_fallback);
+        assert_eq!(decode(&canonical, 3).unwrap(), expected);
+        // The different byte array decoding to the same value is now rejected.
+        assert_eq!(
+            decode(&non_canonical, 3),
+            Err(DecodeError::CorruptDataPayload)
+        );
+    }
+
+    #[test]
+    fn test_decode_base2_length_low_bits_checked() {
+        // One data byte with every bit set; canonically this is an 8-bit vector
+        let data_byte = 0xFFu8;
+
+        for total_bits in 1u16..=8 {
+            let encoded = vec![Version::Base2 as u8, total_bits as u8, 0, data_byte];
+
+            let decoded = decode(&encoded, 8);
+            if total_bits == 8 {
+                let expected: BitVec<u8, Lsb0> = bitvec![u8, Lsb0; 1; total_bits as usize];
+                assert_eq!(decoded.unwrap(), Decoded::Base2(expected));
+            } else {
+                // The 7 length values are rejected despite the identical
+                // payload; the unused padding bits must strictly be 0.
+                assert_eq!(decoded, Err(DecodeError::CorruptDataPayload));
+            }
+        }
+
+        let original = decode(&[Version::Base2 as u8, 8, 0, data_byte], 8).unwrap();
+        let tampered = decode(&[Version::Base2 as u8, 5, 0, data_byte], 8);
+        assert_ne!(Ok(original), tampered);
+
+        let crossing = vec![Version::Base2 as u8, 9, 0, data_byte];
+        assert_eq!(decode(&crossing, 9), Err(DecodeError::CorruptDataPayload));
+    }
+
+    #[test]
+    fn test_decode_base3_length_low_bits_checked() {
+        // One chunk byte holding five base-3 `1` symbols: 1+3+9+27+81 = 121.
+        let chunk_byte = 121u8;
+
+        for total_bits in 1u16..=5 {
+            let encoded = vec![Version::Base3 as u8, total_bits as u8, 0, chunk_byte];
+
+            let decoded = decode(&encoded, 5);
+            if total_bits == 5 {
+                let n = total_bits as usize;
+                let expected_base: BitVec<u8, Lsb0> = bitvec![u8, Lsb0; 1; n];
+                let expected_fallback: BitVec<u8, Lsb0> = bitvec![u8, Lsb0; 0; n];
+                assert_eq!(
+                    decoded.unwrap(),
+                    Decoded::Base3(expected_base, expected_fallback)
+                );
+            } else {
+                // The 4 length values are rejected despite the identical
+                // payload; the unused symbols must strictly be 0.
+                assert_eq!(decoded, Err(DecodeError::CorruptDataPayload));
+            }
+        }
+
+        let original = decode(&[Version::Base3 as u8, 5, 0, chunk_byte], 5).unwrap();
+        let tampered = decode(&[Version::Base3 as u8, 3, 0, chunk_byte], 5);
+        assert_ne!(Ok(original), tampered);
+
+        let crossing = vec![Version::Base3 as u8, 6, 0, chunk_byte];
+        assert_eq!(decode(&crossing, 6), Err(DecodeError::CorruptDataPayload));
+    }
+
+    #[test]
+    fn base3_decode_rejects_noncanonical_chunk_byte_ge_243() {
+        let mut base = BitVec::<u8>::new();
+        base.resize(5, false);
+        base.set(1, true);
+        base.set(2, true);
+        let mut fallback = BitVec::<u8>::new();
+        fallback.resize(5, false);
+
+        let canonical = encode_base3(&base, &fallback).unwrap();
+        let data_byte = *canonical.last().unwrap();
+        assert_eq!(data_byte, 12);
+
+        // Tamper: add 3^5 = 243 to the chunk byte (12 -> 255).
+        let mut non_canonical = canonical.clone();
+        *non_canonical.last_mut().unwrap() = data_byte.checked_add(243).unwrap();
+        assert_ne!(canonical, non_canonical);
+
+        let expected = Decoded::Base3(base, fallback);
+        assert_eq!(decode(&canonical, 5).unwrap(), expected);
+        // The non-canonical chunk byte 255 is rejected.
+        assert_eq!(
+            decode(&non_canonical, 5),
+            Err(DecodeError::CorruptDataPayload)
+        );
+
+        // Quantify the collapse: 243 byte values are correct length, others are
+        // rejected
+        let mut header = canonical.clone();
+        let mut valid_count = 0;
+        for byte in 0u8..=255 {
+            *header.last_mut().unwrap() = byte;
+            if decode(&header, 5).is_ok() {
+                valid_count += 1;
+            }
+        }
+        assert_eq!(
+            valid_count, 243,
+            "expected 243 canonical decodings; the 13 aliases are rejected"
+        );
     }
 }

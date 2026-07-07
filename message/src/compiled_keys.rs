@@ -1,15 +1,14 @@
-#[cfg(not(target_os = "solana"))]
-use crate::{
-    v0::{LoadedAddresses, MessageAddressTableLookup},
-    AddressLookupTableAccount,
-};
 use {
-    crate::{inline_nonce::is_advance_nonce_instruction_data, MessageHeader},
+    crate::{
+        inline_nonce::is_advance_nonce_instruction_data,
+        v0::{LoadedAddresses, MessageAddressTableLookup},
+        AddressLookupTableAccount, MessageHeader,
+    },
+    alloc::{collections::BTreeMap, vec::Vec},
     core::fmt,
     solana_address::Address,
     solana_instruction::Instruction,
     solana_sdk_ids::system_program,
-    std::collections::BTreeMap,
 };
 
 /// A helper struct to collect pubkeys compiled for a set of instructions
@@ -19,7 +18,6 @@ pub(crate) struct CompiledKeys {
     key_meta_map: BTreeMap<Address, CompiledKeyMeta>,
 }
 
-#[cfg_attr(target_os = "solana", allow(dead_code))]
 #[derive(PartialEq, Debug, Eq, Clone)]
 pub enum CompileError {
     AccountIndexOverflow,
@@ -129,7 +127,7 @@ impl CompiledKeys {
             num_readonly_unsigned_accounts: try_into_u8(readonly_non_signer_keys.len())?,
         };
 
-        let static_account_keys = std::iter::empty()
+        let static_account_keys = core::iter::empty()
             .chain(writable_signer_keys)
             .chain(readonly_signer_keys)
             .chain(writable_non_signer_keys)
@@ -139,7 +137,6 @@ impl CompiledKeys {
         Ok((header, static_account_keys))
     }
 
-    #[cfg(not(target_os = "solana"))]
     pub(crate) fn try_extract_table_lookup(
         &mut self,
         lookup_table_account: &AddressLookupTableAccount,
@@ -171,7 +168,6 @@ impl CompiledKeys {
         )))
     }
 
-    #[cfg(not(target_os = "solana"))]
     fn try_drain_keys_found_in_lookup_table(
         &mut self,
         lookup_table_addresses: &[Address],
@@ -224,7 +220,7 @@ fn get_nonce_pubkey(instructions: &[Instruction]) -> Option<&Address> {
 #[cfg(test)]
 mod tests {
     use {
-        super::*, bitflags::bitflags, solana_instruction::AccountMeta,
+        super::*, alloc::vec, bitflags::bitflags, solana_instruction::AccountMeta,
         solana_sdk_ids::sysvar::recent_blockhashes,
         solana_system_interface::instruction::advance_nonce_account,
     };

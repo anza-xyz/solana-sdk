@@ -14,17 +14,14 @@
 #![allow(clippy::arithmetic_side_effects)]
 #![no_std]
 
-#[cfg(feature = "std")]
-extern crate std;
-use solana_pubkey::Pubkey;
-#[cfg(feature = "std")]
-use std::vec::Vec;
+extern crate alloc;
+
 pub mod account_meta;
-#[cfg(feature = "std")]
-pub use account_meta::AccountMeta;
-pub use solana_instruction_error as error;
 #[cfg(any(feature = "syscalls", target_os = "solana"))]
 pub mod syscalls;
+
+pub use {account_meta::AccountMeta, solana_instruction_error as error};
+use {alloc::vec::Vec, solana_pubkey::Pubkey};
 
 /// A directive for a single invocation of a Solana program.
 ///
@@ -85,11 +82,11 @@ pub mod syscalls;
 /// Programs may require signatures from some accounts, in which case they
 /// should be specified as signers during `Instruction` construction. The
 /// program must still validate during execution that the account is a signer.
-#[cfg(feature = "std")]
 #[cfg_attr(
     feature = "serde",
     derive(serde_derive::Serialize, serde_derive::Deserialize)
 )]
+#[cfg_attr(feature = "wincode", derive(wincode::SchemaRead, wincode::SchemaWrite))]
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Instruction {
     /// Pubkey of the program that executes this instruction.
@@ -100,7 +97,6 @@ pub struct Instruction {
     pub data: Vec<u8>,
 }
 
-#[cfg(feature = "std")]
 impl Instruction {
     #[cfg(feature = "borsh")]
     /// Create a new instruction from a value, encoded with [`borsh`].
@@ -174,7 +170,7 @@ impl Instruction {
     /// ```
     /// # use solana_pubkey::Pubkey;
     /// # use solana_instruction::{AccountMeta, Instruction};
-    /// # use serde::{Serialize, Deserialize};
+    /// # use serde_derive::{Serialize, Deserialize};
     /// #
     /// #[derive(Serialize, Deserialize)]
     /// pub struct MyInstruction {
@@ -205,6 +201,57 @@ impl Instruction {
         accounts: Vec<AccountMeta>,
     ) -> Self {
         let data = bincode::serialize(data).unwrap();
+        Self {
+            program_id,
+            accounts,
+            data,
+        }
+    }
+
+    #[cfg(feature = "wincode")]
+    /// Create a new instruction from a value, encoded with [`wincode`].
+    ///
+    /// [`wincode`]: https://docs.rs/wincode/latest/wincode/
+    ///
+    /// `program_id` is the address of the program that will execute the instruction.
+    /// `accounts` contains a description of all accounts that may be accessed by the program.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use solana_pubkey::Pubkey;
+    /// # use solana_instruction::{AccountMeta, Instruction};
+    /// # use wincode::{SchemaRead, SchemaWrite, config::DefaultConfig};
+    /// #
+    /// #[derive(SchemaRead, SchemaWrite)]
+    /// pub struct MyInstruction {
+    ///     pub lamports: u64,
+    /// }
+    ///
+    /// pub fn create_instruction(
+    ///     program_id: &Pubkey,
+    ///     from: &Pubkey,
+    ///     to: &Pubkey,
+    ///     lamports: u64,
+    /// ) -> Instruction {
+    ///     let instr = MyInstruction { lamports };
+    ///
+    ///     Instruction::new_with_wincode(
+    ///         *program_id,
+    ///         &instr,
+    ///         vec![
+    ///             AccountMeta::new(*from, true),
+    ///             AccountMeta::new(*to, false),
+    ///         ],
+    ///    )
+    /// }
+    /// ```
+    pub fn new_with_wincode<T: wincode::Serialize<Src = T>>(
+        program_id: Pubkey,
+        data: &T,
+        accounts: Vec<AccountMeta>,
+    ) -> Self {
+        let data = wincode::serialize(data).unwrap();
         Self {
             program_id,
             accounts,
@@ -292,7 +339,6 @@ pub struct BorrowedAccountMeta<'a> {
 ///
 /// This struct is used by the runtime when constructing the instructions sysvar. It is not
 /// useful to Solana programs.
-#[cfg(feature = "std")]
 pub struct BorrowedInstruction<'a> {
     pub program_id: &'a Pubkey,
     pub accounts: Vec<BorrowedAccountMeta<'a>>,

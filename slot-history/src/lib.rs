@@ -20,6 +20,7 @@ use bv::{BitVec, BitsMut};
     feature = "serde",
     derive(serde_derive::Deserialize, serde_derive::Serialize)
 )]
+#[cfg_attr(feature = "wincode", derive(wincode::SchemaWrite, wincode::SchemaRead))]
 #[derive(Clone, PartialEq, Eq)]
 pub struct SlotHistory {
     pub bits: BitVec<u64>,
@@ -49,6 +50,9 @@ impl std::fmt::Debug for SlotHistory {
 }
 
 pub const MAX_ENTRIES: u64 = 1024 * 1024; // 1 million slots is about 5 days
+
+/// Serialized size of the `SlotHistory` sysvar account.
+pub const SIZE: usize = 131_097;
 
 #[derive(PartialEq, Eq, Debug)]
 pub enum Check {
@@ -100,6 +104,14 @@ impl SlotHistory {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_size_of() {
+        assert_eq!(
+            wincode::serialized_size(&SlotHistory::default()).unwrap() as usize,
+            SIZE,
+        );
+    }
 
     #[test]
     fn slot_history_test1() {

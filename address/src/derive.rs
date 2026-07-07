@@ -31,6 +31,7 @@ impl Address {
     /// (off-curve) program derived address. It is intended for use in cases where the
     /// seeds, bump, and program id are known to be valid, and the caller wants to derive
     /// the address without incurring the cost of the `create_program_address` syscall.
+    #[inline]
     pub fn derive_address<const N: usize>(
         seeds: &[&[u8]; N],
         bump: Option<u8>,
@@ -124,6 +125,43 @@ impl Address {
                 .finalize()
         })
     }
+
+    /// Attempt to derive a valid [program derived address][pda] (PDA) and its corresponding
+    /// bump seed.
+    ///
+    /// [pda]: https://solana.com/docs/core/cpi#program-derived-addresses
+    ///
+    /// The main difference between this method and [`Address::derive_address`]
+    /// is that this method iterates through all possible bump seed values (starting from
+    /// `255` and decrementing) until it finds a valid (off-curve) program derived address.
+    ///
+    /// If a valid PDA is found, it returns the PDA and the bump seed used to derive it;
+    /// otherwise, it returns `None`.
+    #[inline]
+    pub fn derive_program_address<const N: usize>(
+        seeds: &[&[u8]; N],
+        program_id: &Address,
+    ) -> Option<(Address, u8)> {
+        let mut bump = u8::MAX;
+
+        loop {
+            let address = Self::derive_address(seeds, Some(bump), program_id);
+
+            // Check if the derived address is a valid (off-curve)
+            // program derived address.
+            if !address.is_on_curve() {
+                return Some((address, bump));
+            }
+
+            // If the derived address is on-curve, decrement the bump and
+            // try again until all possible bump values are tested.
+            if bump == 0 {
+                return None;
+            }
+
+            bump -= 1;
+        }
+    }
 }
 
 #[cfg(test)]
@@ -150,5 +188,19 @@ mod tests {
 
         assert_eq!(address, derived_address);
         assert_eq!(address, derived_address_const);
+    }
+
+    #[test]
+    fn test_program_derive_address() {
+        let program_id = Address::new_unique();
+        let seeds: &[&[u8]; 3] = &[b"derived", b"programm", b"address"];
+
+        let (address, bump) = Address::find_program_address(seeds, &program_id);
+
+        let (derived_address, derived_bump) =
+            Address::derive_program_address(seeds, &program_id).unwrap();
+
+        assert_eq!(address, derived_address);
+        assert_eq!(bump, derived_bump);
     }
 }

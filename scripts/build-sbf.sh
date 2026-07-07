@@ -12,12 +12,13 @@ build_sbf_excludes=(
   --exclude solana-file-download
   --exclude solana-genesis-config
   --exclude solana-keypair
+  --exclude solana-message
   --exclude solana-offchain-message
   --exclude solana-presigner
   --exclude solana-sdk-wasm-js
   --exclude solana-sdk-wasm-js-tests
-  --exclude solana-secp256k1-program
   --exclude solana-secp256r1-program
+  --exclude solana-svm-transaction
   --exclude solana-system-transaction
   --exclude solana-system-wasm-js
   --exclude solana-transaction

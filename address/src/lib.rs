@@ -84,7 +84,14 @@ pub const PDA_MARKER: &[u8; 21] = b"ProgramDerivedAddress";
 /// [pdas]: https://solana.com/docs/core/cpi#program-derived-addresses
 /// [`Keypair`]: https://docs.rs/solana-sdk/latest/solana_sdk/signer/keypair/struct.Keypair.html
 #[repr(transparent)]
-#[cfg_attr(feature = "frozen-abi", derive(solana_frozen_abi_macro::AbiExample))]
+#[cfg_attr(
+    feature = "frozen-abi",
+    derive(
+        solana_frozen_abi_macro::AbiExample,
+        solana_frozen_abi_macro::StableAbi,
+        solana_frozen_abi_macro::StableAbiSample
+    )
+)]
 #[cfg_attr(
     feature = "borsh",
     derive(BorshSerialize, BorshDeserialize),
@@ -377,6 +384,14 @@ pub fn address_eq(a1: &Address, a2: &Address) -> bool {
             && read_unaligned(p1_ptr.add(2)) == read_unaligned(p2_ptr.add(2))
             && read_unaligned(p1_ptr.add(3)) == read_unaligned(p2_ptr.add(3))
     }
+}
+
+/// Implementation of `Nullable` for `Address`.
+///
+/// The zero address (`[0u8; 32]`) is the `None` value.
+#[cfg(feature = "nullable")]
+impl solana_nullable::Nullable for Address {
+    const NONE: Self = Address::new_from_array([0u8; ADDRESS_BYTES]);
 }
 
 #[cfg(feature = "decode")]

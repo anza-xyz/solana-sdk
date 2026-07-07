@@ -104,7 +104,11 @@ pub fn read_bool<T: AsRef<[u8]>>(cursor: &mut Cursor<T>) -> Result<bool, Instruc
 
 #[cfg(test)]
 mod test {
-    use {super::*, rand::Rng, std::fmt::Debug};
+    use {
+        super::*,
+        rand::Rng,
+        std::{fmt::Debug, vec::Vec},
+    };
 
     #[test]
     fn test_read_u8() {

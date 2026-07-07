@@ -1,5 +1,7 @@
 #[cfg(feature = "bytemuck")]
 use bytemuck::{Pod, PodInOption, Zeroable, ZeroableInOption};
+#[cfg(feature = "wincode")]
+use wincode::{SchemaRead, SchemaWrite};
 use {
     base64::{prelude::BASE64_STANDARD, Engine},
     core::fmt,
@@ -14,18 +16,19 @@ use {
 pub const BLS_PUBLIC_KEY_COMPRESSED_SIZE: usize = 48;
 
 /// Size of a BLS public key in a compressed point representation in base64
-pub const BLS_PUBLIC_KEY_COMPRESSED_BASE64_SIZE: usize = 128;
+pub const BLS_PUBLIC_KEY_COMPRESSED_BASE64_SIZE: usize = 64;
 
 /// Size of a BLS public key in an affine point representation
 pub const BLS_PUBLIC_KEY_AFFINE_SIZE: usize = 96;
 
 /// Size of a BLS public key in an affine point representation in base64
-pub const BLS_PUBLIC_KEY_AFFINE_BASE64_SIZE: usize = 256;
+pub const BLS_PUBLIC_KEY_AFFINE_BASE64_SIZE: usize = 128;
 
 /// A serialized BLS public key in a compressed point representation.
 #[cfg_attr(feature = "frozen-abi", derive(solana_frozen_abi_macro::AbiExample))]
 #[cfg_attr(feature = "serde", cfg_eval::cfg_eval, serde_as)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "wincode", derive(SchemaRead, SchemaWrite))]
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 #[repr(transparent)]
 pub struct PubkeyCompressed(
@@ -35,12 +38,6 @@ pub struct PubkeyCompressed(
     )]
     pub [u8; BLS_PUBLIC_KEY_COMPRESSED_SIZE],
 );
-
-impl Default for PubkeyCompressed {
-    fn default() -> Self {
-        Self([0; BLS_PUBLIC_KEY_COMPRESSED_SIZE])
-    }
-}
 
 impl fmt::Display for PubkeyCompressed {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -58,18 +55,13 @@ impl_from_str!(
 #[cfg_attr(feature = "frozen-abi", derive(solana_frozen_abi_macro::AbiExample))]
 #[cfg_attr(feature = "serde", cfg_eval::cfg_eval, serde_as)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "wincode", derive(SchemaRead, SchemaWrite))]
 #[derive(Clone, Copy, Debug, Hash, Eq, Ord, PartialEq, PartialOrd)]
 #[repr(transparent)]
 pub struct Pubkey(
     #[cfg_attr(feature = "serde", serde_as(as = "[_; BLS_PUBLIC_KEY_AFFINE_SIZE]"))]
     pub  [u8; BLS_PUBLIC_KEY_AFFINE_SIZE],
 );
-
-impl Default for Pubkey {
-    fn default() -> Self {
-        Self([0; BLS_PUBLIC_KEY_AFFINE_SIZE])
-    }
-}
 
 impl fmt::Display for Pubkey {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {

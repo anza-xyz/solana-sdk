@@ -5,15 +5,19 @@ use serde_derive::{Deserialize, Serialize};
 #[cfg(feature = "frozen-abi")]
 use solana_frozen_abi_macro::{AbiEnumVisitor, AbiExample};
 use std::fmt;
+#[cfg(feature = "wincode")]
+use wincode::{SchemaRead, SchemaWrite};
 
 #[cfg_attr(feature = "frozen-abi", derive(AbiExample, AbiEnumVisitor))]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "wincode", derive(SchemaRead, SchemaWrite))]
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum RewardType {
     Fee,
     Rent,
     Staking,
     Voting,
+    DeactivatedStake,
 }
 
 impl fmt::Display for RewardType {
@@ -26,6 +30,7 @@ impl fmt::Display for RewardType {
                 RewardType::Rent => "rent",
                 RewardType::Staking => "staking",
                 RewardType::Voting => "voting",
+                RewardType::DeactivatedStake => "deactivated-stake",
             }
         )
     }

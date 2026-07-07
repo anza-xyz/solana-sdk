@@ -1,10 +1,3 @@
-use crate::{
-    error::BlsError,
-    proof_of_possession::ProofOfPossessionProjective,
-    pubkey::{PubkeyAffine, PubkeyProjective, VerifiablePubkey, BLS_PUBLIC_KEY_AFFINE_SIZE},
-    secret_key::{SecretKey, BLS_SECRET_KEY_SIZE},
-    signature::{AsSignatureAffine, SignatureProjective},
-};
 #[cfg(feature = "solana-signer-derive")]
 use solana_signer::Signer;
 #[cfg(feature = "std")]
@@ -17,6 +10,19 @@ use std::{
     string::String,
     vec::Vec,
 };
+use {
+    crate::{
+        error::BlsError,
+        proof_of_possession::ProofOfPossessionProjective,
+        pubkey::{
+            PopVerified, PubkeyAffine, PubkeyProjective, VerifySignature,
+            BLS_PUBLIC_KEY_AFFINE_SIZE,
+        },
+        secret_key::{SecretKey, BLS_SECRET_KEY_SIZE},
+        signature::{AsSignatureAffine, SignatureProjective},
+    },
+    zeroize::{Zeroize, ZeroizeOnDrop, Zeroizing},
+};
 
 /// Size of BLS keypair in bytes
 pub const BLS_KEYPAIR_SIZE: usize = BLS_SECRET_KEY_SIZE + BLS_PUBLIC_KEY_AFFINE_SIZE;
@@ -25,22 +31,32 @@ pub const BLS_KEYPAIR_SIZE: usize = BLS_SECRET_KEY_SIZE + BLS_PUBLIC_KEY_AFFINE_
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Keypair {
     pub secret: SecretKey,
-    pub public: PubkeyAffine,
+    pub public: PopVerified<PubkeyAffine>,
 }
+
+impl Zeroize for Keypair {
+    fn zeroize(&mut self) {
+        // Delegate zeroization to the SecretKey.
+        // We skip `self.public` because public keys do not contain sensitive material.
+        self.secret.zeroize();
+    }
+}
+
+impl ZeroizeOnDrop for Keypair {}
 
 impl Keypair {
     /// Constructs a new, random `Keypair` using `OsRng`
     #[allow(clippy::new_without_default)]
     pub fn new() -> Self {
         let secret = SecretKey::new();
-        let public = PubkeyProjective::from_secret(&secret).into();
+        let public = PopVerified(PubkeyProjective::from_secret(&secret).into());
         Self { secret, public }
     }
 
     /// Derive a `Keypair` from a seed (input key material)
     pub fn derive(ikm: &[u8]) -> Result<Self, BlsError> {
         let secret = SecretKey::derive(ikm)?;
-        let public = PubkeyProjective::from_secret(&secret).into();
+        let public = PopVerified(PubkeyProjective::from_secret(&secret).into());
         Ok(Self { secret, public })
     }
 
@@ -48,7 +64,7 @@ impl Keypair {
     #[cfg(feature = "solana-signer-derive")]
     pub fn derive_from_signer(signer: &dyn Signer, public_seed: &[u8]) -> Result<Self, BlsError> {
         let secret = SecretKey::derive_from_signer(signer, public_seed)?;
-        let public = PubkeyProjective::from_secret(&secret).into();
+        let public = PopVerified(PubkeyProjective::from_secret(&secret).into());
         Ok(Self { secret, public })
     }
 
@@ -90,15 +106,30 @@ impl TryFrom<&[u8]> for Keypair {
             return Err(BlsError::ParseFromBytes);
         }
 
-        Ok(Self { secret, public })
+        Ok(Self {
+            secret,
+            public: PopVerified(public),
+        })
     }
 }
 
 impl From<&Keypair> for [u8; BLS_KEYPAIR_SIZE] {
     fn from(keypair: &Keypair) -> Self {
+        // WARNING: `bytes` contains raw secret-key material. Callers should zeroize the returned
+        // buffer as soon as they are done using it.
         let mut bytes = [0u8; BLS_KEYPAIR_SIZE];
-        bytes[..BLS_SECRET_KEY_SIZE]
-            .copy_from_slice(&Into::<[u8; BLS_SECRET_KEY_SIZE]>::into(&keypair.secret));
+        let secret_bytes: Zeroizing<[u8; BLS_SECRET_KEY_SIZE]> = (&keypair.secret).into();
+        bytes[..BLS_SECRET_KEY_SIZE].copy_from_slice(secret_bytes.as_slice());
+        bytes[BLS_SECRET_KEY_SIZE..].copy_from_slice(&keypair.public.to_bytes_uncompressed());
+        bytes
+    }
+}
+
+impl From<&Keypair> for Zeroizing<[u8; BLS_KEYPAIR_SIZE]> {
+    fn from(keypair: &Keypair) -> Self {
+        let mut bytes = Zeroizing::new([0u8; BLS_KEYPAIR_SIZE]);
+        let secret_bytes: Zeroizing<[u8; BLS_SECRET_KEY_SIZE]> = (&keypair.secret).into();
+        bytes[..BLS_SECRET_KEY_SIZE].copy_from_slice(secret_bytes.as_slice());
         bytes[BLS_SECRET_KEY_SIZE..].copy_from_slice(&keypair.public.to_bytes_uncompressed());
         bytes
     }
@@ -107,7 +138,7 @@ impl From<&Keypair> for [u8; BLS_KEYPAIR_SIZE] {
 #[cfg(feature = "std")]
 impl Keypair {
     pub fn read_json<R: Read>(reader: &mut R) -> Result<Self, Box<dyn error::Error>> {
-        let bytes: Vec<u8> = serde_json::from_reader(reader)?;
+        let bytes: Zeroizing<Vec<u8>> = Zeroizing::new(serde_json::from_reader(reader)?);
         Self::try_from(bytes.as_slice())
             .ok()
             .ok_or_else(|| std::io::Error::other("Invalid BLS keypair").into())
@@ -118,21 +149,28 @@ impl Keypair {
         Self::read_json(&mut file)
     }
 
-    pub fn write_json<W: Write>(&self, writer: &mut W) -> Result<String, Box<dyn error::Error>> {
-        let json = serde_json::to_string(&Into::<[u8; BLS_KEYPAIR_SIZE]>::into(self).as_slice())?;
-        writer.write_all(&json.clone().into_bytes())?;
+    pub fn write_json<W: Write>(
+        &self,
+        writer: &mut W,
+    ) -> Result<Zeroizing<String>, Box<dyn error::Error>> {
+        let bytes: Zeroizing<[u8; BLS_KEYPAIR_SIZE]> = self.into();
+        let json = Zeroizing::new(serde_json::to_string(bytes.as_slice())?);
+        writer.write_all(json.as_bytes())?;
         Ok(json)
     }
 
     pub fn write_json_file<F: AsRef<Path>>(
         &self,
         outfile: F,
-    ) -> Result<String, Box<dyn core::error::Error>> {
+    ) -> Result<Zeroizing<String>, Box<dyn core::error::Error>> {
         let outfile = outfile.as_ref();
 
         if let Some(outdir) = outfile.parent() {
             fs::create_dir_all(outdir)?;
         }
+
+        // Remove the file or symlink if it already exists.
+        let _ = fs::remove_file(outfile);
 
         let mut f = {
             #[cfg(not(unix))]
@@ -146,8 +184,7 @@ impl Keypair {
             }
         }
         .write(true)
-        .truncate(true)
-        .create(true)
+        .create_new(true)
         .open(outfile)?;
 
         self.write_json(&mut f)
@@ -160,12 +197,12 @@ mod tests {
 
     #[test]
     fn test_keygen_derive() {
-        let ikm = b"test_ikm";
+        let ikm = b"test_ikm_that_is_at_least_32_bytes_long";
         let secret = SecretKey::derive(ikm).unwrap();
         let public: PubkeyAffine = PubkeyProjective::from_secret(&secret).into();
         let keypair = Keypair::derive(ikm).unwrap();
         assert_eq!(keypair.secret, secret);
-        assert_eq!(keypair.public, public);
+        assert_eq!(*keypair.public, public);
     }
 
     #[test]
@@ -177,7 +214,7 @@ mod tests {
         let keypair = Keypair::derive_from_signer(&solana_keypair, b"alpenglow-vote").unwrap();
 
         assert_eq!(keypair.secret, secret);
-        assert_eq!(keypair.public, public);
+        assert_eq!(keypair.public, PopVerified(public));
     }
 
     #[test]
@@ -190,5 +227,23 @@ mod tests {
             .unwrap();
         let read_keypair = Keypair::read_json_file(&temp_keypair_file).unwrap();
         assert_eq!(original_keypair, read_keypair);
+    }
+
+    #[test]
+    fn test_keygen_derive_short_ikm() {
+        let short_ikm = b"test_ikm"; // 8 bytes
+        assert_eq!(
+            SecretKey::derive(short_ikm).unwrap_err(),
+            BlsError::KeyDerivation
+        );
+        assert_eq!(
+            Keypair::derive(short_ikm).unwrap_err(),
+            BlsError::KeyDerivation
+        );
+        let exactly_31_bytes = b"0123456789012345678901234567890";
+        assert_eq!(
+            SecretKey::derive(exactly_31_bytes).unwrap_err(),
+            BlsError::KeyDerivation
+        );
     }
 }

@@ -39,8 +39,10 @@ all_crate_dirs=(
   frozen-abi
   frozen-abi-macro
   genesis-config
+  get-sysvar
   hard-forks
   hash
+  hash-512
   inflation
   instruction
   instructions-sysvar
@@ -49,12 +51,12 @@ all_crate_dirs=(
   last-restart-slot
   loader-v2-interface
   loader-v3-interface
-  loader-v4-interface
   message
   msg
   native-token
   nonce
   nonce-account
+  nullable
   offchain-message
   package-metadata
   package-metadata-macro
@@ -85,6 +87,7 @@ all_crate_dirs=(
   serde-varint
   serialize-utils
   sha256-hasher
+  sha512-hasher
   short-vec
   shred-version
   signature
@@ -93,6 +96,7 @@ all_crate_dirs=(
   slot-hashes
   slot-history
   stable-layout
+  stake-history
   system-transaction
   sysvar
   sysvar-id
@@ -101,6 +105,8 @@ all_crate_dirs=(
   transaction-error
   validator-exit
   vote-interface
+  wincode-varint
+  zero-copy
 )
 
 update_solana_sdk_dependencies() {

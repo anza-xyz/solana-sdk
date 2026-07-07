@@ -16,17 +16,20 @@ pub use points::{
 /// Domain separation tag used when hashing public keys to G2 in the proof of
 /// possession signing and verification functions. See the
 /// [standard](https://datatracker.ietf.org/doc/html/draft-irtf-cfrg-bls-signature-05#section-4.2.3).
-pub const POP_DST: &[u8] = b"BLS_SIG_BLS12381G2_XMD:SHA-256_SSWU_RO_POP_";
+pub const POP_DST: &[u8] = b"BLS_POP_BLS12381G2_XMD:SHA-256_SSWU_RO_POP_";
 
 #[cfg(test)]
 mod tests {
     use {
         super::*,
         crate::{
+            hash::hash_pop_to_projective,
             keypair::Keypair,
-            pubkey::{Pubkey, PubkeyAffine, PubkeyCompressed, PubkeyProjective, VerifiablePubkey},
+            pubkey::{Pubkey, PubkeyAffine, PubkeyCompressed, PubkeyProjective, VerifyPop},
         },
+        blstrs::{G1Projective, Scalar},
         core::str::FromStr,
+        group::Group,
         std::string::ToString,
     };
 
@@ -35,14 +38,14 @@ mod tests {
         let keypair = Keypair::new();
         let proof_projective = keypair.proof_of_possession(None);
 
-        let pubkey_affine: PubkeyAffine = keypair.public;
+        let pubkey_affine: PubkeyAffine = *keypair.public;
         let pubkey_projective: PubkeyProjective = pubkey_affine.into();
-        let pubkey_uncompressed: Pubkey = pubkey_affine.into(); // [u8; 96]
-        let pubkey_compressed: PubkeyCompressed = pubkey_affine.into(); // [u8; 48]
+        let pubkey_uncompressed: Pubkey = pubkey_affine.into();
+        let pubkey_compressed: PubkeyCompressed = pubkey_affine.into();
 
         let proof_affine: ProofOfPossessionAffine = proof_projective.into();
-        let proof_uncompressed: ProofOfPossession = proof_affine.into(); // [u8; 96]
-        let proof_compressed: ProofOfPossessionCompressed = proof_affine.into(); // [u8; 48]
+        let proof_uncompressed: ProofOfPossession = proof_affine.into();
+        let proof_compressed: ProofOfPossessionCompressed = proof_affine.into();
 
         // Verify with PubkeyProjective
         assert!(proof_projective.verify(&pubkey_projective, None).is_ok());
@@ -93,12 +96,11 @@ mod tests {
     #[cfg(feature = "serde")]
     #[test]
     fn serialize_and_deserialize_proof_of_possession() {
-        let original = ProofOfPossession::default();
-        let serialized = bincode::serialize(&original).unwrap();
-        let deserialized: ProofOfPossession = bincode::deserialize(&serialized).unwrap();
-        assert_eq!(original, deserialized);
+        let keypair = Keypair::new();
+        let custom_payload = b"SIMD-0387-context-data";
 
-        let original = ProofOfPossession([1; BLS_PROOF_OF_POSSESSION_AFFINE_SIZE]);
+        let proof_custom = keypair.proof_of_possession(Some(custom_payload));
+        let original: ProofOfPossession = proof_custom.into();
         let serialized = bincode::serialize(&original).unwrap();
         let deserialized: ProofOfPossession = bincode::deserialize(&serialized).unwrap();
         assert_eq!(original, deserialized);
@@ -107,12 +109,11 @@ mod tests {
     #[cfg(feature = "serde")]
     #[test]
     fn serialize_and_deserialize_proof_of_possession_compressed() {
-        let original = ProofOfPossessionCompressed::default();
-        let serialized = bincode::serialize(&original).unwrap();
-        let deserialized: ProofOfPossessionCompressed = bincode::deserialize(&serialized).unwrap();
-        assert_eq!(original, deserialized);
+        let keypair = Keypair::new();
+        let custom_payload = b"SIMD-0387-context-data";
 
-        let original = ProofOfPossessionCompressed([1; BLS_PROOF_OF_POSSESSION_COMPRESSED_SIZE]);
+        let proof_custom = keypair.proof_of_possession(Some(custom_payload));
+        let original: ProofOfPossessionCompressed = proof_custom.into();
         let serialized = bincode::serialize(&original).unwrap();
         let deserialized: ProofOfPossessionCompressed = bincode::deserialize(&serialized).unwrap();
         assert_eq!(original, deserialized);
@@ -156,6 +157,27 @@ mod tests {
     }
 
     #[test]
+    #[allow(clippy::arithmetic_side_effects)]
+    fn test_custom_payload_pop_is_bound_to_pubkey() {
+        let honest = Keypair::new();
+        let payload = b"SIMD-0387-context-data";
+        let honest_pop = honest.proof_of_possession(Some(payload));
+        let hashed_payload = hash_pop_to_projective(payload);
+
+        let attacker_scalar = Scalar::from(7u64);
+        let rogue_pubkey = PubkeyProjective(
+            (G1Projective::generator() * attacker_scalar)
+                - PubkeyProjective::from(*honest.public).0,
+        );
+        let rogue_pop =
+            ProofOfPossessionProjective((hashed_payload * attacker_scalar) - honest_pop.0);
+
+        assert!(rogue_pubkey
+            .verify_proof_of_possession(&rogue_pop, Some(payload))
+            .is_err());
+    }
+
+    #[test]
     fn test_verify_proof_of_possession_with_raw_bytes() {
         let keypair = Keypair::new();
         let pop_projective = keypair.proof_of_possession(None);
@@ -183,5 +205,34 @@ mod tests {
 
         let result = pubkey_bytes.verify_proof_of_possession(&bad_pop_bytes, None);
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_identity_pop_behavior() {
+        use {blstrs::G2Projective, group::Group};
+
+        let keypair = Keypair::new();
+
+        // Deserializing an identity PoP should succeed
+        let id_pop_proj = ProofOfPossessionProjective(G2Projective::identity());
+        let id_pop_compressed: ProofOfPossessionCompressed = (&id_pop_proj).into();
+        let id_pop_recovered: Result<ProofOfPossessionProjective, _> =
+            ProofOfPossessionProjective::try_from(&id_pop_compressed);
+        assert!(
+            id_pop_recovered.is_ok(),
+            "Identity PoPs must be allowed to deserialize"
+        );
+        assert_eq!(id_pop_proj, id_pop_recovered.unwrap());
+
+        // PoP Verification with an identity Pubkey must fail
+        let id_pubkey_proj = PubkeyProjective::identity();
+        let valid_pop = keypair.proof_of_possession(None);
+
+        // Verification uses VerifyPop, which is automatically implemented for PubkeyProjective
+        let verify_result = id_pubkey_proj.verify_proof_of_possession(&valid_pop, None);
+        assert!(
+            verify_result.is_err(),
+            "PoP Verification with identity public key must fail"
+        );
     }
 }

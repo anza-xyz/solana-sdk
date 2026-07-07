@@ -2,7 +2,7 @@
 name = "solana-stable-layout"
 description = "Solana types with stable memory layouts. Internal use only."
 documentation = "https://docs.rs/solana-stable-layout"
-version = "3.0.0"
+version = "3.0.1"
 authors = { workspace = true }
 repository = { workspace = true }
 homepage = { workspace = true }
@@ -15,9 +15,7 @@ all-features = true
 rustdoc-args = ["--cfg=docsrs"]
 
 [dependencies]
-solana-instruction = { workspace = true, default-features = false, features = [
-    "std",
-] }
+solana-instruction = { workspace = true, default-features = false, features = ["std"] }
 solana-pubkey = { workspace = true, default-features = false }
 
 [dev-dependencies]

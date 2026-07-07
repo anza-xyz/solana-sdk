@@ -2,8 +2,8 @@
 name = "solana-signer"
 description = "Abstractions for Solana transaction signers. See `solana-keypair` for a concrete implementation."
 documentation = "https://docs.rs/solana-signer"
-version = "3.0.0"
-rust-version = "1.81.0"
+version = "3.0.1"
+rust-version = { workspace = true }
 authors = { workspace = true }
 repository = { workspace = true }
 homepage = { workspace = true }
@@ -14,6 +14,10 @@ edition = { workspace = true }
 targets = ["x86_64-unknown-linux-gnu"]
 all-features = true
 rustdoc-args = ["--cfg=docsrs"]
+
+[features]
+default = ["std"]
+std = []
 
 [dependencies]
 solana-pubkey = { workspace = true }

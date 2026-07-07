@@ -2,16 +2,18 @@
 name = "solana-feature-gate-interface"
 description = "Solana feature gate program interface."
 documentation = "https://docs.rs/solana-feature-gate-interface"
-version = "3.1.0"
+version = "4.0.0"
 authors = { workspace = true }
 repository = { workspace = true }
 homepage = { workspace = true }
 license = { workspace = true }
 edition = { workspace = true }
-rust-version = "1.81.0"
+rust-version = { workspace = true }
 
 [package.metadata.docs.rs]
 targets = ["x86_64-unknown-linux-gnu"]
+all-features = true
+rustdoc-args = ["--cfg=docsrs"]
 
 [features]
 bincode = [
@@ -37,9 +39,7 @@ solana-program-error = { workspace = true }
 solana-pubkey = { workspace = true }
 solana-rent = { workspace = true, optional = true }
 solana-sdk-ids = { workspace = true }
-solana-system-interface = { workspace = true, optional = true, features = [
-    "bincode",
-] }
+solana-system-interface = { workspace = true, optional = true, features = ["bincode"] }
 
 [dev-dependencies]
 solana-feature-gate-interface = { path = ".", features = ["dev-context-only-utils"] }

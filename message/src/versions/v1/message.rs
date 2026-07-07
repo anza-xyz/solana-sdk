@@ -38,15 +38,19 @@ pub use self::tests::MessageBuilder;
 #[cfg(feature = "serde")]
 use serde_derive::{Deserialize, Serialize};
 #[cfg(feature = "frozen-abi")]
-use solana_frozen_abi_macro::AbiExample;
+use solana_frozen_abi_macro::{AbiExample, StableAbi, StableAbiSample};
+#[cfg(feature = "std")]
+use std::collections::HashSet;
 #[cfg(feature = "wincode")]
 use {
-    crate::v1::MAX_TRANSACTION_SIZE,
+    crate::v1::{InstructionHeader, FIXED_HEADER_SIZE},
+    core::{mem::MaybeUninit, slice::from_raw_parts},
     wincode::{
-        config::ConfigCore,
-        error::invalid_tag_encoding,
+        config::{Config, ConfigCore},
+        context,
         io::{Reader, Writer},
-        ReadResult, SchemaRead, SchemaWrite, WriteResult,
+        len::SeqLen,
+        ReadResult, SchemaRead, SchemaReadContext, SchemaWrite, WriteResult,
     },
 };
 use {
@@ -54,17 +58,17 @@ use {
         compiled_instruction::CompiledInstruction,
         compiled_keys::CompiledKeys,
         v1::{
-            InstructionHeader, MessageError, TransactionConfig, TransactionConfigMask,
-            FIXED_HEADER_SIZE, MAX_ADDRESSES, MAX_INSTRUCTIONS, MAX_SIGNATURES,
+            MessageError, TransactionConfig, TransactionConfigMask, MAX_ADDRESSES, MAX_HEAP_SIZE,
+            MAX_INSTRUCTIONS, MAX_SIGNATURES, MIN_HEAP_SIZE,
         },
         AccountKeys, CompileError, MessageHeader,
     },
-    core::{mem::size_of, ptr::copy_nonoverlapping},
+    alloc::{collections::BTreeSet, vec::Vec},
+    core::mem::size_of,
     solana_address::Address,
     solana_hash::Hash,
     solana_instruction::Instruction,
     solana_sanitize::{Sanitize, SanitizeError},
-    std::{collections::HashSet, mem::MaybeUninit},
 };
 
 /// A V1 transaction message (SIMD-0385) supporting 4KB transactions with inline compute budget.
@@ -73,7 +77,7 @@ use {
 ///
 /// This message format does not support bincode binary serialization. Use the provided
 /// `serialize` and `deserialize` functions for binary encoding/decoding.
-#[cfg_attr(feature = "frozen-abi", derive(AbiExample))]
+#[cfg_attr(feature = "frozen-abi", derive(AbiExample, StableAbi, StableAbiSample))]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
@@ -150,7 +154,8 @@ impl Message {
     /// #     solana_signer,
     /// #     solana_keypair,
     /// # };
-    /// # use std::borrow::Cow;
+    /// # extern crate alloc;
+    /// # use alloc::borrow::Cow;
     /// # use solana_account::Account;
     /// use anyhow::Result;
     /// use solana_instruction::{AccountMeta, Instruction};
@@ -170,7 +175,7 @@ impl Message {
     /// #             pub fn try_new(
     /// #                 message: VersionedMessage,
     /// #                 _keypairs: &[&Keypair],
-    /// #             ) -> std::result::Result<Self, solana_example_mocks::solana_signer::SignerError> {
+    /// #             ) -> core::result::Result<Self, solana_example_mocks::solana_signer::SignerError> {
     /// #                 Ok(VersionedTransaction {
     /// #                     message,
     /// #                 })
@@ -237,7 +242,8 @@ impl Message {
     /// #     solana_signer,
     /// #     solana_keypair,
     /// # };
-    /// # use std::borrow::Cow;
+    /// # extern crate alloc;
+    /// # use alloc::borrow::Cow;
     /// # use solana_account::Account;
     /// use anyhow::Result;
     /// use solana_instruction::{AccountMeta, Instruction};
@@ -257,7 +263,7 @@ impl Message {
     /// #             pub fn try_new(
     /// #                 message: VersionedMessage,
     /// #                 _keypairs: &[&Keypair],
-    /// #             ) -> std::result::Result<Self, solana_example_mocks::solana_signer::SignerError> {
+    /// #             ) -> core::result::Result<Self, solana_example_mocks::solana_signer::SignerError> {
     /// #                 Ok(VersionedTransaction {
     /// #                     message,
     /// #                 })
@@ -348,6 +354,7 @@ impl Message {
     ///
     /// This method should not be used directly.
     #[inline(always)]
+    #[cfg(feature = "std")]
     pub(crate) fn is_writable_index(&self, i: usize) -> bool {
         crate::is_writable_index(i, self.header, &self.account_keys)
     }
@@ -371,6 +378,7 @@ impl Message {
     /// Program accounts are demoted from writable to readonly, unless the upgradeable
     /// loader is present in which case they are left as writable since upgradeable
     /// programs need to be writable for upgrades.
+    #[cfg(feature = "std")]
     pub fn is_maybe_writable(
         &self,
         key_index: usize,
@@ -387,6 +395,12 @@ impl Message {
 
     pub fn demote_program_id(&self, i: usize) -> bool {
         crate::is_program_id_write_demoted(i, &self.account_keys, &self.instructions)
+    }
+
+    /// Serialize this message with the V1 version prefix byte.
+    #[cfg(feature = "wincode")]
+    pub fn serialize(&self) -> Vec<u8> {
+        wincode::serialize(&(crate::v1::V1_PREFIX, self)).unwrap()
     }
 
     /// Calculate the serialized size of the message in bytes.
@@ -448,21 +462,22 @@ impl Message {
         }
 
         // no duplicate addresses
-        let unique_keys: HashSet<_> = self.account_keys.iter().collect();
+        let unique_keys: BTreeSet<_> = self.account_keys.iter().collect();
         if unique_keys.len() != num_account_keys {
             return Err(MessageError::DuplicateAddresses);
         }
 
-        // validate config mask (2-bit fields must have both bits set or neither)
-        let mask: TransactionConfigMask = self.config.into();
+        // The config mask is regenerated from the typed `TransactionConfig` on
+        // serialization, so a malformed mask cannot exist here. Invalid/unknown mask
+        // bits only occur in raw wire bytes and are rejected during deserialization.
 
-        if mask.has_invalid_priority_fee_bits() {
-            return Err(MessageError::InvalidConfigMask);
-        }
-
-        // heap size must be a multiple of 1024
+        // if specified, heap size must be a multiple of 1024 and within valid bounds
         if let Some(heap_size) = self.config.heap_size {
-            if heap_size % 1024 != 0 {
+            if !heap_size.is_multiple_of(1024) {
+                return Err(MessageError::InvalidHeapSize);
+            }
+
+            if !(MIN_HEAP_SIZE..=MAX_HEAP_SIZE).contains(&heap_size) {
                 return Err(MessageError::InvalidHeapSize);
             }
         }
@@ -515,327 +530,192 @@ impl Sanitize for Message {
 unsafe impl<C: ConfigCore> SchemaWrite<C> for Message {
     type Src = Self;
 
-    #[allow(clippy::arithmetic_side_effects)]
     #[inline(always)]
     fn size_of(src: &Self::Src) -> WriteResult<usize> {
         Ok(src.size())
     }
 
-    // V0 and V1 add +1 for message version prefix
-    #[inline(always)]
     fn write(mut writer: impl Writer, src: &Self::Src) -> WriteResult<()> {
-        // SAFETY: Serializing a slice of `[u8]`.
-        unsafe {
-            writer
-                .write_slice_t(&serialize(src))
-                .map_err(wincode::WriteError::Io)
+        // SAFETY: `Message::size()` yields the exact number of bytes to be written.
+        let mut writer = unsafe { writer.as_trusted_for(src.size()) }?;
+        writer.write(&[
+            src.header.num_required_signatures,
+            src.header.num_readonly_signed_accounts,
+            src.header.num_readonly_unsigned_accounts,
+        ])?;
+        let mask = TransactionConfigMask::from(&src.config).0.to_le_bytes();
+        writer.write(&mask)?;
+        writer.write(src.lifetime_specifier.as_bytes())?;
+        writer.write(&[src.instructions.len() as u8, src.account_keys.len() as u8])?;
+
+        // SAFETY: `Address` is `#[repr(transparent)]` over `[u8; 32]`, so it is safe to
+        // treat as bytes.
+        #[expect(clippy::arithmetic_side_effects)]
+        let account_keys = unsafe {
+            from_raw_parts(
+                src.account_keys.as_ptr().cast::<u8>(),
+                src.account_keys.len() * size_of::<Address>(),
+            )
+        };
+        writer.write(account_keys)?;
+
+        if let Some(value) = src.config.priority_fee {
+            writer.write(&value.to_le_bytes())?;
         }
-    }
-}
+        if let Some(value) = src.config.compute_unit_limit {
+            writer.write(&value.to_le_bytes())?;
+        }
+        if let Some(value) = src.config.loaded_accounts_data_size_limit {
+            writer.write(&value.to_le_bytes())?;
+        }
+        if let Some(value) = src.config.heap_size {
+            writer.write(&value.to_le_bytes())?;
+        }
 
-#[cfg(feature = "wincode")]
-unsafe impl<'de, C: ConfigCore> SchemaRead<'de, C> for Message {
-    type Dst = Self;
+        for ix in &src.instructions {
+            writer.write(&[ix.program_id_index, ix.accounts.len() as u8])?;
+            writer.write(&(ix.data.len() as u16).to_le_bytes())?;
+        }
 
-    fn read(mut reader: impl Reader<'de>, dst: &mut MaybeUninit<Self::Dst>) -> ReadResult<()> {
-        let bytes = reader.fill_buf(MAX_TRANSACTION_SIZE)?;
-        let (message, consumed) = deserialize(bytes).map_err(|_| invalid_tag_encoding(1))?;
+        for ix in &src.instructions {
+            writer.write(&ix.accounts)?;
+            writer.write(&ix.data)?;
+        }
 
-        // SAFETY: `deserialize` validates that we read `consumed` bytes.
-        unsafe { reader.consume_unchecked(consumed) };
-
-        dst.write(message);
+        writer.finish()?;
 
         Ok(())
     }
 }
 
 /// Serialize the message.
+#[cfg(feature = "wincode")]
+#[inline]
+#[deprecated(since = "4.1.2", note = "use `Message::serialize` instead")]
 pub fn serialize(message: &Message) -> Vec<u8> {
-    let total = message.size();
-    let mut buffer = Vec::<u8>::with_capacity(total);
-
-    // SAFETY: `buffer` has sufficient capacity for serialization.
-    unsafe {
-        serialize_into(message, buffer.as_mut_ptr());
-        buffer.set_len(total);
-    }
-
-    buffer
+    wincode::serialize(message).unwrap()
 }
 
-/// Serialize the message into the provided buffer.
-///
-/// # Safety
-///
-/// The caller must ensure that the provided `dst` pointer has at least
-/// `message.size()` bytes of capacity.
-pub(crate) unsafe fn serialize_into(message: &Message, mut dst: *mut u8) {
-    // header
-    dst.write(message.header.num_required_signatures);
-    dst = dst.add(1);
-    dst.write(message.header.num_readonly_signed_accounts);
-    dst = dst.add(1);
-    dst.write(message.header.num_readonly_unsigned_accounts);
-    dst = dst.add(1);
+#[cfg(feature = "wincode")]
+unsafe impl<'de, C: Config> SchemaRead<'de, C> for Message {
+    type Dst = Message;
 
-    // config mask
-    let mask = TransactionConfigMask::from(&message.config).0.to_le_bytes();
-    copy_nonoverlapping(mask.as_ptr(), dst, mask.len());
-    dst = dst.add(mask.len());
+    #[expect(clippy::arithmetic_side_effects)]
+    fn read(mut reader: impl Reader<'de>, dst: &mut MaybeUninit<Self::Dst>) -> ReadResult<()> {
+        let (header, lifetime_specifier, config_mask, num_instructions, num_addresses) = {
+            // SAFETY: the following reads consume exactly `FIXED_HEADER_SIZE` bytes.
+            // - MessageHeader (3 bytes)
+            // - TransactionConfigMask (4 bytes)
+            // - Hash (32 bytes)
+            // - num_instructions (1 byte)
+            // - num_addresses (1 byte)
+            let mut reader = unsafe { reader.as_trusted_for(FIXED_HEADER_SIZE)? };
+            let header = <MessageHeader as SchemaRead<C>>::get(reader.by_ref())?;
+            let config_mask = TransactionConfigMask(u32::from_le_bytes(reader.take_array()?));
+            let lifetime_specifier = <Hash as SchemaRead<C>>::get(reader.by_ref())?;
+            let num_instructions = reader.take_byte()? as usize;
+            let num_addresses = reader.take_byte()? as usize;
+            (
+                header,
+                lifetime_specifier,
+                config_mask,
+                num_instructions,
+                num_addresses,
+            )
+        };
 
-    // lifetime specifier
-    let lifetime = message.lifetime_specifier.as_ref();
-    copy_nonoverlapping(lifetime.as_ptr(), dst, lifetime.len());
-    dst = dst.add(lifetime.len());
+        // Reject masks we cannot round-trip. Unknown bits would be silently dropped
+        // on re-serialization (this message is signed, so that invalidates the
+        // signature), and a partial priority-fee bit pair is malformed. Support for
+        // new bits is added by a newer library release that promotes them to known.
+        if config_mask.has_unknown_bits() || config_mask.has_invalid_priority_fee_bits() {
+            return Err(wincode::error::invalid_value(
+                "invalid transaction config mask",
+            ));
+        }
 
-    // counts
-    dst.write(message.instructions.len() as u8);
-    dst = dst.add(1);
-    dst.write(message.account_keys.len() as u8);
-    dst = dst.add(1);
+        <C::LengthEncoding as SeqLen<C>>::prealloc_check::<Address>(num_addresses)?;
+        let account_keys = <Vec<Address> as SchemaReadContext<C, context::Len>>::get_with_context(
+            context::Len(num_addresses),
+            reader.by_ref(),
+        )?;
 
-    // addresses
-    for addr in &message.account_keys {
-        let a = addr.as_ref();
-        copy_nonoverlapping(a.as_ptr(), dst, a.len());
-        dst = dst.add(a.len());
-    }
+        let mut config = TransactionConfig::empty();
+        if config_mask.has_priority_fee() {
+            config.priority_fee = Some(u64::from_le_bytes(reader.take_array()?));
+        }
+        if config_mask.has_compute_unit_limit() {
+            config.compute_unit_limit = Some(u32::from_le_bytes(reader.take_array()?));
+        }
+        if config_mask.has_loaded_accounts_data_size() {
+            config.loaded_accounts_data_size_limit = Some(u32::from_le_bytes(reader.take_array()?));
+        }
+        if config_mask.has_heap_size() {
+            config.heap_size = Some(u32::from_le_bytes(reader.take_array()?));
+        }
 
-    // config values
-    if let Some(value) = message.config.priority_fee {
-        let bytes = value.to_le_bytes();
-        copy_nonoverlapping(bytes.as_ptr(), dst, bytes.len());
-        dst = dst.add(bytes.len());
-    }
-    if let Some(value) = message.config.compute_unit_limit {
-        let bytes = value.to_le_bytes();
-        copy_nonoverlapping(bytes.as_ptr(), dst, bytes.len());
-        dst = dst.add(bytes.len());
-    }
-    if let Some(value) = message.config.loaded_accounts_data_size_limit {
-        let bytes = value.to_le_bytes();
-        copy_nonoverlapping(bytes.as_ptr(), dst, bytes.len());
-        dst = dst.add(bytes.len());
-    }
-    if let Some(value) = message.config.heap_size {
-        let bytes = value.to_le_bytes();
-        copy_nonoverlapping(bytes.as_ptr(), dst, bytes.len());
-        dst = dst.add(bytes.len());
-    }
+        // SAFETY:
+        // - `take_borrowed(num_instructions * size_of::<InstructionHeader>())` returns
+        //   exactly the requested number of bytes, or errors.
+        // - `take_borrowed` returns a stable borrow from the backing buffer, so the
+        //   resulting slice remains valid across subsequent reader operations.
+        // - `InstructionHeader` has alignment 1 and is encoded exactly as
+        //   4 bytes `(u8, u8, [u8; 2])`.
+        let instruction_headers = unsafe {
+            from_raw_parts(
+                reader
+                    .take_borrowed(num_instructions * size_of::<InstructionHeader>())?
+                    .as_ptr() as *const InstructionHeader,
+                num_instructions,
+            )
+        };
+        let mut instructions = Vec::with_capacity(num_instructions);
+        for header in instruction_headers {
+            let program_id_index = header.0;
+            let num_accounts = header.1 as usize;
+            let data_len = u16::from_le_bytes(header.2) as usize;
 
-    // instruction headers
-    for ix in &message.instructions {
-        dst.write(ix.program_id_index);
-        dst = dst.add(1);
-        dst.write(ix.accounts.len() as u8);
-        dst = dst.add(1);
+            <C::LengthEncoding as SeqLen<C>>::prealloc_check::<u8>(num_accounts)?;
+            let accounts = <Vec<u8> as SchemaReadContext<C, context::Len>>::get_with_context(
+                context::Len(num_accounts),
+                reader.by_ref(),
+            )?;
+            <C::LengthEncoding as SeqLen<C>>::prealloc_check::<u8>(data_len)?;
+            let data = <Vec<u8> as SchemaReadContext<C, context::Len>>::get_with_context(
+                context::Len(data_len),
+                reader.by_ref(),
+            )?;
 
-        let len = (ix.data.len() as u16).to_le_bytes();
-        copy_nonoverlapping(len.as_ptr(), dst, 2);
-        dst = dst.add(2);
-    }
+            instructions.push(CompiledInstruction {
+                program_id_index,
+                accounts,
+                data,
+            });
+        }
 
-    // instruction payloads
-    for ix in &message.instructions {
-        copy_nonoverlapping(ix.accounts.as_ptr(), dst, ix.accounts.len());
-        dst = dst.add(ix.accounts.len());
+        dst.write(Message {
+            header,
+            lifetime_specifier,
+            config,
+            account_keys,
+            instructions,
+        });
 
-        copy_nonoverlapping(ix.data.as_ptr(), dst, ix.data.len());
-        dst = dst.add(ix.data.len());
+        Ok(())
     }
 }
 
 /// Deserialize the message from the provided input buffer, returning the message and
 /// the number of bytes read.
-#[allow(clippy::arithmetic_side_effects)]
-pub fn deserialize(input: &[u8]) -> Result<(Message, usize), MessageError> {
-    if input.len() < FIXED_HEADER_SIZE {
-        return Err(MessageError::BufferTooSmall);
-    }
-
-    let mut input_ptr = input.as_ptr();
-
-    // SAFETY: input length has been checked against `FIXED_HEADER_SIZE`.
-    let header = unsafe {
-        let mut header = MaybeUninit::<MessageHeader>::uninit();
-        let dst = header.as_mut_ptr() as *mut u8;
-
-        // num_required_signatures
-        dst.write(input_ptr.read());
-        // num_readonly_signed_accounts
-        dst.add(1).write(input_ptr.add(1).read());
-        // num_readonly_unsigned_accounts
-        dst.add(2).write(input_ptr.add(2).read());
-
-        // Advance input pointer past header.
-        input_ptr = input_ptr.add(3);
-
-        header.assume_init()
-    };
-
-    // config mask
-    //
-    // SAFETY: input length has been checked against `FIXED_HEADER_SIZE`.
-    let config_mask = unsafe {
-        let mask = TransactionConfigMask(u32::from_le_bytes(*(input_ptr as *const [u8; 4])));
-        input_ptr = input_ptr.add(4);
-
-        mask
-    };
-
-    // lifetime specifier
-    //
-    // SAFETY: input length has been checked against `FIXED_HEADER_SIZE`.
-    let lifetime_specifier = unsafe {
-        let specifier = Hash::new_from_array(*(input_ptr as *const [u8; 32]));
-        input_ptr = input_ptr.add(32);
-
-        specifier
-    };
-
-    // counts
-    //
-    // SAFETY: input length has been checked against `FIXED_HEADER_SIZE`.
-    let num_instructions = unsafe {
-        let num_instructions = input_ptr.read() as usize;
-        input_ptr = input_ptr.add(1);
-
-        num_instructions
-    };
-    // SAFETY: input length has been checked against `FIXED_HEADER_SIZE`.
-    let num_addresses = unsafe {
-        let num_addresses = input_ptr.read() as usize;
-        input_ptr = input_ptr.add(1);
-
-        num_addresses
-    };
-
-    // Track the offset for input. This is the value returned to indicate
-    // how many bytes were read.
-    let mut offset = FIXED_HEADER_SIZE + num_addresses * size_of::<Address>();
-
-    // addresses
-
-    if input.len() < offset {
-        return Err(MessageError::BufferTooSmall);
-    }
-
-    let mut account_keys = Vec::with_capacity(num_addresses);
-    // SAFETY: input length has been checked against the required size
-    // for the addresses.
-    unsafe {
-        let dst = account_keys.as_mut_ptr();
-        copy_nonoverlapping(input_ptr as *const Address, dst, num_addresses);
-        account_keys.set_len(num_addresses);
-        input_ptr = input_ptr.add(num_addresses * size_of::<Address>());
-    }
-
-    // config values
-    offset += config_mask.size_of_config();
-
-    if input.len() < offset {
-        return Err(MessageError::BufferTooSmall);
-    }
-
-    let mut config = TransactionConfig::empty();
-
-    if config_mask.has_priority_fee() {
-        // SAFETY: input length has been checked against the required size
-        // for the config.
-        let value = unsafe { u64::from_le_bytes(*(input_ptr as *const [u8; 8])) };
-        config = config.with_priority_fee(value);
-        input_ptr = unsafe { input_ptr.add(size_of::<u64>()) };
-    }
-
-    if config_mask.has_compute_unit_limit() {
-        // SAFETY: input length has been checked against the required size
-        // for the config.
-        let value = unsafe { u32::from_le_bytes(*(input_ptr as *const [u8; 4])) };
-        config = config.with_compute_unit_limit(value);
-        input_ptr = unsafe { input_ptr.add(size_of::<u32>()) };
-    }
-
-    if config_mask.has_loaded_accounts_data_size() {
-        // SAFETY: input length has been checked against the required size
-        // for the config.
-        let value = unsafe { u32::from_le_bytes(*(input_ptr as *const [u8; 4])) };
-        config = config.with_loaded_accounts_data_size_limit(value);
-        input_ptr = unsafe { input_ptr.add(size_of::<u32>()) };
-    }
-
-    if config_mask.has_heap_size() {
-        // SAFETY: input length has been checked against the required size
-        // for the config.
-        let value = unsafe { u32::from_le_bytes(*(input_ptr as *const [u8; 4])) };
-        config = config.with_heap_size(value);
-        input_ptr = unsafe { input_ptr.add(size_of::<u32>()) };
-    }
-
-    // instruction headers
-
-    offset += num_instructions * size_of::<InstructionHeader>();
-
-    if input.len() < offset {
-        return Err(MessageError::BufferTooSmall);
-    }
-
-    // SAFETY: input length has been checked against the required size
-    // for the instruction headers.
-    let instruction_headers: &[InstructionHeader] = unsafe {
-        core::slice::from_raw_parts(input_ptr as *const InstructionHeader, num_instructions)
-    };
-
-    input_ptr = unsafe { input_ptr.add(num_instructions * size_of::<InstructionHeader>()) };
-
-    // instruction payloads
-
-    let mut instructions = Vec::with_capacity(num_instructions);
-
-    for header in instruction_headers {
-        let program_id_index = header.0;
-        let num_accounts = header.1 as usize;
-        let data_len = u16::from_le_bytes(header.2) as usize;
-
-        offset += num_accounts + data_len;
-
-        if input.len() < offset {
-            return Err(MessageError::BufferTooSmall);
-        }
-
-        // SAFETY: input length has been checked against the required size
-        // for the instruction payload.
-        let accounts = unsafe { core::slice::from_raw_parts(input_ptr, num_accounts).to_vec() };
-
-        let data = unsafe {
-            input_ptr = input_ptr.add(num_accounts);
-            core::slice::from_raw_parts(input_ptr, data_len).to_vec()
-        };
-
-        input_ptr = unsafe { input_ptr.add(data_len) };
-
-        instructions.push(CompiledInstruction {
-            program_id_index,
-            accounts,
-            data,
-        });
-    }
-
-    Ok((
-        Message {
-            header,
-            config,
-            lifetime_specifier,
-            account_keys,
-            instructions,
-        },
-        offset,
-    ))
+#[cfg(feature = "wincode")]
+#[inline]
+pub fn deserialize(input: &[u8]) -> wincode::ReadResult<Message> {
+    wincode::deserialize(input)
 }
 
 #[cfg(test)]
 mod tests {
-    use {super::*, solana_sdk_ids::bpf_loader_upgradeable};
+    use {super::*, alloc::vec, solana_sdk_ids::bpf_loader_upgradeable};
 
     /// Builder for constructing V1 messages.
     ///
@@ -1226,6 +1106,34 @@ mod tests {
     }
 
     #[test]
+    fn sanitize_rejects_heap_size_below_minimum() {
+        let mut message = create_test_message();
+        message.config.heap_size = Some(MIN_HEAP_SIZE - 1);
+        assert_eq!(message.sanitize(), Err(SanitizeError::InvalidValue));
+    }
+
+    #[test]
+    fn sanitize_rejects_heap_size_above_maximum() {
+        let mut message = create_test_message();
+        message.config.heap_size = Some(MAX_HEAP_SIZE + 1);
+        assert_eq!(message.sanitize(), Err(SanitizeError::InvalidValue));
+    }
+
+    #[test]
+    fn sanitize_accepts_minimum_heap_size() {
+        let mut message = create_test_message();
+        message.config.heap_size = Some(MIN_HEAP_SIZE);
+        assert!(message.sanitize().is_ok());
+    }
+
+    #[test]
+    fn sanitize_accepts_maximum_heap_size() {
+        let mut message = create_test_message();
+        message.config.heap_size = Some(MAX_HEAP_SIZE);
+        assert!(message.sanitize().is_ok());
+    }
+
+    #[test]
     fn sanitize_accepts_aligned_heap_size() {
         let mut message = create_test_message();
         message.config.heap_size = Some(65536); // 64KB, valid
@@ -1339,7 +1247,7 @@ mod tests {
         ];
 
         for message in &test_cases {
-            assert_eq!(message.size(), serialize(message).len());
+            assert_eq!(message.size(), wincode::serialize(message).unwrap().len());
         }
     }
 
@@ -1361,7 +1269,7 @@ mod tests {
             .build()
             .unwrap();
 
-        let bytes = serialize(&message);
+        let bytes = wincode::serialize(&message).unwrap();
 
         // Build expected bytes manually per SIMD-0385
         //
@@ -1404,7 +1312,7 @@ mod tests {
             .build()
             .unwrap();
 
-        let bytes = serialize(&message);
+        let bytes = wincode::serialize(&message).unwrap();
 
         let mut expected = vec![1, 0, 0];
         // ConfigMask: priority fee (bits 0,1) + CU limit (bit 2) = 0b111 = 7
@@ -1443,8 +1351,55 @@ mod tests {
             .build()
             .unwrap();
 
-        let serialized = serialize(&message);
-        let (deserialized, _) = deserialize(&serialized).unwrap();
+        let serialized = wincode::serialize(&message).unwrap();
+        let deserialized = deserialize(&serialized).unwrap();
         assert_eq!(message.config, deserialized.config);
+    }
+
+    #[test]
+    fn deserialize_rejects_unknown_config_mask_bits() {
+        let message = MessageBuilder::default()
+            .required_signatures(1)
+            .lifetime_specifier(Hash::new_unique())
+            .accounts(vec![Address::new_unique(), Address::new_unique()])
+            .instruction(CompiledInstruction {
+                program_id_index: 1,
+                accounts: vec![0],
+                data: vec![],
+            })
+            .build()
+            .unwrap();
+
+        let mut serialized = wincode::serialize(&message).unwrap();
+        // Round-trips cleanly with a zero (all-known) mask.
+        assert!(deserialize(&serialized).is_ok());
+
+        // The config mask is a u32 (little-endian) immediately after the 3-byte
+        // header. Set the first bit past KNOWN_BITS; it must be rejected rather than
+        // silently dropped, regardless of how many bits KNOWN_BITS covers.
+        let unknown_bit = 1u32 << TransactionConfigMask::KNOWN_BITS.trailing_ones();
+        let mask = u32::from_le_bytes(serialized[3..7].try_into().unwrap()) | unknown_bit;
+        serialized[3..7].copy_from_slice(&mask.to_le_bytes());
+        assert!(deserialize(&serialized).is_err());
+    }
+
+    #[test]
+    fn deserialize_rejects_partial_priority_fee_bits() {
+        let message = MessageBuilder::default()
+            .required_signatures(1)
+            .lifetime_specifier(Hash::new_unique())
+            .accounts(vec![Address::new_unique(), Address::new_unique()])
+            .instruction(CompiledInstruction {
+                program_id_index: 1,
+                accounts: vec![0],
+                data: vec![],
+            })
+            .build()
+            .unwrap();
+
+        let mut serialized = wincode::serialize(&message).unwrap();
+        // Set only one of the two priority-fee bits (bit 0).
+        serialized[3] |= 0b1;
+        assert!(deserialize(&serialized).is_err());
     }
 }

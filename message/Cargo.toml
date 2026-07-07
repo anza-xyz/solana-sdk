@@ -2,8 +2,8 @@
 name = "solana-message"
 description = "Solana transaction message types."
 documentation = "https://docs.rs/solana-message"
-version = "3.1.0"
-rust-version = "1.85.0"
+version = "4.2.4"
+rust-version = { workspace = true }
 authors = { workspace = true }
 repository = { workspace = true }
 homepage = { workspace = true }
@@ -16,6 +16,7 @@ all-features = true
 rustdoc-args = ["--cfg=docsrs"]
 
 [features]
+default = ["std"]
 blake3 = ["dep:blake3"]
 dev-context-only-utils = ["blake3", "wincode"]
 frozen-abi = [
@@ -35,26 +36,28 @@ serde = [
     "solana-hash/serde",
     "solana-short-vec/serde",
 ]
-wincode = ["dep:wincode", "solana-hash/wincode", "solana-address/wincode"]
+std = []
+wincode = [
+    "dep:wincode",
+    "solana-short-vec/wincode",
+    "solana-hash/wincode",
+    "solana-address/wincode",
+]
 
 [dependencies]
 blake3 = { workspace = true, features = ["traits-preview"], optional = true }
-lazy_static = { workspace = true }
 serde = { workspace = true, optional = true }
 serde_derive = { workspace = true, optional = true }
 solana-address = { workspace = true }
-solana-frozen-abi = { workspace = true, optional = true }
+solana-frozen-abi = { workspace = true, optional = true, features = ["frozen-abi"] }
 solana-frozen-abi-macro = { workspace = true, optional = true }
 solana-hash = { workspace = true, features = ["decode", "sanitize"] }
-solana-instruction = { workspace = true, features = ["std"] }
+solana-instruction = { workspace = true }
 solana-sanitize = { workspace = true }
 solana-sdk-ids = { workspace = true }
 solana-short-vec = { workspace = true, optional = true }
 solana-transaction-error = { workspace = true }
-wincode = { workspace = true, optional = true, features = [
-    "std",
-    "solana-short-vec",
-] }
+wincode = { workspace = true, optional = true, features = ["alloc"] }
 
 [dev-dependencies]
 anyhow = { workspace = true }
@@ -64,10 +67,7 @@ borsh = { workspace = true }
 itertools = { workspace = true }
 proptest = { workspace = true }
 serde_json = { workspace = true }
-solana-address-lookup-table-interface = { workspace = true, features = [
-    "bincode",
-    "bytemuck",
-] }
+solana-address-lookup-table-interface = { workspace = true, features = ["wincode", "bytemuck"] }
 solana-example-mocks = { path = "../example-mocks" }
 solana-hash = { workspace = true, features = ["atomic"] }
 solana-instruction = { workspace = true, features = ["borsh"] }

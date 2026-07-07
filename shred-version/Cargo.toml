@@ -2,7 +2,7 @@
 name = "solana-shred-version"
 description = "Calculation of shred versions."
 documentation = "https://docs.rs/solana-shred-version"
-version = "3.0.0"
+version = "3.0.1"
 authors = { workspace = true }
 repository = { workspace = true }
 homepage = { workspace = true }
@@ -11,13 +11,12 @@ edition = { workspace = true }
 
 [package.metadata.docs.rs]
 targets = ["x86_64-unknown-linux-gnu"]
+all-features = true
+rustdoc-args = ["--cfg=docsrs"]
 
 [dependencies]
 solana-hard-forks = { workspace = true }
 solana-hash = { workspace = true }
-solana-sha256-hasher = { workspace = true }
-
-[dev-dependencies]
 solana-sha256-hasher = { workspace = true, features = ["sha2"] }
 
 [lints]

@@ -6,11 +6,13 @@
 use log::*;
 #[cfg(feature = "frozen-abi")]
 extern crate std;
+#[cfg(feature = "frozen-abi")]
+use solana_frozen_abi_macro::{AbiExample, StableAbi, StableAbiSample};
 #[cfg(feature = "wincode")]
 use wincode::{SchemaRead, SchemaWrite};
 
 #[repr(C)]
-#[cfg_attr(feature = "frozen-abi", derive(solana_frozen_abi_macro::AbiExample))]
+#[cfg_attr(feature = "frozen-abi", derive(AbiExample, StableAbi, StableAbiSample))]
 #[cfg_attr(
     feature = "serde",
     derive(serde_derive::Serialize, serde_derive::Deserialize)
@@ -34,17 +36,19 @@ impl FeeCalculator {
     }
 }
 
-#[cfg_attr(feature = "frozen-abi", derive(solana_frozen_abi_macro::AbiExample))]
+#[cfg_attr(feature = "frozen-abi", derive(AbiExample, StableAbi, StableAbiSample))]
 #[cfg_attr(
     feature = "serde",
     derive(serde_derive::Serialize, serde_derive::Deserialize)
 )]
+#[cfg_attr(feature = "wincode", derive(SchemaWrite, SchemaRead))]
 #[derive(PartialEq, Eq, Clone, Debug)]
 #[cfg_attr(feature = "serde", serde(rename_all = "camelCase"))]
 pub struct FeeRateGovernor {
     // The current cost of a signature  This amount may increase/decrease over time based on
     // cluster processing load.
     #[cfg_attr(feature = "serde", serde(skip))]
+    #[cfg_attr(feature = "wincode", wincode(skip))]
     pub lamports_per_signature: u64,
 
     // The target cost of a signature when the cluster is operating around target_signatures_per_slot

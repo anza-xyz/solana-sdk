@@ -1,13 +1,20 @@
 #[cfg(feature = "serde")]
 use serde_derive::{Deserialize, Serialize};
 use {solana_clock::Slot, solana_pubkey::Pubkey, solana_sdk_ids::address_lookup_table::id};
-#[cfg(feature = "bincode")]
+#[cfg(all(not(feature = "wincode"), feature = "bincode"))]
 use {
     solana_instruction::{AccountMeta, Instruction},
     solana_sdk_ids::system_program,
 };
+#[cfg(feature = "wincode")]
+use {
+    solana_instruction::{AccountMeta, Instruction},
+    solana_sdk_ids::system_program,
+    wincode::{SchemaRead, SchemaWrite},
+};
 
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
+#[cfg_attr(feature = "wincode", derive(SchemaRead, SchemaWrite))]
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum ProgramInstruction {
     /// Create an address lookup table
@@ -77,9 +84,9 @@ pub fn derive_lookup_table_address(
     )
 }
 
-#[cfg(feature = "bincode")]
 /// Constructs an instruction to create a table account and returns
 /// the instruction and the table account's derived address.
+#[cfg(any(feature = "wincode", feature = "bincode"))]
 fn create_lookup_table_common(
     authority_address: Pubkey,
     payer_address: Pubkey,
@@ -88,7 +95,22 @@ fn create_lookup_table_common(
 ) -> (Instruction, Pubkey) {
     let (lookup_table_address, bump_seed) =
         derive_lookup_table_address(&authority_address, recent_slot);
+    #[cfg(all(not(feature = "wincode"), feature = "bincode"))]
     let instruction = Instruction::new_with_bincode(
+        id(),
+        &ProgramInstruction::CreateLookupTable {
+            recent_slot,
+            bump_seed,
+        },
+        vec![
+            AccountMeta::new(lookup_table_address, false),
+            AccountMeta::new_readonly(authority_address, authority_is_signer),
+            AccountMeta::new(payer_address, true),
+            AccountMeta::new_readonly(system_program::id(), false),
+        ],
+    );
+    #[cfg(feature = "wincode")]
+    let instruction = Instruction::new_with_wincode(
         id(),
         &ProgramInstruction::CreateLookupTable {
             recent_slot,
@@ -113,7 +135,7 @@ fn create_lookup_table_common(
 /// This instruction doesn't require the authority to be a signer but
 /// until v1.12 the address lookup table program still requires the
 /// authority to sign the transaction.
-#[cfg(feature = "bincode")]
+#[cfg(any(feature = "wincode", feature = "bincode"))]
 pub fn create_lookup_table(
     authority_address: Pubkey,
     payer_address: Pubkey,
@@ -125,21 +147,33 @@ pub fn create_lookup_table(
 /// Constructs an instruction that freezes an address lookup
 /// table so that it can never be closed or extended again. Empty
 /// lookup tables cannot be frozen.
-#[cfg(feature = "bincode")]
+#[cfg(any(feature = "wincode", feature = "bincode"))]
 pub fn freeze_lookup_table(lookup_table_address: Pubkey, authority_address: Pubkey) -> Instruction {
-    Instruction::new_with_bincode(
+    #[cfg(all(not(feature = "wincode"), feature = "bincode"))]
+    let instruction = Instruction::new_with_bincode(
         id(),
         &ProgramInstruction::FreezeLookupTable,
         vec![
             AccountMeta::new(lookup_table_address, false),
             AccountMeta::new_readonly(authority_address, true),
         ],
-    )
+    );
+
+    #[cfg(feature = "wincode")]
+    let instruction = Instruction::new_with_wincode(
+        id(),
+        &ProgramInstruction::FreezeLookupTable,
+        vec![
+            AccountMeta::new(lookup_table_address, false),
+            AccountMeta::new_readonly(authority_address, true),
+        ],
+    );
+    instruction
 }
 
 /// Constructs an instruction which extends an address lookup
 /// table account with new addresses.
-#[cfg(feature = "bincode")]
+#[cfg(any(feature = "wincode", feature = "bincode"))]
 pub fn extend_lookup_table(
     lookup_table_address: Pubkey,
     authority_address: Pubkey,
@@ -158,41 +192,61 @@ pub fn extend_lookup_table(
         ]);
     }
 
-    Instruction::new_with_bincode(
+    #[cfg(all(not(feature = "wincode"), feature = "bincode"))]
+    let instruction = Instruction::new_with_bincode(
         id(),
         &ProgramInstruction::ExtendLookupTable { new_addresses },
         accounts,
-    )
+    );
+    #[cfg(feature = "wincode")]
+    let instruction = Instruction::new_with_wincode(
+        id(),
+        &ProgramInstruction::ExtendLookupTable { new_addresses },
+        accounts,
+    );
+    instruction
 }
 
 /// Constructs an instruction that deactivates an address lookup
 /// table so that it cannot be extended again and will be unusable
 /// and eligible for closure after a short amount of time.
-#[cfg(feature = "bincode")]
+#[cfg(any(feature = "wincode", feature = "bincode"))]
 pub fn deactivate_lookup_table(
     lookup_table_address: Pubkey,
     authority_address: Pubkey,
 ) -> Instruction {
-    Instruction::new_with_bincode(
+    #[cfg(all(not(feature = "wincode"), feature = "bincode"))]
+    let instruction = Instruction::new_with_bincode(
         id(),
         &ProgramInstruction::DeactivateLookupTable,
         vec![
             AccountMeta::new(lookup_table_address, false),
             AccountMeta::new_readonly(authority_address, true),
         ],
-    )
+    );
+    #[cfg(feature = "wincode")]
+    let instruction = Instruction::new_with_wincode(
+        id(),
+        &ProgramInstruction::DeactivateLookupTable,
+        vec![
+            AccountMeta::new(lookup_table_address, false),
+            AccountMeta::new_readonly(authority_address, true),
+        ],
+    );
+    instruction
 }
 
 /// Returns an instruction that closes an address lookup table
 /// account. The account will be deallocated and the lamports
 /// will be drained to the recipient address.
-#[cfg(feature = "bincode")]
+#[cfg(any(feature = "wincode", feature = "bincode"))]
 pub fn close_lookup_table(
     lookup_table_address: Pubkey,
     authority_address: Pubkey,
     recipient_address: Pubkey,
 ) -> Instruction {
-    Instruction::new_with_bincode(
+    #[cfg(all(not(feature = "wincode"), feature = "bincode"))]
+    let instruction = Instruction::new_with_bincode(
         id(),
         &ProgramInstruction::CloseLookupTable,
         vec![
@@ -200,5 +254,16 @@ pub fn close_lookup_table(
             AccountMeta::new_readonly(authority_address, true),
             AccountMeta::new(recipient_address, false),
         ],
-    )
+    );
+    #[cfg(feature = "wincode")]
+    let instruction = Instruction::new_with_wincode(
+        id(),
+        &ProgramInstruction::CloseLookupTable,
+        vec![
+            AccountMeta::new(lookup_table_address, false),
+            AccountMeta::new_readonly(authority_address, true),
+            AccountMeta::new(recipient_address, false),
+        ],
+    );
+    instruction
 }

@@ -2,8 +2,8 @@
 name = "solana-address"
 description = "Solana account addresses"
 documentation = "https://docs.rs/solana-address"
-version = "2.1.0"
-rust-version = "1.81.0"
+version = "2.6.1"
+rust-version = { workspace = true }
 authors = { workspace = true }
 repository = { workspace = true }
 homepage = { workspace = true }
@@ -30,15 +30,11 @@ frozen-abi = [
     "dep:solana-program-error",
     "std",
 ]
+nullable = ["dep:solana-nullable"]
 rand = ["dep:rand", "atomic", "std"]
 sanitize = ["dep:solana-sanitize"]
 serde = ["dep:serde", "dep:serde_derive"]
-sha2 = [
-    "dep:sha2-const-stable",
-    "dep:solana-define-syscall",
-    "dep:solana-sha256-hasher",
-    "error",
-]
+sha2 = ["dep:sha2-const-stable", "dep:solana-sha256-hasher", "syscalls"]
 std = ["decode", "borsh?/std", "serde?/std", "wincode?/std", "alloc"]
 alloc = ["wincode?/alloc"]
 syscalls = ["dep:solana-define-syscall", "error"]
@@ -58,6 +54,7 @@ sha2-const-stable = { version = "0.1.0", optional = true }
 solana-atomic-u64 = { workspace = true, optional = true }
 solana-frozen-abi = { workspace = true, features = ["frozen-abi"], optional = true }
 solana-frozen-abi-macro = { workspace = true, features = ["frozen-abi"], optional = true }
+solana-nullable = { workspace = true, optional = true }
 solana-program-error = { workspace = true, optional = true }
 solana-sanitize = { workspace = true, optional = true }
 wincode = { workspace = true, optional = true }
@@ -73,18 +70,7 @@ solana-sha256-hasher = { workspace = true, features = ["sha2"], optional = true 
 [dev-dependencies]
 anyhow = { workspace = true }
 solana-account-info = { path = "../account-info" }
-solana-address = { path = ".", features = [
-    "atomic",
-    "borsh",
-    "curve25519",
-    "decode",
-    "dev-context-only-utils",
-    "error",
-    "sanitize",
-    "sha2",
-    "std",
-    "syscalls",
-] }
+solana-address = { path = ".", features = ["atomic", "borsh", "curve25519", "decode", "dev-context-only-utils", "error", "nullable", "sanitize", "sha2", "std", "syscalls"] }
 solana-cpi = { path = "../cpi" }
 solana-example-mocks = { path = "../example-mocks" }
 solana-hash = { workspace = true }

@@ -8,8 +8,8 @@ src_root="$(readlink -f "${here}/..")"
 cd "${src_root}"
 
 no_std_crates=(
-  -p solana-address
   -p solana-account-view
+  -p solana-address
   -p solana-blake3-hasher
   -p solana-clock
   -p solana-cluster-type
@@ -20,24 +20,47 @@ no_std_crates=(
   -p solana-epoch-schedule
   -p solana-epoch-stake
   -p solana-fee-calculator
+  -p solana-get-sysvar
   -p solana-hash
   -p solana-instruction-view
   -p solana-keccak-hasher
   -p solana-msg
+  -p solana-nullable
   -p solana-program-error
   -p solana-program-log
   -p solana-program-log-macro
   -p solana-program-memory
+  -p solana-program-option
   -p solana-program-pack
   -p solana-pubkey
   -p solana-rent
   -p solana-sanitize
   -p solana-sdk-ids
+  -p solana-secp256k1-program
+  -p solana-secp256k1-recover
   -p solana-sha256-hasher
   -p solana-signature
   -p solana-sysvar-id
-  -p solana-system-interface
+  -p solana-transaction-error
+  -p solana-zero-copy
 )
+
+# Crates that are no_std but unconditionally require alloc.
+# These are only checked in the alloc+core pass, not the core-only pass.
+no_std_alloc_crates=(
+  -p solana-account-info
+  -p solana-borsh
+  -p solana-curve25519
+  -p solana-instruction
+  -p solana-instructions-sysvar
+  -p solana-message
+  -p solana-serialize-utils
+  -p solana-signer
+  -p solana-short-vec
+  -p solana-stake-history
+  -p solana-transaction
+)
+
 # Use the upstream BPF target, which doesn't support std, to make sure that our
 # no_std support really works.
 target="bpfel-unknown-none"
@@ -45,7 +68,7 @@ target="bpfel-unknown-none"
 # These features require alloc
 exclude_features_no_alloc="alloc,borsh,curve25519,serde,slice-cpi"
 # These features never work on upstream BPF
-exclude_features="atomic,bincode,default,dev-context-only-utils,frozen-abi,rand,std,verify"
+exclude_features="atomic,batch-verify,bincode,default,dev-context-only-utils,frozen-abi,parallel,rand,std,verify"
 
 ./cargo nightly hack check \
   -Zbuild-std=core \
@@ -60,4 +83,4 @@ exclude_features="atomic,bincode,default,dev-context-only-utils,frozen-abi,rand,
   "--target=${target}" \
   "--exclude-features=${exclude_features}" \
   --each-feature \
-  "${no_std_crates[@]}"
+  "${no_std_crates[@]}" "${no_std_alloc_crates[@]}"

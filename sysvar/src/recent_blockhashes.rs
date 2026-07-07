@@ -37,6 +37,13 @@ use {
 )]
 pub const MAX_ENTRIES: usize = 150;
 
+const LEN_PREFIX: usize = size_of::<u64>();
+const ENTRY_SERIALIZED_SIZE: usize = size_of::<Hash>() + size_of::<FeeCalculator>();
+
+/// Serialized size of `RecentBlockhashes` sysvar account.
+pub const SIZE: usize = LEN_PREFIX + (MAX_ENTRIES * ENTRY_SERIALIZED_SIZE);
+const _: () = assert!(SIZE == 6_008);
+
 impl_sysvar_id!(RecentBlockhashes);
 
 #[deprecated(
@@ -45,6 +52,7 @@ impl_sysvar_id!(RecentBlockhashes);
 )]
 #[repr(C)]
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
+#[cfg_attr(feature = "wincode", derive(wincode::SchemaWrite, wincode::SchemaRead))]
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct Entry {
     pub blockhash: Hash,
@@ -96,6 +104,7 @@ impl PartialOrd for IterItem<'_> {
 )]
 #[repr(C)]
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
+#[cfg_attr(feature = "wincode", derive(wincode::SchemaWrite, wincode::SchemaRead))]
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct RecentBlockhashes(Vec<Entry>);
 
@@ -156,8 +165,7 @@ impl Sysvar for RecentBlockhashes {}
 #[cfg(feature = "bincode")]
 impl SysvarSerialize for RecentBlockhashes {
     fn size_of() -> usize {
-        // hard-coded so that we don't have to construct an empty
-        6008 // golden, update if MAX_ENTRIES changes
+        SIZE
     }
 }
 

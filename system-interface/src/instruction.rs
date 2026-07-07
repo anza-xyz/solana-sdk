@@ -46,7 +46,7 @@
 //! [`Instruction`]:
 //! https://docs.rs/solana-instruction/latest/solana_instruction/struct.Instruction.html
 
-#[cfg(feature = "bincode")]
+#[cfg(any(feature = "bincode", feature = "wincode"))]
 use {
     crate::program::ID,
     alloc::{string::ToString, vec, vec::Vec},
@@ -60,18 +60,18 @@ use {alloc::string::String, solana_address::Address};
 // Note: replace these inline IDs with the corresponding value from
 // `solana_sdk_ids` once the version is updated to 2.2.0.
 
-#[cfg(feature = "bincode")]
+#[cfg(any(feature = "bincode", feature = "wincode"))]
 const RECENT_BLOCKHASHES_ID: Address =
     Address::from_str_const("SysvarRecentB1ockHashes11111111111111111111");
 
-#[cfg(feature = "bincode")]
+#[cfg(any(feature = "bincode", feature = "wincode"))]
 const RENT_ID: Address = Address::from_str_const("SysvarRent111111111111111111111111111111111");
 
-#[cfg(feature = "bincode")]
+#[cfg(any(feature = "bincode", feature = "wincode"))]
 #[cfg(test)]
 static_assertions::const_assert_eq!(solana_nonce::state::State::size(), NONCE_STATE_SIZE);
 /// The serialized size of the nonce state.
-#[cfg(feature = "bincode")]
+#[cfg(any(feature = "bincode", feature = "wincode"))]
 const NONCE_STATE_SIZE: usize = 80;
 
 /// An instruction to the system program.
@@ -87,6 +87,7 @@ const NONCE_STATE_SIZE: usize = 80;
     feature = "serde",
     derive(serde_derive::Deserialize, serde_derive::Serialize)
 )]
+#[cfg_attr(feature = "wincode", derive(wincode::SchemaRead, wincode::SchemaWrite))]
 #[cfg(feature = "alloc")]
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum SystemInstruction {
@@ -298,6 +299,26 @@ pub enum SystemInstruction {
     },
 }
 
+/// Create an instruction using bincode.
+#[cfg(all(feature = "bincode", not(feature = "wincode")))]
+#[inline(always)]
+fn create_instruction<T>(program_id: Address, data: &T, accounts: Vec<AccountMeta>) -> Instruction
+where
+    T: serde::Serialize,
+{
+    Instruction::new_with_bincode(program_id, data, accounts)
+}
+
+/// Create an instruction using wincode.
+#[cfg(feature = "wincode")]
+#[inline(always)]
+fn create_instruction<T>(program_id: Address, data: &T, accounts: Vec<AccountMeta>) -> Instruction
+where
+    T: wincode::Serialize<Src = T>,
+{
+    Instruction::new_with_wincode(program_id, data, accounts)
+}
+
 /// Create an account, failing if the account previously had any balance.
 ///
 /// This function produces an [`Instruction`] which must be submitted in a
@@ -462,7 +483,7 @@ pub enum SystemInstruction {
 ///     Ok(())
 /// }
 /// ```
-#[cfg(feature = "bincode")]
+#[cfg(any(feature = "bincode", feature = "wincode"))]
 pub fn create_account(
     from_address: &Address,
     to_address: &Address,
@@ -474,7 +495,7 @@ pub fn create_account(
         AccountMeta::new(*from_address, true),
         AccountMeta::new(*to_address, true),
     ];
-    Instruction::new_with_bincode(
+    create_instruction(
         ID,
         &SystemInstruction::CreateAccount {
             lamports,
@@ -487,7 +508,7 @@ pub fn create_account(
 
 // we accept `to` as a parameter so that callers do their own error handling when
 //   calling create_with_seed()
-#[cfg(feature = "bincode")]
+#[cfg(any(feature = "bincode", feature = "wincode"))]
 pub fn create_account_with_seed(
     from_address: &Address,
     to_address: &Address, // must match create_with_seed(base, seed, owner)
@@ -505,7 +526,7 @@ pub fn create_account_with_seed(
         account_metas.push(AccountMeta::new_readonly(*base, true));
     }
 
-    Instruction::new_with_bincode(
+    create_instruction(
         ID,
         &SystemInstruction::CreateAccountWithSeed {
             base: *base,
@@ -681,17 +702,17 @@ pub fn create_account_with_seed(
 ///     Ok(())
 /// }
 /// ```
-#[cfg(feature = "bincode")]
+#[cfg(any(feature = "bincode", feature = "wincode"))]
 pub fn assign(address: &Address, owner: &Address) -> Instruction {
     let account_metas = vec![AccountMeta::new(*address, true)];
-    Instruction::new_with_bincode(
+    create_instruction(
         ID,
         &SystemInstruction::Assign { owner: *owner },
         account_metas,
     )
 }
 
-#[cfg(feature = "bincode")]
+#[cfg(any(feature = "bincode", feature = "wincode"))]
 pub fn assign_with_seed(
     address: &Address, // must match create_with_seed(base, seed, owner)
     base: &Address,
@@ -702,7 +723,7 @@ pub fn assign_with_seed(
         AccountMeta::new(*address, false),
         AccountMeta::new_readonly(*base, true),
     ];
-    Instruction::new_with_bincode(
+    create_instruction(
         ID,
         &SystemInstruction::AssignWithSeed {
             base: *base,
@@ -877,16 +898,16 @@ pub fn assign_with_seed(
 ///     Ok(())
 /// }
 /// ```
-#[cfg(feature = "bincode")]
+#[cfg(any(feature = "bincode", feature = "wincode"))]
 pub fn transfer(from_address: &Address, to_address: &Address, lamports: u64) -> Instruction {
     let account_metas = vec![
         AccountMeta::new(*from_address, true),
         AccountMeta::new(*to_address, false),
     ];
-    Instruction::new_with_bincode(ID, &SystemInstruction::Transfer { lamports }, account_metas)
+    create_instruction(ID, &SystemInstruction::Transfer { lamports }, account_metas)
 }
 
-#[cfg(feature = "bincode")]
+#[cfg(any(feature = "bincode", feature = "wincode"))]
 pub fn transfer_with_seed(
     from_address: &Address, // must match create_with_seed(base, seed, owner)
     from_base: &Address,
@@ -900,7 +921,7 @@ pub fn transfer_with_seed(
         AccountMeta::new_readonly(*from_base, true),
         AccountMeta::new(*to_address, false),
     ];
-    Instruction::new_with_bincode(
+    create_instruction(
         ID,
         &SystemInstruction::TransferWithSeed {
             lamports,
@@ -1077,13 +1098,13 @@ pub fn transfer_with_seed(
 ///     Ok(())
 /// }
 /// ```
-#[cfg(feature = "bincode")]
+#[cfg(any(feature = "bincode", feature = "wincode"))]
 pub fn allocate(address: &Address, space: u64) -> Instruction {
     let account_metas = vec![AccountMeta::new(*address, true)];
-    Instruction::new_with_bincode(ID, &SystemInstruction::Allocate { space }, account_metas)
+    create_instruction(ID, &SystemInstruction::Allocate { space }, account_metas)
 }
 
-#[cfg(feature = "bincode")]
+#[cfg(any(feature = "bincode", feature = "wincode"))]
 pub fn allocate_with_seed(
     address: &Address, // must match create_with_seed(base, seed, owner)
     base: &Address,
@@ -1095,7 +1116,7 @@ pub fn allocate_with_seed(
         AccountMeta::new(*address, false),
         AccountMeta::new_readonly(*base, true),
     ];
-    Instruction::new_with_bincode(
+    create_instruction(
         ID,
         &SystemInstruction::AllocateWithSeed {
             base: *base,
@@ -1244,7 +1265,7 @@ pub fn allocate_with_seed(
 ///     Ok(())
 /// }
 /// ```
-#[cfg(feature = "bincode")]
+#[cfg(any(feature = "bincode", feature = "wincode"))]
 pub fn transfer_many(from_address: &Address, to_lamports: &[(Address, u64)]) -> Vec<Instruction> {
     to_lamports
         .iter()
@@ -1252,7 +1273,7 @@ pub fn transfer_many(from_address: &Address, to_lamports: &[(Address, u64)]) -> 
         .collect()
 }
 
-#[cfg(feature = "bincode")]
+#[cfg(any(feature = "bincode", feature = "wincode"))]
 pub fn create_nonce_account_with_seed(
     from_address: &Address,
     nonce_address: &Address,
@@ -1271,7 +1292,7 @@ pub fn create_nonce_account_with_seed(
             NONCE_STATE_SIZE as u64,
             &ID,
         ),
-        Instruction::new_with_bincode(
+        create_instruction(
             ID,
             &SystemInstruction::InitializeNonceAccount(*authority),
             vec![
@@ -1395,7 +1416,7 @@ pub fn create_nonce_account_with_seed(
 /// #
 /// # Ok::<(), anyhow::Error>(())
 /// ```
-#[cfg(feature = "bincode")]
+#[cfg(any(feature = "bincode", feature = "wincode"))]
 pub fn create_nonce_account(
     from_address: &Address,
     nonce_address: &Address,
@@ -1410,7 +1431,7 @@ pub fn create_nonce_account(
             NONCE_STATE_SIZE as u64,
             &ID,
         ),
-        Instruction::new_with_bincode(
+        create_instruction(
             ID,
             &SystemInstruction::InitializeNonceAccount(*authority),
             vec![
@@ -1542,7 +1563,7 @@ pub fn create_nonce_account(
 /// #
 /// # Ok::<(), anyhow::Error>(())
 /// ```
-#[cfg(feature = "bincode")]
+#[cfg(any(feature = "bincode", feature = "wincode"))]
 pub fn advance_nonce_account(nonce_address: &Address, authorized_address: &Address) -> Instruction {
     let account_metas = vec![
         AccountMeta::new(*nonce_address, false),
@@ -1550,7 +1571,7 @@ pub fn advance_nonce_account(nonce_address: &Address, authorized_address: &Addre
         AccountMeta::new_readonly(RECENT_BLOCKHASHES_ID, false),
         AccountMeta::new_readonly(*authorized_address, true),
     ];
-    Instruction::new_with_bincode(ID, &SystemInstruction::AdvanceNonceAccount, account_metas)
+    create_instruction(ID, &SystemInstruction::AdvanceNonceAccount, account_metas)
 }
 
 /// Withdraw lamports from a durable transaction nonce account.
@@ -1628,7 +1649,7 @@ pub fn advance_nonce_account(nonce_address: &Address, authorized_address: &Addre
 /// #
 /// # Ok::<(), anyhow::Error>(())
 /// ```
-#[cfg(feature = "bincode")]
+#[cfg(any(feature = "bincode", feature = "wincode"))]
 pub fn withdraw_nonce_account(
     nonce_address: &Address,
     authorized_address: &Address,
@@ -1643,7 +1664,7 @@ pub fn withdraw_nonce_account(
         AccountMeta::new_readonly(RENT_ID, false),
         AccountMeta::new_readonly(*authorized_address, true),
     ];
-    Instruction::new_with_bincode(
+    create_instruction(
         ID,
         &SystemInstruction::WithdrawNonceAccount(lamports),
         account_metas,
@@ -1712,7 +1733,7 @@ pub fn withdraw_nonce_account(
 /// #
 /// # Ok::<(), anyhow::Error>(())
 /// ```
-#[cfg(feature = "bincode")]
+#[cfg(any(feature = "bincode", feature = "wincode"))]
 pub fn authorize_nonce_account(
     nonce_address: &Address,
     authorized_address: &Address,
@@ -1722,7 +1743,7 @@ pub fn authorize_nonce_account(
         AccountMeta::new(*nonce_address, false),
         AccountMeta::new_readonly(*authorized_address, true),
     ];
-    Instruction::new_with_bincode(
+    create_instruction(
         ID,
         &SystemInstruction::AuthorizeNonceAccount(*new_authority),
         account_metas,
@@ -1731,10 +1752,10 @@ pub fn authorize_nonce_account(
 
 /// One-time idempotent upgrade of legacy nonce versions in order to bump
 /// them out of chain blockhash domain.
-#[cfg(feature = "bincode")]
+#[cfg(any(feature = "bincode", feature = "wincode"))]
 pub fn upgrade_nonce_account(nonce_address: Address) -> Instruction {
     let account_metas = vec![AccountMeta::new(nonce_address, /*is_signer:*/ false)];
-    Instruction::new_with_bincode(ID, &SystemInstruction::UpgradeNonceAccount, account_metas)
+    create_instruction(ID, &SystemInstruction::UpgradeNonceAccount, account_metas)
 }
 
 /// Create a new account without enforcing zero lamports on the destination
@@ -1744,7 +1765,7 @@ pub fn upgrade_nonce_account(nonce_address: Address) -> Instruction {
 ///
 /// The `new_account_address` signer must sign the transaction. If present,
 /// the payer in `payer_and_lamports` must also sign the transaction.
-#[cfg(feature = "bincode")]
+#[cfg(any(feature = "bincode", feature = "wincode"))]
 pub fn create_account_allow_prefund(
     new_account_address: &Address,
     payer_and_lamports: Option<(&Address, u64)>,
@@ -1760,7 +1781,7 @@ pub fn create_account_allow_prefund(
         }
     };
 
-    Instruction::new_with_bincode(
+    create_instruction(
         ID,
         &SystemInstruction::CreateAccountAllowPrefund {
             lamports,

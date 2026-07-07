@@ -2,7 +2,7 @@
 name = "solana-serialize-utils"
 description = "Solana helpers for reading and writing bytes."
 documentation = "https://docs.rs/solana-serialize-utils"
-version = "3.1.0"
+version = "3.1.2"
 authors = { workspace = true }
 repository = { workspace = true }
 homepage = { workspace = true }
@@ -11,6 +11,12 @@ edition = { workspace = true }
 
 [package.metadata.docs.rs]
 targets = ["x86_64-unknown-linux-gnu"]
+all-features = true
+rustdoc-args = ["--cfg=docsrs"]
+
+[features]
+default = ["std"]
+std = []
 
 [dependencies]
 solana-instruction-error = { workspace = true }
@@ -22,7 +28,4 @@ bincode = { workspace = true }
 borsh = { workspace = true }
 rand = { workspace = true }
 serde = { workspace = true }
-solana-pubkey = { workspace = true, default-features = false, features = [
-    "borsh",
-    "serde",
-] }
+solana-pubkey = { workspace = true, default-features = false, features = ["borsh", "serde"] }

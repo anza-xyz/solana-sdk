@@ -2,7 +2,7 @@
 name = "solana-sdk-macro"
 description = "Solana SDK Macro"
 documentation = "https://docs.rs/solana-sdk-macro"
-version = "3.0.0"
+version = "3.0.1"
 authors = { workspace = true }
 repository = { workspace = true }
 homepage = { workspace = true }
@@ -11,6 +11,8 @@ edition = { workspace = true }
 
 [package.metadata.docs.rs]
 targets = ["x86_64-unknown-linux-gnu"]
+all-features = true
+rustdoc-args = ["--cfg=docsrs"]
 
 [lib]
 proc-macro = true

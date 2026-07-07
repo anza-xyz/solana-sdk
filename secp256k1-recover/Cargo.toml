@@ -2,7 +2,7 @@
 name = "solana-secp256k1-recover"
 description = "Solana SECP256K1 Recover"
 documentation = "https://docs.rs/solana-secp256k1-recover"
-version = "3.1.0"
+version = "3.2.0"
 authors = { workspace = true }
 repository = { workspace = true }
 homepage = { workspace = true }
@@ -11,6 +11,8 @@ edition = { workspace = true }
 
 [package.metadata.docs.rs]
 targets = ["x86_64-unknown-linux-gnu"]
+all-features = true
+rustdoc-args = ["--cfg=docsrs"]
 
 [features]
 borsh = ["dep:borsh"]
@@ -18,12 +20,8 @@ frozen-abi = ["dep:solana-frozen-abi", "dep:solana-frozen-abi-macro"]
 
 [dependencies]
 borsh = { workspace = true, optional = true }
-solana-frozen-abi = { workspace = true, optional = true, features = [
-    "frozen-abi",
-] }
-solana-frozen-abi-macro = { workspace = true, optional = true, features = [
-    "frozen-abi",
-] }
+solana-frozen-abi = { workspace = true, optional = true, features = ["frozen-abi"] }
+solana-frozen-abi-macro = { workspace = true, optional = true, features = ["frozen-abi"] }
 thiserror = { workspace = true }
 
 [target.'cfg(any(target_os = "solana", target_arch = "bpf"))'.dependencies]

@@ -2,12 +2,10 @@
 
 #[cfg(feature = "dev-context-only-utils")]
 use arbitrary::Arbitrary;
-#[cfg(test)]
-use arbitrary::Unstructured;
 #[cfg(feature = "serde")]
 use serde_derive::{Deserialize, Serialize};
 #[cfg(feature = "frozen-abi")]
-use solana_frozen_abi_macro::AbiExample;
+use solana_frozen_abi_macro::{AbiExample, StableAbi, StableAbiSample};
 use {
     crate::authorized_voters::AuthorizedVoters,
     solana_clock::{Epoch, Slot, UnixTimestamp},
@@ -51,12 +49,19 @@ pub const VOTE_CREDITS_GRACE_SLOTS: u8 = 2;
 // Maximum number of credits to award for a vote; this number of credits is awarded to votes on slots that land within the grace period. After that grace period, vote credits are reduced.
 pub const VOTE_CREDITS_MAXIMUM_PER_SLOT: u8 = 16;
 
-#[cfg_attr(feature = "frozen-abi", derive(AbiExample))]
+#[cfg_attr(feature = "frozen-abi", derive(AbiExample, StableAbi, StableAbiSample))]
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
+#[cfg_attr(feature = "wincode", derive(wincode::SchemaWrite, wincode::SchemaRead))]
 #[derive(Default, Debug, PartialEq, Eq, Copy, Clone)]
 #[cfg_attr(feature = "dev-context-only-utils", derive(Arbitrary))]
 pub struct Lockout {
     slot: Slot,
+    /// Effectively bounded by `MAX_LOCKOUT_HISTORY`, the cap applied to it as the
+    /// lockout exponent in [`Lockout::lockout`]; the ABI sample uses that range.
+    #[cfg_attr(
+        feature = "frozen-abi",
+        stable_abi_sample(with = "sampling::sample_confirmation_count(rng)")
+    )]
     confirmation_count: u32,
 }
 
@@ -104,8 +109,55 @@ impl Lockout {
     }
 }
 
-#[cfg_attr(feature = "frozen-abi", derive(AbiExample))]
+/// Sampling support for random lockout towers, shared by the `frozen-abi` ABI
+/// samplers and the round-trip tests.
+///
+/// The compact (offset-encoded) wire format used on the wire requires strictly
+/// increasing slots and a root at or below the first slot. Slots are sampled
+/// starting at `LOCKOUT_SAMPLE_SLOT_BASE` and grow by up to
+/// `LOCKOUT_SAMPLE_SLOT_STEP` per lockout; the (optional) root sits just below
+/// the base, so the first delta-encoded offset is always non-negative.
+#[cfg(any(feature = "frozen-abi", test))]
+mod sampling {
+    use {
+        super::{Lockout, MAX_LOCKOUT_HISTORY},
+        solana_clock::Slot,
+        std::collections::VecDeque,
+    };
+
+    const LOCKOUT_SAMPLE_SLOT_BASE: Slot = 149_303_885;
+    const LOCKOUT_SAMPLE_SLOT_STEP: Slot = 1_000;
+
+    /// A `confirmation_count` capped to `MAX_LOCKOUT_HISTORY`, the range usable
+    /// by the compact wire format (and the lockout exponent).
+    pub(super) fn sample_confirmation_count<R: rand::Rng + ?Sized>(rng: &mut R) -> u32 {
+        rng.random_range(0..=MAX_LOCKOUT_HISTORY as u32)
+    }
+
+    /// Build a tower with strictly increasing slots and in-range
+    /// `confirmation_count`s, so the sample survives the compact codec.
+    pub(super) fn sample_lockouts<R: rand::Rng + ?Sized>(rng: &mut R) -> VecDeque<Lockout> {
+        let mut slot = LOCKOUT_SAMPLE_SLOT_BASE;
+        (0..rng.random_range(0..=MAX_LOCKOUT_HISTORY))
+            .map(|_| {
+                slot = slot.saturating_add(rng.random_range(1..=LOCKOUT_SAMPLE_SLOT_STEP));
+                Lockout::new_with_confirmation_count(slot, sample_confirmation_count(rng))
+            })
+            .collect()
+    }
+
+    /// An optional root just below the first sampled slot, keeping the first
+    /// delta-encoded offset non-negative.
+    pub(super) fn sample_root<R: rand::Rng + ?Sized>(rng: &mut R) -> Option<Slot> {
+        rng.random_bool(0.5).then(|| {
+            LOCKOUT_SAMPLE_SLOT_BASE.saturating_sub(rng.random_range(0..=LOCKOUT_SAMPLE_SLOT_STEP))
+        })
+    }
+}
+
+#[cfg_attr(feature = "frozen-abi", derive(AbiExample, StableAbi, StableAbiSample))]
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
+#[cfg_attr(feature = "wincode", derive(wincode::SchemaWrite, wincode::SchemaRead))]
 #[derive(Default, Debug, PartialEq, Eq, Copy, Clone)]
 #[cfg_attr(feature = "dev-context-only-utils", derive(Arbitrary))]
 pub struct LandedVote {
@@ -141,8 +193,9 @@ impl From<Lockout> for LandedVote {
     }
 }
 
-#[cfg_attr(feature = "frozen-abi", derive(AbiExample))]
+#[cfg_attr(feature = "frozen-abi", derive(AbiExample, StableAbi, StableAbiSample))]
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
+#[cfg_attr(feature = "wincode", derive(wincode::SchemaWrite, wincode::SchemaRead))]
 #[derive(Debug, Default, PartialEq, Eq, Clone)]
 #[cfg_attr(feature = "dev-context-only-utils", derive(Arbitrary))]
 pub struct BlockTimestamp {
@@ -154,7 +207,8 @@ pub struct BlockTimestamp {
 const MAX_ITEMS: usize = 32;
 
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
-#[cfg_attr(feature = "frozen-abi", derive(AbiExample))]
+#[cfg_attr(feature = "wincode", derive(wincode::SchemaWrite, wincode::SchemaRead))]
+#[cfg_attr(feature = "frozen-abi", derive(AbiExample, StableAbi, StableAbiSample))]
 #[derive(Debug, PartialEq, Eq, Clone)]
 #[cfg_attr(feature = "dev-context-only-utils", derive(Arbitrary))]
 pub struct CircBuf<I> {
@@ -202,32 +256,172 @@ impl<I> CircBuf<I> {
     }
 }
 
-#[cfg(feature = "serde")]
-pub mod serde_compact_vote_state_update {
+/// Shared compact wire-format representations for [`VoteStateUpdate`] and
+/// [`TowerSync`]: lockout slots are stored as varint offsets from the previous
+/// slot in a `short_vec`.
+///
+/// The [`serde_compact_vote_state_update`]/[`serde_tower_sync`] (serde) and
+/// [`wincode_compact`] (wincode) modules bridge the original types to these
+/// representations.
+#[cfg(any(feature = "serde", feature = "wincode"))]
+mod compact {
+    #[cfg(feature = "serde")]
+    use serde_derive::{Deserialize, Serialize};
+    #[cfg(feature = "frozen-abi")]
+    use solana_frozen_abi_macro::{AbiExample, StableAbi, StableAbiSample};
     use {
-        super::*,
-        crate::state::Lockout,
-        serde::{Deserialize, Deserializer, Serialize, Serializer},
+        super::{Lockout, TowerSync, VoteStateUpdate},
+        solana_clock::{Slot, UnixTimestamp},
         solana_hash::Hash,
-        solana_serde_varint as serde_varint, solana_short_vec as short_vec,
+        std::collections::VecDeque,
+    };
+    #[cfg(feature = "wincode")]
+    use {
+        solana_short_vec::ShortU16,
+        solana_wincode_varint::Leb128Int,
+        wincode::{containers, SchemaRead, SchemaWrite},
     };
 
-    #[cfg_attr(feature = "frozen-abi", derive(AbiExample))]
-    #[derive(serde_derive::Deserialize, serde_derive::Serialize)]
+    #[cfg_attr(feature = "frozen-abi", derive(AbiExample, StableAbi, StableAbiSample))]
+    #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
+    #[cfg_attr(feature = "wincode", derive(SchemaWrite, SchemaRead))]
     struct LockoutOffset {
-        #[serde(with = "serde_varint")]
+        #[cfg_attr(feature = "serde", serde(with = "solana_serde_varint"))]
+        #[cfg_attr(feature = "wincode", wincode(with = "Leb128Int<Slot>"))]
         offset: Slot,
         confirmation_count: u8,
     }
 
-    #[derive(serde_derive::Deserialize, serde_derive::Serialize)]
-    struct CompactVoteStateUpdate {
+    /// `short_vec`-length-encoded `Vec<LockoutOffset>`, the wincode counterpart
+    /// of `#[serde(with = "solana_short_vec")]`.
+    #[cfg(feature = "wincode")]
+    type LockoutOffsetShortVec = containers::Vec<LockoutOffset, ShortU16>;
+
+    #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
+    #[cfg_attr(feature = "wincode", derive(SchemaWrite, SchemaRead))]
+    pub(super) struct CompactVoteStateUpdate {
         root: Slot,
-        #[serde(with = "short_vec")]
+        #[cfg_attr(feature = "serde", serde(with = "solana_short_vec"))]
+        #[cfg_attr(feature = "wincode", wincode(with = "LockoutOffsetShortVec"))]
         lockout_offsets: Vec<LockoutOffset>,
         hash: Hash,
         timestamp: Option<UnixTimestamp>,
     }
+
+    #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
+    #[cfg_attr(feature = "wincode", derive(SchemaWrite, SchemaRead))]
+    pub(super) struct CompactTowerSync {
+        root: Slot,
+        #[cfg_attr(feature = "serde", serde(with = "solana_short_vec"))]
+        #[cfg_attr(feature = "wincode", wincode(with = "LockoutOffsetShortVec"))]
+        lockout_offsets: Vec<LockoutOffset>,
+        hash: Hash,
+        timestamp: Option<UnixTimestamp>,
+        block_id: Hash,
+    }
+
+    /// Convert a tower's absolute lockout slots into the relative, delta-encoded
+    /// offsets used by the compact wire format.
+    ///
+    /// Shared by the serde and wincode encoders; the returned error message is
+    /// mapped to each backend's error type by the caller.
+    fn lockout_offsets(
+        lockouts: &VecDeque<Lockout>,
+        root: Option<Slot>,
+    ) -> Result<Vec<LockoutOffset>, &'static str> {
+        let mut offsets = Vec::with_capacity(lockouts.len());
+        let mut slot = root.unwrap_or_default();
+        for lockout in lockouts {
+            let offset = lockout
+                .slot()
+                .checked_sub(slot)
+                .ok_or("Invalid vote lockout")?;
+            let confirmation_count = u8::try_from(lockout.confirmation_count())
+                .map_err(|_| "Invalid confirmation count")?;
+            offsets.push(LockoutOffset {
+                offset,
+                confirmation_count,
+            });
+            slot = lockout.slot();
+        }
+        Ok(offsets)
+    }
+
+    /// Reconstruct the absolute lockouts from the relative offsets stored in the
+    /// compact wire format. Inverse of [`lockout_offsets`].
+    fn lockouts_from_offsets(
+        lockout_offsets: &[LockoutOffset],
+        root: Option<Slot>,
+    ) -> Result<VecDeque<Lockout>, &'static str> {
+        let mut lockouts = VecDeque::with_capacity(lockout_offsets.len());
+        let mut slot = root.unwrap_or_default();
+        for lockout_offset in lockout_offsets {
+            slot = slot
+                .checked_add(lockout_offset.offset)
+                .ok_or("Invalid lockout offset")?;
+            lockouts.push_back(Lockout::new_with_confirmation_count(
+                slot,
+                u32::from(lockout_offset.confirmation_count),
+            ));
+        }
+        Ok(lockouts)
+    }
+
+    pub(super) fn vote_state_update_to_compact(
+        src: &VoteStateUpdate,
+    ) -> Result<CompactVoteStateUpdate, &'static str> {
+        #[allow(clippy::clone_on_copy)]
+        Ok(CompactVoteStateUpdate {
+            root: src.root.unwrap_or(Slot::MAX),
+            lockout_offsets: lockout_offsets(&src.lockouts, src.root)?,
+            hash: src.hash.clone(),
+            timestamp: src.timestamp,
+        })
+    }
+
+    pub(super) fn vote_state_update_from_compact(
+        repr: CompactVoteStateUpdate,
+    ) -> Result<VoteStateUpdate, &'static str> {
+        let root = (repr.root != Slot::MAX).then_some(repr.root);
+        Ok(VoteStateUpdate {
+            lockouts: lockouts_from_offsets(&repr.lockout_offsets, root)?,
+            root,
+            hash: repr.hash,
+            timestamp: repr.timestamp,
+        })
+    }
+
+    pub(super) fn tower_sync_to_compact(src: &TowerSync) -> Result<CompactTowerSync, &'static str> {
+        #[allow(clippy::clone_on_copy)]
+        Ok(CompactTowerSync {
+            root: src.root.unwrap_or(Slot::MAX),
+            lockout_offsets: lockout_offsets(&src.lockouts, src.root)?,
+            hash: src.hash.clone(),
+            timestamp: src.timestamp,
+            block_id: src.block_id.clone(),
+        })
+    }
+
+    pub(super) fn tower_sync_from_compact(
+        repr: CompactTowerSync,
+    ) -> Result<TowerSync, &'static str> {
+        let root = (repr.root != Slot::MAX).then_some(repr.root);
+        Ok(TowerSync {
+            lockouts: lockouts_from_offsets(&repr.lockout_offsets, root)?,
+            root,
+            hash: repr.hash,
+            timestamp: repr.timestamp,
+            block_id: repr.block_id,
+        })
+    }
+}
+
+#[cfg(feature = "serde")]
+pub mod serde_compact_vote_state_update {
+    use {
+        super::{compact, compact::CompactVoteStateUpdate, *},
+        serde::{Deserialize, Deserializer, Serialize, Serializer},
+    };
 
     pub fn serialize<S>(
         vote_state_update: &VoteStateUpdate,
@@ -236,673 +430,143 @@ pub mod serde_compact_vote_state_update {
     where
         S: Serializer,
     {
-        let lockout_offsets = vote_state_update.lockouts.iter().scan(
-            vote_state_update.root.unwrap_or_default(),
-            |slot, lockout| {
-                let Some(offset) = lockout.slot().checked_sub(*slot) else {
-                    return Some(Err(serde::ser::Error::custom("Invalid vote lockout")));
-                };
-                let Ok(confirmation_count) = u8::try_from(lockout.confirmation_count()) else {
-                    return Some(Err(serde::ser::Error::custom("Invalid confirmation count")));
-                };
-                let lockout_offset = LockoutOffset {
-                    offset,
-                    confirmation_count,
-                };
-                *slot = lockout.slot();
-                Some(Ok(lockout_offset))
-            },
-        );
-        let compact_vote_state_update = CompactVoteStateUpdate {
-            root: vote_state_update.root.unwrap_or(Slot::MAX),
-            lockout_offsets: lockout_offsets.collect::<Result<_, _>>()?,
-            hash: Hash::new_from_array(vote_state_update.hash.to_bytes()),
-            timestamp: vote_state_update.timestamp,
-        };
-        compact_vote_state_update.serialize(serializer)
+        compact::vote_state_update_to_compact(vote_state_update)
+            .map_err(serde::ser::Error::custom)?
+            .serialize(serializer)
     }
 
     pub fn deserialize<'de, D>(deserializer: D) -> Result<VoteStateUpdate, D::Error>
     where
         D: Deserializer<'de>,
     {
-        let CompactVoteStateUpdate {
-            root,
-            lockout_offsets,
-            hash,
-            timestamp,
-        } = CompactVoteStateUpdate::deserialize(deserializer)?;
-        let root = (root != Slot::MAX).then_some(root);
-        let lockouts =
-            lockout_offsets
-                .iter()
-                .scan(root.unwrap_or_default(), |slot, lockout_offset| {
-                    *slot = match slot.checked_add(lockout_offset.offset) {
-                        None => {
-                            return Some(Err(serde::de::Error::custom("Invalid lockout offset")))
-                        }
-                        Some(slot) => slot,
-                    };
-                    let lockout = Lockout::new_with_confirmation_count(
-                        *slot,
-                        u32::from(lockout_offset.confirmation_count),
-                    );
-                    Some(Ok(lockout))
-                });
-        Ok(VoteStateUpdate {
-            root,
-            lockouts: lockouts.collect::<Result<_, _>>()?,
-            hash,
-            timestamp,
-        })
+        let repr = CompactVoteStateUpdate::deserialize(deserializer)?;
+        compact::vote_state_update_from_compact(repr).map_err(serde::de::Error::custom)
     }
 }
 
 #[cfg(feature = "serde")]
 pub mod serde_tower_sync {
     use {
-        super::*,
-        crate::state::Lockout,
+        super::{compact, compact::CompactTowerSync, *},
         serde::{Deserialize, Deserializer, Serialize, Serializer},
-        solana_hash::Hash,
-        solana_serde_varint as serde_varint, solana_short_vec as short_vec,
     };
-
-    #[cfg_attr(feature = "frozen-abi", derive(AbiExample))]
-    #[derive(serde_derive::Deserialize, serde_derive::Serialize)]
-    struct LockoutOffset {
-        #[serde(with = "serde_varint")]
-        offset: Slot,
-        confirmation_count: u8,
-    }
-
-    #[derive(serde_derive::Deserialize, serde_derive::Serialize)]
-    struct CompactTowerSync {
-        root: Slot,
-        #[serde(with = "short_vec")]
-        lockout_offsets: Vec<LockoutOffset>,
-        hash: Hash,
-        timestamp: Option<UnixTimestamp>,
-        block_id: Hash,
-    }
 
     pub fn serialize<S>(tower_sync: &TowerSync, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
     {
-        let lockout_offsets = tower_sync.lockouts.iter().scan(
-            tower_sync.root.unwrap_or_default(),
-            |slot, lockout| {
-                let Some(offset) = lockout.slot().checked_sub(*slot) else {
-                    return Some(Err(serde::ser::Error::custom("Invalid vote lockout")));
-                };
-                let Ok(confirmation_count) = u8::try_from(lockout.confirmation_count()) else {
-                    return Some(Err(serde::ser::Error::custom("Invalid confirmation count")));
-                };
-                let lockout_offset = LockoutOffset {
-                    offset,
-                    confirmation_count,
-                };
-                *slot = lockout.slot();
-                Some(Ok(lockout_offset))
-            },
-        );
-        let compact_tower_sync = CompactTowerSync {
-            root: tower_sync.root.unwrap_or(Slot::MAX),
-            lockout_offsets: lockout_offsets.collect::<Result<_, _>>()?,
-            hash: Hash::new_from_array(tower_sync.hash.to_bytes()),
-            timestamp: tower_sync.timestamp,
-            block_id: Hash::new_from_array(tower_sync.block_id.to_bytes()),
-        };
-        compact_tower_sync.serialize(serializer)
+        compact::tower_sync_to_compact(tower_sync)
+            .map_err(serde::ser::Error::custom)?
+            .serialize(serializer)
     }
 
     pub fn deserialize<'de, D>(deserializer: D) -> Result<TowerSync, D::Error>
     where
         D: Deserializer<'de>,
     {
-        let CompactTowerSync {
-            root,
-            lockout_offsets,
-            hash,
-            timestamp,
-            block_id,
-        } = CompactTowerSync::deserialize(deserializer)?;
-        let root = (root != Slot::MAX).then_some(root);
-        let lockouts =
-            lockout_offsets
-                .iter()
-                .scan(root.unwrap_or_default(), |slot, lockout_offset| {
-                    *slot = match slot.checked_add(lockout_offset.offset) {
-                        None => {
-                            return Some(Err(serde::de::Error::custom("Invalid lockout offset")))
-                        }
-                        Some(slot) => slot,
-                    };
-                    let lockout = Lockout::new_with_confirmation_count(
-                        *slot,
-                        u32::from(lockout_offset.confirmation_count),
-                    );
-                    Some(Ok(lockout))
-                });
-        Ok(TowerSync {
-            root,
-            lockouts: lockouts.collect::<Result<_, _>>()?,
-            hash,
-            timestamp,
-            block_id,
-        })
+        let repr = CompactTowerSync::deserialize(deserializer)?;
+        compact::tower_sync_from_compact(repr).map_err(serde::de::Error::custom)
     }
 }
 
-#[cfg(test)]
-mod tests {
+/// Wincode schemas for the compact wire encodings of [`VoteStateUpdate`] and
+/// [`TowerSync`].
+///
+/// These are the wincode analog of [`serde_compact_vote_state_update`] /
+/// [`serde_tower_sync`]: the types' own (derived) wincode schemas encode the
+/// non-compact form, so the compact form is selected per-field via
+/// `#[wincode(with = ...)]` on [`crate::instruction::VoteInstruction`]. Each
+/// schema is a thin marker that converts to/from the shared `compact`
+/// representation (whose derived schema does the actual encoding) and produces
+/// bytes identical to bincode.
+#[cfg(feature = "wincode")]
+pub mod wincode_compact {
     use {
-        super::*, bincode::serialized_size, core::mem::MaybeUninit, itertools::Itertools,
-        rand::Rng, solana_clock::Clock, solana_hash::Hash,
-        solana_instruction::error::InstructionError,
+        super::{
+            compact,
+            compact::{
+                CompactTowerSync as CompactTowerSyncRepr,
+                CompactVoteStateUpdate as CompactVoteStateUpdateRepr,
+            },
+            TowerSync, VoteStateUpdate,
+        },
+        std::mem::MaybeUninit,
+        wincode::{
+            config::Config,
+            io::{Reader, Writer},
+            ReadError, ReadResult, SchemaRead, SchemaWrite, WriteError, WriteResult,
+        },
     };
 
-    // Test helper to create a VoteStateV4 with random data for testing
-    fn create_test_vote_state_v4(node_pubkey: Pubkey, root_slot: Slot) -> VoteStateV4 {
-        let votes = (1..32)
-            .map(|x| LandedVote {
-                latency: 0,
-                lockout: Lockout::new_with_confirmation_count(
-                    u64::from(x).saturating_add(root_slot),
-                    32_u32.saturating_sub(x),
-                ),
-            })
-            .collect();
-        VoteStateV4 {
-            node_pubkey,
-            root_slot: Some(root_slot),
-            votes,
-            ..VoteStateV4::default()
+    /// Wincode schema mirroring [`super::serde_compact_vote_state_update`].
+    pub struct CompactVoteStateUpdate;
+
+    unsafe impl<C: Config> SchemaWrite<C> for CompactVoteStateUpdate {
+        type Src = VoteStateUpdate;
+
+        fn size_of(src: &Self::Src) -> WriteResult<usize> {
+            let repr = compact::vote_state_update_to_compact(src).map_err(WriteError::Custom)?;
+            <CompactVoteStateUpdateRepr as SchemaWrite<C>>::size_of(&repr)
+        }
+
+        fn write(writer: impl Writer, src: &Self::Src) -> WriteResult<()> {
+            let repr = compact::vote_state_update_to_compact(src).map_err(WriteError::Custom)?;
+            <CompactVoteStateUpdateRepr as SchemaWrite<C>>::write(writer, &repr)
         }
     }
 
-    #[test]
-    fn test_vote_serialize_v3() {
-        let mut buffer: Vec<u8> = vec![0; VoteStateV3::size_of()];
-        let mut vote_state = VoteStateV3::default();
-        vote_state
-            .votes
-            .resize(MAX_LOCKOUT_HISTORY, LandedVote::default());
-        vote_state.root_slot = Some(1);
-        let versioned = VoteStateVersions::new_v3(vote_state);
-        assert!(VoteStateV3::serialize(&versioned, &mut buffer[0..4]).is_err());
-        VoteStateV3::serialize(&versioned, &mut buffer).unwrap();
-        assert_eq!(
-            VoteStateV3::deserialize(&buffer).unwrap(),
-            versioned.try_convert_to_v3().unwrap()
-        );
-    }
+    unsafe impl<'de, C: Config> SchemaRead<'de, C> for CompactVoteStateUpdate {
+        type Dst = VoteStateUpdate;
 
-    #[test]
-    fn test_vote_serialize_v4() {
-        // Use two different pubkeys to demonstrate that v4 ignores the
-        // `vote_pubkey` parameter.
-        let vote_pubkey_for_deserialize = Pubkey::new_unique();
-        let vote_pubkey_for_convert = Pubkey::new_unique();
-
-        let mut buffer: Vec<u8> = vec![0; VoteStateV4::size_of()];
-        let mut vote_state = VoteStateV4::default();
-        vote_state
-            .votes
-            .resize(MAX_LOCKOUT_HISTORY, LandedVote::default());
-        vote_state.root_slot = Some(1);
-        let versioned = VoteStateVersions::new_v4(vote_state);
-        assert!(VoteStateV4::serialize(&versioned, &mut buffer[0..4]).is_err());
-        VoteStateV4::serialize(&versioned, &mut buffer).unwrap();
-        assert_eq!(
-            VoteStateV4::deserialize(&buffer, &vote_pubkey_for_deserialize).unwrap(),
-            versioned
-                .try_convert_to_v4(&vote_pubkey_for_convert)
-                .unwrap()
-        );
-    }
-
-    #[test]
-    fn test_vote_deserialize_into_v3() {
-        // base case
-        let target_vote_state = VoteStateV3::default();
-        let vote_state_buf =
-            bincode::serialize(&VoteStateVersions::new_v3(target_vote_state.clone())).unwrap();
-
-        let mut test_vote_state = VoteStateV3::default();
-        VoteStateV3::deserialize_into(&vote_state_buf, &mut test_vote_state).unwrap();
-
-        assert_eq!(target_vote_state, test_vote_state);
-
-        // variant
-        // provide 4x the minimum struct size in bytes to ensure we typically touch every field
-        let struct_bytes_x4 = std::mem::size_of::<VoteStateV3>() * 4;
-        for _ in 0..1000 {
-            let raw_data: Vec<u8> = (0..struct_bytes_x4).map(|_| rand::random::<u8>()).collect();
-            let mut unstructured = Unstructured::new(&raw_data);
-
-            let target_vote_state_versions =
-                VoteStateVersions::arbitrary(&mut unstructured).unwrap();
-            let vote_state_buf = bincode::serialize(&target_vote_state_versions).unwrap();
-
-            // Skip any v4 since they can't convert to v3.
-            if let Ok(target_vote_state) = target_vote_state_versions.try_convert_to_v3() {
-                let mut test_vote_state = VoteStateV3::default();
-                VoteStateV3::deserialize_into(&vote_state_buf, &mut test_vote_state).unwrap();
-
-                assert_eq!(target_vote_state, test_vote_state);
-            }
+        fn read(reader: impl Reader<'de>, dst: &mut MaybeUninit<Self::Dst>) -> ReadResult<()> {
+            let repr = <CompactVoteStateUpdateRepr as SchemaRead<C>>::get(reader)?;
+            dst.write(compact::vote_state_update_from_compact(repr).map_err(ReadError::Custom)?);
+            Ok(())
         }
     }
 
-    #[test]
-    fn test_vote_deserialize_into_v4() {
-        let vote_pubkey = Pubkey::new_unique();
+    /// Wincode schema mirroring [`super::serde_tower_sync`].
+    pub struct CompactTowerSync;
 
-        // base case
-        let target_vote_state = VoteStateV4::default();
-        let vote_state_buf =
-            bincode::serialize(&VoteStateVersions::new_v4(target_vote_state.clone())).unwrap();
+    unsafe impl<C: Config> SchemaWrite<C> for CompactTowerSync {
+        type Src = TowerSync;
 
-        let mut test_vote_state = VoteStateV4::default();
-        VoteStateV4::deserialize_into(&vote_state_buf, &mut test_vote_state, &vote_pubkey).unwrap();
+        fn size_of(src: &Self::Src) -> WriteResult<usize> {
+            let repr = compact::tower_sync_to_compact(src).map_err(WriteError::Custom)?;
+            <CompactTowerSyncRepr as SchemaWrite<C>>::size_of(&repr)
+        }
 
-        assert_eq!(target_vote_state, test_vote_state);
-
-        // variant
-        // provide 4x the minimum struct size in bytes to ensure we typically touch every field
-        let struct_bytes_x4 = std::mem::size_of::<VoteStateV4>() * 4;
-        for _ in 0..1000 {
-            let raw_data: Vec<u8> = (0..struct_bytes_x4).map(|_| rand::random::<u8>()).collect();
-            let mut unstructured = Unstructured::new(&raw_data);
-
-            let target_vote_state_versions =
-                VoteStateVersions::arbitrary(&mut unstructured).unwrap();
-            let vote_state_buf = bincode::serialize(&target_vote_state_versions).unwrap();
-            let target_vote_state = target_vote_state_versions
-                .try_convert_to_v4(&vote_pubkey)
-                .unwrap();
-
-            let mut test_vote_state = VoteStateV4::default();
-            VoteStateV4::deserialize_into(&vote_state_buf, &mut test_vote_state, &vote_pubkey)
-                .unwrap();
-
-            assert_eq!(target_vote_state, test_vote_state);
+        fn write(writer: impl Writer, src: &Self::Src) -> WriteResult<()> {
+            let repr = compact::tower_sync_to_compact(src).map_err(WriteError::Custom)?;
+            <CompactTowerSyncRepr as SchemaWrite<C>>::write(writer, &repr)
         }
     }
 
-    #[test]
-    fn test_vote_deserialize_into_error_v3() {
-        let target_vote_state = VoteStateV3::new_rand_for_tests(Pubkey::new_unique(), 42);
-        let mut vote_state_buf =
-            bincode::serialize(&VoteStateVersions::new_v3(target_vote_state.clone())).unwrap();
-        let len = vote_state_buf.len();
-        vote_state_buf.truncate(len - 1);
+    unsafe impl<'de, C: Config> SchemaRead<'de, C> for CompactTowerSync {
+        type Dst = TowerSync;
 
-        let mut test_vote_state = VoteStateV3::default();
-        VoteStateV3::deserialize_into(&vote_state_buf, &mut test_vote_state).unwrap_err();
-        assert_eq!(test_vote_state, VoteStateV3::default());
-    }
-
-    #[test]
-    fn test_vote_deserialize_into_error_v4() {
-        let vote_pubkey = Pubkey::new_unique();
-
-        let target_vote_state = create_test_vote_state_v4(Pubkey::new_unique(), 42);
-        let mut vote_state_buf =
-            bincode::serialize(&VoteStateVersions::new_v4(target_vote_state.clone())).unwrap();
-        let len = vote_state_buf.len();
-        vote_state_buf.truncate(len - 1);
-
-        let mut test_vote_state = VoteStateV4::default();
-        VoteStateV4::deserialize_into(&vote_state_buf, &mut test_vote_state, &vote_pubkey)
-            .unwrap_err();
-        assert_eq!(test_vote_state, VoteStateV4::default());
-    }
-
-    #[test]
-    fn test_vote_deserialize_into_uninit_v3() {
-        // base case
-        let target_vote_state = VoteStateV3::default();
-        let vote_state_buf =
-            bincode::serialize(&VoteStateVersions::new_v3(target_vote_state.clone())).unwrap();
-
-        let mut test_vote_state = MaybeUninit::uninit();
-        VoteStateV3::deserialize_into_uninit(&vote_state_buf, &mut test_vote_state).unwrap();
-        let test_vote_state = unsafe { test_vote_state.assume_init() };
-
-        assert_eq!(target_vote_state, test_vote_state);
-
-        // variant
-        // provide 4x the minimum struct size in bytes to ensure we typically touch every field
-        let struct_bytes_x4 = std::mem::size_of::<VoteStateV3>() * 4;
-        for _ in 0..1000 {
-            let raw_data: Vec<u8> = (0..struct_bytes_x4).map(|_| rand::random::<u8>()).collect();
-            let mut unstructured = Unstructured::new(&raw_data);
-
-            let target_vote_state_versions =
-                VoteStateVersions::arbitrary(&mut unstructured).unwrap();
-            let vote_state_buf = bincode::serialize(&target_vote_state_versions).unwrap();
-
-            // Skip any v4 since they can't convert to v3.
-            if let Ok(target_vote_state) = target_vote_state_versions.try_convert_to_v3() {
-                let mut test_vote_state = MaybeUninit::uninit();
-                VoteStateV3::deserialize_into_uninit(&vote_state_buf, &mut test_vote_state)
-                    .unwrap();
-                let test_vote_state = unsafe { test_vote_state.assume_init() };
-
-                assert_eq!(target_vote_state, test_vote_state);
-            }
+        fn read(reader: impl Reader<'de>, dst: &mut MaybeUninit<Self::Dst>) -> ReadResult<()> {
+            let repr = <CompactTowerSyncRepr as SchemaRead<C>>::get(reader)?;
+            dst.write(compact::tower_sync_from_compact(repr).map_err(ReadError::Custom)?);
+            Ok(())
         }
     }
+}
 
-    #[test]
-    fn test_vote_deserialize_into_uninit_v4() {
-        let vote_pubkey = Pubkey::new_unique();
+#[cfg(all(test, feature = "bincode"))]
+mod tests {
+    use {super::*, rand::Rng, solana_hash::Hash};
 
-        // base case
-        let target_vote_state = VoteStateV4::default();
-        let vote_state_buf =
-            bincode::serialize(&VoteStateVersions::new_v4(target_vote_state.clone())).unwrap();
-
-        let mut test_vote_state = MaybeUninit::uninit();
-        VoteStateV4::deserialize_into_uninit(&vote_state_buf, &mut test_vote_state, &vote_pubkey)
-            .unwrap();
-        let test_vote_state = unsafe { test_vote_state.assume_init() };
-
-        assert_eq!(target_vote_state, test_vote_state);
-
-        // variant
-        // provide 4x the minimum struct size in bytes to ensure we typically touch every field
-        let struct_bytes_x4 = std::mem::size_of::<VoteStateV4>() * 4;
-        for _ in 0..1000 {
-            let raw_data: Vec<u8> = (0..struct_bytes_x4).map(|_| rand::random::<u8>()).collect();
-            let mut unstructured = Unstructured::new(&raw_data);
-
-            let target_vote_state_versions =
-                VoteStateVersions::arbitrary(&mut unstructured).unwrap();
-            let vote_state_buf = bincode::serialize(&target_vote_state_versions).unwrap();
-            let target_vote_state = target_vote_state_versions
-                .try_convert_to_v4(&Pubkey::default())
-                .unwrap();
-
-            let mut test_vote_state = MaybeUninit::uninit();
-            VoteStateV4::deserialize_into_uninit(
-                &vote_state_buf,
-                &mut test_vote_state,
-                &Pubkey::default(),
-            )
-            .unwrap();
-            let test_vote_state = unsafe { test_vote_state.assume_init() };
-
-            assert_eq!(target_vote_state, test_vote_state);
+    /// Build a random `VoteStateUpdate` with strictly increasing lockout slots
+    /// and an optional root below the first slot, suitable for exercising the
+    /// compact (offset-encoded) wire formats.
+    fn random_vote_state_update<R: Rng>(rng: &mut R) -> VoteStateUpdate {
+        VoteStateUpdate {
+            lockouts: sampling::sample_lockouts(rng),
+            root: sampling::sample_root(rng),
+            hash: Hash::from(rng.random::<[u8; 32]>()),
+            timestamp: rng.random_bool(0.5).then(|| rng.random()),
         }
-    }
-
-    #[test]
-    fn test_vote_deserialize_into_uninit_nopanic_v3() {
-        // base case
-        let mut test_vote_state = MaybeUninit::uninit();
-        let e = VoteStateV3::deserialize_into_uninit(&[], &mut test_vote_state).unwrap_err();
-        assert_eq!(e, InstructionError::InvalidAccountData);
-
-        // variant
-        let serialized_len_x4 = serialized_size(&VoteStateV3::default()).unwrap() * 4;
-        let mut rng = rand::rng();
-        for _ in 0..1000 {
-            let raw_data_length = rng.random_range(1..serialized_len_x4);
-            let mut raw_data: Vec<u8> = (0..raw_data_length).map(|_| rng.random::<u8>()).collect();
-
-            // pure random data will ~never have a valid enum tag, so lets help it out
-            if raw_data_length >= 4 && rng.random::<bool>() {
-                let tag = rng.random_range(1u8..=3);
-                raw_data[0] = tag;
-                raw_data[1] = 0;
-                raw_data[2] = 0;
-                raw_data[3] = 0;
-            }
-
-            // it is extremely improbable, though theoretically possible, for random bytes to be syntactically valid
-            // so we only check that the parser does not panic and that it succeeds or fails exactly in line with bincode
-            let mut test_vote_state = MaybeUninit::uninit();
-            let test_res = VoteStateV3::deserialize_into_uninit(&raw_data, &mut test_vote_state);
-
-            // Test with bincode for consistency.
-            let bincode_res = bincode::deserialize::<VoteStateVersions>(&raw_data)
-                .map_err(|_| InstructionError::InvalidAccountData)
-                .and_then(|versioned| versioned.try_convert_to_v3());
-
-            if test_res.is_err() {
-                assert!(bincode_res.is_err());
-            } else {
-                let test_vote_state = unsafe { test_vote_state.assume_init() };
-                assert_eq!(test_vote_state, bincode_res.unwrap());
-            }
-        }
-    }
-
-    #[test]
-    fn test_vote_deserialize_into_uninit_nopanic_v4() {
-        let vote_pubkey = Pubkey::new_unique();
-
-        // base case
-        let mut test_vote_state = MaybeUninit::uninit();
-        let e = VoteStateV4::deserialize_into_uninit(&[], &mut test_vote_state, &vote_pubkey)
-            .unwrap_err();
-        assert_eq!(e, InstructionError::InvalidAccountData);
-
-        // variant
-        let serialized_len_x4 = serialized_size(&VoteStateV4::default()).unwrap() * 4;
-        let mut rng = rand::rng();
-        for _ in 0..1000 {
-            let raw_data_length = rng.random_range(1..serialized_len_x4);
-            let mut raw_data: Vec<u8> = (0..raw_data_length).map(|_| rng.random::<u8>()).collect();
-
-            // pure random data will ~never have a valid enum tag, so lets help it out
-            if raw_data_length >= 4 && rng.random::<bool>() {
-                let tag = rng.random_range(1u8..=3);
-                raw_data[0] = tag;
-                raw_data[1] = 0;
-                raw_data[2] = 0;
-                raw_data[3] = 0;
-            }
-
-            // it is extremely improbable, though theoretically possible, for random bytes to be syntactically valid
-            // so we only check that the parser does not panic and that it succeeds or fails exactly in line with bincode
-            let mut test_vote_state = MaybeUninit::uninit();
-            let test_res =
-                VoteStateV4::deserialize_into_uninit(&raw_data, &mut test_vote_state, &vote_pubkey);
-            let bincode_res = bincode::deserialize::<VoteStateVersions>(&raw_data)
-                .map(|versioned| versioned.try_convert_to_v4(&vote_pubkey).unwrap());
-
-            if test_res.is_err() {
-                assert!(bincode_res.is_err());
-            } else {
-                let test_vote_state = unsafe { test_vote_state.assume_init() };
-                assert_eq!(test_vote_state, bincode_res.unwrap());
-            }
-        }
-    }
-
-    #[test]
-    fn test_vote_deserialize_into_uninit_ill_sized_v3() {
-        // provide 4x the minimum struct size in bytes to ensure we typically touch every field
-        let struct_bytes_x4 = std::mem::size_of::<VoteStateV3>() * 4;
-        for _ in 0..1000 {
-            let raw_data: Vec<u8> = (0..struct_bytes_x4).map(|_| rand::random::<u8>()).collect();
-            let mut unstructured = Unstructured::new(&raw_data);
-
-            let original_vote_state_versions =
-                VoteStateVersions::arbitrary(&mut unstructured).unwrap();
-            let original_buf = bincode::serialize(&original_vote_state_versions).unwrap();
-
-            // Skip any v4 since they can't convert to v3.
-            if !matches!(original_vote_state_versions, VoteStateVersions::V4(_)) {
-                let mut truncated_buf = original_buf.clone();
-                let mut expanded_buf = original_buf.clone();
-
-                truncated_buf.resize(original_buf.len() - 8, 0);
-                expanded_buf.resize(original_buf.len() + 8, 0);
-
-                // truncated fails
-                let mut test_vote_state = MaybeUninit::uninit();
-                let test_res =
-                    VoteStateV3::deserialize_into_uninit(&truncated_buf, &mut test_vote_state);
-                // `deserialize_into_uninit` will eventually call into
-                // `try_convert_to_v3`, so we have alignment in the following map.
-                let bincode_res = bincode::deserialize::<VoteStateVersions>(&truncated_buf)
-                    .map_err(|_| InstructionError::InvalidAccountData)
-                    .and_then(|versioned| versioned.try_convert_to_v3());
-
-                assert!(test_res.is_err());
-                assert!(bincode_res.is_err());
-
-                // expanded succeeds
-                let mut test_vote_state = MaybeUninit::uninit();
-                VoteStateV3::deserialize_into_uninit(&expanded_buf, &mut test_vote_state).unwrap();
-                // `deserialize_into_uninit` will eventually call into
-                // `try_convert_to_v3`, so we have alignment in the following map.
-                let bincode_res = bincode::deserialize::<VoteStateVersions>(&expanded_buf)
-                    .map_err(|_| InstructionError::InvalidAccountData)
-                    .and_then(|versioned| versioned.try_convert_to_v3());
-
-                let test_vote_state = unsafe { test_vote_state.assume_init() };
-                assert_eq!(test_vote_state, bincode_res.unwrap());
-            }
-        }
-    }
-
-    #[test]
-    fn test_vote_deserialize_into_uninit_ill_sized_v4() {
-        let vote_pubkey = Pubkey::new_unique();
-
-        // provide 4x the minimum struct size in bytes to ensure we typically touch every field
-        let struct_bytes_x4 = std::mem::size_of::<VoteStateV4>() * 4;
-        for _ in 0..1000 {
-            let raw_data: Vec<u8> = (0..struct_bytes_x4).map(|_| rand::random::<u8>()).collect();
-            let mut unstructured = Unstructured::new(&raw_data);
-
-            let original_vote_state_versions =
-                VoteStateVersions::arbitrary(&mut unstructured).unwrap();
-            let original_buf = bincode::serialize(&original_vote_state_versions).unwrap();
-
-            let mut truncated_buf = original_buf.clone();
-            let mut expanded_buf = original_buf.clone();
-
-            truncated_buf.resize(original_buf.len() - 8, 0);
-            expanded_buf.resize(original_buf.len() + 8, 0);
-
-            // truncated fails
-            let mut test_vote_state = MaybeUninit::uninit();
-            let test_res = VoteStateV4::deserialize_into_uninit(
-                &truncated_buf,
-                &mut test_vote_state,
-                &vote_pubkey,
-            );
-            let bincode_res = bincode::deserialize::<VoteStateVersions>(&truncated_buf)
-                .map(|versioned| versioned.try_convert_to_v4(&vote_pubkey).unwrap());
-
-            assert!(test_res.is_err());
-            assert!(bincode_res.is_err());
-
-            // expanded succeeds
-            let mut test_vote_state = MaybeUninit::uninit();
-            VoteStateV4::deserialize_into_uninit(&expanded_buf, &mut test_vote_state, &vote_pubkey)
-                .unwrap();
-            let bincode_res = bincode::deserialize::<VoteStateVersions>(&expanded_buf)
-                .map(|versioned| versioned.try_convert_to_v4(&vote_pubkey).unwrap());
-
-            let test_vote_state = unsafe { test_vote_state.assume_init() };
-            assert_eq!(test_vote_state, bincode_res.unwrap());
-        }
-    }
-
-    #[test]
-    fn test_vote_state_v3_size_of() {
-        let vote_state = VoteStateV3::get_max_sized_vote_state();
-        let vote_state = VoteStateVersions::new_v3(vote_state);
-        let size = serialized_size(&vote_state).unwrap();
-        assert_eq!(VoteStateV3::size_of() as u64, size);
-    }
-
-    #[test]
-    fn test_vote_state_v4_size_of() {
-        let vote_state = VoteStateV4::get_max_sized_vote_state();
-        let vote_state = VoteStateVersions::new_v4(vote_state);
-        let size = serialized_size(&vote_state).unwrap();
-        assert!(size < VoteStateV4::size_of() as u64); // v4 is smaller than the max size
-    }
-
-    #[test]
-    fn test_default_vote_state_is_uninitialized() {
-        // The default `VoteStateV3` is stored to de-initialize a zero-balance vote account,
-        // so must remain such that `VoteStateVersions::is_uninitialized()` returns true
-        // when called on a `VoteStateVersions` that stores it
-        assert!(VoteStateVersions::new_v3(VoteStateV3::default()).is_uninitialized());
-    }
-
-    #[test]
-    fn test_is_correct_size_and_initialized() {
-        // Check all zeroes
-        let mut vote_account_data = vec![0; VoteStateV3::size_of()];
-        assert!(!VoteStateVersions::is_correct_size_and_initialized(
-            &vote_account_data
-        ));
-
-        // Check default VoteStateV3
-        let default_account_state = VoteStateVersions::new_v3(VoteStateV3::default());
-        VoteStateV3::serialize(&default_account_state, &mut vote_account_data).unwrap();
-        assert!(!VoteStateVersions::is_correct_size_and_initialized(
-            &vote_account_data
-        ));
-
-        // Check non-zero data shorter than offset index used
-        let short_data = vec![1; DEFAULT_PRIOR_VOTERS_OFFSET];
-        assert!(!VoteStateVersions::is_correct_size_and_initialized(
-            &short_data
-        ));
-
-        // Check non-zero large account
-        let mut large_vote_data = vec![1; 2 * VoteStateV3::size_of()];
-        let default_account_state = VoteStateVersions::new_v3(VoteStateV3::default());
-        VoteStateV3::serialize(&default_account_state, &mut large_vote_data).unwrap();
-        assert!(!VoteStateVersions::is_correct_size_and_initialized(
-            &vote_account_data
-        ));
-
-        // Check populated VoteStateV3
-        let vote_state = VoteStateV3::new(
-            &VoteInit {
-                node_pubkey: Pubkey::new_unique(),
-                authorized_voter: Pubkey::new_unique(),
-                authorized_withdrawer: Pubkey::new_unique(),
-                commission: 0,
-            },
-            &Clock::default(),
-        );
-        let account_state = VoteStateVersions::new_v3(vote_state.clone());
-        VoteStateV3::serialize(&account_state, &mut vote_account_data).unwrap();
-        assert!(VoteStateVersions::is_correct_size_and_initialized(
-            &vote_account_data
-        ));
-
-        // Check old VoteStateV3 that hasn't been upgraded to newest version yet
-        let old_vote_state = VoteState1_14_11::from(vote_state);
-        let account_state = VoteStateVersions::V1_14_11(Box::new(old_vote_state));
-        let mut vote_account_data = vec![0; VoteState1_14_11::size_of()];
-        VoteStateV3::serialize(&account_state, &mut vote_account_data).unwrap();
-        assert!(VoteStateVersions::is_correct_size_and_initialized(
-            &vote_account_data
-        ));
-    }
-
-    #[test]
-    fn test_minimum_balance() {
-        let rent = solana_rent::Rent::default();
-        let minimum_balance = rent.minimum_balance(VoteStateV3::size_of());
-        // golden, may need updating when vote_state grows
-        assert!(minimum_balance as f64 / 10f64.powf(9.0) < 0.04)
     }
 
     #[test]
@@ -914,44 +578,47 @@ mod tests {
     }
 
     fn run_serde_compact_vote_state_update<R: Rng>(rng: &mut R) {
-        let lockouts: VecDeque<_> = std::iter::repeat_with(|| {
-            let slot = 149_303_885_u64.saturating_add(rng.random_range(0..10_000));
-            let confirmation_count = rng.random_range(0..33);
-            Lockout::new_with_confirmation_count(slot, confirmation_count)
-        })
-        .take(32)
-        .sorted_by_key(|lockout| lockout.slot())
-        .collect();
-        let root = rng.random_bool(0.5).then(|| {
-            lockouts[0]
-                .slot()
-                .checked_sub(rng.random_range(0..1_000))
-                .expect("All slots should be greater than 1_000")
-        });
-        let timestamp = rng.random_bool(0.5).then(|| rng.random());
-        let hash = Hash::from(rng.random::<[u8; 32]>());
-        let vote_state_update = VoteStateUpdate {
-            lockouts,
-            root,
-            hash,
-            timestamp,
-        };
+        let vote_state_update = random_vote_state_update(rng);
+        #[cfg_attr(feature = "wincode", derive(wincode::SchemaWrite, wincode::SchemaRead))]
         #[derive(Debug, Eq, PartialEq, Deserialize, Serialize)]
         enum VoteInstruction {
             #[serde(with = "serde_compact_vote_state_update")]
-            UpdateVoteState(VoteStateUpdate),
+            UpdateVoteState(
+                #[cfg_attr(
+                    feature = "wincode",
+                    wincode(with = "wincode_compact::CompactVoteStateUpdate")
+                )]
+                VoteStateUpdate,
+            ),
             UpdateVoteStateSwitch(
-                #[serde(with = "serde_compact_vote_state_update")] VoteStateUpdate,
+                #[serde(with = "serde_compact_vote_state_update")]
+                #[cfg_attr(
+                    feature = "wincode",
+                    wincode(with = "wincode_compact::CompactVoteStateUpdate")
+                )]
+                VoteStateUpdate,
                 Hash,
             ),
         }
-        let vote = VoteInstruction::UpdateVoteState(vote_state_update.clone());
-        let bytes = bincode::serialize(&vote).unwrap();
-        assert_eq!(vote, bincode::deserialize(&bytes).unwrap());
+
+        // bincode is the reference encoding; when wincode is enabled, assert it
+        // produces identical bytes and round-trips the same value.
+        let check = |vote: &VoteInstruction| {
+            let bytes = bincode::serialize(vote).unwrap();
+            assert_eq!(*vote, bincode::deserialize(&bytes).unwrap());
+            #[cfg(feature = "wincode")]
+            {
+                assert_eq!(bytes, wincode::serialize(vote).unwrap());
+                assert_eq!(*vote, wincode::deserialize(&bytes).unwrap());
+            }
+        };
+
+        check(&VoteInstruction::UpdateVoteState(vote_state_update.clone()));
         let hash = Hash::from(rng.random::<[u8; 32]>());
-        let vote = VoteInstruction::UpdateVoteStateSwitch(vote_state_update, hash);
-        let bytes = bincode::serialize(&vote).unwrap();
-        assert_eq!(vote, bincode::deserialize(&bytes).unwrap());
+        check(&VoteInstruction::UpdateVoteStateSwitch(
+            vote_state_update,
+            hash,
+        ));
     }
 
     #[test]
@@ -960,58 +627,11 @@ mod tests {
         let data: &[u8] = &[0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x00];
         let circ_buf: CircBuf<()> = bincode::deserialize(data).unwrap();
         assert_eq!(circ_buf.last(), None);
-    }
 
-    #[test]
-    fn test_vote_state_v4_bls_pubkey_compressed() {
-        let vote_pubkey = Pubkey::new_unique();
-
-        let run_test = |start, expected| {
-            let versioned = VoteStateVersions::new_v4(start);
-            let serialized = bincode::serialize(&versioned).unwrap();
-            let deserialized = VoteStateV4::deserialize(&serialized, &vote_pubkey).unwrap();
-            assert_eq!(deserialized.bls_pubkey_compressed, expected);
-        };
-
-        // First try `None`.
-        let vote_state_none = VoteStateV4::default();
-        assert_eq!(vote_state_none.bls_pubkey_compressed, None);
-        run_test(vote_state_none, None);
-
-        // Now try `Some`.
-        let test_bls_key = [42u8; BLS_PUBLIC_KEY_COMPRESSED_SIZE];
-        let vote_state_some = VoteStateV4 {
-            bls_pubkey_compressed: Some(test_bls_key),
-            ..VoteStateV4::default()
-        };
-        assert_eq!(vote_state_some.bls_pubkey_compressed, Some(test_bls_key));
-        run_test(vote_state_some, Some(test_bls_key));
-    }
-
-    #[test]
-    fn test_vote_state_version_conversion_bls_pubkey() {
-        let vote_pubkey = Pubkey::new_unique();
-
-        // All versions before v4 should result in `None` for BLS pubkey.
-        let v1_14_11_state = VoteState1_14_11::default();
-        let v1_14_11_versioned = VoteStateVersions::V1_14_11(Box::new(v1_14_11_state));
-
-        let v3_state = VoteStateV3::default();
-        let v3_versioned = VoteStateVersions::V3(Box::new(v3_state));
-
-        for versioned in [v1_14_11_versioned, v3_versioned] {
-            let converted = versioned.try_convert_to_v4(&vote_pubkey).unwrap();
-            assert_eq!(converted.bls_pubkey_compressed, None);
+        #[cfg(feature = "wincode")]
+        {
+            let circ_buf: CircBuf<()> = wincode::deserialize(data).unwrap();
+            assert_eq!(circ_buf.last(), None);
         }
-
-        // v4 to v4 conversion should preserve the BLS pubkey.
-        let test_bls_key = [128u8; BLS_PUBLIC_KEY_COMPRESSED_SIZE];
-        let v4_state = VoteStateV4 {
-            bls_pubkey_compressed: Some(test_bls_key),
-            ..VoteStateV4::default()
-        };
-        let v4_versioned = VoteStateVersions::V4(Box::new(v4_state));
-        let converted = v4_versioned.try_convert_to_v4(&vote_pubkey).unwrap();
-        assert_eq!(converted.bls_pubkey_compressed, Some(test_bls_key));
     }
 }

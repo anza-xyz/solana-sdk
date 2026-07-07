@@ -2,7 +2,7 @@
 name = "solana-loader-v3-interface"
 description = "Solana loader V3 interface."
 documentation = "https://docs.rs/solana-loader-v3-interface"
-version = "6.1.0"
+version = "8.0.1"
 authors = { workspace = true }
 repository = { workspace = true }
 homepage = { workspace = true }
@@ -15,29 +15,34 @@ all-features = true
 rustdoc-args = ["--cfg=docsrs"]
 
 [features]
-bincode = ["dep:solana-system-interface", "serde", "solana-instruction/bincode"]
-dev-context-only-utils = ["bincode"]
+dev-context-only-utils = ["wincode"]
 frozen-abi = ["dep:solana-frozen-abi", "dep:solana-frozen-abi-macro", "serde"]
 serde = ["dep:serde", "dep:serde_bytes", "dep:serde_derive", "solana-pubkey/serde"]
+wincode = [
+    "dep:solana-system-interface",
+    "dep:wincode",
+    "solana-instruction/wincode",
+    "solana-pubkey/wincode",
+    "solana-system-interface/wincode",
+    "wincode/alloc",
+]
 
 [dependencies]
 serde = { workspace = true, optional = true }
 serde_bytes = { workspace = true, optional = true }
 serde_derive = { workspace = true, optional = true }
-solana-frozen-abi = { workspace = true, features = [
-    "frozen-abi",
-], optional = true }
-solana-frozen-abi-macro = { workspace = true, features = [
-    "frozen-abi",
-], optional = true }
+solana-frozen-abi = { workspace = true, features = ["frozen-abi"], optional = true }
+solana-frozen-abi-macro = { workspace = true, features = ["frozen-abi"], optional = true }
 solana-instruction = { workspace = true, features = ["std"] }
 solana-pubkey = { workspace = true, features = ["curve25519"] }
 solana-sdk-ids = { workspace = true }
-solana-system-interface = { workspace = true, features = ["bincode"], optional = true }
+solana-system-interface = { workspace = true, optional = true }
+wincode = { workspace = true, optional = true }
 
 [dev-dependencies]
 bincode = { workspace = true }
-solana-loader-v3-interface = { path = ".", features = ["dev-context-only-utils"] }
+solana-loader-v3-interface = { path = ".", features = ["dev-context-only-utils", "serde"] }
+test-case = { workspace = true }
 
 [lints]
 workspace = true

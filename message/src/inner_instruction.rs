@@ -1,4 +1,4 @@
-use crate::compiled_instruction::CompiledInstruction;
+use {crate::compiled_instruction::CompiledInstruction, alloc::vec::Vec};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 #[cfg_attr(

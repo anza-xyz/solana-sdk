@@ -1,0 +1,25 @@
+[package]
+name = "solana-get-sysvar"
+description = "Reads Solana sysvar account data from the runtime."
+documentation = "https://docs.rs/solana-get-sysvar"
+version = "1.0.0"
+authors = { workspace = true }
+repository = { workspace = true }
+homepage = { workspace = true }
+license = { workspace = true }
+edition = { workspace = true }
+
+[package.metadata.docs.rs]
+targets = ["x86_64-unknown-linux-gnu"]
+all-features = true
+rustdoc-args = ["--cfg=docsrs"]
+
+[dependencies]
+solana-address = { workspace = true }
+solana-program-error = { workspace = true }
+
+[target.'cfg(target_os = "solana")'.dependencies]
+solana-define-syscall = { workspace = true }
+
+[lints]
+workspace = true

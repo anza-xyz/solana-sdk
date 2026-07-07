@@ -70,6 +70,7 @@ static_assertions::const_assert_eq!(DEFAULT_SLOTS_PER_EPOCH, 432_000);
 pub const DEFAULT_SLOTS_PER_EPOCH: u64 = 2 * TICKS_PER_DAY / DEFAULT_TICKS_PER_SLOT;
 
 // leader schedule is governed by this
+#[deprecated(since = "3.1.0", note = "Moved to solana-leader-schedule crate")]
 pub const NUM_CONSECUTIVE_LEADER_SLOTS: u64 = 4;
 
 #[cfg(test)]
@@ -146,6 +147,7 @@ pub type UnixTimestamp = i64;
 /// All members of `Clock` start from 0 upon network boot.
 #[repr(C)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "wincode", derive(wincode::SchemaWrite, wincode::SchemaRead))]
 #[derive(Debug, CloneZeroed, Default, PartialEq, Eq)]
 pub struct Clock {
     /// The current `Slot`.
@@ -169,9 +171,21 @@ pub struct Clock {
     pub unix_timestamp: UnixTimestamp,
 }
 
+/// Serialized size of the `Clock` sysvar account.
+pub const SIZE: usize = size_of::<Clock>();
+const _: () = assert!(SIZE == 40);
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_size_of() {
+        assert_eq!(
+            wincode::serialized_size(&Clock::default()).unwrap() as usize,
+            SIZE,
+        );
+    }
 
     #[test]
     fn test_clone() {

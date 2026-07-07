@@ -2,8 +2,8 @@
 name = "solana-bls-signatures"
 description = "Solana BLS Signatures"
 documentation = "https://docs.rs/solana-bls-signatures"
-version = "3.0.0"
-rust-version = "1.81.0"
+version = "3.3.0"
+rust-version = { workspace = true }
 authors = { workspace = true }
 repository = { workspace = true }
 homepage = { workspace = true }
@@ -25,7 +25,8 @@ frozen-abi = ["dep:solana-frozen-abi", "dep:solana-frozen-abi-macro", "std"]
 parallel = ["dep:rayon"]
 serde = ["dep:cfg_eval", "dep:serde", "dep:serde_with"]
 solana-signer-derive = ["dep:solana-signer", "dep:solana-signature", "dep:subtle"]
-std = ["dep:serde_json"]
+std = ["dep:serde_json", "wincode?/std"]
+wincode = ["dep:wincode"]
 
 [dependencies]
 base64 = { workspace = true }
@@ -35,13 +36,11 @@ pairing = { workspace = true }
 serde = { workspace = true, features = ["derive"], optional = true }
 serde_json = { workspace = true, optional = true }
 serde_with = { workspace = true, features = ["macros"], optional = true }
-solana-frozen-abi = { workspace = true, optional = true, features = [
-    "frozen-abi",
-] }
-solana-frozen-abi-macro = { workspace = true, optional = true, features = [
-    "frozen-abi",
-] }
+solana-frozen-abi = { workspace = true, optional = true, features = ["frozen-abi"] }
+solana-frozen-abi-macro = { workspace = true, optional = true, features = ["frozen-abi"] }
 thiserror = { workspace = true }
+wincode = { workspace = true, optional = true }
+zeroize = { workspace = true, features = ["zeroize_derive"] }
 
 [target.'cfg(not(target_os = "solana"))'.dependencies]
 blst = { workspace = true }
@@ -57,6 +56,8 @@ subtle = { workspace = true, optional = true }
 [dev-dependencies]
 bincode = { workspace = true }
 criterion = { workspace = true }
+ff = { workspace = true }
+hex = { workspace = true }
 solana-bls-signatures = { path = ".", features = ["std"] }
 solana-keypair = { workspace = true }
 tempfile = { workspace = true }

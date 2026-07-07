@@ -2,7 +2,7 @@
 name = "solana-nonce"
 description = "Solana durable transaction nonces."
 documentation = "https://docs.rs/solana-nonce"
-version = "3.0.0"
+version = "3.2.0"
 authors = { workspace = true }
 repository = { workspace = true }
 homepage = { workspace = true }
@@ -44,3 +44,4 @@ wincode = { workspace = true, optional = true, features = ["alloc"] }
 bincode = { workspace = true }
 solana-nonce = { path = ".", features = ["dev-context-only-utils", "wincode"] }
 solana-pubkey = { workspace = true, features = ["std"], default-features = false }
+solana-sha256-hasher = { workspace = true, features = ["sha2"] }

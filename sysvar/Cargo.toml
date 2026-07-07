@@ -2,7 +2,7 @@
 name = "solana-sysvar"
 description = "Solana sysvar account types"
 documentation = "https://docs.rs/solana-sysvar"
-version = "4.0.0"
+version = "4.1.0"
 authors = { workspace = true }
 repository = { workspace = true }
 homepage = { workspace = true }
@@ -31,6 +31,22 @@ serde = [
     "solana-rent/serde",
     "solana-slot-hashes/serde",
     "solana-slot-history/serde",
+    "solana-stake-history/serde",
+]
+wincode = [
+    "dep:wincode",
+    "wincode/alloc",
+    "solana-clock/wincode",
+    "solana-epoch-rewards/wincode",
+    "solana-epoch-schedule/wincode",
+    "solana-fee-calculator/wincode",
+    "solana-hash/wincode",
+    "solana-last-restart-slot/wincode",
+    "solana-pubkey/wincode",
+    "solana-rent/wincode",
+    "solana-slot-hashes/wincode",
+    "solana-slot-history/wincode",
+    "solana-stake-history/wincode",
 ]
 
 [dependencies]
@@ -45,8 +61,9 @@ solana-clock = { workspace = true, features = ["sysvar"] }
 solana-epoch-rewards = { workspace = true, features = ["sysvar"] }
 solana-epoch-schedule = { workspace = true, features = ["sysvar"] }
 solana-fee-calculator = { workspace = true }
-solana-frozen-abi = { workspace = true, optional = true }
+solana-frozen-abi = { workspace = true, optional = true, features = ["frozen-abi"] }
 solana-frozen-abi-macro = { workspace = true, optional = true }
+solana-get-sysvar = { workspace = true }
 solana-hash = { workspace = true, features = ["bytemuck"] }
 solana-last-restart-slot = { workspace = true, features = ["sysvar"] }
 solana-program-entrypoint = { workspace = true }
@@ -57,7 +74,9 @@ solana-sdk-ids = { workspace = true }
 solana-sdk-macro = { workspace = true }
 solana-slot-hashes = { workspace = true, features = ["sysvar"] }
 solana-slot-history = { workspace = true, features = ["sysvar"] }
+solana-stake-history = { workspace = true, features = ["sysvar"] }
 solana-sysvar-id = { workspace = true }
+wincode = { workspace = true, optional = true }
 
 [target.'cfg(not(target_os = "solana"))'.dependencies]
 base64 = { workspace = true }
@@ -73,8 +92,8 @@ serial_test = { workspace = true }
 solana-example-mocks = { path = "../example-mocks" }
 solana-hash = { workspace = true, features = ["atomic", "bytemuck"] }
 solana-msg = { workspace = true, features = ["std"] }
-solana-sha256-hasher = { workspace = true }
-solana-sysvar = { path = ".", features = ["dev-context-only-utils"] }
+solana-sha256-hasher = { workspace = true, features = ["sha2"] }
+solana-sysvar = { path = ".", features = ["dev-context-only-utils", "wincode"] }
 test-case = { workspace = true }
 
 [lints]

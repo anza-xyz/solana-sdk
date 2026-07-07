@@ -2,7 +2,7 @@
 name = "solana-atomic-u64"
 description = "Solana atomic u64 implementation. For internal use only."
 documentation = "https://docs.rs/solana-atomic-u64"
-version = "3.0.0"
+version = "3.0.1"
 authors = { workspace = true }
 repository = { workspace = true }
 homepage = { workspace = true }
@@ -11,6 +11,8 @@ edition = { workspace = true }
 
 [package.metadata.docs.rs]
 targets = ["x86_64-unknown-linux-gnu"]
+all-features = true
+rustdoc-args = ["--cfg=docsrs"]
 
 [target.'cfg(not(target_pointer_width = "64"))'.dependencies]
 parking_lot = { workspace = true }

@@ -26,23 +26,23 @@ cd "${src_root}"
 
 # Check for grcov commands
 if ! command -v grcov >/dev/null 2>&1; then
-  echo "Error: grcov not found.  Try |cargo install grcov|"
-  exit 1
+    echo "Error: grcov not found.  Try |cargo install grcov|"
+    exit 1
 fi
 
 # Check llvm path
 llvm_profdata="$(find "$(./cargo nightly -Z unstable-options rustc --print sysroot)" -name llvm-profdata)"
 if [ -z "$llvm_profdata" ]; then
-  # pacify shellcheck: rust_nightly is referenced but not assigned
-  # shellcheck disable=SC2154
-  echo "Error: couldn't find llvm-profdata. Try installing the llvm-tools component with \`rustup component add llvm-tools-preview --toolchain=$rust_nightly\`"
-  exit 1
+    # pacify shellcheck: rust_nightly is referenced but not assigned
+    # shellcheck disable=SC2154
+    echo "Error: couldn't find llvm-profdata. Try installing the llvm-tools component with \`rustup component add llvm-tools-preview --toolchain=$rust_nightly\`"
+    exit 1
 fi
 llvm_path="$(dirname "$llvm_profdata")"
 
 # get commit hash. it will be used to name output folder
 if [ -z "$COMMIT_HASH" ]; then
-  COMMIT_HASH=$(git rev-parse --short=9 HEAD)
+    COMMIT_HASH=$(git rev-parse --short=9 HEAD)
 fi
 
 # Clean up
@@ -53,26 +53,28 @@ export RUSTFLAGS="-C instrument-coverage $RUSTFLAGS"
 export LLVM_PROFILE_FILE="./target/cov/${COMMIT_HASH}/profraw/default-%p-%m.profraw"
 
 if [[ -z $1 ]]; then
-  PACKAGES=(--lib --all)
+    PACKAGES=(--lib --all)
 else
-  PACKAGES=("$@")
+    PACKAGES=("$@")
 fi
 
 # Most verbose log level (trace) is enabled for all solana code to make log!
 # macro code green always. Also, forcibly discard the vast amount of log by
 # redirecting the stderr.
+# RUST_LOG="solana=trace,$RUST_LOG" \
+#   ./cargo nightly test --all-features --target-dir "./target/cov" "${PACKAGES[@]}" 2>/dev/null
 RUST_LOG="solana=trace,$RUST_LOG" \
-  ./cargo nightly test --all-features --target-dir "./target/cov" "${PACKAGES[@]}" 2>/dev/null
+    ./cargo nightly test --all-features --target-dir "./target/cov" "${PACKAGES[@]}"
 
 # Generate test reports
 echo "--- grcov"
 grcov_common_args=(
-  "./target/cov/${COMMIT_HASH}"
-  --source-dir .
-  --binary-path "./target/cov/debug"
-  --llvm
-  --llvm-path "$llvm_path"
-  --ignore \*.cargo\*
+    "./target/cov/${COMMIT_HASH}"
+    --source-dir .
+    --binary-path "./target/cov/debug"
+    --llvm
+    --llvm-path "$llvm_path"
+    --ignore \*.cargo\*
 )
 
 grcov "${grcov_common_args[@]}" -t html -o "./target/cov/${COMMIT_HASH}/coverage/html"

@@ -2,7 +2,7 @@
 name = "solana-program-option"
 description = "A C representation of Rust's Option, used in Solana programs."
 documentation = "https://docs.rs/solana-program-option"
-version = "3.0.0"
+version = "3.1.0"
 authors = { workspace = true }
 repository = { workspace = true }
 homepage = { workspace = true }
@@ -11,3 +11,14 @@ edition = { workspace = true }
 
 [package.metadata.docs.rs]
 targets = ["x86_64-unknown-linux-gnu"]
+all-features = true
+rustdoc-args = ["--cfg=docsrs"]
+
+[features]
+nullable = ["dep:solana-nullable"]
+
+[dependencies]
+solana-nullable = { workspace = true, optional = true }
+
+[dev-dependencies]
+solana-program-option = { path = ".", features = ["nullable"] }
