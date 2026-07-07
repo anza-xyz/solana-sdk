@@ -82,6 +82,7 @@ pub struct Meta {
     pub size: usize,
     pub addr: IpAddr,
     pub port: u16,
+    #[cfg_attr(feature = "wincode", wincode(with = "PodPacketFlags"))]
     pub flags: PacketFlags,
     remote_pubkey: Pubkey,
 }
@@ -112,36 +113,11 @@ impl ::solana_frozen_abi::stable_abi::StableAbi for PacketFlags {
     }
 }
 
-// `PacketFlags` is transparent over a `u8`, so encode it as its raw bits.
+// Every bit is a defined flag, so any byte is a valid `PacketFlags`; it is a
+// single `u8` in memory and can be serialized as raw bytes.
 #[cfg(feature = "wincode")]
-unsafe impl<C: ConfigCore> SchemaWrite<C> for PacketFlags {
-    type Src = Self;
-
-    const TYPE_META: TypeMeta = <u8 as SchemaWrite<C>>::TYPE_META;
-
-    fn size_of(src: &Self::Src) -> WriteResult<usize> {
-        <u8 as SchemaWrite<C>>::size_of(&src.bits())
-    }
-
-    fn write(writer: impl Writer, src: &Self::Src) -> WriteResult<()> {
-        <u8 as SchemaWrite<C>>::write(writer, &src.bits())
-    }
-}
-
-#[cfg(feature = "wincode")]
-unsafe impl<'de, C: ConfigCore> SchemaRead<'de, C> for PacketFlags {
-    type Dst = Self;
-
-    const TYPE_META: TypeMeta = <u8 as SchemaRead<'de, C>>::TYPE_META;
-
-    fn read(reader: impl Reader<'de>, dst: &mut MaybeUninit<Self::Dst>) -> ReadResult<()> {
-        let bits = <u8 as SchemaRead<'de, C>>::get(reader)?;
-        // Reject bytes that set bits not backed by a defined flag.
-        let flags =
-            Self::from_bits(bits).ok_or(wincode::error::invalid_value("invalid PacketFlags"))?;
-        dst.write(flags);
-        Ok(())
-    }
+wincode::pod_wrapper! {
+    unsafe struct PodPacketFlags(PacketFlags);
 }
 
 /// Wincode schema adapter for a fixed `[u8; N]` written as bincode serializes it
