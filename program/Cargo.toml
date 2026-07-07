@@ -48,7 +48,6 @@ frozen-abi = [
 ]
 
 [dependencies]
-memoffset = { workspace = true }
 solana-account-info = { workspace = true, features = ["bincode"] }
 solana-big-mod-exp = { workspace = true }
 solana-blake3-hasher = { workspace = true, features = ["blake3"] }
