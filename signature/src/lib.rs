@@ -35,11 +35,6 @@ const MAX_BASE58_SIGNATURE_LEN: usize = 88;
 #[cfg(any(test, feature = "batch-verify"))]
 type SignatureData<'a> = (&'a Signature, &'a [u8], &'a [u8]);
 
-#[cfg(any(test, feature = "batch-verify"))]
-fn verify_individual<'a>(mut signature_data: impl Iterator<Item = SignatureData<'a>>) -> bool {
-    signature_data.all(|(signature, pubkey, message)| signature.verify(pubkey, message))
-}
-
 /// A 64-byte Ed25519 signature.
 #[repr(transparent)]
 #[cfg_attr(
@@ -150,16 +145,40 @@ impl Signature {
     /// `pubkey_bytes` is the signer's public key, and `message_bytes` is the
     /// exact message that was signed. The iterator must know its exact length.
     ///
-    /// TODO: since SIMD-0376 activates ZIP-215 verification, we can use batch
-    /// verification for non-strict verification.
-    /// This will be in a follow-up PR.
+    /// Uses ZIP-215-compatible Ed25519 rules, matching
+    /// [`Self::verify_non_strict`] rather than the current strict
+    /// [`Self::verify`] path.
     ///
     /// Returns `false` if any signature fails to verify, any public key or
-    /// signature cannot be parsed, or batch verification fails.
+    /// signature cannot be parsed, randomness cannot be obtained, or batch
+    /// verification fails.
     pub fn batch_verify<'a>(
-        signature_data: impl ExactSizeIterator<Item = (&'a Signature, &'a [u8], &'a [u8])>,
+        signature_data: impl ExactSizeIterator<Item = SignatureData<'a>>,
     ) -> bool {
-        verify_individual(signature_data)
+        if signature_data.len() == 0 {
+            return true;
+        }
+
+        let mut batch = curve25519::ed_sigs::batch::Verifier::new();
+        for (signature, pubkey_bytes, message_bytes) in signature_data {
+            let Ok(pubkey_bytes) =
+                curve25519::ed_sigs::VerificationKeyBytes::try_from(pubkey_bytes)
+            else {
+                return false;
+            };
+            batch.queue((
+                pubkey_bytes,
+                curve25519::ed_sigs::Signature::from(*signature.as_array()),
+                message_bytes,
+            ));
+        }
+
+        let Ok(rng) = <rand_chacha_0_3::ChaCha20Rng as rand_core_0_6::SeedableRng>::from_rng(
+            rand_core_0_6::OsRng,
+        ) else {
+            return false;
+        };
+        batch.verify(rng).is_ok()
     }
 
     /// Parallel batch-verifies signatures over their corresponding public keys
@@ -473,7 +492,7 @@ mod tests {
     }
 
     #[test]
-    fn test_batch_verify_rejects_non_strict_valid_signatures() {
+    fn test_batch_verify_accepts_zip215_valid_signatures() {
         let mut signature = [0; SIGNATURE_BYTES];
         signature[0] = 1;
         let signatures = [Signature::from(signature); 9];
@@ -483,7 +502,8 @@ mod tests {
         let messages: [Vec<u8>; 9] = core::array::from_fn(|_| b"message".to_vec());
 
         assert!(!signatures[0].verify(&pubkeys[0], &messages[0]));
-        assert!(!Signature::batch_verify(batch_verify_items(
+        assert!(signatures[0].verify_non_strict(&pubkeys[0], &messages[0]));
+        assert!(Signature::batch_verify(batch_verify_items(
             &signatures,
             &pubkeys,
             &messages,
