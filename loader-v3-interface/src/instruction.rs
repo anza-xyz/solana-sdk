@@ -753,9 +753,8 @@ mod tests {
         assert_invalid_trailing_bool(&data);
     }
 
-    /// A read error other than a clean end-of-input (`ReadError::ReadSizeLimit`,
-    /// e.g. the `PermissionDenied` from #808) must be surfaced, not silently
-    /// treated as a missing trailing `bool`.
+    /// A read error other than a clean end-of-input (`ReadError::ReadSizeLimit`)
+    /// must be surfaced, not silently treated as a missing trailing `bool`.
     #[test]
     fn optional_trailing_bool_surfaces_non_eof_read_error() {
         use {
