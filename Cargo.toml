@@ -250,7 +250,7 @@ solana-cpi = { path = "cpi", version = "3.0.0" }
 solana-curve25519 = { path = "curve25519", version = "4.0.0" }
 solana-define-syscall = { path = "define-syscall", version = "5.1.0" }
 solana-derivation-path = { path = "derivation-path", version = "3.0.0" }
-solana-ed25519 = { version = "0.2.0", default-features = false, features = ["digest", "precomputed-tables", "rand_core", "zeroize"] }
+solana-ed25519 = { version = "0.2.1", default-features = false, features = ["digest", "precomputed-tables", "rand_core", "zeroize"] }
 solana-ed25519-program = { path = "ed25519-program", version = "3.0.0" }
 solana-epoch-info = { path = "epoch-info", version = "3.0.0" }
 solana-epoch-rewards = { path = "epoch-rewards", version = "3.1.0" }
