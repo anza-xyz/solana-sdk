@@ -158,6 +158,10 @@ impl Signature {
         if signature_data.len() == 0 {
             return true;
         }
+        if signature_data.len() == 1 {
+            let (signature, pubkey_bytes, message_bytes) = signature_data.into_iter().next().unwrap();
+            return signature.verify(pubkey_bytes, message_bytes);
+        }
 
         let mut batch = curve25519::ed_sigs::batch::Verifier::new();
         for (signature, pubkey_bytes, message_bytes) in signature_data {
@@ -195,6 +199,11 @@ impl Signature {
     pub fn par_batch_verify<'a>(
         signature_data: impl ExactSizeIterator<Item = (&'a Signature, &'a [u8], &'a [u8])>,
     ) -> bool {
+        // for small number of signatures, the overhead of parallelization is not worth it
+        if signature_data.len() <=16 {
+            return Self::batch_verify(signature_data);
+        }
+
         let signatures = signature_data.collect::<Vec<_>>();
 
         if signatures.is_empty() {
