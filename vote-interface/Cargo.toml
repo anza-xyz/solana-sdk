@@ -2,7 +2,7 @@
 name = "solana-vote-interface"
 description = "Solana vote interface."
 documentation = "https://docs.rs/solana-vote-interface"
-version = "6.0.2"
+version = "6.0.3"
 rust-version = { workspace = true }
 authors = { workspace = true }
 repository = { workspace = true }

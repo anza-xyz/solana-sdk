@@ -38,7 +38,7 @@ pub use self::tests::MessageBuilder;
 #[cfg(feature = "serde")]
 use serde_derive::{Deserialize, Serialize};
 #[cfg(feature = "frozen-abi")]
-use solana_frozen_abi_macro::AbiExample;
+use solana_frozen_abi_macro::{AbiExample, StableAbi, StableAbiSample};
 #[cfg(feature = "std")]
 use std::collections::HashSet;
 #[cfg(feature = "wincode")]
@@ -77,7 +77,7 @@ use {
 ///
 /// This message format does not support bincode binary serialization. Use the provided
 /// `serialize` and `deserialize` functions for binary encoding/decoding.
-#[cfg_attr(feature = "frozen-abi", derive(AbiExample))]
+#[cfg_attr(feature = "frozen-abi", derive(AbiExample, StableAbi, StableAbiSample))]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),

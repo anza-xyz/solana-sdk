@@ -50,8 +50,7 @@ impl From<Instruction> for StableInstruction {
 mod tests {
     use {
         super::*,
-        memoffset::offset_of,
-        std::mem::{align_of, size_of},
+        std::mem::{align_of, offset_of, size_of},
     };
 
     #[test]

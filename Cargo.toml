@@ -198,7 +198,6 @@ libc = "0.2.170"
 light-poseidon = "0.4.0"
 log = "0.4.25"
 memmap2 = "0.5.10"
-memoffset = "0.9"
 num-bigint = "0.4.6"
 num-derive = "0.4"
 num-traits = { version = "0.2.18", default-features = false }

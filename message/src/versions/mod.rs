@@ -1,7 +1,7 @@
 #[cfg(any(feature = "wincode", feature = "serde"))]
 use alloc::vec::Vec;
 #[cfg(feature = "frozen-abi")]
-use solana_frozen_abi_macro::{frozen_abi, AbiEnumVisitor, AbiExample};
+use solana_frozen_abi_macro::{frozen_abi, AbiEnumVisitor, AbiExample, StableAbi, StableAbiSample};
 #[cfg(feature = "std")]
 use std::collections::HashSet;
 use {
@@ -51,8 +51,13 @@ pub const MESSAGE_VERSION_PREFIX: u8 = 0x80;
 /// format.
 #[cfg_attr(
     feature = "frozen-abi",
-    frozen_abi(digest = "9xQQLkQntX2QKgwxbbpeuNrs5V2WopsBa11su46WWCro"),
-    derive(AbiEnumVisitor, AbiExample)
+    derive(AbiEnumVisitor, AbiExample, StableAbi, StableAbiSample),
+    frozen_abi(
+        digest = "9xQQLkQntX2QKgwxbbpeuNrs5V2WopsBa11su46WWCro",
+        abi_digest = "4F9XrnBYkNKecPExdyPDpQSSpegDoSHpaAmgvpWUmT3g",
+        abi_serializer = "wincode",
+        test_roundtrip = "eq_and_wire"
+    )
 )]
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum VersionedMessage {

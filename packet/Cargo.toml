@@ -25,7 +25,14 @@ serde = [
     "dep:serde_with",
     "solana-pubkey/serde",
 ]
-frozen-abi = ["dep:solana-frozen-abi", "dep:solana-frozen-abi-macro"]
+frozen-abi = [
+    "dep:solana-frozen-abi",
+    "dep:solana-frozen-abi-macro",
+    "serde",
+    "solana-pubkey/frozen-abi",
+    "wincode",
+]
+wincode = ["dep:wincode", "solana-pubkey/wincode"]
 
 [dependencies]
 bincode = { workspace = true, optional = true }
@@ -37,6 +44,7 @@ serde_with = { workspace = true, optional = true, features = ["macros"] }
 solana-frozen-abi = { workspace = true, optional = true, features = ["frozen-abi"] }
 solana-frozen-abi-macro = { workspace = true, optional = true, features = ["frozen-abi"] }
 solana-pubkey = { workspace = true }
+wincode = { workspace = true, optional = true }
 
 [dev-dependencies]
 solana-packet = { path = ".", features = ["dev-context-only-utils"] }
