@@ -4045,6 +4045,7 @@ dependencies = [
 name = "solana-nonce-account"
 version = "4.1.0"
 dependencies = [
+ "bincode",
  "solana-account",
  "solana-fee-calculator",
  "solana-hash",

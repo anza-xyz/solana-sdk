@@ -25,5 +25,6 @@ solana-sdk-ids = { workspace = true }
 wincode = { workspace = true, optional = true }
 
 [dev-dependencies]
+bincode = { workspace = true }
 solana-fee-calculator = { workspace = true }
 solana-pubkey = { workspace = true, features = ["std"] }
