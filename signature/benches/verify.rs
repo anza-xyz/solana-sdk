@@ -2,7 +2,7 @@
 use rayon::prelude::*;
 use {
     criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion},
-    curve25519::ed_sigs::SigningKey,
+    solana_ed25519::ed_sigs::SigningKey,
     solana_signature::Signature,
     std::vec::Vec,
 };

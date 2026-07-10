@@ -3610,9 +3610,9 @@ dependencies = [
 
 [[package]]
 name = "solana-ed25519"
-version = "0.2.1"
+version = "0.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "92d53e83c1a72952bcd3139c945689572721c8df6a8f78f25e39bae5c0fcab5c"
+checksum = "277eebda58d900c9ded260368ad5d298bd5e10ca7c9934df1758013b24c87545"
 dependencies = [
  "cfg-if",
  "cpufeatures 0.3.0",
@@ -3620,7 +3620,8 @@ dependencies = [
  "digest 0.11.3",
  "ed25519",
  "hashbrown 0.15.5",
- "rand_core 0.6.4",
+ "rand 0.10.2",
+ "rand_core 0.10.1",
  "rustc_version",
  "sha2 0.11.0",
  "subtle",
@@ -4610,8 +4611,6 @@ dependencies = [
  "criterion",
  "five8",
  "rand 0.9.4",
- "rand_chacha 0.3.1",
- "rand_core 0.6.4",
  "rayon",
  "serde",
  "serde-big-array",

@@ -90,10 +90,10 @@ impl Signature {
         &self,
         pubkey_bytes: &[u8],
         message_bytes: &[u8],
-    ) -> Result<(), curve25519::ed_sigs::Error> {
-        let publickey = curve25519::ed_sigs::VerificationKey::try_from(pubkey_bytes)?;
-        let signature = curve25519::ed_sigs::Signature::from_slice(self.as_ref())
-            .map_err(|_| curve25519::ed_sigs::Error::InvalidSignature)?;
+    ) -> Result<(), solana_ed25519::ed_sigs::Error> {
+        let publickey = solana_ed25519::ed_sigs::VerificationKey::try_from(pubkey_bytes)?;
+        let signature = solana_ed25519::ed_sigs::Signature::from_slice(self.as_ref())
+            .map_err(|_| solana_ed25519::ed_sigs::Error::InvalidSignature)?;
         publickey.verify_dalek(&signature, message_bytes)
     }
 
@@ -103,10 +103,10 @@ impl Signature {
         &self,
         pubkey_bytes: &[u8],
         message_bytes: &[u8],
-    ) -> Result<(), curve25519::ed_sigs::Error> {
-        let publickey = curve25519::ed_sigs::VerificationKey::try_from(pubkey_bytes)?;
-        let signature = curve25519::ed_sigs::Signature::from_slice(self.as_ref())
-            .map_err(|_| curve25519::ed_sigs::Error::InvalidSignature)?;
+    ) -> Result<(), solana_ed25519::ed_sigs::Error> {
+        let publickey = solana_ed25519::ed_sigs::VerificationKey::try_from(pubkey_bytes)?;
+        let signature = solana_ed25519::ed_sigs::Signature::from_slice(self.as_ref())
+            .map_err(|_| solana_ed25519::ed_sigs::Error::InvalidSignature)?;
         publickey.verify_zebra(&signature, message_bytes)
     }
 
@@ -163,26 +163,21 @@ impl Signature {
             return signature.verify(pubkey_bytes, message_bytes);
         }
 
-        let mut batch = curve25519::ed_sigs::batch::Verifier::new();
+        let mut batch = solana_ed25519::ed_sigs::batch::Verifier::new();
         for (signature, pubkey_bytes, message_bytes) in signature_data {
             let Ok(pubkey_bytes) =
-                curve25519::ed_sigs::VerificationKeyBytes::try_from(pubkey_bytes)
+                solana_ed25519::ed_sigs::VerificationKeyBytes::try_from(pubkey_bytes)
             else {
                 return false;
             };
             batch.queue((
                 pubkey_bytes,
-                curve25519::ed_sigs::Signature::from(*signature.as_array()),
+                solana_ed25519::ed_sigs::Signature::from(*signature.as_array()),
                 message_bytes,
             ));
         }
 
-        let Ok(rng) = <rand_chacha_0_3::ChaCha20Rng as rand_core_0_6::SeedableRng>::from_rng(
-            rand_core_0_6::OsRng,
-        ) else {
-            return false;
-        };
-        batch.verify(rng).is_ok()
+        batch.verify().is_ok()
     }
 
     /// Parallel batch-verifies signatures over their corresponding public keys
@@ -322,7 +317,7 @@ impl FromStr for Signature {
 mod tests {
     use {
         super::*,
-        curve25519::ed_sigs::SigningKey,
+        solana_ed25519::ed_sigs::SigningKey,
         serde_derive::{Deserialize, Serialize},
         solana_pubkey::Pubkey,
     };
@@ -377,7 +372,7 @@ mod tests {
         // Confirm golden's off-curvedness
         let mut off_curve_bits = [0u8; 32];
         off_curve_bits.copy_from_slice(&off_curve_bytes);
-        let off_curve_point = curve25519::edwards::CompressedEdwardsY(off_curve_bits);
+        let off_curve_point = solana_ed25519::edwards::CompressedEdwardsY(off_curve_bits);
         assert_eq!(off_curve_point.decompress(), None);
 
         let pubkey = Pubkey::try_from(off_curve_bytes).unwrap();

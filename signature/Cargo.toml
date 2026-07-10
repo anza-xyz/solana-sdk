@@ -22,8 +22,7 @@ batch-verify = [
     "alloc",
     "verify",
     "solana-ed25519/alloc",
-    "dep:rand_chacha_0_3",
-    "dep:rand_core_0_6",
+    "solana-ed25519/rand_core",
 ]
 bytemuck = ["dep:bytemuck", "dep:bytemuck_derive"]
 frozen-abi = ["dep:solana-frozen-abi", "dep:solana-frozen-abi-macro", "std"]
@@ -39,8 +38,6 @@ bytemuck = { workspace = true, optional = true }
 bytemuck_derive = { workspace = true, optional = true }
 five8 = { workspace = true }
 rand = { workspace = true, optional = true }
-rand_chacha_0_3 = { package = "rand_chacha", version = "0.3", default-features = false, optional = true }
-rand_core_0_6 = { package = "rand_core", version = "0.6.4", features = ["getrandom"], optional = true }
 rayon = { workspace = true, optional = true }
 serde = { workspace = true, optional = true }
 serde-big-array = { workspace = true, optional = true }
@@ -55,8 +52,6 @@ wincode = { workspace = true, optional = true }
 bincode = { workspace = true }
 bs58 = { workspace = true, features = ["std"] }
 criterion = { workspace = true }
-rand_chacha_0_3 = { package = "rand_chacha", version = "0.3", default-features = false }
-rand_core_0_6 = { package = "rand_core", version = "0.6.4", features = ["getrandom"] }
 serde_derive = { workspace = true }
 serde_json = { workspace = true }
 solana-ed25519 = { workspace = true, features = ["alloc"] }
