@@ -34,6 +34,11 @@ wincode = { workspace = true }
 console_error_panic_hook = { workspace = true }
 console_log = { workspace = true }
 getrandom = { workspace = true, features = ["wasm_js"] }
+# solana-ed25519 -> rand 0.10 pulls getrandom 0.4, which needs the wasm_js
+# backend enabled explicitly for wasm32-unknown-unknown.
+# so we have to have both versions of getrandom enabled for wasm32-unknown-unknown.
+# the alternative is to move the whole sdk to rand 0.10.0
+getrandom_0_4 = { package = "getrandom", version = "0.4", features = ["wasm_js"] }
 js-sys = { workspace = true }
 log = { workspace = true }
 wasm-bindgen = { workspace = true }
