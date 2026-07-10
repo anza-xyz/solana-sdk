@@ -84,8 +84,8 @@ impl Signature {
 
 #[cfg(any(test, feature = "verify"))]
 impl Signature {
-    // TODO: switch to non-strict since SIMD-0376 is merged, and switch [`Self::verify`] to call this method.
-    /// This will be in a follow-up PR.
+    // Once SIMD-0376 cleanup lands, [`Self::verify`] should call this method.
+    // Tracked in https://github.com/anza-xyz/solana-sdk/issues/819.
     pub(self) fn verify_verbose(
         &self,
         pubkey_bytes: &[u8],
@@ -97,8 +97,8 @@ impl Signature {
         publickey.verify_dalek(&signature, message_bytes)
     }
 
-    // TODO: remove since SIMD-0376 is merged
-    /// This will be in a follow-up PR.
+    // To be removed as part of the SIMD-0376 cleanup.
+    // Tracked in https://github.com/anza-xyz/solana-sdk/issues/819.
     pub(self) fn verify_non_strict_verbose(
         &self,
         pubkey_bytes: &[u8],
@@ -116,8 +116,8 @@ impl Signature {
     /// is the exact message that was signed. Returns `false` if verification
     /// fails or the public key cannot be parsed.
     ///
-    /// TODO: switch to zebra since SIMD-0376 is merged.
-    /// This will be in a follow-up PR.
+    /// Will switch to the zebra (ZIP-215) path as part of the SIMD-0376
+    /// cleanup, tracked in <https://github.com/anza-xyz/solana-sdk/issues/819>.
     pub fn verify(&self, pubkey_bytes: &[u8], message_bytes: &[u8]) -> bool {
         self.verify_verbose(pubkey_bytes, message_bytes).is_ok()
     }
@@ -127,8 +127,8 @@ impl Signature {
     /// `pubkey_bytes` is the signer's Ed25519 public key, and `message_bytes`
     /// is the exact message that was signed.
     ///
-    /// TODO: remove since SIMD-0376 is merged.
-    /// This will be in a follow-up PR.
+    /// To be removed as part of the SIMD-0376 cleanup, tracked in
+    /// <https://github.com/anza-xyz/solana-sdk/issues/819>.
     pub fn verify_non_strict(&self, pubkey_bytes: &[u8], message_bytes: &[u8]) -> bool {
         self.verify_non_strict_verbose(pubkey_bytes, message_bytes)
             .is_ok()
