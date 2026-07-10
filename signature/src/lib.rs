@@ -159,7 +159,8 @@ impl Signature {
             return true;
         }
         if signature_data.len() == 1 {
-            let (signature, pubkey_bytes, message_bytes) = signature_data.into_iter().next().unwrap();
+            let (signature, pubkey_bytes, message_bytes) =
+                signature_data.into_iter().next().unwrap();
             return signature.verify(pubkey_bytes, message_bytes);
         }
 
@@ -195,7 +196,7 @@ impl Signature {
         signature_data: impl ExactSizeIterator<Item = (&'a Signature, &'a [u8], &'a [u8])>,
     ) -> bool {
         // for small number of signatures, the overhead of parallelization is not worth it
-        if signature_data.len() <=16 {
+        if signature_data.len() <= 16 {
             return Self::batch_verify(signature_data);
         }
 
@@ -317,8 +318,8 @@ impl FromStr for Signature {
 mod tests {
     use {
         super::*,
-        solana_ed25519::ed_sigs::SigningKey,
         serde_derive::{Deserialize, Serialize},
+        solana_ed25519::ed_sigs::SigningKey,
         solana_pubkey::Pubkey,
     };
 
