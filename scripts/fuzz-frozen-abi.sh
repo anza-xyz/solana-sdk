@@ -1,5 +1,10 @@
 #!/usr/bin/env bash
 #
+# Environment variables:
+#   TOTAL_FUZZ_TIME  Total fuzzing time in seconds, optionally suffixed with "s"
+#                    (default: 120s). Build/preparation time is not counted.
+#   RUST_MIN_STACK   Rust stack size used by fuzz runs (default: 16777216).
+#
 # Usage:
 #   scripts/fuzz-frozen-abi.sh [target ...] [-- cargo-bolero-arg ...]
 #
@@ -19,10 +24,31 @@
 #        --corpus-dir __fuzz__/corpus \
 #        --crashes-dir __fuzz__/crashes
 #
-# Environment variables:
-#   TOTAL_FUZZ_TIME  Total fuzzing time in seconds, optionally suffixed with "s"
-#                    (default: 120s). Build/preparation time is not counted.
-#   RUST_MIN_STACK   Rust stack size used by fuzz runs (default: 16777216).
+# Reproduce the intentionally skipped serialization bug target:
+#     TOTAL_FUZZ_TIME=1s scripts/fuzz-frozen-abi.sh \
+#     'stable_abi::impls::tests::bolero_repro::TestFuzzerBreakSerializationAboveN_frozen_abi_fuzzer::test_fuzzer_wincode' \
+#     -- --package solana-frozen-abi \
+#        --features fuzz-bolero-repro \
+#        --corpus-dir frozen-abi/src/stable_abi/__fuzz__/stable_abi__impls__tests__bolero_repro__TestFuzzerBreakSerializationAboveN_frozen_abi_fuzzer__fuzzer_wincode/corpus \
+#        --crashes-dir frozen-abi/src/stable_abi/__fuzz__/stable_abi__impls__tests__bolero_repro__TestFuzzerBreakSerializationAboveN_frozen_abi_fuzzer__fuzzer_wincode/crashes
+#
+# Output:
+#
+# INFO: Running with entropic power schedule (0xFF, 100).
+# INFO: Seed: 404653315
+# INFO: Loaded 1 modules   (40652 inline 8-bit counters): 40652 [0x5884c28935b0, 0x5884c289d47c), 
+# INFO: Loaded 1 PC tables (40652 PCs): 40652 [0x5884c289d480,0x5884c293c140), 
+# INFO:        1 files found in frozen-abi/src/stable_abi/__fuzz__/stable_abi__impls__tests__bolero_repro__TestFuzzerBreakSerializationAboveN_frozen_abi_fuzzer__fuzzer_wincode/corpus
+# INFO:        0 files found in frozen-abi/src/stable_abi/__fuzz__/stable_abi__impls__tests__bolero_repro__TestFuzzerBreakSerializationAboveN_frozen_abi_fuzzer__fuzzer_wincode/crashes
+# INFO: -max_len is not provided; libFuzzer will not generate inputs larger than 4096 bytes
+# INFO: seed corpus: files: 1 min: 1b max: 1b total: 1b rss: 36Mb
+# test failed; shrinking input...
+
+# ======================== Test Failure ========================
+
+# Input: 
+# Length: 1 (0x1) bytes
+# 0000:   11
 #
 set -euo pipefail
 cd "$(dirname "$0")/.."
@@ -30,11 +56,6 @@ cd "$(dirname "$0")/.."
 export RUST_MIN_STACK="${RUST_MIN_STACK:-16777216}"
 
 duration="${TOTAL_FUZZ_TIME:-120s}"
-
-bolero_common_args=(
-  --features fuzz-bolero
-  --rustc-bootstrap
-)
 
 targets=()
 bolero_extra_args=()
@@ -48,6 +69,23 @@ while [[ "$#" -gt 0 ]]; do
   targets+=("$1")
   shift
 done
+
+bolero_common_args=(
+  --rustc-bootstrap
+)
+
+uses_custom_features=false
+for arg in "${bolero_extra_args[@]}"; do
+  case "$arg" in
+    --features|--features=*|--all-features)
+      uses_custom_features=true
+      ;;
+  esac
+done
+
+if [[ "$uses_custom_features" == false ]]; then
+  bolero_common_args+=(--features fuzz-bolero)
+fi
 
 if ((${#targets[@]} == 0)); then
   echo "listing fuzz targets from workspace" >&2

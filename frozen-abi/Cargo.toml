@@ -20,6 +20,7 @@ default = []
 # otherwise leave it off because it requires nightly Rust
 frozen-abi = ["dep:wincode", "solana-frozen-abi-macro/frozen-abi"]
 fuzz-bolero = ["dep:bolero", "frozen-abi"]
+fuzz-bolero-repro = ["fuzz-bolero"]
 
 [dependencies]
 boxcar = { workspace = true }

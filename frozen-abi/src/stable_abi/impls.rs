@@ -1268,4 +1268,36 @@ mod tests {
             test_roundtrip = "eq_and_wire"
         );
     }
+
+    // Intentionally broken type used to exercise fuzz repro workflows. The
+    // feature gate keeps it out of normal fuzz targets.
+    #[cfg(feature = "fuzz-bolero-repro")]
+    #[derive(PartialEq, wincode::SchemaRead)]
+    struct TestFuzzerBreakSerializationAboveN(u8);
+
+    #[cfg(feature = "fuzz-bolero-repro")]
+    unsafe impl<C: wincode::config::ConfigCore> wincode::SchemaWrite<C>
+        for TestFuzzerBreakSerializationAboveN
+    {
+        type Src = Self;
+
+        fn size_of(src: &Self::Src) -> wincode::WriteResult<usize> {
+            <u8 as wincode::SchemaWrite<C>>::size_of(&src.0)
+        }
+
+        fn write(writer: impl wincode::io::Writer, src: &Self::Src) -> wincode::WriteResult<()> {
+            assert!(src.0 <= 16, "intentional repro panic for values above 16");
+            <u8 as wincode::SchemaWrite<C>>::write(writer, &src.0)
+        }
+    }
+
+    #[cfg(feature = "fuzz-bolero-repro")]
+    mod bolero_repro {
+        solana_frozen_abi_macro::generate_serialization_test!(
+            super::TestFuzzerBreakSerializationAboveN,
+            strategy = "bolero_fuzzer",
+            serializer = "wincode",
+            test_roundtrip = "eq_and_wire"
+        );
+    }
 }
