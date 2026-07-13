@@ -279,3 +279,108 @@ impl From<BorshIoError> for ProgramError {
         Self::BorshIoError
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // Exhaustive on purpose: adding a variant without updating the
+    // conversions (and this test) fails to compile here.
+    fn builtin_code(error: &ProgramError) -> u64 {
+        match error {
+            ProgramError::Custom(_) => CUSTOM_ZERO,
+            ProgramError::InvalidArgument => INVALID_ARGUMENT,
+            ProgramError::InvalidInstructionData => INVALID_INSTRUCTION_DATA,
+            ProgramError::InvalidAccountData => INVALID_ACCOUNT_DATA,
+            ProgramError::AccountDataTooSmall => ACCOUNT_DATA_TOO_SMALL,
+            ProgramError::InsufficientFunds => INSUFFICIENT_FUNDS,
+            ProgramError::IncorrectProgramId => INCORRECT_PROGRAM_ID,
+            ProgramError::MissingRequiredSignature => MISSING_REQUIRED_SIGNATURES,
+            ProgramError::AccountAlreadyInitialized => ACCOUNT_ALREADY_INITIALIZED,
+            ProgramError::UninitializedAccount => UNINITIALIZED_ACCOUNT,
+            ProgramError::NotEnoughAccountKeys => NOT_ENOUGH_ACCOUNT_KEYS,
+            ProgramError::AccountBorrowFailed => ACCOUNT_BORROW_FAILED,
+            ProgramError::MaxSeedLengthExceeded => MAX_SEED_LENGTH_EXCEEDED,
+            ProgramError::InvalidSeeds => INVALID_SEEDS,
+            ProgramError::BorshIoError => BORSH_IO_ERROR,
+            ProgramError::AccountNotRentExempt => ACCOUNT_NOT_RENT_EXEMPT,
+            ProgramError::UnsupportedSysvar => UNSUPPORTED_SYSVAR,
+            ProgramError::IllegalOwner => ILLEGAL_OWNER,
+            ProgramError::MaxAccountsDataAllocationsExceeded => {
+                MAX_ACCOUNTS_DATA_ALLOCATIONS_EXCEEDED
+            }
+            ProgramError::InvalidRealloc => INVALID_ACCOUNT_DATA_REALLOC,
+            ProgramError::MaxInstructionTraceLengthExceeded => {
+                MAX_INSTRUCTION_TRACE_LENGTH_EXCEEDED
+            }
+            ProgramError::BuiltinProgramsMustConsumeComputeUnits => {
+                BUILTIN_PROGRAMS_MUST_CONSUME_COMPUTE_UNITS
+            }
+            ProgramError::InvalidAccountOwner => INVALID_ACCOUNT_OWNER,
+            ProgramError::ArithmeticOverflow => ARITHMETIC_OVERFLOW,
+            ProgramError::Immutable => IMMUTABLE,
+            ProgramError::IncorrectAuthority => INCORRECT_AUTHORITY,
+        }
+    }
+
+    #[test]
+    fn test_builtin_conversions_round_trip() {
+        let variants = [
+            ProgramError::Custom(0),
+            ProgramError::InvalidArgument,
+            ProgramError::InvalidInstructionData,
+            ProgramError::InvalidAccountData,
+            ProgramError::AccountDataTooSmall,
+            ProgramError::InsufficientFunds,
+            ProgramError::IncorrectProgramId,
+            ProgramError::MissingRequiredSignature,
+            ProgramError::AccountAlreadyInitialized,
+            ProgramError::UninitializedAccount,
+            ProgramError::NotEnoughAccountKeys,
+            ProgramError::AccountBorrowFailed,
+            ProgramError::MaxSeedLengthExceeded,
+            ProgramError::InvalidSeeds,
+            ProgramError::BorshIoError,
+            ProgramError::AccountNotRentExempt,
+            ProgramError::UnsupportedSysvar,
+            ProgramError::IllegalOwner,
+            ProgramError::MaxAccountsDataAllocationsExceeded,
+            ProgramError::InvalidRealloc,
+            ProgramError::MaxInstructionTraceLengthExceeded,
+            ProgramError::BuiltinProgramsMustConsumeComputeUnits,
+            ProgramError::InvalidAccountOwner,
+            ProgramError::ArithmeticOverflow,
+            ProgramError::Immutable,
+            ProgramError::IncorrectAuthority,
+        ];
+        for error in variants {
+            let code = builtin_code(&error);
+            assert_eq!(u64::from(error.clone()), code);
+            assert_eq!(ProgramError::from(code), error);
+        }
+    }
+
+    #[test]
+    fn test_custom_conversions_round_trip() {
+        assert_eq!(u64::from(ProgramError::Custom(0)), CUSTOM_ZERO);
+        assert_eq!(ProgramError::from(CUSTOM_ZERO), ProgramError::Custom(0));
+        for code in [1u64, 42, u32::MAX as u64] {
+            assert_eq!(u64::from(ProgramError::Custom(code as u32)), code);
+            assert_eq!(ProgramError::from(code), ProgramError::Custom(code as u32));
+        }
+    }
+
+    #[test]
+    fn test_unknown_codes_convert_to_custom() {
+        for (code, expected) in [
+            ((1u64 << BUILTIN_BIT_SHIFT) | 5, 5),
+            ((2u64 << BUILTIN_BIT_SHIFT) | 7, 7),
+            (27u64 << BUILTIN_BIT_SHIFT, 0),
+            // 0x102 truncates to 2 as u8; must not decode as InvalidArgument
+            (0x102u64 << BUILTIN_BIT_SHIFT, 0),
+            (u64::MAX, u32::MAX),
+        ] {
+            assert_eq!(ProgramError::from(code), ProgramError::Custom(expected));
+        }
+    }
+}
