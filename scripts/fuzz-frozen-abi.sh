@@ -1,22 +1,23 @@
 #!/usr/bin/env bash
 #
-# Runs Bolero fuzzers for frozen abi targets with specified strategy `fuzz-bolero`.
-#
 # Usage:
 #   scripts/fuzz-frozen-abi.sh [target ...] [-- cargo-bolero-arg ...]
 #
-# When no target is given, the script finds all
+# With no target arguments, the script lists all
 # *_frozen_abi_fuzzer::test_fuzzer_* targets in the workspace and splits
-# TOTAL_FUZZ_TIME between them.
-
-# Example:
+# TOTAL_FUZZ_TIME across them.
 #
-# RUST_MIN_STACK=16777216 TOTAL_FUZZ_TIME=60s scripts/fuzz-frozen-abi.sh \
-#   'stable_abi::impls::tests::bolero_fuzzer::TestFuzzerFeed_frozen_abi_fuzzer::test_fuzzer_wincode' \
-#   -- --package solana-frozen-abi \
-#      --max-input-length 64 \
-#      --corpus-dir __fuzz__/corpus \
-#      --crashes-dir __fuzz__/crashes
+# The script runs bolero fuzzing to explore new inputs. If inputs are saved in
+# a corpus or crashes directory, pass the same `--corpus-dir` and
+# `--crashes-dir` arguments to use them again.
+#
+# Example:
+#   RUST_MIN_STACK=16777216 TOTAL_FUZZ_TIME=60s scripts/fuzz-frozen-abi.sh \
+#     'stable_abi::impls::tests::bolero_fuzzer::TestFuzzerFeed_frozen_abi_fuzzer::test_fuzzer_wincode' \
+#     -- --package solana-frozen-abi \
+#        --max-input-length 64 \
+#        --corpus-dir __fuzz__/corpus \
+#        --crashes-dir __fuzz__/crashes
 #
 # Environment variables:
 #   TOTAL_FUZZ_TIME  Total fuzzing time in seconds, optionally suffixed with "s"
