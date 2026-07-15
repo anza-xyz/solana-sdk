@@ -9,6 +9,7 @@ use {
         compiled_instruction::CompiledInstruction, legacy::Message as LegacyMessage,
         v0::MessageAddressTableLookup, MessageHeader,
     },
+    alloc::collections::BTreeSet,
     solana_address::Address,
     solana_hash::Hash,
     solana_sanitize::{Sanitize, SanitizeError},
@@ -103,6 +104,20 @@ impl VersionedMessage {
     /// message.
     pub fn is_signer(&self, index: usize) -> bool {
         index < usize::from(self.header().num_required_signatures)
+    }
+
+    /// Returns true if the account at the specified index was requested as writable.
+    /// This has the same semantics as `is_maybe_writable` but is no-std.
+    pub fn is_maybe_writable_v2(
+        &self,
+        index: usize,
+        reserved_account_keys: Option<&BTreeSet<Address>>,
+    ) -> bool {
+        match self {
+            Self::Legacy(message) => message.is_maybe_writable_v2(index, reserved_account_keys),
+            Self::V0(message) => message.is_maybe_writable_v2(index, reserved_account_keys),
+            Self::V1(message) => message.is_maybe_writable_v2(index, reserved_account_keys),
+        }
     }
 
     /// Returns true if the account at the specified index is writable by the

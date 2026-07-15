@@ -53,7 +53,8 @@ use std::collections::HashSet;
 #[cfg(feature = "wincode")]
 use wincode::{SchemaRead, SchemaWrite, UninitBuilder};
 use {
-    crate::compiled_instruction::CompiledInstruction, alloc::vec::Vec,
+    crate::compiled_instruction::CompiledInstruction,
+    alloc::{collections::BTreeSet, vec::Vec},
     solana_sdk_ids::bpf_loader_upgradeable,
 };
 
@@ -165,7 +166,6 @@ pub struct AddressLookupTableAccount {
 ///
 /// This method should not be used directly. It is used by Legacy and V1
 /// message types.
-#[cfg(feature = "std")]
 #[inline(always)]
 fn is_writable_index(i: usize, header: MessageHeader, account_keys: &[Address]) -> bool {
     i < (header.num_required_signatures as usize)
@@ -178,17 +178,17 @@ fn is_writable_index(i: usize, header: MessageHeader, account_keys: &[Address]) 
 
 /// Returns true if the account at the specified index is in the optional
 /// reserved account keys set.
-#[cfg(feature = "std")]
 #[inline(always)]
-fn is_account_maybe_reserved(
+fn is_account_maybe_reserved<T>(
     i: usize,
     account_keys: &[Address],
-    reserved_account_keys: Option<&HashSet<Address>>,
+    reserved_account_keys: Option<&T>,
+    contains: impl FnOnce(&T, &Address) -> bool,
 ) -> bool {
     let mut is_maybe_reserved = false;
     if let Some(reserved_account_keys) = reserved_account_keys {
         if let Some(key) = account_keys.get(i) {
-            is_maybe_reserved = reserved_account_keys.contains(key);
+            is_maybe_reserved = contains(reserved_account_keys, key);
         }
     }
     is_maybe_reserved
@@ -223,6 +223,23 @@ fn is_upgradeable_loader_present(account_keys: &[Address]) -> bool {
 }
 
 /// Returns true if the account at the specified index is writable by the
+/// instructions in this message according to the supplied reserved account
+/// check.
+#[inline(always)]
+fn is_maybe_writable_impl<T>(
+    i: usize,
+    header: MessageHeader,
+    account_keys: &[Address],
+    instructions: &[CompiledInstruction],
+    reserved_account_keys: Option<&T>,
+    contains: impl FnOnce(&T, &Address) -> bool,
+) -> bool {
+    is_writable_index(i, header, account_keys)
+        && !is_account_maybe_reserved(i, account_keys, reserved_account_keys, contains)
+        && !is_program_id_write_demoted(i, account_keys, instructions)
+}
+
+/// Returns true if the account at the specified index is writable by the
 /// instructions in this message. The `reserved_account_keys` param has been
 /// optional to allow clients to approximate writability without requiring
 /// fetching the latest set of reserved account keys. If this method is
@@ -237,9 +254,32 @@ fn is_maybe_writable(
     instructions: &[CompiledInstruction],
     reserved_account_keys: Option<&HashSet<Address>>,
 ) -> bool {
-    (is_writable_index(i, header, account_keys))
-        && !is_account_maybe_reserved(i, account_keys, reserved_account_keys)
-        && !is_program_id_write_demoted(i, account_keys, instructions)
+    is_maybe_writable_impl(
+        i,
+        header,
+        account_keys,
+        instructions,
+        reserved_account_keys,
+        HashSet::contains,
+    )
+}
+
+#[inline(always)]
+fn is_maybe_writable_v2(
+    i: usize,
+    header: MessageHeader,
+    account_keys: &[Address],
+    instructions: &[CompiledInstruction],
+    reserved_account_keys: Option<&BTreeSet<Address>>,
+) -> bool {
+    is_maybe_writable_impl(
+        i,
+        header,
+        account_keys,
+        instructions,
+        reserved_account_keys,
+        BTreeSet::contains,
+    )
 }
 
 #[cfg(test)]
@@ -262,24 +302,43 @@ mod tests {
         };
 
         let reserved_account_keys = HashSet::from([key1]);
+        let no_reserved_account_keys = None::<&HashSet<Address>>;
 
         assert!(!is_account_maybe_reserved(
             0,
             &message.account_keys,
-            Some(&reserved_account_keys)
+            Some(&reserved_account_keys),
+            HashSet::contains,
         ));
         assert!(is_account_maybe_reserved(
             1,
             &message.account_keys,
-            Some(&reserved_account_keys)
+            Some(&reserved_account_keys),
+            HashSet::contains,
         ));
         assert!(!is_account_maybe_reserved(
             2,
             &message.account_keys,
-            Some(&reserved_account_keys)
+            Some(&reserved_account_keys),
+            HashSet::contains,
         ));
-        assert!(!is_account_maybe_reserved(0, &message.account_keys, None));
-        assert!(!is_account_maybe_reserved(1, &message.account_keys, None));
-        assert!(!is_account_maybe_reserved(2, &message.account_keys, None));
+        assert!(!is_account_maybe_reserved(
+            0,
+            &message.account_keys,
+            no_reserved_account_keys,
+            HashSet::contains,
+        ));
+        assert!(!is_account_maybe_reserved(
+            1,
+            &message.account_keys,
+            no_reserved_account_keys,
+            HashSet::contains,
+        ));
+        assert!(!is_account_maybe_reserved(
+            2,
+            &message.account_keys,
+            no_reserved_account_keys,
+            HashSet::contains,
+        ));
     }
 }

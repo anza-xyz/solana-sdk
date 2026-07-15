@@ -365,6 +365,22 @@ impl Message {
         crate::is_upgradeable_loader_present(&self.account_keys)
     }
 
+    /// Returns true if the account at the specified index was requested as writable.
+    /// This has the same semantics as `is_maybe_writable` but is no-std.
+    pub fn is_maybe_writable_v2(
+        &self,
+        key_index: usize,
+        reserved_account_keys: Option<&BTreeSet<Address>>,
+    ) -> bool {
+        crate::is_maybe_writable_v2(
+            key_index,
+            self.header,
+            &self.account_keys,
+            &self.instructions,
+            reserved_account_keys,
+        )
+    }
+
     /// Returns `true` if the account at the specified index was requested as
     /// writable.
     ///
@@ -716,7 +732,11 @@ pub fn deserialize(input: &[u8]) -> wincode::ReadResult<Message> {
 
 #[cfg(test)]
 mod tests {
-    use {super::*, alloc::vec, solana_sdk_ids::bpf_loader_upgradeable};
+    use {
+        super::*,
+        alloc::{collections::BTreeSet, vec},
+        solana_sdk_ids::bpf_loader_upgradeable,
+    };
 
     /// Builder for constructing V1 messages.
     ///
@@ -995,17 +1015,21 @@ mod tests {
         // Index 2 is readonly unsigned
         assert!(!message.is_writable_index(2));
         assert!(!message.is_maybe_writable(2, None));
+        assert!(!message.is_maybe_writable_v2(2, None));
         // Even with empty reserved set
         assert!(!message.is_maybe_writable(2, Some(&HashSet::new())));
+        assert!(!message.is_maybe_writable_v2(2, Some(&BTreeSet::new())));
     }
 
     #[test]
     fn is_maybe_writable_demotes_reserved_accounts() {
         let message = create_test_message();
         let reserved = HashSet::from([message.account_keys[0]]);
+        let reserved_v2 = BTreeSet::from([message.account_keys[0]]);
         // Fee payer is writable by index, but reserved → demoted
         assert!(message.is_writable_index(0));
         assert!(!message.is_maybe_writable(0, Some(&reserved)));
+        assert!(!message.is_maybe_writable_v2(0, Some(&reserved_v2)));
     }
 
     #[test]
@@ -1016,6 +1040,7 @@ mod tests {
         assert!(message.is_key_called_as_program(1));
         assert!(!message.is_upgradeable_loader_present());
         assert!(!message.is_maybe_writable(1, None));
+        assert!(!message.is_maybe_writable_v2(1, None));
     }
 
     #[test]
@@ -1030,6 +1055,7 @@ mod tests {
         assert!(message.is_upgradeable_loader_present());
         // Program not demoted because upgradeable loader is present
         assert!(message.is_maybe_writable(1, None));
+        assert!(message.is_maybe_writable_v2(1, None));
     }
 
     #[test]

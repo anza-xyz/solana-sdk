@@ -22,7 +22,7 @@ use {
         compiled_instruction::CompiledInstruction, compiled_keys::CompiledKeys,
         inline_nonce::advance_nonce_account_instruction, MessageHeader,
     },
-    alloc::vec::Vec,
+    alloc::{collections::BTreeSet, vec::Vec},
     core::convert::TryFrom,
     solana_address::Address,
     solana_hash::Hash,
@@ -579,6 +579,22 @@ impl Message {
         super::is_writable_index(i, self.header, &self.account_keys)
     }
 
+    /// Returns true if the account at the specified index was requested as writable.
+    /// This has the same semantics as `is_maybe_writable` but is no-std.
+    pub fn is_maybe_writable_v2(
+        &self,
+        i: usize,
+        reserved_account_keys: Option<&BTreeSet<Address>>,
+    ) -> bool {
+        super::is_maybe_writable_v2(
+            i,
+            self.header,
+            &self.account_keys,
+            &self.instructions,
+            reserved_account_keys,
+        )
+    }
+
     /// Returns true if the account at the specified index is writable by the
     /// instructions in this message. The `reserved_account_keys` param has been
     /// optional to allow clients to approximate writability without requiring
@@ -636,8 +652,13 @@ impl Message {
 #[cfg(test)]
 mod tests {
     use {
-        super::*, crate::MESSAGE_HEADER_LENGTH, alloc::vec, core::str::FromStr,
-        solana_instruction::AccountMeta, std::collections::HashSet,
+        super::*,
+        crate::MESSAGE_HEADER_LENGTH,
+        alloc::{collections::BTreeSet, vec},
+        core::str::FromStr,
+        solana_instruction::AccountMeta,
+        std::collections::HashSet,
+        test_case::test_case,
     };
 
     #[test]
@@ -722,8 +743,15 @@ mod tests {
         assert_eq!(message.program_position(2), Some(1));
     }
 
-    #[test]
-    fn test_is_maybe_writable() {
+    #[test_case(0, true, true; "writable signer")]
+    #[test_case(1, false, true; "first readonly signer")]
+    #[test_case(2, false, true; "second readonly signer")]
+    #[test_case(3, false, true; "reserved writable unsigned account")]
+    #[test_case(3, true, false; "writable unsigned account without reserved keys")]
+    #[test_case(4, true, true; "writable unsigned account")]
+    #[test_case(5, false, true; "readonly unsigned account")]
+    #[test_case(6, false, true; "out of bounds")]
+    fn test_is_maybe_writable(key_index: usize, expected: bool, with_reserved_account_keys: bool) {
         let key0 = Address::new_unique();
         let key1 = Address::new_unique();
         let key2 = Address::new_unique();
@@ -743,15 +771,20 @@ mod tests {
         };
 
         let reserved_account_keys = HashSet::from([key3]);
+        let reserved_account_keys_v2 = BTreeSet::from([key3]);
+        let maybe_reserved_account_keys =
+            with_reserved_account_keys.then_some(&reserved_account_keys);
+        let maybe_reserved_account_keys_v2 =
+            with_reserved_account_keys.then_some(&reserved_account_keys_v2);
 
-        assert!(message.is_maybe_writable(0, Some(&reserved_account_keys)));
-        assert!(!message.is_maybe_writable(1, Some(&reserved_account_keys)));
-        assert!(!message.is_maybe_writable(2, Some(&reserved_account_keys)));
-        assert!(!message.is_maybe_writable(3, Some(&reserved_account_keys)));
-        assert!(message.is_maybe_writable(3, None));
-        assert!(message.is_maybe_writable(4, Some(&reserved_account_keys)));
-        assert!(!message.is_maybe_writable(5, Some(&reserved_account_keys)));
-        assert!(!message.is_maybe_writable(6, Some(&reserved_account_keys)));
+        assert_eq!(
+            message.is_maybe_writable(key_index, maybe_reserved_account_keys),
+            expected,
+        );
+        assert_eq!(
+            message.is_maybe_writable_v2(key_index, maybe_reserved_account_keys_v2),
+            expected,
+        );
     }
 
     #[test]

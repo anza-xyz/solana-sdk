@@ -14,20 +14,21 @@ pub use loaded::*;
 use serde_derive::{Deserialize, Serialize};
 #[cfg(feature = "frozen-abi")]
 use solana_frozen_abi_macro::{frozen_abi, AbiExample, StableAbi, StableAbiSample};
+#[cfg(feature = "std")]
+use std::collections::HashSet;
 use {
     crate::{
         compiled_instruction::CompiledInstruction,
         compiled_keys::{CompileError, CompiledKeys},
         AccountKeys, AddressLookupTableAccount, MessageHeader,
     },
-    alloc::vec::Vec,
+    alloc::{collections::BTreeSet, vec::Vec},
     solana_address::Address,
     solana_hash::Hash,
     solana_instruction::Instruction,
     solana_sanitize::SanitizeError,
+    solana_sdk_ids::bpf_loader_upgradeable,
 };
-#[cfg(feature = "std")]
-use {solana_sdk_ids::bpf_loader_upgradeable, std::collections::HashSet};
 #[cfg(feature = "wincode")]
 use {
     solana_short_vec::ShortU16,
@@ -355,7 +356,6 @@ impl Message {
 
     /// Returns true if the account at the specified index was requested to be
     /// writable.  This method should not be used directly.
-    #[cfg(feature = "std")]
     fn is_writable_index(&self, key_index: usize) -> bool {
         let header = &self.header;
         let num_account_keys = self.account_keys.len();
@@ -382,7 +382,6 @@ impl Message {
     }
 
     /// Returns true if any static account key is the bpf upgradeable loader
-    #[cfg(feature = "std")]
     fn is_upgradeable_loader_in_static_keys(&self) -> bool {
         self.account_keys
             .iter()
@@ -400,8 +399,22 @@ impl Message {
         key_index: usize,
         reserved_account_keys: Option<&HashSet<Address>>,
     ) -> bool {
+        self.is_maybe_writable_impl(key_index, reserved_account_keys, HashSet::contains)
+    }
+
+    fn is_maybe_writable_impl<T>(
+        &self,
+        key_index: usize,
+        reserved_account_keys: Option<&T>,
+        contains: impl FnOnce(&T, &Address) -> bool,
+    ) -> bool {
         self.is_writable_index(key_index)
-            && !self.is_account_maybe_reserved(key_index, reserved_account_keys)
+            && !crate::is_account_maybe_reserved(
+                key_index,
+                &self.account_keys,
+                reserved_account_keys,
+                contains,
+            )
             && !{
                 // demote program ids
                 self.is_key_called_as_program(key_index)
@@ -409,28 +422,26 @@ impl Message {
             }
     }
 
-    /// Returns true if the account at the specified index is in the reserved
-    /// account keys set. Before loading addresses, we can't detect reserved
-    /// account keys properly so this shouldn't be used by the runtime.
-    #[cfg(feature = "std")]
-    fn is_account_maybe_reserved(
+    /// Returns true if the account at the specified index was requested as writable.
+    /// This has the same semantics as `is_maybe_writable` but is no-std.
+    pub fn is_maybe_writable_v2(
         &self,
         key_index: usize,
-        reserved_account_keys: Option<&HashSet<Address>>,
+        reserved_account_keys: Option<&BTreeSet<Address>>,
     ) -> bool {
-        let mut is_maybe_reserved = false;
-        if let Some(reserved_account_keys) = reserved_account_keys {
-            if let Some(key) = self.account_keys.get(key_index) {
-                is_maybe_reserved = reserved_account_keys.contains(key);
-            }
-        }
-        is_maybe_reserved
+        self.is_maybe_writable_impl(key_index, reserved_account_keys, BTreeSet::contains)
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use {super::*, crate::VersionedMessage, alloc::vec, solana_instruction::AccountMeta};
+    use {
+        super::*,
+        crate::VersionedMessage,
+        alloc::{collections::BTreeSet, vec},
+        solana_instruction::AccountMeta,
+        test_case::test_case,
+    };
 
     #[test]
     fn test_sanitize() {
@@ -757,8 +768,17 @@ mod tests {
         );
     }
 
-    #[test]
-    fn test_is_maybe_writable() {
+    #[test_case(0, true, true; "writable signer")]
+    #[test_case(1, false, true; "first readonly signer")]
+    #[test_case(2, false, true; "second readonly signer")]
+    #[test_case(3, false, true; "reserved writable unsigned static account")]
+    #[test_case(3, true, false; "writable unsigned static account without reserved keys")]
+    #[test_case(4, true, true; "writable unsigned static account")]
+    #[test_case(5, false, true; "readonly unsigned static account")]
+    #[test_case(6, true, true; "writable loaded account")]
+    #[test_case(7, false, true; "readonly loaded account")]
+    #[test_case(8, false, true; "out of bounds")]
+    fn test_is_maybe_writable(key_index: usize, expected: bool, with_reserved_account_keys: bool) {
         let key0 = Address::new_unique();
         let key1 = Address::new_unique();
         let key2 = Address::new_unique();
@@ -782,17 +802,20 @@ mod tests {
         };
 
         let reserved_account_keys = HashSet::from([key3]);
+        let reserved_account_keys_v2 = BTreeSet::from([key3]);
+        let maybe_reserved_account_keys =
+            with_reserved_account_keys.then_some(&reserved_account_keys);
+        let maybe_reserved_account_keys_v2 =
+            with_reserved_account_keys.then_some(&reserved_account_keys_v2);
 
-        assert!(message.is_maybe_writable(0, Some(&reserved_account_keys)));
-        assert!(!message.is_maybe_writable(1, Some(&reserved_account_keys)));
-        assert!(!message.is_maybe_writable(2, Some(&reserved_account_keys)));
-        assert!(!message.is_maybe_writable(3, Some(&reserved_account_keys)));
-        assert!(message.is_maybe_writable(3, None));
-        assert!(message.is_maybe_writable(4, Some(&reserved_account_keys)));
-        assert!(!message.is_maybe_writable(5, Some(&reserved_account_keys)));
-        assert!(message.is_maybe_writable(6, Some(&reserved_account_keys)));
-        assert!(!message.is_maybe_writable(7, Some(&reserved_account_keys)));
-        assert!(!message.is_maybe_writable(8, Some(&reserved_account_keys)));
+        assert_eq!(
+            message.is_maybe_writable(key_index, maybe_reserved_account_keys),
+            expected,
+        );
+        assert_eq!(
+            message.is_maybe_writable_v2(key_index, maybe_reserved_account_keys_v2),
+            expected,
+        );
     }
 
     #[test]
@@ -811,16 +834,25 @@ mod tests {
         };
 
         let reserved_account_keys = HashSet::from([key1]);
+        let is_account_maybe_reserved =
+            |key_index, reserved_account_keys: Option<&HashSet<Address>>| {
+                crate::is_account_maybe_reserved(
+                    key_index,
+                    &message.account_keys,
+                    reserved_account_keys,
+                    HashSet::contains,
+                )
+            };
 
-        assert!(!message.is_account_maybe_reserved(0, Some(&reserved_account_keys)));
-        assert!(message.is_account_maybe_reserved(1, Some(&reserved_account_keys)));
-        assert!(!message.is_account_maybe_reserved(2, Some(&reserved_account_keys)));
-        assert!(!message.is_account_maybe_reserved(3, Some(&reserved_account_keys)));
-        assert!(!message.is_account_maybe_reserved(4, Some(&reserved_account_keys)));
-        assert!(!message.is_account_maybe_reserved(0, None));
-        assert!(!message.is_account_maybe_reserved(1, None));
-        assert!(!message.is_account_maybe_reserved(2, None));
-        assert!(!message.is_account_maybe_reserved(3, None));
-        assert!(!message.is_account_maybe_reserved(4, None));
+        assert!(!is_account_maybe_reserved(0, Some(&reserved_account_keys)));
+        assert!(is_account_maybe_reserved(1, Some(&reserved_account_keys)));
+        assert!(!is_account_maybe_reserved(2, Some(&reserved_account_keys)));
+        assert!(!is_account_maybe_reserved(3, Some(&reserved_account_keys)));
+        assert!(!is_account_maybe_reserved(4, Some(&reserved_account_keys)));
+        assert!(!is_account_maybe_reserved(0, None));
+        assert!(!is_account_maybe_reserved(1, None));
+        assert!(!is_account_maybe_reserved(2, None));
+        assert!(!is_account_maybe_reserved(3, None));
+        assert!(!is_account_maybe_reserved(4, None));
     }
 }
