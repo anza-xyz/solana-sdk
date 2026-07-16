@@ -7,5 +7,5 @@ pub use {
 impl_sysvar_id!(Rent);
 
 impl GetSysvar for Rent {
-    impl_get_sysvar!(id(), 7);
+    impl_get_sysvar!(ID, 7);
 }
