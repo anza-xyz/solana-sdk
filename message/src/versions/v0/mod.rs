@@ -794,5 +794,4 @@ mod tests {
         assert!(!message.is_maybe_writable(7, Some(&reserved_account_keys)));
         assert!(!message.is_maybe_writable(8, Some(&reserved_account_keys)));
     }
-
 }

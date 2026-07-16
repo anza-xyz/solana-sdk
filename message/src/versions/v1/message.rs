@@ -739,11 +739,7 @@ pub fn deserialize(input: &[u8]) -> wincode::ReadResult<Message> {
 
 #[cfg(test)]
 mod tests {
-    use {
-        super::*,
-        alloc::vec,
-        solana_sdk_ids::bpf_loader_upgradeable,
-    };
+    use {super::*, alloc::vec, solana_sdk_ids::bpf_loader_upgradeable};
 
     /// Builder for constructing V1 messages.
     ///
