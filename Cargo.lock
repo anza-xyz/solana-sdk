@@ -4012,7 +4012,6 @@ dependencies = [
  "solana-system-interface",
  "solana-transaction-error",
  "static_assertions",
- "test-case",
  "wincode",
 ]
 

@@ -7,9 +7,8 @@ use std::collections::HashSet;
 use {
     crate::{
         compiled_instruction::CompiledInstruction, legacy::Message as LegacyMessage,
-        v0::MessageAddressTableLookup, MessageHeader,
+        v0::MessageAddressTableLookup, AddressSet, MessageHeader,
     },
-    alloc::collections::BTreeSet,
     solana_address::Address,
     solana_hash::Hash,
     solana_sanitize::{Sanitize, SanitizeError},
@@ -106,34 +105,33 @@ impl VersionedMessage {
         index < usize::from(self.header().num_required_signatures)
     }
 
-    /// Returns true if the account at the specified index was requested as writable.
-    /// This has the same semantics as `is_maybe_writable` but is no-std.
-    pub fn is_maybe_writable_v2(
+    /// Returns true if the account at the specified index is writable by the
+    /// instructions in this message. Since dynamically loaded addresses can't
+    /// have write locks demoted without loading addresses, this shouldn't be
+    /// used in the runtime.
+    #[cfg(feature = "std")]
+    #[deprecated(since = "4.4.0", note = "Use `is_maybe_writable_v2` instead")]
+    pub fn is_maybe_writable(
         &self,
         index: usize,
-        reserved_account_keys: Option<&BTreeSet<Address>>,
+        reserved_account_keys: Option<&HashSet<Address>>,
     ) -> bool {
-        match self {
-            Self::Legacy(message) => message.is_maybe_writable_v2(index, reserved_account_keys),
-            Self::V0(message) => message.is_maybe_writable_v2(index, reserved_account_keys),
-            Self::V1(message) => message.is_maybe_writable_v2(index, reserved_account_keys),
-        }
+        self.is_maybe_writable_v2(index, reserved_account_keys)
     }
 
     /// Returns true if the account at the specified index is writable by the
     /// instructions in this message. Since dynamically loaded addresses can't
     /// have write locks demoted without loading addresses, this shouldn't be
     /// used in the runtime.
-    #[cfg(feature = "std")]
-    pub fn is_maybe_writable(
+    pub fn is_maybe_writable_v2<T: AddressSet>(
         &self,
         index: usize,
-        reserved_account_keys: Option<&HashSet<Address>>,
+        reserved_account_keys: Option<&T>,
     ) -> bool {
         match self {
-            Self::Legacy(message) => message.is_maybe_writable(index, reserved_account_keys),
-            Self::V0(message) => message.is_maybe_writable(index, reserved_account_keys),
-            Self::V1(message) => message.is_maybe_writable(index, reserved_account_keys),
+            Self::Legacy(message) => message.is_maybe_writable_v2(index, reserved_account_keys),
+            Self::V0(message) => message.is_maybe_writable_v2(index, reserved_account_keys),
+            Self::V1(message) => message.is_maybe_writable_v2(index, reserved_account_keys),
         }
     }
 

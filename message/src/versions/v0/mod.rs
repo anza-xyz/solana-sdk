@@ -20,9 +20,9 @@ use {
     crate::{
         compiled_instruction::CompiledInstruction,
         compiled_keys::{CompileError, CompiledKeys},
-        AccountKeys, AddressLookupTableAccount, MessageHeader,
+        AccountKeys, AddressLookupTableAccount, AddressSet, MessageHeader,
     },
-    alloc::{collections::BTreeSet, vec::Vec},
+    alloc::vec::Vec,
     solana_address::Address,
     solana_hash::Hash,
     solana_instruction::Instruction,
@@ -394,26 +394,30 @@ impl Message {
     /// param is optional to allow clients to approximate writability without
     /// requiring fetching the latest set of reserved account keys.
     #[cfg(feature = "std")]
+    #[deprecated(since = "4.4.0", note = "Use `is_maybe_writable_v2` instead")]
     pub fn is_maybe_writable(
         &self,
         key_index: usize,
         reserved_account_keys: Option<&HashSet<Address>>,
     ) -> bool {
-        self.is_maybe_writable_impl(key_index, reserved_account_keys, HashSet::contains)
+        self.is_maybe_writable_v2(key_index, reserved_account_keys)
     }
 
-    fn is_maybe_writable_impl<T>(
+    /// Returns true if the account at the specified index was requested as
+    /// writable. Before loading addresses, we can't demote write locks properly
+    /// so this should not be used by the runtime. The `reserved_account_keys`
+    /// param is optional to allow clients to approximate writability without
+    /// requiring fetching the latest set of reserved account keys.
+    pub fn is_maybe_writable_v2<T: AddressSet>(
         &self,
         key_index: usize,
         reserved_account_keys: Option<&T>,
-        contains: impl FnOnce(&T, &Address) -> bool,
     ) -> bool {
         self.is_writable_index(key_index)
             && !crate::is_account_maybe_reserved(
                 key_index,
                 &self.account_keys,
                 reserved_account_keys,
-                contains,
             )
             && !{
                 // demote program ids
@@ -421,27 +425,11 @@ impl Message {
                     && !self.is_upgradeable_loader_in_static_keys()
             }
     }
-
-    /// Returns true if the account at the specified index was requested as writable.
-    /// This has the same semantics as `is_maybe_writable` but is no-std.
-    pub fn is_maybe_writable_v2(
-        &self,
-        key_index: usize,
-        reserved_account_keys: Option<&BTreeSet<Address>>,
-    ) -> bool {
-        self.is_maybe_writable_impl(key_index, reserved_account_keys, BTreeSet::contains)
-    }
 }
 
 #[cfg(test)]
 mod tests {
-    use {
-        super::*,
-        crate::VersionedMessage,
-        alloc::{collections::BTreeSet, vec},
-        solana_instruction::AccountMeta,
-        test_case::test_case,
-    };
+    use {super::*, crate::VersionedMessage, alloc::vec, solana_instruction::AccountMeta};
 
     #[test]
     fn test_sanitize() {
@@ -768,17 +756,9 @@ mod tests {
         );
     }
 
-    #[test_case(0, true, true; "writable signer")]
-    #[test_case(1, false, true; "first readonly signer")]
-    #[test_case(2, false, true; "second readonly signer")]
-    #[test_case(3, false, true; "reserved writable unsigned static account")]
-    #[test_case(3, true, false; "writable unsigned static account without reserved keys")]
-    #[test_case(4, true, true; "writable unsigned static account")]
-    #[test_case(5, false, true; "readonly unsigned static account")]
-    #[test_case(6, true, true; "writable loaded account")]
-    #[test_case(7, false, true; "readonly loaded account")]
-    #[test_case(8, false, true; "out of bounds")]
-    fn test_is_maybe_writable(key_index: usize, expected: bool, with_reserved_account_keys: bool) {
+    #[test]
+    #[allow(deprecated)]
+    fn test_is_maybe_writable() {
         let key0 = Address::new_unique();
         let key1 = Address::new_unique();
         let key2 = Address::new_unique();
@@ -802,57 +782,17 @@ mod tests {
         };
 
         let reserved_account_keys = HashSet::from([key3]);
-        let reserved_account_keys_v2 = BTreeSet::from([key3]);
-        let maybe_reserved_account_keys =
-            with_reserved_account_keys.then_some(&reserved_account_keys);
-        let maybe_reserved_account_keys_v2 =
-            with_reserved_account_keys.then_some(&reserved_account_keys_v2);
 
-        assert_eq!(
-            message.is_maybe_writable(key_index, maybe_reserved_account_keys),
-            expected,
-        );
-        assert_eq!(
-            message.is_maybe_writable_v2(key_index, maybe_reserved_account_keys_v2),
-            expected,
-        );
+        assert!(message.is_maybe_writable(0, Some(&reserved_account_keys)));
+        assert!(!message.is_maybe_writable(1, Some(&reserved_account_keys)));
+        assert!(!message.is_maybe_writable(2, Some(&reserved_account_keys)));
+        assert!(!message.is_maybe_writable(3, Some(&reserved_account_keys)));
+        assert!(message.is_maybe_writable(3, None));
+        assert!(message.is_maybe_writable(4, Some(&reserved_account_keys)));
+        assert!(!message.is_maybe_writable(5, Some(&reserved_account_keys)));
+        assert!(message.is_maybe_writable(6, Some(&reserved_account_keys)));
+        assert!(!message.is_maybe_writable(7, Some(&reserved_account_keys)));
+        assert!(!message.is_maybe_writable(8, Some(&reserved_account_keys)));
     }
 
-    #[test]
-    fn test_is_account_maybe_reserved() {
-        let key0 = Address::new_unique();
-        let key1 = Address::new_unique();
-
-        let message = Message {
-            account_keys: vec![key0, key1],
-            address_table_lookups: vec![MessageAddressTableLookup {
-                account_key: Address::new_unique(),
-                writable_indexes: vec![0],
-                readonly_indexes: vec![1],
-            }],
-            ..Message::default()
-        };
-
-        let reserved_account_keys = HashSet::from([key1]);
-        let is_account_maybe_reserved =
-            |key_index, reserved_account_keys: Option<&HashSet<Address>>| {
-                crate::is_account_maybe_reserved(
-                    key_index,
-                    &message.account_keys,
-                    reserved_account_keys,
-                    HashSet::contains,
-                )
-            };
-
-        assert!(!is_account_maybe_reserved(0, Some(&reserved_account_keys)));
-        assert!(is_account_maybe_reserved(1, Some(&reserved_account_keys)));
-        assert!(!is_account_maybe_reserved(2, Some(&reserved_account_keys)));
-        assert!(!is_account_maybe_reserved(3, Some(&reserved_account_keys)));
-        assert!(!is_account_maybe_reserved(4, Some(&reserved_account_keys)));
-        assert!(!is_account_maybe_reserved(0, None));
-        assert!(!is_account_maybe_reserved(1, None));
-        assert!(!is_account_maybe_reserved(2, None));
-        assert!(!is_account_maybe_reserved(3, None));
-        assert!(!is_account_maybe_reserved(4, None));
-    }
 }

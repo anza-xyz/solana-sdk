@@ -62,7 +62,7 @@ use {
             MessageError, TransactionConfig, TransactionConfigMask, MAX_ADDRESSES, MAX_HEAP_SIZE,
             MAX_INSTRUCTIONS, MAX_SIGNATURES, MIN_HEAP_SIZE,
         },
-        AccountKeys, CompileError, MessageHeader,
+        AccountKeys, AddressSet, CompileError, MessageHeader,
     },
     alloc::{collections::BTreeSet, vec::Vec},
     core::mem::size_of,
@@ -365,20 +365,28 @@ impl Message {
         crate::is_upgradeable_loader_present(&self.account_keys)
     }
 
-    /// Returns true if the account at the specified index was requested as writable.
-    /// This has the same semantics as `is_maybe_writable` but is no-std.
-    pub fn is_maybe_writable_v2(
+    /// Returns `true` if the account at the specified index was requested as
+    /// writable.
+    ///
+    ///
+    /// # Important
+    ///
+    /// Before loading addresses, we can't demote write locks properly so this should
+    /// not be used by the runtime. The `reserved_account_keys` parameter is optional
+    /// to allow clients to approximate writability without requiring fetching the latest
+    /// set of reserved account keys.
+    ///
+    /// Program accounts are demoted from writable to readonly, unless the upgradeable
+    /// loader is present in which case they are left as writable since upgradeable
+    /// programs need to be writable for upgrades.
+    #[cfg(feature = "std")]
+    #[deprecated(since = "4.4.0", note = "Use `is_maybe_writable_v2` instead")]
+    pub fn is_maybe_writable(
         &self,
         key_index: usize,
-        reserved_account_keys: Option<&BTreeSet<Address>>,
+        reserved_account_keys: Option<&HashSet<Address>>,
     ) -> bool {
-        crate::is_maybe_writable_v2(
-            key_index,
-            self.header,
-            &self.account_keys,
-            &self.instructions,
-            reserved_account_keys,
-        )
+        self.is_maybe_writable_v2(key_index, reserved_account_keys)
     }
 
     /// Returns `true` if the account at the specified index was requested as
@@ -395,11 +403,10 @@ impl Message {
     /// Program accounts are demoted from writable to readonly, unless the upgradeable
     /// loader is present in which case they are left as writable since upgradeable
     /// programs need to be writable for upgrades.
-    #[cfg(feature = "std")]
-    pub fn is_maybe_writable(
+    pub fn is_maybe_writable_v2<T: AddressSet>(
         &self,
         key_index: usize,
-        reserved_account_keys: Option<&HashSet<Address>>,
+        reserved_account_keys: Option<&T>,
     ) -> bool {
         crate::is_maybe_writable(
             key_index,
@@ -734,7 +741,7 @@ pub fn deserialize(input: &[u8]) -> wincode::ReadResult<Message> {
 mod tests {
     use {
         super::*,
-        alloc::{collections::BTreeSet, vec},
+        alloc::vec,
         solana_sdk_ids::bpf_loader_upgradeable,
     };
 
@@ -1010,29 +1017,28 @@ mod tests {
     }
 
     #[test]
+    #[allow(deprecated)]
     fn is_maybe_writable_returns_false_for_readonly_index() {
         let message = create_test_message();
         // Index 2 is readonly unsigned
         assert!(!message.is_writable_index(2));
         assert!(!message.is_maybe_writable(2, None));
-        assert!(!message.is_maybe_writable_v2(2, None));
         // Even with empty reserved set
         assert!(!message.is_maybe_writable(2, Some(&HashSet::new())));
-        assert!(!message.is_maybe_writable_v2(2, Some(&BTreeSet::new())));
     }
 
     #[test]
+    #[allow(deprecated)]
     fn is_maybe_writable_demotes_reserved_accounts() {
         let message = create_test_message();
         let reserved = HashSet::from([message.account_keys[0]]);
-        let reserved_v2 = BTreeSet::from([message.account_keys[0]]);
         // Fee payer is writable by index, but reserved → demoted
         assert!(message.is_writable_index(0));
         assert!(!message.is_maybe_writable(0, Some(&reserved)));
-        assert!(!message.is_maybe_writable_v2(0, Some(&reserved_v2)));
     }
 
     #[test]
+    #[allow(deprecated)]
     fn is_maybe_writable_demotes_programs_without_upgradeable_loader() {
         let message = create_test_message();
         // Index 1 is writable unsigned, called as program, no upgradeable loader
@@ -1040,10 +1046,10 @@ mod tests {
         assert!(message.is_key_called_as_program(1));
         assert!(!message.is_upgradeable_loader_present());
         assert!(!message.is_maybe_writable(1, None));
-        assert!(!message.is_maybe_writable_v2(1, None));
     }
 
     #[test]
+    #[allow(deprecated)]
     fn is_maybe_writable_preserves_programs_with_upgradeable_loader() {
         let mut message = create_test_message();
         // Add upgradeable loader to account keys
@@ -1055,7 +1061,6 @@ mod tests {
         assert!(message.is_upgradeable_loader_present());
         // Program not demoted because upgradeable loader is present
         assert!(message.is_maybe_writable(1, None));
-        assert!(message.is_maybe_writable_v2(1, None));
     }
 
     #[test]
