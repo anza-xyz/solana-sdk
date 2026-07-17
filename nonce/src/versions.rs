@@ -1,5 +1,7 @@
 //! State for durable transaction nonces.
 
+#[cfg(feature = "frozen-abi")]
+use solana_frozen_abi_macro::{AbiExample, StableAbi, StableAbiSample};
 #[cfg(feature = "wincode")]
 use wincode::{SchemaRead, SchemaWrite};
 use {
@@ -9,6 +11,7 @@ use {
     std::collections::HashSet,
 };
 
+#[cfg_attr(feature = "frozen-abi", derive(AbiExample, StableAbiSample, StableAbi))]
 #[cfg_attr(
     feature = "serde",
     derive(serde_derive::Deserialize, serde_derive::Serialize)
