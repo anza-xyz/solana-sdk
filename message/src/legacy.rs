@@ -586,13 +586,16 @@ impl Message {
     /// called by the runtime, the latest set of reserved account keys must be
     /// passed.
     #[cfg(feature = "std")]
-    #[deprecated(since = "4.4.0", note = "Use `is_maybe_writable_v2` instead")]
+    #[deprecated(
+        since = "4.4.0",
+        note = "Use `is_maybe_writable_with_address_set` instead"
+    )]
     pub fn is_maybe_writable(
         &self,
         i: usize,
         reserved_account_keys: Option<&HashSet<Address>>,
     ) -> bool {
-        self.is_maybe_writable_v2(i, reserved_account_keys)
+        self.is_maybe_writable_with_address_set(i, reserved_account_keys)
     }
 
     /// Returns true if the account at the specified index is writable by the
@@ -601,7 +604,7 @@ impl Message {
     /// fetching the latest set of reserved account keys. If this method is
     /// called by the runtime, the latest set of reserved account keys must be
     /// passed.
-    pub fn is_maybe_writable_v2<T: AddressSet>(
+    pub fn is_maybe_writable_with_address_set<T: AddressSet>(
         &self,
         i: usize,
         reserved_account_keys: Option<&T>,

@@ -380,13 +380,16 @@ impl Message {
     /// loader is present in which case they are left as writable since upgradeable
     /// programs need to be writable for upgrades.
     #[cfg(feature = "std")]
-    #[deprecated(since = "4.4.0", note = "Use `is_maybe_writable_v2` instead")]
+    #[deprecated(
+        since = "4.4.0",
+        note = "Use `is_maybe_writable_with_address_set` instead"
+    )]
     pub fn is_maybe_writable(
         &self,
         key_index: usize,
         reserved_account_keys: Option<&HashSet<Address>>,
     ) -> bool {
-        self.is_maybe_writable_v2(key_index, reserved_account_keys)
+        self.is_maybe_writable_with_address_set(key_index, reserved_account_keys)
     }
 
     /// Returns `true` if the account at the specified index was requested as
@@ -403,7 +406,7 @@ impl Message {
     /// Program accounts are demoted from writable to readonly, unless the upgradeable
     /// loader is present in which case they are left as writable since upgradeable
     /// programs need to be writable for upgrades.
-    pub fn is_maybe_writable_v2<T: AddressSet>(
+    pub fn is_maybe_writable_with_address_set<T: AddressSet>(
         &self,
         key_index: usize,
         reserved_account_keys: Option<&T>,
