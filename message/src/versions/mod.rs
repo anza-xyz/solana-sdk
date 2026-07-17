@@ -112,34 +112,34 @@ impl VersionedMessage {
     #[cfg(feature = "std")]
     #[deprecated(
         since = "4.4.0",
-        note = "Use `is_maybe_writable_with_address_set` instead"
+        note = "Use `is_maybe_writable_with_reserved_addresses` instead"
     )]
     pub fn is_maybe_writable(
         &self,
         index: usize,
         reserved_account_keys: Option<&HashSet<Address>>,
     ) -> bool {
-        self.is_maybe_writable_with_address_set(index, reserved_account_keys)
+        self.is_maybe_writable_with_reserved_addresses(index, reserved_account_keys)
     }
 
     /// Returns true if the account at the specified index is writable by the
     /// instructions in this message. Since dynamically loaded addresses can't
     /// have write locks demoted without loading addresses, this shouldn't be
     /// used in the runtime.
-    pub fn is_maybe_writable_with_address_set<T: AddressSet>(
+    pub fn is_maybe_writable_with_reserved_addresses<T: AddressSet>(
         &self,
         index: usize,
-        reserved_account_keys: Option<&T>,
+        reserved_addresses: Option<&T>,
     ) -> bool {
         match self {
             Self::Legacy(message) => {
-                message.is_maybe_writable_with_address_set(index, reserved_account_keys)
+                message.is_maybe_writable_with_reserved_addresses(index, reserved_addresses)
             }
             Self::V0(message) => {
-                message.is_maybe_writable_with_address_set(index, reserved_account_keys)
+                message.is_maybe_writable_with_reserved_addresses(index, reserved_addresses)
             }
             Self::V1(message) => {
-                message.is_maybe_writable_with_address_set(index, reserved_account_keys)
+                message.is_maybe_writable_with_reserved_addresses(index, reserved_addresses)
             }
         }
     }

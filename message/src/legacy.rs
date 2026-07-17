@@ -588,33 +588,33 @@ impl Message {
     #[cfg(feature = "std")]
     #[deprecated(
         since = "4.4.0",
-        note = "Use `is_maybe_writable_with_address_set` instead"
+        note = "Use `is_maybe_writable_with_reserved_addresses` instead"
     )]
     pub fn is_maybe_writable(
         &self,
         i: usize,
         reserved_account_keys: Option<&HashSet<Address>>,
     ) -> bool {
-        self.is_maybe_writable_with_address_set(i, reserved_account_keys)
+        self.is_maybe_writable_with_reserved_addresses(i, reserved_account_keys)
     }
 
     /// Returns true if the account at the specified index is writable by the
-    /// instructions in this message. The `reserved_account_keys` param is
+    /// instructions in this message. The `reserved_addresses` param is
     /// optional to allow clients to approximate writability without requiring
-    /// fetching the latest set of reserved account keys. If this method is
-    /// called by the runtime, the latest set of reserved account keys must be
+    /// fetching the latest set of protocol-reserved addresses. If this method
+    /// is called by the runtime, the latest set of reserved addresses must be
     /// passed.
-    pub fn is_maybe_writable_with_address_set<T: AddressSet>(
+    pub fn is_maybe_writable_with_reserved_addresses<T: AddressSet>(
         &self,
         i: usize,
-        reserved_account_keys: Option<&T>,
+        reserved_addresses: Option<&T>,
     ) -> bool {
         super::is_maybe_writable(
             i,
             self.header,
             &self.account_keys,
             &self.instructions,
-            reserved_account_keys,
+            reserved_addresses,
         )
     }
 

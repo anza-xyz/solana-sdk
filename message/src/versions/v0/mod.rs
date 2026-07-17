@@ -396,32 +396,28 @@ impl Message {
     #[cfg(feature = "std")]
     #[deprecated(
         since = "4.4.0",
-        note = "Use `is_maybe_writable_with_address_set` instead"
+        note = "Use `is_maybe_writable_with_reserved_addresses` instead"
     )]
     pub fn is_maybe_writable(
         &self,
         key_index: usize,
         reserved_account_keys: Option<&HashSet<Address>>,
     ) -> bool {
-        self.is_maybe_writable_with_address_set(key_index, reserved_account_keys)
+        self.is_maybe_writable_with_reserved_addresses(key_index, reserved_account_keys)
     }
 
     /// Returns true if the account at the specified index was requested as
     /// writable. Before loading addresses, we can't demote write locks properly
-    /// so this should not be used by the runtime. The `reserved_account_keys`
-    /// param is optional to allow clients to approximate writability without
-    /// requiring fetching the latest set of reserved account keys.
-    pub fn is_maybe_writable_with_address_set<T: AddressSet>(
+    /// so this should not be used by the runtime. The `reserved_addresses` param
+    /// is optional to allow clients to approximate writability without requiring
+    /// fetching the latest set of protocol-reserved addresses.
+    pub fn is_maybe_writable_with_reserved_addresses<T: AddressSet>(
         &self,
         key_index: usize,
-        reserved_account_keys: Option<&T>,
+        reserved_addresses: Option<&T>,
     ) -> bool {
         self.is_writable_index(key_index)
-            && !crate::is_account_maybe_reserved(
-                key_index,
-                &self.account_keys,
-                reserved_account_keys,
-            )
+            && !crate::is_account_maybe_reserved(key_index, &self.account_keys, reserved_addresses)
             && !{
                 // demote program ids
                 self.is_key_called_as_program(key_index)
