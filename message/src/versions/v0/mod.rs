@@ -417,7 +417,7 @@ impl Message {
         reserved_addresses: Option<&impl AddressSet>,
     ) -> bool {
         self.is_writable_index(key_index)
-            && !crate::is_account_maybe_reserved(key_index, &self.account_keys, reserved_addresses)
+            && !crate::is_account_maybe_reserved(key_index, &self.account_keys, &reserved_addresses)
             && !{
                 // demote program ids
                 self.is_key_called_as_program(key_index)

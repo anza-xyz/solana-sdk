@@ -211,10 +211,10 @@ impl<T: AddressSet> AddressSet for Option<T> {
 /// Returns true if the account at the specified index is in the reserved
 /// account keys set.
 #[inline(always)]
-fn is_account_maybe_reserved<T: AddressSet>(
+fn is_account_maybe_reserved(
     i: usize,
     account_keys: &[Address],
-    reserved_account_keys: T,
+    reserved_account_keys: &impl AddressSet,
 ) -> bool {
     account_keys
         .get(i)
@@ -256,12 +256,12 @@ fn is_upgradeable_loader_present(account_keys: &[Address]) -> bool {
 /// called by the runtime, the latest set of reserved account keys must be
 /// passed.
 #[inline(always)]
-fn is_maybe_writable<T: AddressSet>(
+fn is_maybe_writable(
     i: usize,
     header: MessageHeader,
     account_keys: &[Address],
     instructions: &[CompiledInstruction],
-    reserved_account_keys: T,
+    reserved_account_keys: &impl AddressSet,
 ) -> bool {
     (is_writable_index(i, header, account_keys))
         && !is_account_maybe_reserved(i, account_keys, reserved_account_keys)
@@ -292,32 +292,32 @@ mod tests {
         assert!(!is_account_maybe_reserved(
             0,
             &message.account_keys,
-            Some(&reserved_account_keys),
+            &Some(&reserved_account_keys),
         ));
         assert!(is_account_maybe_reserved(
             1,
             &message.account_keys,
-            Some(&reserved_account_keys),
+            &Some(&reserved_account_keys),
         ));
         assert!(!is_account_maybe_reserved(
             2,
             &message.account_keys,
-            Some(&reserved_account_keys),
+            &Some(&reserved_account_keys),
         ));
         assert!(!is_account_maybe_reserved(
             0,
             &message.account_keys,
-            None::<&HashSet<Address>>,
+            &None::<&HashSet<Address>>,
         ));
         assert!(!is_account_maybe_reserved(
             1,
             &message.account_keys,
-            None::<&HashSet<Address>>,
+            &None::<&HashSet<Address>>,
         ));
         assert!(!is_account_maybe_reserved(
             2,
             &message.account_keys,
-            None::<&HashSet<Address>>,
+            &None::<&HashSet<Address>>,
         ));
     }
 }
