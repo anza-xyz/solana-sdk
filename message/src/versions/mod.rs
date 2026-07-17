@@ -106,9 +106,12 @@ impl VersionedMessage {
     }
 
     /// Returns true if the account at the specified index is writable by the
-    /// instructions in this message. Since dynamically loaded addresses can't
-    /// have write locks demoted without loading addresses, this shouldn't be
-    /// used in the runtime.
+    /// instructions in this message.
+    ///
+    /// # Important
+    ///
+    /// Since dynamically loaded addresses can't have write locks demoted without
+    /// loading addresses, this shouldn't be used in the runtime.
     #[cfg(feature = "std")]
     #[deprecated(
         since = "4.4.0",
@@ -123,9 +126,12 @@ impl VersionedMessage {
     }
 
     /// Returns true if the account at the specified index is writable by the
-    /// instructions in this message. Since dynamically loaded addresses can't
-    /// have write locks demoted without loading addresses, this shouldn't be
-    /// used in the runtime.
+    /// instructions in this message.
+    ///
+    /// # Important
+    ///
+    /// Since dynamically loaded addresses can't have write locks demoted without
+    /// loading addresses, this shouldn't be used in the runtime.
     pub fn is_maybe_writable_with_reserved_addresses(
         &self,
         index: usize,

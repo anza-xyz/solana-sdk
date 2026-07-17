@@ -580,11 +580,14 @@ impl Message {
     }
 
     /// Returns true if the account at the specified index is writable by the
-    /// instructions in this message. The `reserved_account_keys` param has been
-    /// optional to allow clients to approximate writability without requiring
-    /// fetching the latest set of reserved account keys. If this method is
-    /// called by the runtime, the latest set of reserved account keys must be
-    /// passed.
+    /// instructions in this message.
+    ///
+    /// # Important
+    ///
+    /// The `reserved_account_keys` param has been optional to allow clients to
+    /// approximate writability without requiring fetching the latest set of
+    /// reserved account keys. If this method is called by the runtime, the latest
+    /// set of reserved account keys must be passed.
     #[cfg(feature = "std")]
     #[deprecated(
         since = "4.4.0",
@@ -599,11 +602,14 @@ impl Message {
     }
 
     /// Returns true if the account at the specified index is writable by the
-    /// instructions in this message. The `reserved_addresses` param is
-    /// optional to allow clients to approximate writability without requiring
-    /// fetching the latest set of protocol-reserved addresses. If this method
-    /// is called by the runtime, the latest set of reserved addresses must be
-    /// passed.
+    /// instructions in this message.
+    ///
+    /// # Important
+    ///
+    /// The `reserved_addresses` param is optional to allow clients to approximate
+    /// writability without requiring fetching the latest set of protocol-reserved
+    /// addresses. If this method is called by the runtime, the latest set of
+    /// reserved addresses must be passed.
     pub fn is_maybe_writable_with_reserved_addresses(
         &self,
         i: usize,
