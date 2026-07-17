@@ -195,21 +195,30 @@ impl<S: core::hash::BuildHasher> AddressSet for HashSet<Address, S> {
     }
 }
 
-/// Returns true if the account at the specified index is in the optional
-/// reserved account keys set.
+impl<T: AddressSet> AddressSet for &T {
+    fn contains(&self, address: &Address) -> bool {
+        T::contains(*self, address)
+    }
+}
+
+impl<T: AddressSet> AddressSet for Option<T> {
+    fn contains(&self, address: &Address) -> bool {
+        self.as_ref()
+            .is_some_and(|address_set| address_set.contains(address))
+    }
+}
+
+/// Returns true if the account at the specified index is in the reserved
+/// account keys set.
 #[inline(always)]
 fn is_account_maybe_reserved<T: AddressSet>(
     i: usize,
     account_keys: &[Address],
-    reserved_account_keys: Option<&T>,
+    reserved_account_keys: T,
 ) -> bool {
-    let mut is_maybe_reserved = false;
-    if let Some(reserved_account_keys) = reserved_account_keys {
-        if let Some(key) = account_keys.get(i) {
-            is_maybe_reserved = reserved_account_keys.contains(key);
-        }
-    }
-    is_maybe_reserved
+    account_keys
+        .get(i)
+        .is_some_and(|key| reserved_account_keys.contains(key))
 }
 
 #[inline(always)]
@@ -252,7 +261,7 @@ fn is_maybe_writable<T: AddressSet>(
     header: MessageHeader,
     account_keys: &[Address],
     instructions: &[CompiledInstruction],
-    reserved_account_keys: Option<&T>,
+    reserved_account_keys: T,
 ) -> bool {
     (is_writable_index(i, header, account_keys))
         && !is_account_maybe_reserved(i, account_keys, reserved_account_keys)
