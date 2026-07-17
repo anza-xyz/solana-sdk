@@ -604,10 +604,10 @@ impl Message {
     /// fetching the latest set of protocol-reserved addresses. If this method
     /// is called by the runtime, the latest set of reserved addresses must be
     /// passed.
-    pub fn is_maybe_writable_with_reserved_addresses<T: AddressSet>(
+    pub fn is_maybe_writable_with_reserved_addresses(
         &self,
         i: usize,
-        reserved_addresses: Option<&T>,
+        reserved_addresses: Option<&impl AddressSet>,
     ) -> bool {
         super::is_maybe_writable(
             i,

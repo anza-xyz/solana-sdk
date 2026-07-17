@@ -406,10 +406,10 @@ impl Message {
     /// Program accounts are demoted from writable to readonly, unless the upgradeable
     /// loader is present in which case they are left as writable since upgradeable
     /// programs need to be writable for upgrades.
-    pub fn is_maybe_writable_with_reserved_addresses<T: AddressSet>(
+    pub fn is_maybe_writable_with_reserved_addresses(
         &self,
         key_index: usize,
-        reserved_addresses: Option<&T>,
+        reserved_addresses: Option<&impl AddressSet>,
     ) -> bool {
         crate::is_maybe_writable(
             key_index,

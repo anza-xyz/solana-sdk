@@ -126,10 +126,10 @@ impl VersionedMessage {
     /// instructions in this message. Since dynamically loaded addresses can't
     /// have write locks demoted without loading addresses, this shouldn't be
     /// used in the runtime.
-    pub fn is_maybe_writable_with_reserved_addresses<T: AddressSet>(
+    pub fn is_maybe_writable_with_reserved_addresses(
         &self,
         index: usize,
-        reserved_addresses: Option<&T>,
+        reserved_addresses: Option<&impl AddressSet>,
     ) -> bool {
         match self {
             Self::Legacy(message) => {

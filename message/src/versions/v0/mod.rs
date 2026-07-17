@@ -411,10 +411,10 @@ impl Message {
     /// so this should not be used by the runtime. The `reserved_addresses` param
     /// is optional to allow clients to approximate writability without requiring
     /// fetching the latest set of protocol-reserved addresses.
-    pub fn is_maybe_writable_with_reserved_addresses<T: AddressSet>(
+    pub fn is_maybe_writable_with_reserved_addresses(
         &self,
         key_index: usize,
-        reserved_addresses: Option<&T>,
+        reserved_addresses: Option<&impl AddressSet>,
     ) -> bool {
         self.is_writable_index(key_index)
             && !crate::is_account_maybe_reserved(key_index, &self.account_keys, reserved_addresses)
