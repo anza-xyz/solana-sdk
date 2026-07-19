@@ -209,16 +209,16 @@ impl<T: AddressSet> AddressSet for Option<T> {
 }
 
 /// Returns true if the account at the specified index is in the reserved
-/// account keys set.
+/// address set.
 #[inline(always)]
 fn is_account_maybe_reserved(
     i: usize,
     account_keys: &[Address],
-    reserved_account_keys: &impl AddressSet,
+    reserved_addresses: Option<impl AddressSet>,
 ) -> bool {
     account_keys
         .get(i)
-        .is_some_and(|key| reserved_account_keys.contains(key))
+        .is_some_and(|key| reserved_addresses.contains(key))
 }
 
 #[inline(always)]
@@ -250,21 +250,20 @@ fn is_upgradeable_loader_present(account_keys: &[Address]) -> bool {
 }
 
 /// Returns true if the account at the specified index is writable by the
-/// instructions in this message. The `reserved_account_keys` param has been
-/// optional to allow clients to approximate writability without requiring
-/// fetching the latest set of reserved account keys. If this method is
-/// called by the runtime, the latest set of reserved account keys must be
-/// passed.
+/// instructions in this message. The `reserved_addresses` parameter is optional
+/// to allow clients to approximate writability without requiring fetching the
+/// latest set of protocol-reserved addresses. If this method is called by the
+/// runtime, the latest set of reserved addresses must be passed.
 #[inline(always)]
 fn is_maybe_writable(
     i: usize,
     header: MessageHeader,
     account_keys: &[Address],
     instructions: &[CompiledInstruction],
-    reserved_account_keys: &impl AddressSet,
+    reserved_addresses: Option<impl AddressSet>,
 ) -> bool {
     (is_writable_index(i, header, account_keys))
-        && !is_account_maybe_reserved(i, account_keys, reserved_account_keys)
+        && !is_account_maybe_reserved(i, account_keys, reserved_addresses)
         && !is_program_id_write_demoted(i, account_keys, instructions)
 }
 
@@ -287,37 +286,37 @@ mod tests {
             ..Message::default()
         };
 
-        let reserved_account_keys = HashSet::from([key1]);
+        let reserved_addresses = HashSet::from([key1]);
 
         assert!(!is_account_maybe_reserved(
             0,
             &message.account_keys,
-            &Some(&reserved_account_keys),
+            Some(&reserved_addresses),
         ));
         assert!(is_account_maybe_reserved(
             1,
             &message.account_keys,
-            &Some(&reserved_account_keys),
+            Some(&reserved_addresses),
         ));
         assert!(!is_account_maybe_reserved(
             2,
             &message.account_keys,
-            &Some(&reserved_account_keys),
+            Some(&reserved_addresses),
         ));
         assert!(!is_account_maybe_reserved(
             0,
             &message.account_keys,
-            &None::<&HashSet<Address>>,
+            None::<&HashSet<Address>>,
         ));
         assert!(!is_account_maybe_reserved(
             1,
             &message.account_keys,
-            &None::<&HashSet<Address>>,
+            None::<&HashSet<Address>>,
         ));
         assert!(!is_account_maybe_reserved(
             2,
             &message.account_keys,
-            &None::<&HashSet<Address>>,
+            None::<&HashSet<Address>>,
         ));
     }
 }

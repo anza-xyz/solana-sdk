@@ -416,7 +416,7 @@ impl Message {
             self.header,
             &self.account_keys,
             &self.instructions,
-            &reserved_addresses,
+            reserved_addresses,
         )
     }
 
