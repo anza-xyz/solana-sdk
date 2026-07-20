@@ -31,7 +31,7 @@ impl SystemInstruction {
         from: &Address,
         to: &Address,
         base: &Address,
-        seed: &str,
+        seed: &[u8],
         lamports: u64,
         space: u64,
         owner: &Address,
@@ -46,7 +46,7 @@ impl SystemInstruction {
     pub fn assignWithSeed(
         address: &Address,
         base: &Address,
-        seed: &str,
+        seed: &[u8],
         owner: &Address,
     ) -> Instruction {
         assign_with_seed(address, base, seed, owner).into()
@@ -59,7 +59,7 @@ impl SystemInstruction {
     pub fn transferWithSeed(
         from: &Address,
         from_base: &Address,
-        from_seed: String,
+        from_seed: Vec<u8>,
         from_owner: &Address,
         to: &Address,
         lamports: u64,
@@ -74,7 +74,7 @@ impl SystemInstruction {
     pub fn allocateWithSeed(
         address: &Address,
         base: &Address,
-        seed: &str,
+        seed: &[u8],
         space: u64,
         owner: &Address,
     ) -> Instruction {
