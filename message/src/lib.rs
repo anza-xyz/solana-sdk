@@ -214,7 +214,7 @@ impl<T: AddressSet> AddressSet for Option<T> {
 fn is_account_maybe_reserved(
     i: usize,
     account_keys: &[Address],
-    reserved_addresses: Option<impl AddressSet>,
+    reserved_addresses: Option<&impl AddressSet>,
 ) -> bool {
     account_keys
         .get(i)
@@ -260,7 +260,7 @@ fn is_maybe_writable(
     header: MessageHeader,
     account_keys: &[Address],
     instructions: &[CompiledInstruction],
-    reserved_addresses: Option<impl AddressSet>,
+    reserved_addresses: Option<&impl AddressSet>,
 ) -> bool {
     (is_writable_index(i, header, account_keys))
         && !is_account_maybe_reserved(i, account_keys, reserved_addresses)
