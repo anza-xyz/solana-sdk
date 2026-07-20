@@ -757,25 +757,20 @@ mod tests {
     /// must be surfaced, not silently treated as a missing trailing `bool`.
     #[test]
     fn optional_trailing_bool_surfaces_non_eof_read_error() {
-        use {
-            core::mem::MaybeUninit,
-            wincode::io::{BorrowKind, ReadError, ReadResult, Reader},
-        };
+        use wincode::io::{BorrowKind, ReadError, ReadResult, Reader};
 
         /// Yields `data`, then fails every further read with an error that is not
         /// `ReadSizeLimit`, standing in for a genuine reader failure.
         struct FailAfter<'a> {
             data: &'a [u8],
         }
-        impl<'a> Reader<'a> for FailAfter<'a> {
-            fn copy_into_slice(&mut self, dst: &mut [MaybeUninit<u8>]) -> ReadResult<()> {
+        unsafe impl<'a> Reader<'a> for FailAfter<'a> {
+            fn copy_into_slice(&mut self, dst: &mut [u8]) -> ReadResult<()> {
                 if dst.len() > self.data.len() {
                     return Err(ReadError::UnsupportedBorrow(BorrowKind::CallSite));
                 }
                 let (head, rest) = self.data.split_at(dst.len());
-                for (slot, &byte) in dst.iter_mut().zip(head) {
-                    slot.write(byte);
-                }
+                dst.copy_from_slice(head);
                 self.data = rest;
                 Ok(())
             }
