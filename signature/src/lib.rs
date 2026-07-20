@@ -2,21 +2,17 @@
 #![no_std]
 #![cfg_attr(docsrs, feature(doc_cfg))]
 #![cfg_attr(feature = "frozen-abi", feature(min_specialization))]
-#[cfg(any(test, feature = "verify"))]
-use core::convert::TryInto;
 #[cfg(any(test, feature = "batch-verify"))]
 use core::iter::ExactSizeIterator;
 use core::{
     fmt,
     str::{from_utf8_unchecked, FromStr},
 };
-#[cfg(any(test, feature = "batch-verify"))]
-use curve25519_dalek::{edwards::CompressedEdwardsY, scalar::Scalar};
 #[cfg(any(test, feature = "alloc"))]
 extern crate alloc;
 #[cfg(feature = "std")]
 extern crate std;
-#[cfg(any(test, feature = "std", feature = "batch-verify"))]
+#[cfg(any(test, feature = "std", feature = "parallel"))]
 use alloc::vec::Vec;
 use core::error::Error;
 #[cfg(feature = "parallel")]
@@ -38,57 +34,6 @@ const MAX_BASE58_SIGNATURE_LEN: usize = 88;
 
 #[cfg(any(test, feature = "batch-verify"))]
 type SignatureData<'a> = (&'a Signature, &'a [u8], &'a [u8]);
-
-#[cfg(any(test, feature = "batch-verify"))]
-fn verify_individual<'a>(mut signature_data: impl Iterator<Item = SignatureData<'a>>) -> bool {
-    signature_data.all(|(signature, pubkey, message)| signature.verify(pubkey, message))
-}
-
-// Dalek's batch verification does not perform the same malleability checks as `verify_strict()`
-// So we need to perform those checks ourselves before pushing the signatures, pubkeys, and messages
-// into the batch verification inputs.
-//
-// TODO: once we switch to solana-ed25519, we can remove this function.
-#[cfg(any(test, feature = "batch-verify"))]
-fn passes_strict_batch_verification_prechecks(
-    signature: &ed25519_dalek::Signature,
-    pubkey: &ed25519_dalek::VerifyingKey,
-) -> bool {
-    if Option::<Scalar>::from(Scalar::from_canonical_bytes(*signature.s_bytes())).is_none() {
-        return false;
-    }
-
-    // `verify_batch` checks the batch equation; these are the extra
-    // malleability checks performed by `verify_strict`.
-    let Some(signature_r) = CompressedEdwardsY(*signature.r_bytes()).decompress() else {
-        return false;
-    };
-
-    !signature_r.is_small_order() && !pubkey.is_weak()
-}
-
-#[cfg(any(test, feature = "batch-verify"))]
-fn push_batch_verification_inputs<'a>(
-    (signature, pubkey_bytes, message): SignatureData<'a>,
-    message_bytes: &mut Vec<&'a [u8]>,
-    parsed_signatures: &mut Vec<ed25519_dalek::Signature>,
-    parsed_pubkeys: &mut Vec<ed25519_dalek::VerifyingKey>,
-) -> bool {
-    let Ok(signature) = ed25519_dalek::Signature::try_from(signature.0.as_slice()) else {
-        return false;
-    };
-    let Ok(pubkey) = ed25519_dalek::VerifyingKey::try_from(pubkey_bytes) else {
-        return false;
-    };
-    if !passes_strict_batch_verification_prechecks(&signature, &pubkey) {
-        return false;
-    }
-
-    message_bytes.push(message);
-    parsed_signatures.push(signature);
-    parsed_pubkeys.push(pubkey);
-    true
-}
 
 /// A 64-byte Ed25519 signature.
 #[repr(transparent)]
@@ -139,14 +84,30 @@ impl Signature {
 
 #[cfg(any(test, feature = "verify"))]
 impl Signature {
+    // Once SIMD-0376 cleanup lands, [`Self::verify`] should call this method.
+    // Tracked in https://github.com/anza-xyz/solana-sdk/issues/819.
     pub(self) fn verify_verbose(
         &self,
         pubkey_bytes: &[u8],
         message_bytes: &[u8],
-    ) -> Result<(), ed25519_dalek::SignatureError> {
-        let publickey = ed25519_dalek::VerifyingKey::try_from(pubkey_bytes)?;
-        let signature = self.0.as_slice().try_into()?;
-        publickey.verify_strict(message_bytes, &signature)
+    ) -> Result<(), solana_ed25519::ed_sigs::Error> {
+        let publickey = solana_ed25519::ed_sigs::VerificationKey::try_from(pubkey_bytes)?;
+        let signature = solana_ed25519::ed_sigs::Signature::from_slice(self.as_ref())
+            .map_err(|_| solana_ed25519::ed_sigs::Error::InvalidSignature)?;
+        publickey.verify_dalek(&signature, message_bytes)
+    }
+
+    // To be removed as part of the SIMD-0376 cleanup.
+    // Tracked in https://github.com/anza-xyz/solana-sdk/issues/819.
+    pub(self) fn verify_non_strict_verbose(
+        &self,
+        pubkey_bytes: &[u8],
+        message_bytes: &[u8],
+    ) -> Result<(), solana_ed25519::ed_sigs::Error> {
+        let publickey = solana_ed25519::ed_sigs::VerificationKey::try_from(pubkey_bytes)?;
+        let signature = solana_ed25519::ed_sigs::Signature::from_slice(self.as_ref())
+            .map_err(|_| solana_ed25519::ed_sigs::Error::InvalidSignature)?;
+        publickey.verify_zebra(&signature, message_bytes)
     }
 
     /// Verifies this signature against `message_bytes` using `pubkey_bytes`.
@@ -154,8 +115,23 @@ impl Signature {
     /// `pubkey_bytes` is the signer's Ed25519 public key, and `message_bytes`
     /// is the exact message that was signed. Returns `false` if verification
     /// fails or the public key cannot be parsed.
+    ///
+    /// Will switch to the zebra (ZIP-215) path as part of the SIMD-0376
+    /// cleanup, tracked in <https://github.com/anza-xyz/solana-sdk/issues/819>.
     pub fn verify(&self, pubkey_bytes: &[u8], message_bytes: &[u8]) -> bool {
         self.verify_verbose(pubkey_bytes, message_bytes).is_ok()
+    }
+
+    /// Verifies this signature using ZIP-215-compatible Ed25519 rules.
+    ///
+    /// `pubkey_bytes` is the signer's Ed25519 public key, and `message_bytes`
+    /// is the exact message that was signed.
+    ///
+    /// To be removed as part of the SIMD-0376 cleanup, tracked in
+    /// <https://github.com/anza-xyz/solana-sdk/issues/819>.
+    pub fn verify_non_strict(&self, pubkey_bytes: &[u8], message_bytes: &[u8]) -> bool {
+        self.verify_non_strict_verbose(pubkey_bytes, message_bytes)
+            .is_ok()
     }
 }
 
@@ -168,42 +144,41 @@ impl Signature {
     /// message_bytes)`, where `signature` is the Ed25519 signature to verify,
     /// `pubkey_bytes` is the signer's public key, and `message_bytes` is the
     /// exact message that was signed. The iterator must know its exact length.
+    ///
+    /// Uses ZIP-215-compatible Ed25519 rules, matching
+    /// [`Self::verify_non_strict`] rather than the current strict
+    /// [`Self::verify`] path.
+    ///
     /// Returns `false` if any signature fails to verify, any public key or
-    /// signature cannot be parsed, or batch verification fails.
+    /// signature cannot be parsed, randomness cannot be obtained, or batch
+    /// verification fails.
     pub fn batch_verify<'a>(
-        signature_data: impl ExactSizeIterator<Item = (&'a Signature, &'a [u8], &'a [u8])>,
+        signature_data: impl ExactSizeIterator<Item = SignatureData<'a>>,
     ) -> bool {
-        // Empirical benchmarks indicate that batch verification outperforms
-        // individual verification starting at 2 signatures for single-threaded
-        // execution, and at approximately 256 signatures for highly parallel
-        // environments (for example, 16-thread execution). These thresholds can
-        // be tuned further based on future profiling and experimentation.
-        #[cfg(not(feature = "parallel"))]
-        const INDIVIDUAL_VERIFY_THRESHOLD: usize = 1;
-        #[cfg(feature = "parallel")]
-        const INDIVIDUAL_VERIFY_THRESHOLD: usize = 8;
-
-        let len = signature_data.len();
-        if len <= INDIVIDUAL_VERIFY_THRESHOLD {
-            return verify_individual(signature_data);
+        if signature_data.len() == 0 {
+            return true;
+        }
+        if signature_data.len() == 1 {
+            let (signature, pubkey_bytes, message_bytes) =
+                signature_data.into_iter().next().unwrap();
+            return signature.verify(pubkey_bytes, message_bytes);
         }
 
-        let mut message_bytes = Vec::with_capacity(len);
-        let mut parsed_signatures = Vec::with_capacity(len);
-        let mut parsed_pubkeys = Vec::with_capacity(len);
-
-        for signature_data in signature_data {
-            if !push_batch_verification_inputs(
-                signature_data,
-                &mut message_bytes,
-                &mut parsed_signatures,
-                &mut parsed_pubkeys,
-            ) {
+        let mut batch = solana_ed25519::ed_sigs::batch::Verifier::new();
+        for (signature, pubkey_bytes, message_bytes) in signature_data {
+            let Ok(pubkey_bytes) =
+                solana_ed25519::ed_sigs::VerificationKeyBytes::try_from(pubkey_bytes)
+            else {
                 return false;
-            }
+            };
+            batch.queue((
+                pubkey_bytes,
+                solana_ed25519::ed_sigs::Signature::from(*signature.as_array()),
+                message_bytes,
+            ));
         }
 
-        ed25519_dalek::verify_batch(&message_bytes, &parsed_signatures, &parsed_pubkeys).is_ok()
+        batch.verify().is_ok()
     }
 
     /// Parallel batch-verifies signatures over their corresponding public keys
@@ -213,11 +188,18 @@ impl Signature {
     /// message_bytes)`, where `signature` is the Ed25519 signature to verify,
     /// `pubkey_bytes` is the signer's public key, and `message_bytes` is the
     /// exact message that was signed. The iterator must know its exact length.
-    /// Returns `false` under the same conditions as [`Self::batch_verify`].
+    ///
+    /// Returns `false` under the same conditions as [`Self::batch_verify`] and
+    /// uses the same verification semantics for each chunk.
     #[cfg(feature = "parallel")]
     pub fn par_batch_verify<'a>(
         signature_data: impl ExactSizeIterator<Item = (&'a Signature, &'a [u8], &'a [u8])>,
     ) -> bool {
+        // for small number of signatures, the overhead of parallelization is not worth it
+        if signature_data.len() <= 16 {
+            return Self::batch_verify(signature_data);
+        }
+
         let signatures = signature_data.collect::<Vec<_>>();
 
         if signatures.is_empty() {
@@ -336,17 +318,17 @@ impl FromStr for Signature {
 mod tests {
     use {
         super::*,
-        ed25519_dalek::Signer,
         serde_derive::{Deserialize, Serialize},
+        solana_ed25519::ed_sigs::SigningKey,
         solana_pubkey::Pubkey,
     };
 
-    fn signing_key_from_index(index: usize) -> ed25519_dalek::SigningKey {
+    fn signing_key_from_index(index: usize) -> SigningKey {
         let key_index = index.checked_add(1).unwrap();
         let key_index_bytes = key_index.to_le_bytes();
         let mut bytes = [0; 32];
         bytes[..key_index_bytes.len()].copy_from_slice(&key_index_bytes);
-        ed25519_dalek::SigningKey::from_bytes(&bytes)
+        SigningKey::from_bytes(&bytes)
     }
 
     fn batch_verify_data(size: usize) -> (Vec<Vec<u8>>, Vec<[u8; 32]>, Vec<Signature>) {
@@ -356,7 +338,7 @@ mod tests {
             .collect();
         let pubkeys: Vec<[u8; 32]> = signing_keys
             .iter()
-            .map(|signing_key| signing_key.verifying_key().to_bytes())
+            .map(|signing_key| signing_key.verification_key().into())
             .collect();
         let signatures: Vec<Signature> = signing_keys
             .iter()
@@ -391,14 +373,11 @@ mod tests {
         // Confirm golden's off-curvedness
         let mut off_curve_bits = [0u8; 32];
         off_curve_bits.copy_from_slice(&off_curve_bytes);
-        let off_curve_point = curve25519_dalek::edwards::CompressedEdwardsY(off_curve_bits);
+        let off_curve_point = solana_ed25519::edwards::CompressedEdwardsY(off_curve_bits);
         assert_eq!(off_curve_point.decompress(), None);
 
         let pubkey = Pubkey::try_from(off_curve_bytes).unwrap();
         let signature = Signature::default();
-        // Unfortunately, ed25519-dalek doesn't surface the internal error types that we'd ideally
-        // `source()` out of the `SignatureError` returned by `verify_strict()`.  So the best we
-        // can do is `is_err()` here.
         assert!(signature.verify_verbose(pubkey.as_ref(), &[0u8]).is_err());
     }
 
@@ -518,7 +497,7 @@ mod tests {
     }
 
     #[test]
-    fn test_batch_verify_rejects_non_strict_valid_signatures() {
+    fn test_batch_verify_accepts_zip215_valid_signatures() {
         let mut signature = [0; SIGNATURE_BYTES];
         signature[0] = 1;
         let signatures = [Signature::from(signature); 9];
@@ -526,25 +505,10 @@ mod tests {
         pubkey[0] = 1;
         let pubkeys = [pubkey; 9];
         let messages: [Vec<u8>; 9] = core::array::from_fn(|_| b"message".to_vec());
-        let message_bytes = messages
-            .iter()
-            .map(|message| message.as_slice())
-            .collect::<Vec<_>>();
-        let parsed_signatures = signatures
-            .iter()
-            .map(|signature| ed25519_dalek::Signature::try_from(signature.0.as_slice()).unwrap())
-            .collect::<Vec<_>>();
-        let parsed_pubkeys = pubkeys
-            .iter()
-            .map(|pubkey| ed25519_dalek::VerifyingKey::try_from(pubkey.as_slice()).unwrap())
-            .collect::<Vec<_>>();
 
-        assert!(
-            ed25519_dalek::verify_batch(&message_bytes, &parsed_signatures, &parsed_pubkeys)
-                .is_ok()
-        );
         assert!(!signatures[0].verify(&pubkeys[0], &messages[0]));
-        assert!(!Signature::batch_verify(batch_verify_items(
+        assert!(signatures[0].verify_non_strict(&pubkeys[0], &messages[0]));
+        assert!(Signature::batch_verify(batch_verify_items(
             &signatures,
             &pubkeys,
             &messages,
