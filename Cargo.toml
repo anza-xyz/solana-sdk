@@ -259,7 +259,7 @@ solana-epoch-stake = { path = "epoch-stake", version = "3.0.0" }
 solana-example-mocks = { path = "example-mocks", version = "4.0.0" }
 solana-feature-gate-interface = { path = "feature-gate-interface", version = "4.0.0" }
 solana-fee-calculator = { path = "fee-calculator", version = "3.2.2" }
-solana-fee-structure = { path = "fee-structure", version = "3.0.0" }
+solana-fee-structure = { path = "fee-structure", version = "4.0.0" }
 solana-file-download = { path = "file-download", version = "3.0.0" }
 solana-frozen-abi = { path = "frozen-abi", version = "3.6.0" }
 solana-frozen-abi-macro = { path = "frozen-abi-macro", version = "3.6.0", default-features = false }
