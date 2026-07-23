@@ -3881,7 +3881,7 @@ dependencies = [
 
 [[package]]
 name = "solana-inflation"
-version = "3.1.1"
+version = "3.2.0"
 dependencies = [
  "serde",
  "serde_derive",
