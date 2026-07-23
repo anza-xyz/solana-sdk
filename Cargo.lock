@@ -3476,6 +3476,31 @@ dependencies = [
 ]
 
 [[package]]
+name = "solana-bls12-381"
+version = "0.1.0"
+dependencies = [
+ "array-bytes",
+ "bytemuck",
+ "solana-bls12-381-syscall",
+ "solana-define-syscall",
+ "thiserror 2.0.18",
+]
+
+[[package]]
+name = "solana-bls12-381-syscall"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "28a699aa5e660203c17c18ceaef0eff78c67fd5193f4dbe90a07148e06030ab6"
+dependencies = [
+ "blst",
+ "blstrs",
+ "bytemuck",
+ "bytemuck_derive",
+ "group",
+ "pairing",
+]
+
+[[package]]
 name = "solana-bn254"
 version = "3.2.1"
 dependencies = [
