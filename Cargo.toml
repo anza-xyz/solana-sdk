@@ -324,7 +324,7 @@ solana-signature = { path = "signature", version = "3.4.1", default-features = f
 solana-signer = { path = "signer", version = "3.0.1", default-features = false }
 solana-signer-store = { path = "signer-store", version = "0.1.0" }
 solana-slot-hashes = { path = "slot-hashes", version = "3.1.0" }
-solana-slot-history = { path = "slot-history", version = "3.1.0" }
+solana-slot-history = { path = "slot-history", version = "3.2.0" }
 solana-stable-layout = { path = "stable-layout", version = "3.0.0" }
 solana-stake-history = { path = "stake-history", version = "1.0.0" }
 solana-svm-transaction = { path = "svm-transaction", version = "4.2.0" }
