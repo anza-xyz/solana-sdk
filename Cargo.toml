@@ -275,7 +275,7 @@ solana-instruction-view = { path = "instruction-view", version = "2.1.0" }
 solana-instructions-sysvar = { path = "instructions-sysvar", version = "4.0.0" }
 solana-keccak-hasher = { path = "keccak-hasher", version = "3.0.0" }
 solana-keypair = { path = "keypair", version = "3.0.0" }
-solana-last-restart-slot = { path = "last-restart-slot", version = "3.1.0" }
+solana-last-restart-slot = { path = "last-restart-slot", version = "3.2.0" }
 solana-loader-v2-interface = { path = "loader-v2-interface", version = "3.0.0" }
 solana-loader-v3-interface = { path = "loader-v3-interface", version = "8.0.0" }
 solana-message = { path = "message", version = "4.2.4", default-features = false }
