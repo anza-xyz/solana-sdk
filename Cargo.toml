@@ -283,7 +283,7 @@ solana-msg = { path = "msg", version = "3.0.0", default-features = false }
 solana-native-token = { path = "native-token", version = "3.0.0" }
 solana-nonce = { path = "nonce", version = "3.2.0" }
 solana-nonce-account = { path = "nonce-account", version = "4.1.0" }
-solana-nullable = { path = "nullable", version = "1.0.0", default-features = false }
+solana-nullable = { path = "nullable", version = "1.3.0", default-features = false }
 solana-offchain-message = { path = "offchain-message", version = "3.0.0" }
 solana-package-metadata = { path = "package-metadata", version = "3.0.0" }
 solana-package-metadata-macro = { path = "package-metadata-macro", version = "3.0.0" }
