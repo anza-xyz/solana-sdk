@@ -335,7 +335,7 @@ solana-sysvar = { path = "sysvar", version = "4.0.0" }
 solana-sysvar-id = { path = "sysvar-id", version = "3.0.0" }
 solana-time-utils = { path = "time-utils", version = "3.0.0" }
 solana-transaction = { path = "transaction", version = "4.1.5", default-features = false }
-solana-transaction-error = { path = "transaction-error", version = "3.3.1" }
+solana-transaction-error = { path = "transaction-error", version = "3.4.0" }
 solana-validator-exit = { path = "validator-exit", version = "3.0.0" }
 solana-vote-interface = { path = "vote-interface", version = "6.0.1" }
 solana-wincode-varint = { path = "wincode-varint", version = "1.1.0" }
