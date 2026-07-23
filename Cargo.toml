@@ -270,7 +270,7 @@ solana-hash = { path = "hash", version = "4.4.0", default-features = false }
 solana-hash-512 = { path = "hash-512", version = "1.1.0", default-features = false }
 solana-inflation = { path = "inflation", version = "3.1.1" }
 solana-instruction = { path = "instruction", version = "3.4.0", default-features = false }
-solana-instruction-error = { path = "instruction-error", version = "2.4.0" }
+solana-instruction-error = { path = "instruction-error", version = "2.5.0" }
 solana-instruction-view = { path = "instruction-view", version = "2.1.0" }
 solana-instructions-sysvar = { path = "instructions-sysvar", version = "4.0.0" }
 solana-keccak-hasher = { path = "keccak-hasher", version = "3.0.0" }

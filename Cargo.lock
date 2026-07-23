@@ -3907,7 +3907,7 @@ dependencies = [
 
 [[package]]
 name = "solana-instruction-error"
-version = "2.4.0"
+version = "2.5.0"
 dependencies = [
  "num-traits",
  "serde",
