@@ -4565,7 +4565,7 @@ dependencies = [
 
 [[package]]
 name = "solana-short-vec"
-version = "3.2.2"
+version = "3.3.0"
 dependencies = [
  "assert_matches",
  "bincode",
