@@ -2,7 +2,7 @@
 name = "solana-hash-512"
 description = "Solana wrapper for the 64-byte output of the SHA-512 hashing algorithm."
 documentation = "https://docs.rs/solana-hash-512"
-version = "1.1.0"
+version = "1.2.0"
 rust-version = { workspace = true }
 authors = { workspace = true }
 repository = { workspace = true }
