@@ -302,7 +302,7 @@ solana-program-option = { path = "program-option", version = "3.0.0" }
 solana-program-pack = { path = "program-pack", version = "3.0.0" }
 solana-pubkey = { path = "pubkey", version = "4.2.0", default-features = false }
 solana-rent = { path = "rent", version = "4.3.0", default-features = false }
-solana-reward-info = { path = "reward-info", version = "6.2.0" }
+solana-reward-info = { path = "reward-info", version = "6.3.0" }
 solana-sanitize = { path = "sanitize", version = "3.0.0" }
 solana-sdk = { path = "sdk", version = "4.0.1" }
 solana-sdk-ids = { path = "sdk-ids", version = "3.0.0" }
