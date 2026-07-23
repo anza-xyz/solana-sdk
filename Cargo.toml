@@ -339,7 +339,7 @@ solana-transaction-error = { path = "transaction-error", version = "3.3.1" }
 solana-validator-exit = { path = "validator-exit", version = "3.0.0" }
 solana-vote-interface = { path = "vote-interface", version = "6.0.1" }
 solana-wincode-varint = { path = "wincode-varint", version = "1.0.0" }
-solana-zero-copy = { path = "zero-copy", version = "1.0.0", default-features = false }
+solana-zero-copy = { path = "zero-copy", version = "1.2.0", default-features = false }
 static_assertions = "1.1.0"
 strum = "0.24"
 strum_macros = "0.24"
