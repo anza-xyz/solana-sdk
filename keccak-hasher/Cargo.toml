@@ -24,7 +24,16 @@ solana-hash = { workspace = true, features = ["decode"] }
 solana-define-syscall = { workspace = true }
 
 [target.'cfg(not(any(target_os = "solana", target_arch = "bpf")))'.dependencies]
+keccak = { workspace = true }
 sha3 = { workspace = true, optional = true }
+
+[dev-dependencies]
+criterion = { workspace = true }
 
 [lints]
 workspace = true
+
+[[bench]]
+name = "keccak_f"
+harness = false
+required-features = ["sha3"]

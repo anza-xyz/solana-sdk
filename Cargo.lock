@@ -3951,6 +3951,8 @@ dependencies = [
 name = "solana-keccak-hasher"
 version = "3.1.0"
 dependencies = [
+ "criterion",
+ "keccak",
  "sha3",
  "solana-define-syscall",
  "solana-hash",
