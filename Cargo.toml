@@ -252,7 +252,7 @@ solana-derivation-path = { path = "derivation-path", version = "3.0.0" }
 solana-ed25519 = { version = "0.2.2", default-features = false, features = ["digest", "precomputed-tables", "rand_core", "zeroize"] }
 solana-ed25519-program = { path = "ed25519-program", version = "3.0.0" }
 solana-epoch-info = { path = "epoch-info", version = "3.0.0" }
-solana-epoch-rewards = { path = "epoch-rewards", version = "3.1.0" }
+solana-epoch-rewards = { path = "epoch-rewards", version = "3.2.0" }
 solana-epoch-rewards-hasher = { path = "epoch-rewards-hasher", version = "3.0.0" }
 solana-epoch-schedule = { path = "epoch-schedule", version = "3.2.0" }
 solana-epoch-stake = { path = "epoch-stake", version = "3.0.0" }
