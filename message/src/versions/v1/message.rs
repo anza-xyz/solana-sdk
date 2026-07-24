@@ -60,7 +60,7 @@ use {
         compiled_keys::CompiledKeys,
         v1::{
             MessageError, TransactionConfig, TransactionConfigMask, MAX_ADDRESSES, MAX_HEAP_SIZE,
-            MAX_INSTRUCTIONS, MAX_SIGNATURES, MIN_HEAP_SIZE,
+            MAX_INSTRUCTIONS, MAX_SIGNATURES, MAX_TRANSACTION_SIZE, MIN_HEAP_SIZE,
         },
         AccountKeys, AddressSet, CompileError, MessageHeader,
     },
@@ -732,12 +732,18 @@ unsafe impl<'de, C: Config> SchemaRead<'de, C> for Message {
     }
 }
 
-/// Deserialize the message from the provided input buffer, returning the message and
-/// the number of bytes read.
+/// Deserialize a message from the provided input buffer.
+///
+/// Bounds preallocation to `MAX_TRANSACTION_SIZE` and rejects trailing bytes, so an
+/// oversized or padded buffer is refused instead of allocating for it.
 #[cfg(feature = "wincode")]
 #[inline]
 pub fn deserialize(input: &[u8]) -> wincode::ReadResult<Message> {
-    wincode::deserialize(input)
+    wincode::config::deserialize_exact(
+        input,
+        wincode::config::DefaultConfig::default()
+            .with_preallocation_size_limit::<MAX_TRANSACTION_SIZE>(),
+    )
 }
 
 #[cfg(test)]
@@ -1280,6 +1286,54 @@ mod tests {
         for message in &test_cases {
             assert_eq!(message.size(), wincode::serialize(message).unwrap().len());
         }
+    }
+
+    #[test]
+    fn deserialize_rejects_oversized_message() {
+        // `validate` bounds counts and indices but not total size, so wincode's 4 MiB
+        // default deserializes an over-limit message. `deserialize` pins the preallocation
+        // limit to `MAX_TRANSACTION_SIZE`, so the same bytes are refused before allocating.
+        const OVERSIZED_DATA_LEN: usize = MAX_TRANSACTION_SIZE + 1;
+        let message = MessageBuilder::new()
+            .required_signatures(1)
+            .lifetime_specifier(Hash::new_from_array([0u8; 32]))
+            .accounts(vec![
+                Address::new_from_array([1u8; 32]),
+                Address::new_from_array([2u8; 32]),
+            ])
+            .instruction(CompiledInstruction {
+                program_id_index: 1,
+                accounts: vec![0],
+                data: vec![0u8; OVERSIZED_DATA_LEN],
+            })
+            .build()
+            .unwrap();
+
+        let bytes = wincode::serialize(&message).unwrap();
+        assert!(deserialize(&bytes).is_err());
+        // The default-config path still accepts it, confirming the gap the limit closes.
+        assert!(wincode::deserialize::<Message>(&bytes).is_ok());
+    }
+
+    #[test]
+    fn deserialize_accepts_valid_message() {
+        let message = MessageBuilder::new()
+            .required_signatures(1)
+            .lifetime_specifier(Hash::new_from_array([0u8; 32]))
+            .accounts(vec![
+                Address::new_from_array([1u8; 32]),
+                Address::new_from_array([2u8; 32]),
+            ])
+            .instruction(CompiledInstruction {
+                program_id_index: 1,
+                accounts: vec![0],
+                data: vec![0xAB; 32],
+            })
+            .build()
+            .unwrap();
+
+        let bytes = wincode::serialize(&message).unwrap();
+        assert_eq!(deserialize(&bytes).unwrap(), message);
     }
 
     #[test]
