@@ -225,6 +225,8 @@ jobs:
     environment: ${{ inputs.dry_run && 'dry-run' || 'prod' }}
     permissions:
       contents: write
+      id-token: write
+      attestations: write
     steps:
       - name: Generate app token
         if: github.event.inputs.dry_run != 'true'
@@ -252,31 +254,16 @@ jobs:
         with:
           tool: cargo-release
 
-      - name: Ensure CARGO_REGISTRY_TOKEN variable is set
-        env:
-          token: ${{ secrets.CARGO_REGISTRY_TOKEN }}
-        if: ${{ env.token == '' }}
-        run: |
-          echo "The CARGO_REGISTRY_TOKEN secret variable is not set"
-          echo "Go to \"Settings\" -> \"Secrets and variables\" -> \"Actions\" -> \"New repository secret\"."
-          exit 1
-
-      - name: Set Git Author
-        if: github.event.inputs.dry_run != 'true'
-        env:
-          APP_ID: ${{ vars.APP_ID }}
-          APP_SLUG: ${{ steps.app-token.outputs.app-slug }}
-        run: |
-          git config --global user.email "${APP_ID}+${APP_SLUG}[bot]@users.noreply.github.com"
-          git config --global user.name "${APP_SLUG}[bot]"
-
       - name: Rebase (in case any changes landed after)
         run: git pull --rebase origin
+
+      - uses: rust-lang/crates-io-auth-action@v1
+        id: auth
 
       - name: Publish Crate
         id: publish
         env:
-          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+          CARGO_REGISTRY_TOKEN: ${{ steps.auth.outputs.token }}
         run: |
           if [ "${{ inputs.level }}" == "version" ]; then
             LEVEL=${{ inputs.version }}
@@ -291,6 +278,12 @@ jobs:
           fi
 
           ./scripts/publish-rust.sh "${{ inputs.package_path }}" $LEVEL "${{ inputs.dependent_version }}" $OPTIONS
+
+      - name: Generate SLSA provenance
+        if: github.event.inputs.dry_run != 'true'
+        uses: actions/attest-build-provenance@v3
+        with:
+          subject-path: target/package/*.crate
 
       - name: Generate a changelog
         if: github.event.inputs.create_release == 'true'
