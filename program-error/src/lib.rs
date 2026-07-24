@@ -5,7 +5,7 @@
 #![no_std]
 #[cfg(feature = "borsh")]
 use borsh::io::Error as BorshIoError;
-use core::{convert::TryFrom, fmt};
+use core::{convert::TryFrom, fmt, mem::MaybeUninit};
 #[cfg(feature = "serde")]
 use serde_derive::{Deserialize, Serialize};
 
@@ -46,7 +46,8 @@ pub const ARITHMETIC_OVERFLOW: u64 = to_builtin!(24);
 pub const IMMUTABLE: u64 = to_builtin!(25);
 pub const INCORRECT_AUTHORITY: u64 = to_builtin!(26);
 // Warning: Any new error codes added here must also be:
-// - Added to the below conversions
+// - Added as a `ProgramError` variant with the code as its discriminant,
+//   and made the new upper bound of the builtin range in `From<u64>`
 // - Added as an equivalent to ProgramError and InstructionError
 // - Be featurized in the BPF loader to return `InstructionError::InvalidError`
 //   until the feature is activated
@@ -54,36 +55,37 @@ pub const INCORRECT_AUTHORITY: u64 = to_builtin!(26);
 /// Reasons the program may fail
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[derive(Clone, Debug, Eq, PartialEq)]
+#[repr(u8)]
 pub enum ProgramError {
     /// Allows on-chain programs to implement program-specific error types and see them returned
     /// by the Solana runtime. A program-specific error may be any type that is represented as
     /// or serialized to a u32 integer.
-    Custom(u32),
-    InvalidArgument,
-    InvalidInstructionData,
-    InvalidAccountData,
-    AccountDataTooSmall,
-    InsufficientFunds,
-    IncorrectProgramId,
-    MissingRequiredSignature,
-    AccountAlreadyInitialized,
-    UninitializedAccount,
-    NotEnoughAccountKeys,
-    AccountBorrowFailed,
-    MaxSeedLengthExceeded,
-    InvalidSeeds,
-    BorshIoError,
-    AccountNotRentExempt,
-    UnsupportedSysvar,
-    IllegalOwner,
-    MaxAccountsDataAllocationsExceeded,
-    InvalidRealloc,
-    MaxInstructionTraceLengthExceeded,
-    BuiltinProgramsMustConsumeComputeUnits,
-    InvalidAccountOwner,
-    ArithmeticOverflow,
-    Immutable,
-    IncorrectAuthority,
+    Custom(u32) = 1,
+    InvalidArgument = 2,
+    InvalidInstructionData = 3,
+    InvalidAccountData = 4,
+    AccountDataTooSmall = 5,
+    InsufficientFunds = 6,
+    IncorrectProgramId = 7,
+    MissingRequiredSignature = 8,
+    AccountAlreadyInitialized = 9,
+    UninitializedAccount = 10,
+    NotEnoughAccountKeys = 11,
+    AccountBorrowFailed = 12,
+    MaxSeedLengthExceeded = 13,
+    InvalidSeeds = 14,
+    BorshIoError = 15,
+    AccountNotRentExempt = 16,
+    UnsupportedSysvar = 17,
+    IllegalOwner = 18,
+    MaxAccountsDataAllocationsExceeded = 19,
+    InvalidRealloc = 20,
+    MaxInstructionTraceLengthExceeded = 21,
+    BuiltinProgramsMustConsumeComputeUnits = 22,
+    InvalidAccountOwner = 23,
+    ArithmeticOverflow = 24,
+    Immutable = 25,
+    IncorrectAuthority = 26,
 }
 
 impl core::error::Error for ProgramError {}
@@ -231,6 +233,62 @@ impl ProgramError {
 impl From<ProgramError> for u64 {
     fn from(error: ProgramError) -> Self {
         match error {
+            ProgramError::Custom(error) => {
+                if error == 0 {
+                    CUSTOM_ZERO
+                } else {
+                    error as u64
+                }
+            }
+            _ => {
+                // SAFETY: `ProgramError` is `repr(u8)`, so the discriminant
+                // of every variant is stored as a `u8` in its first byte.
+                let discriminant = unsafe { *(&error as *const ProgramError as *const u8) };
+                (discriminant as u64) << BUILTIN_BIT_SHIFT
+            }
+        }
+    }
+}
+
+impl From<u64> for ProgramError {
+    fn from(error: u64) -> Self {
+        match error {
+            CUSTOM_ZERO => Self::Custom(0),
+            // Builtin errors encode their discriminant in the upper 32 bits
+            // and have nothing in the lower 32.
+            INVALID_ARGUMENT..=INCORRECT_AUTHORITY if error as u32 == 0 => {
+                let discriminant = (error >> BUILTIN_BIT_SHIFT) as u8;
+                // SAFETY: `ProgramError` is `repr(u8)` and `discriminant` is
+                // the tag of one of its fieldless variants, so writing it to
+                // the first byte produces a valid value; the remaining bytes
+                // are padding for these variants.
+                unsafe {
+                    let mut value = MaybeUninit::<ProgramError>::uninit();
+                    value.as_mut_ptr().cast::<u8>().write(discriminant);
+                    value.assume_init()
+                }
+            }
+            _ => Self::Custom(error as u32),
+        }
+    }
+}
+
+#[cfg(feature = "borsh")]
+impl From<BorshIoError> for ProgramError {
+    fn from(_error: BorshIoError) -> Self {
+        Self::BorshIoError
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // Exhaustive on purpose: adding a variant without updating the
+    // conversions (and this test) fails to compile here.
+    fn builtin_code(error: &ProgramError) -> u64 {
+        match error {
+            ProgramError::Custom(_) => CUSTOM_ZERO,
             ProgramError::InvalidArgument => INVALID_ARGUMENT,
             ProgramError::InvalidInstructionData => INVALID_INSTRUCTION_DATA,
             ProgramError::InvalidAccountData => INVALID_ACCOUNT_DATA,
@@ -262,56 +320,67 @@ impl From<ProgramError> for u64 {
             ProgramError::ArithmeticOverflow => ARITHMETIC_OVERFLOW,
             ProgramError::Immutable => IMMUTABLE,
             ProgramError::IncorrectAuthority => INCORRECT_AUTHORITY,
-            ProgramError::Custom(error) => {
-                if error == 0 {
-                    CUSTOM_ZERO
-                } else {
-                    error as u64
-                }
-            }
         }
     }
-}
 
-impl From<u64> for ProgramError {
-    fn from(error: u64) -> Self {
-        match error {
-            CUSTOM_ZERO => Self::Custom(0),
-            INVALID_ARGUMENT => Self::InvalidArgument,
-            INVALID_INSTRUCTION_DATA => Self::InvalidInstructionData,
-            INVALID_ACCOUNT_DATA => Self::InvalidAccountData,
-            ACCOUNT_DATA_TOO_SMALL => Self::AccountDataTooSmall,
-            INSUFFICIENT_FUNDS => Self::InsufficientFunds,
-            INCORRECT_PROGRAM_ID => Self::IncorrectProgramId,
-            MISSING_REQUIRED_SIGNATURES => Self::MissingRequiredSignature,
-            ACCOUNT_ALREADY_INITIALIZED => Self::AccountAlreadyInitialized,
-            UNINITIALIZED_ACCOUNT => Self::UninitializedAccount,
-            NOT_ENOUGH_ACCOUNT_KEYS => Self::NotEnoughAccountKeys,
-            ACCOUNT_BORROW_FAILED => Self::AccountBorrowFailed,
-            MAX_SEED_LENGTH_EXCEEDED => Self::MaxSeedLengthExceeded,
-            INVALID_SEEDS => Self::InvalidSeeds,
-            BORSH_IO_ERROR => Self::BorshIoError,
-            ACCOUNT_NOT_RENT_EXEMPT => Self::AccountNotRentExempt,
-            UNSUPPORTED_SYSVAR => Self::UnsupportedSysvar,
-            ILLEGAL_OWNER => Self::IllegalOwner,
-            MAX_ACCOUNTS_DATA_ALLOCATIONS_EXCEEDED => Self::MaxAccountsDataAllocationsExceeded,
-            INVALID_ACCOUNT_DATA_REALLOC => Self::InvalidRealloc,
-            MAX_INSTRUCTION_TRACE_LENGTH_EXCEEDED => Self::MaxInstructionTraceLengthExceeded,
-            BUILTIN_PROGRAMS_MUST_CONSUME_COMPUTE_UNITS => {
-                Self::BuiltinProgramsMustConsumeComputeUnits
-            }
-            INVALID_ACCOUNT_OWNER => Self::InvalidAccountOwner,
-            ARITHMETIC_OVERFLOW => Self::ArithmeticOverflow,
-            IMMUTABLE => Self::Immutable,
-            INCORRECT_AUTHORITY => Self::IncorrectAuthority,
-            _ => Self::Custom(error as u32),
+    #[test]
+    fn test_builtin_conversions_round_trip() {
+        let variants = [
+            ProgramError::Custom(0),
+            ProgramError::InvalidArgument,
+            ProgramError::InvalidInstructionData,
+            ProgramError::InvalidAccountData,
+            ProgramError::AccountDataTooSmall,
+            ProgramError::InsufficientFunds,
+            ProgramError::IncorrectProgramId,
+            ProgramError::MissingRequiredSignature,
+            ProgramError::AccountAlreadyInitialized,
+            ProgramError::UninitializedAccount,
+            ProgramError::NotEnoughAccountKeys,
+            ProgramError::AccountBorrowFailed,
+            ProgramError::MaxSeedLengthExceeded,
+            ProgramError::InvalidSeeds,
+            ProgramError::BorshIoError,
+            ProgramError::AccountNotRentExempt,
+            ProgramError::UnsupportedSysvar,
+            ProgramError::IllegalOwner,
+            ProgramError::MaxAccountsDataAllocationsExceeded,
+            ProgramError::InvalidRealloc,
+            ProgramError::MaxInstructionTraceLengthExceeded,
+            ProgramError::BuiltinProgramsMustConsumeComputeUnits,
+            ProgramError::InvalidAccountOwner,
+            ProgramError::ArithmeticOverflow,
+            ProgramError::Immutable,
+            ProgramError::IncorrectAuthority,
+        ];
+        for error in variants {
+            let code = builtin_code(&error);
+            assert_eq!(u64::from(error.clone()), code);
+            assert_eq!(ProgramError::from(code), error);
         }
     }
-}
 
-#[cfg(feature = "borsh")]
-impl From<BorshIoError> for ProgramError {
-    fn from(_error: BorshIoError) -> Self {
-        Self::BorshIoError
+    #[test]
+    fn test_custom_conversions_round_trip() {
+        assert_eq!(u64::from(ProgramError::Custom(0)), CUSTOM_ZERO);
+        assert_eq!(ProgramError::from(CUSTOM_ZERO), ProgramError::Custom(0));
+        for code in [1u64, 42, u32::MAX as u64] {
+            assert_eq!(u64::from(ProgramError::Custom(code as u32)), code);
+            assert_eq!(ProgramError::from(code), ProgramError::Custom(code as u32));
+        }
+    }
+
+    #[test]
+    fn test_unknown_codes_convert_to_custom() {
+        for (code, expected) in [
+            ((1u64 << BUILTIN_BIT_SHIFT) | 5, 5),
+            ((2u64 << BUILTIN_BIT_SHIFT) | 7, 7),
+            (27u64 << BUILTIN_BIT_SHIFT, 0),
+            // 0x102 truncates to 2 as u8; must not decode as InvalidArgument
+            (0x102u64 << BUILTIN_BIT_SHIFT, 0),
+            (u64::MAX, u32::MAX),
+        ] {
+            assert_eq!(ProgramError::from(code), ProgramError::Custom(expected));
+        }
     }
 }
