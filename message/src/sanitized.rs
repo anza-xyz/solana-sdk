@@ -347,7 +347,7 @@ impl SanitizedMessage {
                     if !self.is_writable(idx) {
                         None
                     } else {
-                        self.account_keys().get(idx)
+                        self.static_account_keys().get(idx)
                     }
                 })
             })
