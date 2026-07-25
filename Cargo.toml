@@ -231,7 +231,7 @@ siphasher = "0.3.11"
 solana-account = { path = "account", version = "4.3.1" }
 solana-account-info = { path = "account-info", version = "3.0.0" }
 solana-account-view = { path = "account-view", version = "2.0.0" }
-solana-address = { path = "address", version = "2.6.1" }
+solana-address = { path = "address", version = "2.7.0" }
 solana-address-lookup-table-interface = { path = "address-lookup-table-interface", version = "3.1.0" }
 solana-atomic-u64 = { path = "atomic-u64", version = "3.0.0" }
 solana-big-mod-exp = { path = "big-mod-exp", version = "4.0.0" }
@@ -323,7 +323,7 @@ solana-shred-version = { path = "shred-version", version = "3.0.0" }
 solana-signature = { path = "signature", version = "3.4.1", default-features = false }
 solana-signer = { path = "signer", version = "3.0.1", default-features = false }
 solana-signer-store = { path = "signer-store", version = "0.1.0" }
-solana-slot-hashes = { path = "slot-hashes", version = "3.1.0" }
+solana-slot-hashes = { path = "slot-hashes", version = "3.2.0" }
 solana-slot-history = { path = "slot-history", version = "3.2.0" }
 solana-stable-layout = { path = "stable-layout", version = "3.0.0" }
 solana-stake-history = { path = "stake-history", version = "1.0.0" }
