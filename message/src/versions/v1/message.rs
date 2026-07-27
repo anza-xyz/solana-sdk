@@ -23,7 +23,8 @@
 //! │                                                        │
 //! │ * ConfigValues ([[u8; 4] * variable based on mask])    │
 //! │                                                        │
-//! │ * InstructionHeaders [(u8, u8, u16) x NumInstructions] │
+//! │ * WireInstructionHeaders [WireInstructionHeader        │
+//! │                            x NumInstructions]          │
 //! │                                                        │
 //! │ * InstructionPayloads (variable based on headers)      │
 //! │    └─ Per NumInstructions:                             │
@@ -43,7 +44,7 @@ use solana_frozen_abi_macro::{AbiExample, StableAbi, StableAbiSample};
 use std::collections::HashSet;
 #[cfg(feature = "wincode")]
 use {
-    crate::v1::{InstructionHeader, FIXED_HEADER_SIZE},
+    crate::v1::{WireInstructionHeader, FIXED_HEADER_SIZE},
     core::{mem::MaybeUninit, slice::from_raw_parts},
     wincode::{
         config::{Config, ConfigCore},
@@ -61,7 +62,7 @@ use {
             MessageError, TransactionConfig, TransactionConfigMask, MAX_ADDRESSES, MAX_HEAP_SIZE,
             MAX_INSTRUCTIONS, MAX_SIGNATURES, MIN_HEAP_SIZE,
         },
-        AccountKeys, CompileError, MessageHeader,
+        AccountKeys, AddressSet, CompileError, MessageHeader,
     },
     alloc::{collections::BTreeSet, vec::Vec},
     core::mem::size_of,
@@ -379,17 +380,43 @@ impl Message {
     /// loader is present in which case they are left as writable since upgradeable
     /// programs need to be writable for upgrades.
     #[cfg(feature = "std")]
+    #[deprecated(
+        since = "4.4.0",
+        note = "Use `is_maybe_writable_with_reserved_addresses` instead"
+    )]
     pub fn is_maybe_writable(
         &self,
         key_index: usize,
         reserved_account_keys: Option<&HashSet<Address>>,
+    ) -> bool {
+        self.is_maybe_writable_with_reserved_addresses(key_index, reserved_account_keys)
+    }
+
+    /// Returns `true` if the account at the specified index was requested as
+    /// writable.
+    ///
+    ///
+    /// # Important
+    ///
+    /// Before loading addresses, we can't demote write locks properly so this should
+    /// not be used by the runtime. The `reserved_addresses` parameter is optional to
+    /// allow clients to approximate writability without requiring fetching the latest
+    /// set of protocol-reserved addresses.
+    ///
+    /// Program accounts are demoted from writable to readonly, unless the upgradeable
+    /// loader is present in which case they are left as writable since upgradeable
+    /// programs need to be writable for upgrades.
+    pub fn is_maybe_writable_with_reserved_addresses(
+        &self,
+        key_index: usize,
+        reserved_addresses: Option<&impl AddressSet>,
     ) -> bool {
         crate::is_maybe_writable(
             key_index,
             self.header,
             &self.account_keys,
             &self.instructions,
-            reserved_account_keys,
+            reserved_addresses,
         )
     }
 
@@ -655,25 +682,25 @@ unsafe impl<'de, C: Config> SchemaRead<'de, C> for Message {
         }
 
         // SAFETY:
-        // - `take_borrowed(num_instructions * size_of::<InstructionHeader>())` returns
+        // - `take_borrowed(num_instructions * size_of::<WireInstructionHeader>())` returns
         //   exactly the requested number of bytes, or errors.
         // - `take_borrowed` returns a stable borrow from the backing buffer, so the
         //   resulting slice remains valid across subsequent reader operations.
-        // - `InstructionHeader` has alignment 1 and is encoded exactly as
-        //   4 bytes `(u8, u8, [u8; 2])`.
+        // - The `const` block above pins `WireInstructionHeader`'s layout to a packed
+        //   4 bytes with fields in wire order, so the reinterpretation is exact.
         let instruction_headers = unsafe {
             from_raw_parts(
                 reader
-                    .take_borrowed(num_instructions * size_of::<InstructionHeader>())?
-                    .as_ptr() as *const InstructionHeader,
+                    .take_borrowed(num_instructions * size_of::<WireInstructionHeader>())?
+                    .as_ptr() as *const WireInstructionHeader,
                 num_instructions,
             )
         };
         let mut instructions = Vec::with_capacity(num_instructions);
         for header in instruction_headers {
-            let program_id_index = header.0;
-            let num_accounts = header.1 as usize;
-            let data_len = u16::from_le_bytes(header.2) as usize;
+            let program_id_index = header.program_id_index;
+            let num_accounts = header.num_accounts as usize;
+            let data_len = u16::from_le_bytes(header.data_len) as usize;
 
             <C::LengthEncoding as SeqLen<C>>::prealloc_check::<u8>(num_accounts)?;
             let accounts = <Vec<u8> as SchemaReadContext<C, context::Len>>::get_with_context(
@@ -989,6 +1016,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(deprecated)]
     fn is_maybe_writable_returns_false_for_readonly_index() {
         let message = create_test_message();
         // Index 2 is readonly unsigned
@@ -999,6 +1027,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(deprecated)]
     fn is_maybe_writable_demotes_reserved_accounts() {
         let message = create_test_message();
         let reserved = HashSet::from([message.account_keys[0]]);
@@ -1008,6 +1037,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(deprecated)]
     fn is_maybe_writable_demotes_programs_without_upgradeable_loader() {
         let message = create_test_message();
         // Index 1 is writable unsigned, called as program, no upgradeable loader
@@ -1018,6 +1048,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(deprecated)]
     fn is_maybe_writable_preserves_programs_with_upgradeable_loader() {
         let mut message = create_test_message();
         // Add upgradeable loader to account keys

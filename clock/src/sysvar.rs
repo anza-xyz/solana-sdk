@@ -8,5 +8,5 @@ use {
 impl_sysvar_id!(Clock);
 
 impl GetSysvar for Clock {
-    impl_get_sysvar!(id());
+    impl_get_sysvar!(ID);
 }

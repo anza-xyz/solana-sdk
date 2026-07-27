@@ -243,7 +243,7 @@ fn test_get_durable_nonce() {
                 readonly: vec![],
             }),
         );
-        assert_eq!(SanitizedMessage::get_durable_nonce(&message), Some(&nonce));
+        assert_eq!(SanitizedMessage::get_durable_nonce(&message), None);
         assert_eq!(SVMMessage::get_durable_nonce(&message), None);
     }
 }

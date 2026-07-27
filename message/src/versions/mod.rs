@@ -7,7 +7,7 @@ use std::collections::HashSet;
 use {
     crate::{
         compiled_instruction::CompiledInstruction, legacy::Message as LegacyMessage,
-        v0::MessageAddressTableLookup, MessageHeader,
+        v0::MessageAddressTableLookup, AddressSet, MessageHeader,
     },
     solana_address::Address,
     solana_hash::Hash,
@@ -106,19 +106,47 @@ impl VersionedMessage {
     }
 
     /// Returns true if the account at the specified index is writable by the
-    /// instructions in this message. Since dynamically loaded addresses can't
-    /// have write locks demoted without loading addresses, this shouldn't be
-    /// used in the runtime.
+    /// instructions in this message.
+    ///
+    /// # Important
+    ///
+    /// Since dynamically loaded addresses can't have write locks demoted without
+    /// loading addresses, this shouldn't be used in the runtime.
     #[cfg(feature = "std")]
+    #[deprecated(
+        since = "4.4.0",
+        note = "Use `is_maybe_writable_with_reserved_addresses` instead"
+    )]
     pub fn is_maybe_writable(
         &self,
         index: usize,
         reserved_account_keys: Option<&HashSet<Address>>,
     ) -> bool {
+        self.is_maybe_writable_with_reserved_addresses(index, reserved_account_keys)
+    }
+
+    /// Returns true if the account at the specified index is writable by the
+    /// instructions in this message.
+    ///
+    /// # Important
+    ///
+    /// Since dynamically loaded addresses can't have write locks demoted without
+    /// loading addresses, this shouldn't be used in the runtime.
+    pub fn is_maybe_writable_with_reserved_addresses(
+        &self,
+        index: usize,
+        reserved_addresses: Option<&impl AddressSet>,
+    ) -> bool {
         match self {
-            Self::Legacy(message) => message.is_maybe_writable(index, reserved_account_keys),
-            Self::V0(message) => message.is_maybe_writable(index, reserved_account_keys),
-            Self::V1(message) => message.is_maybe_writable(index, reserved_account_keys),
+            Self::Legacy(message) => {
+                message.is_maybe_writable_with_reserved_addresses(index, reserved_addresses)
+            }
+            Self::V0(message) => {
+                message.is_maybe_writable_with_reserved_addresses(index, reserved_addresses)
+            }
+            Self::V1(message) => {
+                message.is_maybe_writable_with_reserved_addresses(index, reserved_addresses)
+            }
         }
     }
 

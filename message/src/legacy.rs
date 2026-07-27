@@ -20,7 +20,7 @@ use std::collections::HashSet;
 use {
     crate::{
         compiled_instruction::CompiledInstruction, compiled_keys::CompiledKeys,
-        inline_nonce::advance_nonce_account_instruction, MessageHeader,
+        inline_nonce::advance_nonce_account_instruction, AddressSet, MessageHeader,
     },
     alloc::vec::Vec,
     core::convert::TryFrom,
@@ -580,23 +580,47 @@ impl Message {
     }
 
     /// Returns true if the account at the specified index is writable by the
-    /// instructions in this message. The `reserved_account_keys` param has been
-    /// optional to allow clients to approximate writability without requiring
-    /// fetching the latest set of reserved account keys. If this method is
-    /// called by the runtime, the latest set of reserved account keys must be
-    /// passed.
+    /// instructions in this message.
+    ///
+    /// # Important
+    ///
+    /// The `reserved_account_keys` param has been optional to allow clients to
+    /// approximate writability without requiring fetching the latest set of
+    /// reserved account keys. If this method is called by the runtime, the latest
+    /// set of reserved account keys must be passed.
     #[cfg(feature = "std")]
+    #[deprecated(
+        since = "4.4.0",
+        note = "Use `is_maybe_writable_with_reserved_addresses` instead"
+    )]
     pub fn is_maybe_writable(
         &self,
         i: usize,
         reserved_account_keys: Option<&HashSet<Address>>,
+    ) -> bool {
+        self.is_maybe_writable_with_reserved_addresses(i, reserved_account_keys)
+    }
+
+    /// Returns true if the account at the specified index is writable by the
+    /// instructions in this message.
+    ///
+    /// # Important
+    ///
+    /// The `reserved_addresses` param is optional to allow clients to approximate
+    /// writability without requiring fetching the latest set of protocol-reserved
+    /// addresses. If this method is called by the runtime, the latest set of
+    /// reserved addresses must be passed.
+    pub fn is_maybe_writable_with_reserved_addresses(
+        &self,
+        i: usize,
+        reserved_addresses: Option<&impl AddressSet>,
     ) -> bool {
         super::is_maybe_writable(
             i,
             self.header,
             &self.account_keys,
             &self.instructions,
-            reserved_account_keys,
+            reserved_addresses,
         )
     }
 
@@ -723,6 +747,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(deprecated)]
     fn test_is_maybe_writable() {
         let key0 = Address::new_unique();
         let key1 = Address::new_unique();

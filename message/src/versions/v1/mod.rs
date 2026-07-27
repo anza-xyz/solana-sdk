@@ -17,7 +17,17 @@ pub use {config::*, error::*, message::*};
 ///  - data_len
 ///
 /// This is used to parse the instruction portion of a V1 message.
+#[deprecated(since = "4.3.0", note = "Use WireInstructionHeader instead")]
 pub type InstructionHeader = (u8, u8, [u8; 2]);
+
+#[cfg_attr(feature = "wincode", derive(wincode::SchemaRead, wincode::SchemaWrite))]
+#[cfg_attr(feature = "wincode", wincode(assert_zero_copy))]
+#[repr(C)]
+pub struct WireInstructionHeader {
+    pub program_id_index: u8,
+    pub num_accounts: u8,
+    pub data_len: [u8; 2],
+}
 
 /// Version byte for V1 messages (decimal 129).
 pub const V1_PREFIX: u8 = MESSAGE_VERSION_PREFIX | 1;
