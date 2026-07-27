@@ -12,3 +12,4 @@ farf/
 /.vscode/
 
 .DS_Store
+__fuzz__
