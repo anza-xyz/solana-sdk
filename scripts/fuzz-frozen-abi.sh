@@ -124,22 +124,9 @@ for target in "${targets[@]}"; do
     bolero_test_args+=("${bolero_extra_args[@]}")
   fi
 
-  echo "preparing $target"
-  prepare_command=(cargo bolero test "${bolero_test_args[@]}" --runs 0 "$target")
-  "${prepare_command[@]}"
-
   echo "fuzzing $target for $duration"
-
-  fuzz_command=(cargo bolero test "${bolero_test_args[@]}" -T "$duration" "$target")
-
-  if timeout "$duration" "${fuzz_command[@]}"; then
-    :
-  else
-    status="$?"
-    if [[ "$status" -eq 124 || "$status" -eq 137 ]]; then
-      echo "fuzzing $target reached $duration"
-    else
-      exit "$status"
-    fi
-  fi
+  cargo bolero test \
+    "${bolero_test_args[@]}" \
+    -T "$duration" \
+    "$target"
 done
