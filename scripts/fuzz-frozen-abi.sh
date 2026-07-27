@@ -25,12 +25,15 @@
 #        --crashes-dir __fuzz__/crashes
 #
 # Reproduce the intentionally skipped serialization bug target:
-#     TOTAL_FUZZ_TIME=1s scripts/fuzz-frozen-abi.sh \
-#     'stable_abi::impls::tests::bolero_repro::TestFuzzerBreakSerializationAboveN_frozen_abi_fuzzer::test_fuzzer_wincode' \
-#     -- --package solana-frozen-abi \
-#        --features fuzz-bolero-repro \
-#        --corpus-dir frozen-abi/src/stable_abi/__fuzz__/stable_abi__impls__tests__bolero_repro__TestFuzzerBreakSerializationAboveN_frozen_abi_fuzzer__fuzzer_wincode/corpus \
-#        --crashes-dir frozen-abi/src/stable_abi/__fuzz__/stable_abi__impls__tests__bolero_repro__TestFuzzerBreakSerializationAboveN_frozen_abi_fuzzer__fuzzer_wincode/crashes
+#  RUST_MIN_STACK=16777216 cargo bolero test \
+#    --rustc-bootstrap \
+#    --package solana-frozen-abi \
+#    --features fuzz-bolero-repro \
+#    --corpus-dir frozen-abi/src/stable_abi/__fuzz__/stable_abi__impls__tests__bolero_repro__TestFuzzerBreakSerializationAboveN_frozen_abi_fuzzer__fuzzer_wincode/corpus \
+#    --crashes-dir frozen-abi/src/stable_abi/__fuzz__/stable_abi__impls__tests__bolero_repro__TestFuzzerBreakSerializationAboveN_frozen_abi_fuzzer__fuzzer_wincode/crashes \
+#    -T 1s \
+#    --timeout 1s \
+#    'stable_abi::impls::tests::bolero_repro::TestFuzzerBreakSerializationAboveN_frozen_abi_fuzzer::test_fuzzer_wincode'
 #
 # Output:
 #
