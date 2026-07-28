@@ -16,10 +16,7 @@ all-features = true
 rustdoc-args = ["--cfg=docsrs"]
 
 [features]
-seed-derivable = [
-    "dep:solana-derivation-path",
-    "dep:solana-seed-derivable",
-]
+seed-derivable = ["dep:solana-derivation-path", "dep:solana-seed-derivable"]
 
 [dependencies]
 five8 = { workspace = true }
