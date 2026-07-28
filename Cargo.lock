@@ -3430,7 +3430,7 @@ dependencies = [
 
 [[package]]
 name = "solana-bls-signatures"
-version = "3.3.0"
+version = "3.4.0"
 dependencies = [
  "base64",
  "bincode",
@@ -4763,7 +4763,7 @@ dependencies = [
 
 [[package]]
 name = "solana-sysvar"
-version = "4.1.0"
+version = "4.2.0"
 dependencies = [
  "anyhow",
  "base64",

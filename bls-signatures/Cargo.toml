@@ -2,7 +2,7 @@
 name = "solana-bls-signatures"
 description = "Solana BLS Signatures"
 documentation = "https://docs.rs/solana-bls-signatures"
-version = "3.3.0"
+version = "3.4.0"
 rust-version = { workspace = true }
 authors = { workspace = true }
 repository = { workspace = true }

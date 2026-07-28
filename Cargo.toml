@@ -237,7 +237,7 @@ solana-atomic-u64 = { path = "atomic-u64", version = "3.0.0" }
 solana-big-mod-exp = { path = "big-mod-exp", version = "4.0.0" }
 solana-bincode = { path = "bincode", version = "3.0.0" }
 solana-blake3-hasher = { path = "blake3-hasher", version = "3.0.0" }
-solana-bls-signatures = { path = "bls-signatures", version = "3.0.0" }
+solana-bls-signatures = { path = "bls-signatures", version = "3.4.0" }
 solana-bn254 = { path = "bn254", version = "3.0.0" }
 solana-borsh = { path = "borsh", version = "3.0.0" }
 solana-client-traits = { path = "client-traits", version = "4.0.0" }
@@ -331,7 +331,7 @@ solana-svm-transaction = { path = "svm-transaction", version = "4.2.0" }
 solana-system-interface = { path = "system-interface", version = "3.2" }
 solana-system-transaction = { path = "system-transaction", version = "4.0.0" }
 solana-system-wasm-js = { path = "system-wasm-js", version = "1.0" }
-solana-sysvar = { path = "sysvar", version = "4.0.0" }
+solana-sysvar = { path = "sysvar", version = "4.2.0" }
 solana-sysvar-id = { path = "sysvar-id", version = "3.0.0" }
 solana-time-utils = { path = "time-utils", version = "3.0.0" }
 solana-transaction = { path = "transaction", version = "4.1.5", default-features = false }
