@@ -14,6 +14,8 @@ use {
         io::{Read, Write},
         path::Path,
     },
+    subtle::ConstantTimeEq,
+    zeroize::Zeroizing,
 };
 
 #[cfg(feature = "seed-derivable")]
@@ -103,12 +105,24 @@ impl TryFrom<&[u8]> for Keypair {
         // The first half is the secret key seed; the second half is the
         // expected public key. Reconstruct the signing key from the seed and
         // verify that its derived public key matches the provided one.
-        let secret_key: [u8; Keypair::SECRET_KEY_LENGTH] = keypair_bytes
-            [..Keypair::SECRET_KEY_LENGTH]
-            .try_into()
-            .expect("secret key length is checked above");
-        let signing_key = SigningKey::from(secret_key);
-        if signing_key.verification_key().as_ref() != &keypair_bytes[Keypair::SECRET_KEY_LENGTH..] {
+        //
+        // The seed is copied into a `Zeroizing` buffer so that this transient
+        // copy of the secret key material is wiped from the stack once the
+        // signing key has been constructed.
+        let secret_key: Zeroizing<[u8; Keypair::SECRET_KEY_LENGTH]> = Zeroizing::new(
+            keypair_bytes[..Keypair::SECRET_KEY_LENGTH]
+                .try_into()
+                .expect("secret key length is checked above"),
+        );
+        let signing_key = SigningKey::from(*secret_key);
+        // The public keys are not secret, but compare them in constant time as
+        // good hygiene so the comparison timing does not depend on how many
+        // leading bytes match.
+        let pubkeys_match = signing_key
+            .verification_key()
+            .as_ref()
+            .ct_eq(&keypair_bytes[Keypair::SECRET_KEY_LENGTH..]);
+        if !bool::from(pubkeys_match) {
             return Err(SignatureError::from_source(String::from(
                 "keypair bytes do not specify same pubkey as derived from their secret key",
             )));
