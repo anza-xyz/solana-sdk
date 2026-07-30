@@ -17,10 +17,16 @@ pub mod state_traits;
 
 // wincode config used by the `state_traits::wincode` trait. The wire format matches
 // bincode byte-for-byte; the only deliberate difference is raising the preallocation
-// guard to 10 MiB (Solana's max account data length) so valid accounts are never
-// rejected. This gates only the prealloc check, not the encoded bytes.
+// guard to the max account data length so valid accounts are never rejected. This gates
+// only the prealloc check, not the encoded bytes.
+//
+// Mirrors `solana_system_interface::MAX_PERMITTED_DATA_LENGTH` (kept in sync by the
+// assertion below) so `solana-system-interface` stays a dev-only dependency.
 #[cfg(feature = "wincode")]
 const WINCODE_PREALLOC_LIMIT: usize = 10 * 1024 * 1024;
+#[cfg(all(test, feature = "wincode"))]
+const _: () =
+    assert!(WINCODE_PREALLOC_LIMIT as u64 == solana_system_interface::MAX_PERMITTED_DATA_LENGTH);
 #[cfg(feature = "wincode")]
 pub(crate) type WincodeConfig = wincode::config::Configuration<true, WINCODE_PREALLOC_LIMIT>;
 #[cfg(feature = "wincode")]
