@@ -17,7 +17,7 @@ rustdoc-args = ["--cfg=docsrs"]
 [features]
 bincode = ["dep:bincode", "dep:solana-sysvar", "serde"]
 wincode = ["dep:wincode", "solana-pubkey/wincode"]
-dev-context-only-utils = ["bincode", "dep:qualifier_attr"]
+dev-context-only-utils = ["bincode", "wincode", "dep:qualifier_attr"]
 frozen-abi = [
     "dep:solana-frozen-abi",
     "dep:solana-frozen-abi-macro",

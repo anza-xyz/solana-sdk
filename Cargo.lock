@@ -3159,6 +3159,7 @@ dependencies = [
  "solana-instruction-error",
  "solana-pubkey",
  "solana-sdk-ids",
+ "solana-system-interface",
  "solana-sysvar",
  "wincode",
 ]
