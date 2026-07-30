@@ -111,6 +111,10 @@ pub enum UpgradeableLoaderInstruction {
         /// Optional on the wire: when the trailing byte is absent, this
         /// decodes to `true`.
         #[cfg_attr(feature = "wincode", wincode(with = "OptionalTrailingBool<true>"))]
+        #[cfg_attr(
+            feature = "serde",
+            serde(deserialize_with = "deserialize_optional_trailing_bool_true")
+        )]
         close_buffer: bool,
     },
 
@@ -140,6 +144,10 @@ pub enum UpgradeableLoaderInstruction {
         /// Optional on the wire: when the trailing byte is absent, this
         /// decodes to `true`.
         #[cfg_attr(feature = "wincode", wincode(with = "OptionalTrailingBool<true>"))]
+        #[cfg_attr(
+            feature = "serde",
+            serde(deserialize_with = "deserialize_optional_trailing_bool_true")
+        )]
         close_buffer: bool,
     },
 
@@ -173,6 +181,10 @@ pub enum UpgradeableLoaderInstruction {
         /// Optional on the wire: when the trailing byte is absent, this
         /// decodes to `false`.
         #[cfg_attr(feature = "wincode", wincode(with = "OptionalTrailingBool<false>"))]
+        #[cfg_attr(
+            feature = "serde",
+            serde(deserialize_with = "solana_serde::default_on_eof")
+        )]
         tombstone: bool,
     },
 
@@ -261,6 +273,31 @@ unsafe impl<C: ConfigCore, const DEFAULT: bool> SchemaWrite<C> for OptionalTrail
         writer.write(&[u8::from(*src)])?;
         Ok(())
     }
+}
+
+/// A `bool` whose `Default` is `true`. Used with `solana_serde::default_on_eof`
+/// to decode a legacy payload whose trailing byte is absent as `true`.
+#[cfg(feature = "serde")]
+#[derive(serde_derive::Deserialize)]
+struct DefaultTrueBool(bool);
+
+#[cfg(feature = "serde")]
+impl Default for DefaultTrueBool {
+    fn default() -> Self {
+        Self(true)
+    }
+}
+
+/// serde/bincode counterpart of `OptionalTrailingBool<true>`: decodes a
+/// trailing `bool` that is absent in the legacy wire format as `true`. A clean
+/// end-of-input yields `true`; a present byte is decoded as its value.
+#[cfg(feature = "serde")]
+fn deserialize_optional_trailing_bool_true<'de, D>(deserializer: D) -> Result<bool, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    let value: DefaultTrueBool = solana_serde::default_on_eof(deserializer)?;
+    Ok(value.0)
 }
 
 #[cfg(feature = "wincode")]
@@ -788,5 +825,78 @@ mod tests {
             result.is_err(),
             "a non-EOF read error must be surfaced, got {result:?}",
         );
+    }
+}
+
+/// Backward-compatibility of the serde/bincode deserializer with the v7.0 wire
+/// format, in which `DeployWithMaxDataLen`, `Upgrade`, and `Close` carried no
+/// trailing `bool`. Mirrors the wincode `legacy_*` tests above.
+#[cfg(all(test, feature = "serde"))]
+mod serde_tests {
+    use super::*;
+
+    /// Legacy `DeployWithMaxDataLen` payloads omit the trailing `close_buffer`
+    /// byte; bincode must decode these to `close_buffer: true`.
+    #[test]
+    fn legacy_deploy_decodes_close_buffer_as_true() {
+        let mut data = Vec::new();
+        data.extend_from_slice(&2u32.to_le_bytes()); // Discriminator
+        data.extend_from_slice(&42u64.to_le_bytes()); // max_data_len
+        let decoded: UpgradeableLoaderInstruction = bincode::deserialize(&data).unwrap();
+        assert_eq!(
+            decoded,
+            UpgradeableLoaderInstruction::DeployWithMaxDataLen {
+                max_data_len: 42,
+                close_buffer: true, // <-- Default value
+            }
+        );
+    }
+
+    /// Legacy `Upgrade` payloads omit the trailing `close_buffer` byte; bincode
+    /// must decode these to `close_buffer: true`.
+    #[test]
+    fn legacy_upgrade_decodes_close_buffer_as_true() {
+        let data = 3u32.to_le_bytes(); // Discriminator
+        let decoded: UpgradeableLoaderInstruction = bincode::deserialize(&data).unwrap();
+        assert_eq!(
+            decoded,
+            UpgradeableLoaderInstruction::Upgrade {
+                close_buffer: true, // <-- Default value
+            }
+        );
+    }
+
+    /// Legacy `Close` payloads omit the trailing `tombstone` byte; bincode must
+    /// decode these to `tombstone: false`.
+    #[test]
+    fn legacy_close_decodes_tombstone_as_false() {
+        let data = 5u32.to_le_bytes(); // Discriminator
+        let decoded: UpgradeableLoaderInstruction = bincode::deserialize(&data).unwrap();
+        assert_eq!(
+            decoded,
+            UpgradeableLoaderInstruction::Close {
+                tombstone: false, // <-- Default value
+            }
+        );
+    }
+
+    /// A present trailing byte is still honored on the serde/bincode path, for
+    /// both settings of each optional `bool`, and round-trips through bincode.
+    #[test]
+    fn present_trailing_bool_round_trips() {
+        for instr in [
+            UpgradeableLoaderInstruction::DeployWithMaxDataLen {
+                max_data_len: 42,
+                close_buffer: false,
+            },
+            UpgradeableLoaderInstruction::Upgrade {
+                close_buffer: false,
+            },
+            UpgradeableLoaderInstruction::Close { tombstone: true },
+        ] {
+            let bytes = bincode::serialize(&instr).unwrap();
+            let decoded: UpgradeableLoaderInstruction = bincode::deserialize(&bytes).unwrap();
+            assert_eq!(decoded, instr);
+        }
     }
 }
