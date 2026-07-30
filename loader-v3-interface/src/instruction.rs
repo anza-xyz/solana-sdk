@@ -111,6 +111,10 @@ pub enum UpgradeableLoaderInstruction {
         /// Optional on the wire: when the trailing byte is absent, this
         /// decodes to `true`.
         #[cfg_attr(feature = "wincode", wincode(with = "OptionalTrailingBool<true>"))]
+        #[cfg_attr(
+            feature = "serde",
+            serde(deserialize_with = "deserialize_optional_trailing_bool::<_, true>")
+        )]
         close_buffer: bool,
     },
 
@@ -140,6 +144,10 @@ pub enum UpgradeableLoaderInstruction {
         /// Optional on the wire: when the trailing byte is absent, this
         /// decodes to `true`.
         #[cfg_attr(feature = "wincode", wincode(with = "OptionalTrailingBool<true>"))]
+        #[cfg_attr(
+            feature = "serde",
+            serde(deserialize_with = "deserialize_optional_trailing_bool::<_, true>")
+        )]
         close_buffer: bool,
     },
 
@@ -173,6 +181,10 @@ pub enum UpgradeableLoaderInstruction {
         /// Optional on the wire: when the trailing byte is absent, this
         /// decodes to `false`.
         #[cfg_attr(feature = "wincode", wincode(with = "OptionalTrailingBool<false>"))]
+        #[cfg_attr(
+            feature = "serde",
+            serde(deserialize_with = "deserialize_optional_trailing_bool::<_, false>")
+        )]
         tombstone: bool,
     },
 
@@ -261,6 +273,22 @@ unsafe impl<C: ConfigCore, const DEFAULT: bool> SchemaWrite<C> for OptionalTrail
         writer.write(&[u8::from(*src)])?;
         Ok(())
     }
+}
+
+/// serde/bincode counterpart of `OptionalTrailingBool<DEFAULT>`: a trailing
+/// `bool` that the v7.0 wire format omits. An absent byte decodes to `DEFAULT`,
+/// a present one to its own value.
+#[cfg(feature = "serde")]
+fn deserialize_optional_trailing_bool<'de, D, const DEFAULT: bool>(
+    deserializer: D,
+) -> Result<bool, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    let value = solana_serde::ignore_eof_error::<Option<bool>, D::Error>(
+        <bool as serde::Deserialize>::deserialize(deserializer).map(Some),
+    )?;
+    Ok(value.unwrap_or(DEFAULT))
 }
 
 #[cfg(feature = "wincode")]
@@ -545,7 +573,7 @@ pub fn extend_program(
     )
 }
 
-#[cfg(all(test, feature = "wincode"))]
+#[cfg(test)]
 mod tests {
     use {super::*, test_case::test_case};
 
@@ -677,48 +705,65 @@ mod tests {
         assert_eq!(from_wincode, instr);
     }
 
+    /// Both deserializers must decode `legacy_data` to `expected`, and both must
+    /// encode `expected` back as `legacy_data` plus its one trailing byte. The
+    /// paths share the buffer so they cannot drift apart.
+    fn assert_legacy_decodes_to(legacy_data: &[u8], expected: UpgradeableLoaderInstruction) {
+        let from_wincode: UpgradeableLoaderInstruction = wincode::deserialize(legacy_data).unwrap();
+        let from_bincode: UpgradeableLoaderInstruction = bincode::deserialize(legacy_data).unwrap();
+        assert_eq!(from_wincode, expected);
+        assert_eq!(from_bincode, expected);
+
+        let modern_wincode = wincode::serialize(&expected).unwrap();
+        let modern_bincode = bincode::serialize(&expected).unwrap();
+        assert_eq!(modern_wincode, modern_bincode);
+        let (trailing, prefix) = modern_wincode.split_last().unwrap();
+        assert_eq!(prefix, legacy_data);
+        assert!(
+            matches!(*trailing, 0 | 1),
+            "trailing byte must encode a bool"
+        );
+    }
+
     /// Legacy `DeployWithMaxDataLen` payloads omit the trailing
-    /// `close_buffer` byte; wincode must decode these to `close_buffer: true`.
+    /// `close_buffer` byte; both decoders must yield `close_buffer: true`.
     #[test]
     fn legacy_deploy_decodes_close_buffer_as_true() {
         let mut data = Vec::new();
         data.extend_from_slice(&2u32.to_le_bytes()); // Discriminator
         data.extend_from_slice(&42u64.to_le_bytes()); // max_data_len
-        let decoded: UpgradeableLoaderInstruction = wincode::deserialize(&data).unwrap();
-        assert_eq!(
-            decoded,
+        assert_legacy_decodes_to(
+            &data,
             UpgradeableLoaderInstruction::DeployWithMaxDataLen {
                 max_data_len: 42,
                 close_buffer: true, // <-- Default value
-            }
+            },
         );
     }
 
-    /// Legacy `Upgrade` payloads omit the trailing `close_buffer` byte;
-    /// wincode must decode these to `close_buffer: true`.
+    /// Legacy `Upgrade` payloads omit the trailing `close_buffer` byte; both
+    /// decoders must yield `close_buffer: true`.
     #[test]
     fn legacy_upgrade_decodes_close_buffer_as_true() {
         let data = 3u32.to_le_bytes(); // Discriminator
-        let decoded: UpgradeableLoaderInstruction = wincode::deserialize(&data).unwrap();
-        assert_eq!(
-            decoded,
+        assert_legacy_decodes_to(
+            &data,
             UpgradeableLoaderInstruction::Upgrade {
                 close_buffer: true, // <-- Default value
-            }
+            },
         );
     }
 
-    /// Legacy `Close` payloads omit the trailing `tombstone` byte; wincode
-    /// must decode these to `tombstone: false`.
+    /// Legacy `Close` payloads omit the trailing `tombstone` byte; both
+    /// decoders must yield `tombstone: false`.
     #[test]
     fn legacy_close_decodes_tombstone_as_false() {
         let data = 5u32.to_le_bytes(); // Discriminator
-        let decoded: UpgradeableLoaderInstruction = wincode::deserialize(&data).unwrap();
-        assert_eq!(
-            decoded,
+        assert_legacy_decodes_to(
+            &data,
             UpgradeableLoaderInstruction::Close {
                 tombstone: false, // <-- Default value
-            }
+            },
         );
     }
 
