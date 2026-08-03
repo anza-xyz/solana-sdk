@@ -1,3 +1,4 @@
+#![cfg_attr(target_os = "solana", no_std)]
 #![cfg_attr(docsrs, feature(doc_cfg))]
 //! Hashing with the [Poseidon] hash function.
 //!
