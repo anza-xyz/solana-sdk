@@ -3447,9 +3447,9 @@ dependencies = [
 
 [[package]]
 name = "solana-ed25519"
-version = "0.2.2"
+version = "0.2.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "277eebda58d900c9ded260368ad5d298bd5e10ca7c9934df1758013b24c87545"
+checksum = "e9eb363f7bce265f568551029efdff3f33752376fe8289cb628fe084503a925f"
 dependencies = [
  "cfg-if",
  "cpufeatures 0.3.0",
