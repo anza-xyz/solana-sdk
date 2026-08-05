@@ -12,6 +12,7 @@ use {
     std::{
         error,
         io::{Read, Write},
+        mem::MaybeUninit,
         path::Path,
     },
     subtle::ConstantTimeEq,
@@ -46,10 +47,19 @@ impl Keypair {
 
     /// Returns this `Keypair` as a byte array
     pub fn to_bytes(&self) -> [u8; KEYPAIR_LENGTH] {
-        let mut bytes = [0u8; KEYPAIR_LENGTH];
-        bytes[..Self::SECRET_KEY_LENGTH].copy_from_slice(self.0.as_bytes());
-        bytes[Self::SECRET_KEY_LENGTH..].copy_from_slice(self.0.verification_key().as_ref());
-        bytes
+        let secret_key = self.0.as_bytes();
+        let pubkey = <[u8; Self::SECRET_KEY_LENGTH]>::from(self.0.verification_key());
+        let mut bytes = MaybeUninit::<[u8; KEYPAIR_LENGTH]>::uninit();
+        let ptr = bytes.as_mut_ptr().cast::<u8>();
+        // SAFETY: `secret_key` and `pubkey` are `Self::SECRET_KEY_LENGTH` bytes
+        // each, so the two copies below together initialize all
+        // `KEYPAIR_LENGTH` bytes of `bytes` before it is read.
+        unsafe {
+            ptr.copy_from_nonoverlapping(secret_key.as_ptr(), Self::SECRET_KEY_LENGTH);
+            ptr.add(Self::SECRET_KEY_LENGTH)
+                .copy_from_nonoverlapping(pubkey.as_ptr(), Self::SECRET_KEY_LENGTH);
+            bytes.assume_init()
+        }
     }
 
     /// Recovers a `Keypair` from a base58-encoded string
@@ -133,6 +143,10 @@ impl TryFrom<&[u8]> for Keypair {
 
 #[cfg(test)]
 static_assertions::const_assert_eq!(Keypair::SECRET_KEY_LENGTH * 2, KEYPAIR_LENGTH);
+// Fails to compile if the underlying library's secret key length ever diverges
+// from `Keypair::SECRET_KEY_LENGTH`.
+#[cfg(test)]
+const _: fn(&[u8; Keypair::SECRET_KEY_LENGTH]) -> SigningKey = SigningKey::from_bytes;
 
 impl Signer for Keypair {
     #[inline]
