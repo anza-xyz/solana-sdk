@@ -3,7 +3,7 @@ name = "solana-sdk"
 description = "Solana SDK"
 documentation = "https://docs.rs/solana-sdk"
 readme = "README.md"
-version = "4.0.1"
+version = "4.1.0"
 rust-version = { workspace = true }
 authors = { workspace = true }
 repository = { workspace = true }

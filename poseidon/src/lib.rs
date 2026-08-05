@@ -5,9 +5,6 @@
 
 use thiserror::Error;
 
-#[doc(hidden)]
-pub mod legacy;
-
 /// Length of Poseidon hash result.
 pub const HASH_BYTES: usize = 32;
 

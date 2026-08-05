@@ -1,6 +1,6 @@
 [package]
 name = "solana-system-interface"
-version = "3.2.0"
+version = "3.3.0"
 description = "Instructions and constructors for the System program"
 readme = "README.md"
 authors = { workspace = true }
