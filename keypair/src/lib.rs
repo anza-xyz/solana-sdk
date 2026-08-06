@@ -12,7 +12,6 @@ use {
     std::{
         error,
         io::{Read, Write},
-        mem::MaybeUninit,
         path::Path,
     },
     subtle::ConstantTimeEq,
@@ -47,19 +46,11 @@ impl Keypair {
 
     /// Returns this `Keypair` as a byte array
     pub fn to_bytes(&self) -> [u8; KEYPAIR_LENGTH] {
-        let secret_key = self.0.as_bytes();
-        let pubkey = <[u8; Self::SECRET_KEY_LENGTH]>::from(self.0.verification_key());
-        let mut bytes = MaybeUninit::<[u8; KEYPAIR_LENGTH]>::uninit();
-        let ptr = bytes.as_mut_ptr().cast::<u8>();
-        // SAFETY: `secret_key` and `pubkey` are `Self::SECRET_KEY_LENGTH` bytes
-        // each, so the two copies below together initialize all
-        // `KEYPAIR_LENGTH` bytes of `bytes` before it is read.
-        unsafe {
-            ptr.copy_from_nonoverlapping(secret_key.as_ptr(), Self::SECRET_KEY_LENGTH);
-            ptr.add(Self::SECRET_KEY_LENGTH)
-                .copy_from_nonoverlapping(pubkey.as_ptr(), Self::SECRET_KEY_LENGTH);
-            bytes.assume_init()
-        }
+        let mut bytes = [0u8; KEYPAIR_LENGTH];
+        let (secret_key, pubkey) = bytes.split_at_mut(Self::SECRET_KEY_LENGTH);
+        secret_key.copy_from_slice(self.0.as_bytes());
+        pubkey.copy_from_slice(self.0.verification_key().as_ref());
+        bytes
     }
 
     /// Recovers a `Keypair` from a base58-encoded string
