@@ -14,7 +14,6 @@ use {
         io::{Read, Write},
         path::Path,
     },
-    subtle::ConstantTimeEq,
     zeroize::Zeroizing,
 };
 
@@ -94,6 +93,23 @@ impl Keypair {
     }
 }
 
+/// Compares two byte slices without short-circuiting on the first difference.
+///
+/// This is what `subtle::ConstantTimeEq` would give us, written out by hand to
+/// keep the direct dependencies of this crate to a minimum. The differences are
+/// folded into an accumulator and passed through `black_box` so the optimizer
+/// cannot turn the loop back into an early-exit comparison.
+fn constant_time_eq(a: &[u8], b: &[u8]) -> bool {
+    if a.len() != b.len() {
+        return false;
+    }
+    let mut diff = 0u8;
+    for (x, y) in a.iter().zip(b.iter()) {
+        diff |= x ^ y;
+    }
+    core::hint::black_box(diff) == 0
+}
+
 impl TryFrom<&[u8]> for Keypair {
     type Error = SignatureError;
 
@@ -119,11 +135,11 @@ impl TryFrom<&[u8]> for Keypair {
         // The public keys are not secret, but compare them in constant time as
         // good hygiene so the comparison timing does not depend on how many
         // leading bytes match.
-        let pubkeys_match = signing_key
-            .verification_key()
-            .as_ref()
-            .ct_eq(&keypair_bytes[Keypair::SECRET_KEY_LENGTH..]);
-        if !bool::from(pubkeys_match) {
+        let pubkeys_match = constant_time_eq(
+            signing_key.verification_key().as_ref(),
+            &keypair_bytes[Keypair::SECRET_KEY_LENGTH..],
+        );
+        if !pubkeys_match {
             return Err(SignatureError::from_source(String::from(
                 "keypair bytes do not specify same pubkey as derived from their secret key",
             )));
@@ -449,6 +465,36 @@ mod tests {
         let keypair =
             keypair_from_seed_phrase_and_passphrase(mnemonic.phrase(), passphrase).unwrap();
         assert_eq!(keypair.pubkey(), expected_keypair.pubkey());
+    }
+
+    #[test]
+    fn test_try_from_bytes() {
+        let keypair = Keypair::new();
+        let bytes = keypair.to_bytes();
+        assert_eq!(Keypair::try_from(&bytes[..]).unwrap(), keypair);
+
+        // wrong length
+        assert!(Keypair::try_from(&bytes[..KEYPAIR_LENGTH - 1]).is_err());
+
+        // pubkey half does not match the secret key half
+        let mut mismatched = bytes;
+        mismatched[KEYPAIR_LENGTH - 1] ^= 1;
+        assert!(Keypair::try_from(&mismatched[..]).is_err());
+
+        // first byte of the pubkey half differs, to cover the non-short-circuiting
+        // comparison from the other end
+        let mut mismatched = bytes;
+        mismatched[Keypair::SECRET_KEY_LENGTH] ^= 1;
+        assert!(Keypair::try_from(&mismatched[..]).is_err());
+    }
+
+    #[test]
+    fn test_constant_time_eq() {
+        assert!(constant_time_eq(&[], &[]));
+        assert!(constant_time_eq(&[1, 2, 3], &[1, 2, 3]));
+        assert!(!constant_time_eq(&[1, 2, 3], &[1, 2, 4]));
+        assert!(!constant_time_eq(&[1, 2, 3], &[9, 2, 3]));
+        assert!(!constant_time_eq(&[1, 2, 3], &[1, 2]));
     }
 
     #[test]

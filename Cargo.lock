@@ -3811,7 +3811,6 @@ dependencies = [
  "solana-signature",
  "solana-signer",
  "static_assertions",
- "subtle",
  "tiny-bip39",
  "zeroize",
 ]
