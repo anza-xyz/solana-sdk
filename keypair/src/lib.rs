@@ -133,7 +133,7 @@ impl TryFrom<&[u8]> for Keypair {
 }
 
 #[cfg(test)]
-static_assertions::const_assert_eq!(Keypair::SECRET_KEY_LENGTH * 2, KEYPAIR_LENGTH);
+static_assertions::const_assert_eq!(Keypair::SECRET_KEY_LENGTH, size_of::<SigningKey>());
 // Fails to compile if the underlying library's secret key length ever diverges
 // from `Keypair::SECRET_KEY_LENGTH`.
 #[cfg(test)]
