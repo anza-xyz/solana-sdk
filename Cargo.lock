@@ -3945,7 +3945,6 @@ dependencies = [
  "solana-nonce",
  "solana-pubkey",
  "solana-sdk-ids",
- "wincode",
 ]
 
 [[package]]

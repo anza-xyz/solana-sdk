@@ -2,7 +2,7 @@
 #![cfg_attr(docsrs, feature(doc_cfg))]
 
 use {
-    solana_account::{state_traits::StateMut, AccountSharedData, ReadableAccount},
+    solana_account::{AccountSharedData, ReadableAccount},
     solana_hash::Hash,
     solana_nonce::{
         state::{Data, State},
@@ -11,6 +11,13 @@ use {
     solana_sdk_ids::system_program,
     std::cell::RefCell,
 };
+// `StateMutWincode` mirrors `StateMut`'s `state`/`set_state` surface, so the codec used to
+// read nonce accounts is picked once, here, by the `wincode` feature. Both encode the same
+// wire format, so accounts written by either are readable by the other.
+#[cfg(not(feature = "wincode"))]
+use solana_account::state_traits::StateMut;
+#[cfg(feature = "wincode")]
+use solana_account::state_traits::StateMutWincode as StateMut;
 
 pub fn create_account(lamports: u64) -> RefCell<AccountSharedData> {
     RefCell::new(
@@ -32,11 +39,7 @@ pub fn verify_nonce_account(
 ) -> Option<Data> {
     (account.owner() == &system_program::id())
         .then(|| {
-            #[cfg(feature = "wincode")]
-            let versions = wincode::deserialize::<Versions>(account.data());
-            #[cfg(not(feature = "wincode"))]
-            let versions = StateMut::<Versions>::state(account);
-            versions
+            StateMut::<Versions>::state(account)
                 .ok()?
                 .verify_recent_blockhash(recent_blockhash)
                 .cloned()
