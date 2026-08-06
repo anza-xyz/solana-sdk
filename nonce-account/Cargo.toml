@@ -15,15 +15,20 @@ all-features = true
 rustdoc-args = ["--cfg=docsrs"]
 
 [features]
+default = ["bincode"]
+bincode = ["solana-account/bincode", "solana-nonce/serde"]
 wincode = ["solana-account/wincode", "solana-nonce/wincode"]
 
 [dependencies]
-solana-account = { workspace = true, features = ["bincode"] }
+solana-account = { workspace = true }
 solana-hash = { workspace = true }
-solana-nonce = { workspace = true, features = ["serde"] }
+solana-nonce = { workspace = true }
 solana-sdk-ids = { workspace = true }
 
 [dev-dependencies]
 bincode = { workspace = true }
+# Tests build accounts with the bincode constructors whichever codec the lib is built with.
+solana-account = { workspace = true, features = ["bincode"] }
 solana-fee-calculator = { workspace = true }
+solana-nonce = { workspace = true, features = ["serde"] }
 solana-pubkey = { workspace = true, features = ["std"] }

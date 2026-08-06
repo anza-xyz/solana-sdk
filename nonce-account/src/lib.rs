@@ -1,25 +1,28 @@
 //! Functions related to nonce accounts.
 #![cfg_attr(docsrs, feature(doc_cfg))]
 
+// Imported anonymously: either name would be wrong under the other feature, and both in
+// scope at once makes `state` ambiguous.
+#[cfg(all(feature = "bincode", not(feature = "wincode")))]
+use solana_account::state_traits::StateMut as _;
+#[cfg(feature = "wincode")]
+use solana_account::state_traits::StateMutWincode as _;
 use {
     solana_account::{AccountSharedData, ReadableAccount},
-    solana_hash::Hash,
-    solana_nonce::{
-        state::{Data, State},
-        versions::Versions,
-    },
+    solana_nonce::state::State,
     solana_sdk_ids::system_program,
+};
+#[cfg(any(feature = "bincode", feature = "wincode"))]
+use {
+    solana_hash::Hash,
+    solana_nonce::{state::Data, versions::Versions},
     std::cell::RefCell,
 };
-// `StateMutWincode` mirrors `StateMut`'s `state`/`set_state` surface, so the codec used to
-// read nonce accounts is picked once, here, by the `wincode` feature. Both encode the same
-// wire format, so accounts written by either are readable by the other.
-#[cfg(not(feature = "wincode"))]
-use solana_account::state_traits::StateMut;
-#[cfg(feature = "wincode")]
-use solana_account::state_traits::StateMutWincode as StateMut;
 
+#[cfg(any(feature = "bincode", feature = "wincode"))]
 pub fn create_account(lamports: u64) -> RefCell<AccountSharedData> {
+    // bincode's `new_data_with_space` is inherent while wincode's is a trait method, so this
+    // shadows to bincode whenever that codec is compiled in. The encodings agree.
     RefCell::new(
         AccountSharedData::new_data_with_space(
             lamports,
@@ -33,22 +36,23 @@ pub fn create_account(lamports: u64) -> RefCell<AccountSharedData> {
 
 /// Checks if the recent_blockhash field in Transaction verifies, and returns
 /// nonce account data if so.
+#[cfg(any(feature = "bincode", feature = "wincode"))]
 pub fn verify_nonce_account(
     account: &AccountSharedData,
     recent_blockhash: &Hash, // Transaction.message.recent_blockhash
 ) -> Option<Data> {
     (account.owner() == &system_program::id())
         .then(|| {
-            StateMut::<Versions>::state(account)
-                .ok()?
-                .verify_recent_blockhash(recent_blockhash)
-                .cloned()
+            let versions: Versions = account.state().ok()?;
+            versions.verify_recent_blockhash(recent_blockhash).cloned()
         })
         .flatten()
 }
 
+#[cfg(any(feature = "bincode", feature = "wincode"))]
 pub fn lamports_per_signature_of(account: &AccountSharedData) -> Option<u64> {
-    match StateMut::<Versions>::state(account).ok()?.state() {
+    let versions: Versions = account.state().ok()?;
+    match versions.state() {
         State::Initialized(data) => Some(data.fee_calculator.lamports_per_signature),
         State::Uninitialized => None,
     }
@@ -91,11 +95,26 @@ pub fn get_system_account_kind(account: &AccountSharedData) -> Option<SystemAcco
 mod tests {
     use {
         super::*,
-        solana_fee_calculator::FeeCalculator,
-        solana_nonce::state::{Data, DurableNonce},
+        solana_nonce::{state::Data, versions::Versions},
         solana_pubkey::Pubkey,
     };
+    #[cfg(any(feature = "bincode", feature = "wincode"))]
+    use {solana_fee_calculator::FeeCalculator, solana_nonce::state::DurableNonce};
 
+    // Written by bincode, always compiled in for tests; read back through the active codec.
+    #[cfg(any(feature = "bincode", feature = "wincode"))]
+    #[test]
+    fn test_create_account() {
+        let account = create_account(42);
+        let account = account.borrow();
+        assert_eq!(account.lamports(), 42);
+        assert_eq!(account.owner(), &system_program::id());
+        assert_eq!(account.data().len(), State::size());
+        let versions: Versions = account.state().unwrap();
+        assert_eq!(versions.state(), &State::Uninitialized);
+    }
+
+    #[cfg(any(feature = "bincode", feature = "wincode"))]
     #[test]
     fn test_verify_bad_account_owner_fails() {
         let program_id = Pubkey::new_unique();
@@ -110,6 +129,7 @@ mod tests {
         assert_eq!(verify_nonce_account(&account, &Hash::default()), None);
     }
 
+    #[cfg(any(feature = "bincode", feature = "wincode"))]
     fn new_nonce_account(versions: Versions) -> AccountSharedData {
         AccountSharedData::new_data(
             1_000_000,             // lamports
@@ -119,6 +139,7 @@ mod tests {
         .unwrap()
     }
 
+    #[cfg(any(feature = "bincode", feature = "wincode"))]
     #[test]
     fn test_verify_nonce_account() {
         let blockhash = Hash::from([171; 32]);
