@@ -4327,7 +4327,7 @@ dependencies = [
 
 [[package]]
 name = "solana-pubkey"
-version = "4.2.0"
+version = "4.2.1"
 dependencies = [
  "rand 0.9.4",
  "solana-address",
