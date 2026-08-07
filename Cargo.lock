@@ -3906,7 +3906,7 @@ dependencies = [
 
 [[package]]
 name = "solana-instruction"
-version = "3.4.0"
+version = "3.4.1"
 dependencies = [
  "bincode",
  "borsh",
