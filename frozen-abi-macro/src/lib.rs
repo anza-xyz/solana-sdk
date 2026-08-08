@@ -90,8 +90,9 @@ use proc_macro2::{Span, TokenStream as TokenStream2, TokenTree};
 use quote::{quote, ToTokens};
 #[cfg(feature = "frozen-abi")]
 use syn::{
+    parse::{Parse, ParseStream},
     parse_macro_input, Attribute, Error, Expr, ExprLit, Fields, Ident, Item, ItemEnum, ItemStruct,
-    ItemType, Lit, LitStr, Variant,
+    ItemType, Lit, LitStr, Token, Type, Variant,
 };
 
 #[cfg(feature = "frozen-abi")]
@@ -177,6 +178,17 @@ enum RoundtripTest {
 }
 
 #[cfg(feature = "frozen-abi")]
+impl RoundtripTest {
+    fn name(&self) -> &'static str {
+        match self {
+            Self::No => "no",
+            Self::WireOnly => "wire_only",
+            Self::EqAndWire => "eq_and_wire",
+        }
+    }
+}
+
+#[cfg(feature = "frozen-abi")]
 fn parse_roundtrip_test(value: Option<&LitStr>) -> Result<RoundtripTest, Error> {
     match value {
         None => Ok(RoundtripTest::WireOnly),
@@ -186,6 +198,122 @@ fn parse_roundtrip_test(value: Option<&LitStr>) -> Result<RoundtripTest, Error> 
             "eq_and_wire" => Ok(RoundtripTest::EqAndWire),
             _ => Err(Error::new_spanned(value, "unsupported `test_roundtrip` value; expected \"no\", \"wire_only\", or \"eq_and_wire\"")),
         },
+    }
+}
+
+#[cfg(feature = "frozen-abi")]
+enum SerializationTestStrategy {
+    BoleroFuzzer,
+    Random,
+}
+
+#[cfg(feature = "frozen-abi")]
+impl SerializationTestStrategy {
+    fn parse(input: ParseStream) -> syn::Result<Self> {
+        let value = input.parse::<LitStr>()?;
+        match value.value().as_str() {
+            "bolero_fuzzer" => Ok(Self::BoleroFuzzer),
+            "random" => Ok(Self::Random),
+            _ => Err(Error::new_spanned(
+                value,
+                "unsupported `strategy` value; expected \"bolero_fuzzer\" or \"random\"",
+            )),
+        }
+    }
+}
+
+#[cfg(feature = "frozen-abi")]
+struct SerializationTestArgs {
+    type_names: Vec<Type>,
+    expected_digest: Option<Expr>,
+    serializers: Vec<AbiSerializer>,
+    roundtrip_test: RoundtripTest,
+    strategy: SerializationTestStrategy,
+}
+
+#[cfg(feature = "frozen-abi")]
+impl Parse for SerializationTestArgs {
+    fn parse(input: ParseStream) -> syn::Result<Self> {
+        let type_names = Self::parse_type_names(input)?;
+        if !input.is_empty() {
+            input.parse::<Token![,]>()?;
+        }
+
+        let mut expected_digest: Option<Expr> = None;
+        let mut serializers = vec![AbiSerializer::Wincode];
+        let mut test_roundtrip: Option<LitStr> = None;
+        let mut strategy: Option<SerializationTestStrategy> = None;
+
+        while !input.is_empty() {
+            let key = input.parse::<Ident>()?;
+            input.parse::<Token![=]>()?;
+
+            if key == "serializer" {
+                serializers = parse_abi_serializers(&input.parse::<Expr>()?)?;
+            } else if key == "abi_digest" {
+                Self::check_duplicate(&key, &expected_digest)?;
+                expected_digest = Some(input.parse::<Expr>()?);
+            } else if key == "strategy" {
+                Self::check_duplicate(&key, &strategy)?;
+                strategy = Some(SerializationTestStrategy::parse(input)?);
+            } else if key == "test_roundtrip" {
+                Self::check_duplicate(&key, &test_roundtrip)?;
+                test_roundtrip = Some(input.parse()?);
+            } else {
+                return Err(Error::new_spanned(
+                    key,
+                    "unsupported `generate_serialization_test` property",
+                ));
+            }
+
+            if !input.is_empty() {
+                input.parse::<Token![,]>()?;
+            }
+        }
+
+        let strategy = strategy.ok_or_else(|| {
+            Error::new_spanned(
+                &type_names[0],
+                "missing required `strategy = \"bolero_fuzzer\"` or `strategy = \"random\"`",
+            )
+        })?;
+        let roundtrip_test = parse_roundtrip_test(test_roundtrip.as_ref())?;
+
+        Ok(Self {
+            type_names,
+            expected_digest,
+            serializers,
+            roundtrip_test,
+            strategy,
+        })
+    }
+}
+
+#[cfg(feature = "frozen-abi")]
+impl SerializationTestArgs {
+    fn check_duplicate<T>(key: &Ident, value: &Option<T>) -> syn::Result<()> {
+        if value.is_some() {
+            return Err(Error::new_spanned(key, format!("duplicate `{key}`")));
+        }
+        Ok(())
+    }
+
+    fn parse_type_names(input: ParseStream) -> syn::Result<Vec<Type>> {
+        if input.peek(syn::token::Bracket) {
+            let type_list;
+            syn::bracketed!(type_list in input);
+
+            let type_names = type_list.parse_terminated(Type::parse, Token![,])?;
+            if type_names.is_empty() {
+                return Err(
+                    type_list.error("`generate_serialization_test` type list must not be empty")
+                );
+            }
+
+            Ok(type_names.into_iter().collect())
+        } else {
+            Ok(vec![input.parse::<Type>()?])
+        }
     }
 }
 
@@ -645,6 +773,131 @@ pub fn derive_abi_enum_visitor(item: TokenStream) -> TokenStream {
 }
 
 #[cfg(feature = "frozen-abi")]
+fn quote_for_roundtrip_test(
+    type_name: &Ident,
+    serialize_expr: &TokenStream2,
+    roundtrip_test: &RoundtripTest,
+) -> TokenStream2 {
+    match roundtrip_test {
+        RoundtripTest::No => TokenStream2::new(),
+        RoundtripTest::WireOnly | RoundtripTest::EqAndWire => {
+            let test_roundtrip_eq = match roundtrip_test {
+                RoundtripTest::EqAndWire => quote! {
+                    assert!(
+                        val == roundtrip_val,
+                        "deserializing serialized {} should preserve value",
+                        roundtrip_type_name
+                    );
+                },
+                _ => TokenStream2::new(),
+            };
+            quote! {
+                let roundtrip_type_name = ::std::any::type_name::<#type_name>();
+                let roundtrip_val: #type_name =
+                    #serialize_expr::deserialize::<#type_name>(&bytes).expect(
+                        ::std::concat!(
+                            "must deserialize serialized ",
+                            ::std::stringify!(#type_name)
+                        )
+                    );
+
+                #test_roundtrip_eq
+
+                let roundtrip_bytes = #serialize_expr::serialize(&roundtrip_val).expect(
+                    ::std::concat!(
+                        "must re-serialize ",
+                        ::std::stringify!(#type_name)
+                    )
+                );
+                assert_eq!(
+                    bytes,
+                    roundtrip_bytes,
+                    "re-serializing deserialized {} should match bytes",
+                    roundtrip_type_name
+                );
+            }
+        }
+    }
+}
+
+#[cfg(feature = "frozen-abi")]
+fn quote_for_stable_abi_tests(
+    type_name: &Ident,
+    expected_digest: &Expr,
+    abi_serializers: &[AbiSerializer],
+    roundtrip_test: &RoundtripTest,
+) -> TokenStream2 {
+    // Both serializers share the same expected digest, so generate a separate
+    // test per serializer (named with the serializer) that each check against
+    // it; the tests run in sequence without cross-checking each other.
+    let abi_tests = abi_serializers.iter().map(|abi_serializer| {
+        let test_name = format!("test_abi_digest_{}", abi_serializer.name());
+        let test_fn_name = Ident::new(&test_name, Span::call_site());
+        let abi_serialize_expr = abi_serializer.serialize_expr();
+        let test_roundtrip =
+            quote_for_roundtrip_test(type_name, &abi_serialize_expr, roundtrip_test);
+
+        quote! {
+            #[test]
+            fn #test_fn_name() {
+                use ::solana_frozen_abi::rand::{Rng, SeedableRng};
+                use ::solana_frozen_abi::rand_chacha::ChaCha8Rng;
+
+                let mut rng = ChaCha8Rng::seed_from_u64(20666175621446498);
+                let mut digester = ::solana_frozen_abi::hash::Hasher::default();
+
+                for _ in 0..10_000 {
+                    let val = rng.random::<#type_name>();
+                    let bytes = #abi_serialize_expr::serialize(&val)
+                        .expect("must serialize");
+
+                    #test_roundtrip
+
+                    digester.hash(&bytes);
+                }
+
+                assert_eq!(
+                    #expected_digest,
+                    ::std::format!("{}", digester.result()),
+                    "ABI layout has changed!"
+                );
+            }
+        }
+    });
+
+    quote! { #(#abi_tests)* }
+}
+
+#[cfg(feature = "frozen-abi")]
+fn quote_serializers(serializers: &[AbiSerializer]) -> TokenStream2 {
+    let serializers = serializers
+        .iter()
+        .map(|s| LitStr::new(s.name(), Span::call_site()));
+    quote! { [#(#serializers),*] }
+}
+
+#[cfg(feature = "frozen-abi")]
+fn quote_for_stable_abi_macro_invocation(
+    type_name: &Ident,
+    expected_digest: &Expr,
+    abi_serializers: &[AbiSerializer],
+    roundtrip_test: &RoundtripTest,
+) -> TokenStream2 {
+    let serializers = quote_serializers(abi_serializers);
+    let roundtrip_test = LitStr::new(roundtrip_test.name(), Span::call_site());
+
+    quote! {
+        ::solana_frozen_abi_macro::generate_serialization_test!(
+            #type_name,
+            strategy = "random",
+            serializer = #serializers,
+            abi_digest = #expected_digest,
+            test_roundtrip = #roundtrip_test,
+        );
+    }
+}
+
+#[cfg(feature = "frozen-abi")]
 fn quote_for_test(
     test_mod_ident: &Ident,
     type_name: &Ident,
@@ -686,80 +939,13 @@ fn quote_for_test(
         TokenStream2::new()
     };
 
-    // Both serializers share the same expected digest, so generate a separate
-    // test per serializer (named with the serializer) that each check against
-    // it; the tests run in sequence without cross-checking each other.
     let test_abi = if let Some(expected_abi_digest) = expected_abi_digest {
-        let abi_tests = abi_serializers.iter().map(|abi_serializer| {
-            let test_fn_name = Ident::new(
-                &format!("test_abi_digest_{}", abi_serializer.name()),
-                Span::call_site(),
-            );
-            let abi_serialize_expr = abi_serializer.serialize_expr();
-            let test_roundtrip = match roundtrip_test {
-                RoundtripTest::No => TokenStream2::new(),
-                RoundtripTest::WireOnly | RoundtripTest::EqAndWire => {
-                    let test_roundtrip_eq = match roundtrip_test {
-                        RoundtripTest::EqAndWire => quote! {
-                            assert!(
-                                val == roundtrip_val,
-                                "deserializing serialized {} should preserve value",
-                                roundtrip_type_name
-                            );
-                        },
-                        _ => TokenStream2::new(),
-                    };
-                    quote! {
-                        let roundtrip_type_name = ::std::any::type_name::<#type_name>();
-                        let roundtrip_val: #type_name =
-                            #abi_serialize_expr::deserialize::<#type_name>(&bytes).expect(
-                                ::std::concat!(
-                                    "must deserialize serialized ",
-                                    ::std::stringify!(#type_name)
-                                )
-                            );
-
-                        #test_roundtrip_eq
-
-                        let roundtrip_bytes = #abi_serialize_expr::serialize(&roundtrip_val).expect(
-                            ::std::concat!(
-                                "must re-serialize ",
-                                ::std::stringify!(#type_name)
-                            )
-                        );
-                        assert_eq!(
-                            bytes,
-                            roundtrip_bytes,
-                            "re-serializing deserialized {} should match bytes",
-                            roundtrip_type_name
-                        );
-                    }
-                }
-            };
-            quote! {
-                #[test]
-                fn #test_fn_name() {
-                    use ::solana_frozen_abi::rand::{SeedableRng, RngCore};
-                    use ::solana_frozen_abi::rand_chacha::ChaCha8Rng;
-                    use ::solana_frozen_abi::stable_abi::StableAbi;
-
-                    let mut rng = ChaCha8Rng::seed_from_u64(20666175621446498);
-                    let mut digester = ::solana_frozen_abi::hash::Hasher::default();
-
-                    for _ in 0..10_000 {
-                        let val = <#type_name>::random(&mut rng);
-                        let bytes = #abi_serialize_expr::serialize(&val)
-                            .expect("must serialize");
-
-                        #test_roundtrip
-
-                        digester.hash(&bytes);
-                    }
-                    assert_eq!(#expected_abi_digest, ::std::format!("{}", digester.result()), "ABI layout has changed!");
-                }
-            }
-        });
-        quote! { #(#abi_tests)* }
+        quote_for_stable_abi_macro_invocation(
+            type_name,
+            expected_abi_digest,
+            abi_serializers,
+            &roundtrip_test,
+        )
     } else {
         TokenStream2::new()
     };
@@ -777,6 +963,127 @@ fn quote_for_test(
 #[cfg(feature = "frozen-abi")]
 fn test_mod_name(type_name: &Ident) -> Ident {
     Ident::new(&format!("{type_name}_frozen_abi"), Span::call_site())
+}
+
+#[cfg(feature = "frozen-abi")]
+fn fuzzer_test_mod_name(type_name: &Ident) -> Ident {
+    Ident::new(&format!("{type_name}_frozen_abi_fuzzer"), Span::call_site())
+}
+
+#[cfg(feature = "frozen-abi")]
+fn random_test_mod_name(type_name: &Ident) -> Ident {
+    Ident::new(&format!("{type_name}_frozen_abi_random"), Span::call_site())
+}
+
+#[cfg(feature = "frozen-abi")]
+fn serialization_test_target_ident(target_type: &Type) -> Result<Ident, Error> {
+    match target_type {
+        Type::Path(type_path) if type_path.qself.is_none() => type_path
+            .path
+            .segments
+            .last()
+            .map(|segment| segment.ident.clone())
+            .ok_or_else(|| Error::new_spanned(target_type, "expected a non-empty type path")),
+        _ => Err(Error::new_spanned(
+            target_type,
+            "expected a concrete type path such as `super::MyType`",
+        )),
+    }
+}
+
+#[cfg(feature = "frozen-abi")]
+fn quote_for_fuzzer_test(
+    type_names: &[Type],
+    serializers: &[AbiSerializer],
+    roundtrip_test: RoundtripTest,
+) -> Result<TokenStream2, Error> {
+    let test_modules = type_names
+        .iter()
+        .map(|type_name| -> Result<TokenStream2, Error> {
+            let type_ident = serialization_test_target_ident(type_name)?;
+            let type_alias = Ident::new(
+                &format!("_frozen_abi_fuzzer_target_{type_ident}"),
+                Span::call_site(),
+            );
+            let test_mod_ident = fuzzer_test_mod_name(&type_ident);
+            let serializer_tests = serializers.iter().map(|serializer| {
+                let test_fn_name = Ident::new(
+                    &format!("test_fuzzer_{}", serializer.name()),
+                    Span::call_site(),
+                );
+                let serialize_expr = serializer.serialize_expr();
+                let test_roundtrip =
+                    quote_for_roundtrip_test(&type_alias, &serialize_expr, &roundtrip_test);
+                quote! {
+                    #[test]
+                    fn #test_fn_name() {
+                        let test = ::solana_frozen_abi::bolero::check!();
+                        test.for_each(|input: &[u8]| {
+                                let Some(val) = #serialize_expr::deserialize::<#type_alias>(input).ok() else {
+                                    return;
+                                };
+                                let bytes = #serialize_expr::serialize(&val)
+                                    .expect("must serialize");
+
+                                #test_roundtrip
+                            });
+                    }
+                }
+            });
+
+            Ok(quote! {
+                #[cfg(test)]
+                type #type_alias = #type_name;
+                mod #test_mod_ident {
+                    use super::*;
+                    #(#serializer_tests)*
+                }
+            })
+        })
+        .collect::<Result<Vec<_>, _>>()?;
+
+    Ok(quote! {
+        #(#test_modules)*
+    })
+}
+
+#[cfg(feature = "frozen-abi")]
+fn quote_for_random_test(
+    type_names: &[Type],
+    expected_abi_digest: &Expr,
+    serializers: &[AbiSerializer],
+    roundtrip_test: RoundtripTest,
+) -> Result<TokenStream2, Error> {
+    let test_modules = type_names
+        .iter()
+        .map(|type_name| -> Result<TokenStream2, Error> {
+            let type_ident = serialization_test_target_ident(type_name)?;
+            let type_alias = Ident::new(
+                &format!("_frozen_abi_random_{type_ident}"),
+                Span::call_site(),
+            );
+            let test_mod_ident = random_test_mod_name(&type_ident);
+            let stable_abi_tests = quote_for_stable_abi_tests(
+                &type_alias,
+                expected_abi_digest,
+                serializers,
+                &roundtrip_test,
+            );
+
+            Ok(quote! {
+                #[cfg(test)]
+                type #type_alias = #type_name;
+                mod #test_mod_ident {
+                    use super::*;
+                    #stable_abi_tests
+                }
+            })
+        })
+        .collect::<Result<Vec<_>, _>>()?;
+
+    Ok(quote! {
+        #(#test_modules)*
+    })
 }
 
 #[cfg(feature = "frozen-abi")]
@@ -968,6 +1275,48 @@ pub fn frozen_abi(attrs: TokenStream, item: TokenStream) -> TokenStream {
         .to_compile_error()
         .into(),
     }
+}
+
+#[cfg(feature = "frozen-abi")]
+#[proc_macro]
+pub fn generate_serialization_test(input: TokenStream) -> TokenStream {
+    let args = parse_macro_input!(input as SerializationTestArgs);
+    let generated = match args.strategy {
+        SerializationTestStrategy::BoleroFuzzer => {
+            if let Some(expected_abi_digest) = args.expected_digest.as_ref() {
+                return Error::new_spanned(
+                    expected_abi_digest,
+                    "`abi_digest` is only supported with `strategy = \"random\"`",
+                )
+                .to_compile_error()
+                .into();
+            }
+            match quote_for_fuzzer_test(&args.type_names, &args.serializers, args.roundtrip_test) {
+                Ok(generated) => generated,
+                Err(error) => return error.to_compile_error().into(),
+            }
+        }
+        SerializationTestStrategy::Random => {
+            let Some(expected_digest) = args.expected_digest.as_ref() else {
+                return Error::new_spanned(
+                    &args.type_names[0],
+                    "missing required `abi_digest = ...` for `strategy = \"random\"`",
+                )
+                .to_compile_error()
+                .into();
+            };
+            match quote_for_random_test(
+                &args.type_names,
+                expected_digest,
+                &args.serializers,
+                args.roundtrip_test,
+            ) {
+                Ok(generated) => generated,
+                Err(error) => return error.to_compile_error().into(),
+            }
+        }
+    };
+    generated.into()
 }
 
 #[cfg(all(test, feature = "frozen-abi"))]
