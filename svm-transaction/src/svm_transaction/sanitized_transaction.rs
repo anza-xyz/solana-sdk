@@ -1,9 +1,9 @@
 use {
-    crate::svm_transaction::SVMTransaction, solana_signature::Signature,
+    crate::svm_transaction::SVMStaticTransaction, solana_signature::Signature,
     solana_transaction::sanitized::SanitizedTransaction,
 };
 
-impl SVMTransaction for SanitizedTransaction {
+impl SVMStaticTransaction for SanitizedTransaction {
     fn signature(&self) -> &Signature {
         SanitizedTransaction::signature(self)
     }

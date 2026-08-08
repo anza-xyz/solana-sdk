@@ -1,6 +1,6 @@
 #![cfg(test)]
 use {
-    crate::svm_message::SVMMessage,
+    crate::svm_message::{SVMMessage, SVMStaticMessage},
     solana_hash::Hash,
     solana_message::{
         compiled_instruction::CompiledInstruction,
@@ -274,19 +274,59 @@ fn test_get_ix_signers() {
     .unwrap();
 
     assert_eq!(
-        SVMMessage::get_ix_signers(&message, 0).collect::<HashSet<_>>(),
+        SVMStaticMessage::get_ix_signers(&message, 0).collect::<HashSet<_>>(),
         HashSet::from_iter([&signer0])
     );
     assert_eq!(
-        SVMMessage::get_ix_signers(&message, 1).collect::<HashSet<_>>(),
+        SVMStaticMessage::get_ix_signers(&message, 1).collect::<HashSet<_>>(),
         HashSet::from_iter([&signer0, &signer1])
     );
     assert_eq!(
-        SVMMessage::get_ix_signers(&message, 2).collect::<HashSet<_>>(),
+        SVMStaticMessage::get_ix_signers(&message, 2).collect::<HashSet<_>>(),
         HashSet::from_iter([&signer0])
     );
     assert_eq!(
-        SVMMessage::get_ix_signers(&message, 3).collect::<HashSet<_>>(),
+        SVMStaticMessage::get_ix_signers(&message, 3).collect::<HashSet<_>>(),
         HashSet::default()
     );
+}
+
+#[test]
+fn test_is_requested_writable() {
+    // 6 static keys: 3 signers, of which 1 readonly; 3 unsigned, of which 2
+    // readonly. Plus 2 loaded addresses: 1 writable, 1 readonly.
+    let message = SanitizedMessage::try_new(
+        SanitizedVersionedMessage::try_new(VersionedMessage::V0(v0::Message {
+            header: MessageHeader {
+                num_required_signatures: 3,
+                num_readonly_signed_accounts: 1,
+                num_readonly_unsigned_accounts: 2,
+            },
+            account_keys: (0..6).map(|_| Pubkey::new_unique()).collect(),
+            recent_blockhash: Hash::default(),
+            instructions: vec![CompiledInstruction::new_from_raw_parts(1, vec![], vec![])],
+            address_table_lookups: vec![MessageAddressTableLookup {
+                account_key: Pubkey::new_unique(),
+                writable_indexes: vec![0],
+                readonly_indexes: vec![1],
+            }],
+        }))
+        .unwrap(),
+        SimpleAddressLoader::Enabled(LoadedAddresses {
+            writable: vec![Pubkey::new_unique()],
+            readonly: vec![Pubkey::new_unique()],
+        }),
+        &HashSet::new(),
+    )
+    .unwrap();
+
+    assert!(SVMStaticMessage::is_requested_writable(&message, 0)); // writable signer
+    assert!(SVMStaticMessage::is_requested_writable(&message, 1)); // writable signer
+    assert!(!SVMStaticMessage::is_requested_writable(&message, 2)); // readonly signer
+    assert!(SVMStaticMessage::is_requested_writable(&message, 3)); // writable unsigned
+    assert!(!SVMStaticMessage::is_requested_writable(&message, 4)); // readonly unsigned
+    assert!(!SVMStaticMessage::is_requested_writable(&message, 5)); // readonly unsigned
+    assert!(SVMStaticMessage::is_requested_writable(&message, 6)); // writable loaded
+    assert!(!SVMStaticMessage::is_requested_writable(&message, 7)); // readonly loaded
+    assert!(!SVMStaticMessage::is_requested_writable(&message, 8)); // out of bounds
 }
