@@ -3855,6 +3855,7 @@ dependencies = [
  "solana-loader-v3-interface",
  "solana-pubkey",
  "solana-sdk-ids",
+ "solana-serde",
  "solana-system-interface",
  "test-case",
  "wincode",
