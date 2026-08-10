@@ -3930,6 +3930,7 @@ dependencies = [
  "solana-fee-calculator",
  "solana-hash",
  "solana-nonce",
+ "solana-nonce-account",
  "solana-pubkey",
  "solana-sdk-ids",
 ]

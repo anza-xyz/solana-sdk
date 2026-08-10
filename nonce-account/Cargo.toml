@@ -15,7 +15,6 @@ all-features = true
 rustdoc-args = ["--cfg=docsrs"]
 
 [features]
-default = ["bincode"]
 bincode = ["solana-account/bincode", "solana-nonce/serde"]
 wincode = ["solana-account/wincode", "solana-nonce/wincode"]
 
@@ -31,4 +30,5 @@ bincode = { workspace = true }
 solana-account = { workspace = true, features = ["bincode"] }
 solana-fee-calculator = { workspace = true }
 solana-nonce = { workspace = true, features = ["serde"] }
+solana-nonce-account = { path = ".", features = ["wincode"] }
 solana-pubkey = { workspace = true, features = ["std"] }
