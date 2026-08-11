@@ -101,9 +101,10 @@ describe("Address", function () {
 
   it("createWithSeed", async () => {
     const defaultPublicKey = new Address("11111111111111111111111111111111");
+    const bytes = Uint8Array.from("limber chicken: 4/45", c => c.charCodeAt(0));
     const derivedKey = Address.createWithSeed(
       defaultPublicKey,
-      "limber chicken: 4/45",
+      bytes,
       defaultPublicKey
     );
 
