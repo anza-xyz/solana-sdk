@@ -1,5 +1,6 @@
 //! This sysvar is deprecated and unused.
 #[cfg(feature = "bincode")]
+#[allow(deprecated)]
 use crate::SysvarSerialize;
 #[cfg(feature = "serde")]
 use serde_derive::{Deserialize, Serialize};
@@ -31,6 +32,7 @@ impl Rewards {
 }
 impl Sysvar for Rewards {}
 #[cfg(feature = "bincode")]
+#[allow(deprecated)]
 impl SysvarSerialize for Rewards {}
 
 #[cfg(test)]

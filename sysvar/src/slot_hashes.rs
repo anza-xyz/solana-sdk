@@ -2,12 +2,11 @@
 //!
 //! The _slot hashes sysvar_ provides access to the [`SlotHashes`] type.
 //!
-//! The [`SysvarSerialize::from_account_info`] and [`crate::Sysvar::get`] methods always return
+//! The [`crate::Sysvar::get`] method always returns
 //! [`solana_program_error::ProgramError::UnsupportedSysvar`] because this sysvar account is too large
 //! to process on-chain. Thus this sysvar cannot be accessed on chain, though
-//! one can still use the [`SysvarId::id`], [`SysvarId::check_id`] and
-//! [`SysvarSerialize::size_of`] methods in an on-chain program, and it can be accessed
-//! off-chain through RPC.
+//! one can still use the [`SysvarId::id`], [`SysvarId::check_id`] and [`SIZE`]
+//! in an on-chain program, and it can be accessed off-chain through RPC.
 //!
 //! [`SysvarId::id`]: https://docs.rs/solana-sysvar-id/latest/solana_sysvar_id/trait.SysvarId.html#tymethod.id
 //! [`SysvarId::check_id`]: https://docs.rs/solana-sysvar-id/latest/solana_sysvar_id/trait.SysvarId.html#tymethod.check_id
@@ -47,6 +46,7 @@
 #[cfg(feature = "bytemuck")]
 use bytemuck_derive::{Pod, Zeroable};
 #[cfg(feature = "bincode")]
+#[allow(deprecated)]
 use {crate::SysvarSerialize, solana_account_info::AccountInfo};
 use {solana_clock::Slot, solana_hash::Hash};
 
@@ -60,6 +60,7 @@ pub use {
 };
 
 #[cfg(feature = "bincode")]
+#[allow(deprecated)]
 impl SysvarSerialize for SlotHashes {
     // override
     fn size_of() -> usize {
@@ -185,6 +186,7 @@ mod tests {
     };
 
     #[test]
+    #[allow(deprecated)]
     fn test_size_of() {
         assert_eq!(
             SlotHashes::size_of(),

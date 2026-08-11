@@ -30,16 +30,16 @@
 //! ```
 //!
 //! Since Solana sysvars are accounts, if the `AccountInfo` is provided to the
-//! program, then the program can deserialize the sysvar with
-//! [`SysvarSerialize::from_account_info`] to access its data, as in this example that
-//! again logs the [`clock`] sysvar.
+//! program, then the program can deserialize the sysvar with wincode to access
+//! its data, as in this example that again logs the [`clock`] sysvar.
 //!
 //! ```
 //! use solana_account_info::{AccountInfo, next_account_info};
+//! use solana_clock::Clock;
 //! use solana_msg::msg;
-//! use solana_sysvar::{Sysvar, SysvarSerialize};
-//! use solana_program_error::ProgramResult;
+//! use solana_program_error::{ProgramError, ProgramResult};
 //! use solana_pubkey::Pubkey;
+//! use solana_sdk_ids::sysvar::clock;
 //!
 //! fn process_instruction(
 //!     program_id: &Pubkey,
@@ -48,14 +48,18 @@
 //! ) -> ProgramResult {
 //!     let account_info_iter = &mut accounts.iter();
 //!     let clock_account = next_account_info(account_info_iter)?;
-//!     let clock = solana_clock::Clock::from_account_info(&clock_account)?;
+//!     if !clock::check_id(clock_account.key) {
+//!         return Err(ProgramError::InvalidArgument);
+//!     }
+//!     let clock: Clock = wincode::deserialize(&clock_account.data.borrow())
+//!         .map_err(|_| ProgramError::InvalidArgument)?;
 //!     msg!("clock: {:#?}", clock);
 //!     Ok(())
 //! }
 //! ```
 //!
 //! When possible, programs should prefer to call `Sysvar::get` instead of
-//! deserializing with `Sysvar::from_account_info`, as the latter imposes extra
+//! deserializing with wincode, as the latter imposes extra
 //! overhead of deserialization while also requiring the sysvar account address
 //! be passed to the program, wasting the limited space available to
 //! transactions. Deserializing sysvars that can instead be retrieved with
@@ -63,9 +67,8 @@
 //! programs that pass around sysvar accounts.
 //!
 //! Some sysvars are too large to deserialize within a program, and
-//! `Sysvar::from_account_info` returns an error, or the serialization attempt
-//! will exhaust the program's compute budget. Some sysvars do not implement
-//! `Sysvar::get` and return an error. Some sysvars have custom deserializers
+//! deserializing them may exhaust the program's compute budget. Some sysvars do
+//! not implement `Sysvar::get` and return an error. Some sysvars have custom deserializers
 //! that do not implement the `Sysvar` trait. These cases are documented in the
 //! modules for individual sysvars.
 //!
@@ -98,10 +101,12 @@ pub mod stake_history;
 
 #[cfg(feature = "bincode")]
 /// A type that holds sysvar data.
+#[deprecated(since = "4.3.0", note = "Use wincode")]
 pub trait SysvarSerialize:
     Default + Sysvar + SysvarId + serde::Serialize + serde::de::DeserializeOwned
 {
     /// The size in bytes of the sysvar as serialized account data.
+    #[deprecated(since = "4.3.0", note = "Use `SIZE` or `wincode::serialized_size`")]
     fn size_of() -> usize {
         bincode::serialized_size(&Self::default()).unwrap() as usize
     }
@@ -112,6 +117,7 @@ pub trait SysvarSerialize:
     ///
     /// If `account_info` does not have the same ID as the sysvar this function
     /// returns [`ProgramError::InvalidArgument`].
+    #[deprecated(since = "4.3.0", note = "Use `wincode::deserialize`")]
     fn from_account_info(account_info: &AccountInfo) -> Result<Self, ProgramError> {
         if !Self::check_id(account_info.unsigned_key()) {
             return Err(ProgramError::InvalidArgument);
@@ -124,6 +130,7 @@ pub trait SysvarSerialize:
     /// # Errors
     ///
     /// Returns `None` if serialization failed.
+    #[deprecated(since = "4.3.0", note = "Use `wincode::serialize_into`")]
     fn to_account_info(&self, account_info: &mut AccountInfo) -> Option<()> {
         bincode::serialize_into(&mut account_info.data.borrow_mut()[..], self).ok()
     }
@@ -155,9 +162,11 @@ mod tests {
         }
     }
     impl Sysvar for TestSysvar {}
+    #[allow(deprecated)]
     impl SysvarSerialize for TestSysvar {}
 
     #[test]
+    #[allow(deprecated)]
     fn test_sysvar_account_info_to_from() {
         let test_sysvar = TestSysvar::default();
         let key = id();

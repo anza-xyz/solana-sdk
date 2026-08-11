@@ -1,6 +1,7 @@
 #![feature(test)]
 
 extern crate test;
+#[allow(deprecated)]
 use {
     solana_sdk::{
         account::{create_account_for_test, from_account},
@@ -10,6 +11,7 @@ use {
 };
 
 #[bench]
+#[allow(deprecated)]
 fn bench_to_from_account(b: &mut Bencher) {
     let mut slot_history = SlotHistory::default();
 

@@ -1,5 +1,6 @@
 //! bincode-based serialization helpers for [`Account`] and [`AccountSharedData`].
 
+#[allow(deprecated)]
 use {
     crate::{
         Account, AccountSharedData, InheritableAccountFields, ReadableAccount, WritableAccount,
@@ -123,6 +124,8 @@ impl AccountSharedData {
     }
 }
 
+#[deprecated(since = "4.6.0", note = "Use `StateMutWincode::new_data_with_space`")]
+#[allow(deprecated)]
 pub fn create_account_with_fields<S: SysvarSerialize>(
     sysvar: &S,
     (lamports, rent_epoch): InheritableAccountFields,
@@ -134,11 +137,15 @@ pub fn create_account_with_fields<S: SysvarSerialize>(
     account
 }
 
+#[deprecated(since = "4.6.0", note = "Use `StateMutWincode::new_data_with_space`")]
+#[allow(deprecated)]
 pub fn create_account_for_test<S: SysvarSerialize>(sysvar: &S) -> Account {
     create_account_with_fields(sysvar, DUMMY_INHERITABLE_ACCOUNT_FIELDS)
 }
 
 /// Create an `Account` from a `Sysvar`.
+#[deprecated(since = "4.6.0", note = "Use `StateMutWincode::new_data_with_space`")]
+#[allow(deprecated)]
 pub fn create_account_shared_data_with_fields<S: SysvarSerialize>(
     sysvar: &S,
     fields: InheritableAccountFields,
@@ -146,6 +153,8 @@ pub fn create_account_shared_data_with_fields<S: SysvarSerialize>(
     AccountSharedData::from(create_account_with_fields(sysvar, fields))
 }
 
+#[deprecated(since = "4.6.0", note = "Use `StateMutWincode::new_data_with_space`")]
+#[allow(deprecated)]
 pub fn create_account_shared_data_for_test<S: SysvarSerialize>(sysvar: &S) -> AccountSharedData {
     AccountSharedData::from(create_account_with_fields(
         sysvar,
@@ -154,11 +163,15 @@ pub fn create_account_shared_data_for_test<S: SysvarSerialize>(sysvar: &S) -> Ac
 }
 
 /// Create a `Sysvar` from an `Account`'s data.
+#[deprecated(since = "4.6.0", note = "Use `StateMutWincode::state`")]
+#[allow(deprecated)]
 pub fn from_account<S: SysvarSerialize, T: ReadableAccount>(account: &T) -> Option<S> {
     bincode::deserialize(account.data()).ok()
 }
 
 /// Serialize a `Sysvar` into an `Account`'s data.
+#[deprecated(since = "4.6.0", note = "Use `StateMutWincode::set_state`")]
+#[allow(deprecated)]
 pub fn to_account<S: SysvarSerialize, T: WritableAccount>(
     sysvar: &S,
     account: &mut T,
