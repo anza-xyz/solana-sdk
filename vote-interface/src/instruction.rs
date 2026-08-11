@@ -16,7 +16,7 @@ use {
 use {
     crate::program::id,
     solana_instruction::{AccountMeta, Instruction},
-    solana_sdk_ids::sysvar,
+    solana_sdk_ids::{system_program, sysvar},
 };
 #[cfg(feature = "wincode")]
 use {
@@ -258,6 +258,7 @@ pub enum VoteInstruction {
     /// # Account references
     ///   0. `[WRITE]` Vote account to be updated with the deposit
     ///   1. `[SIGNER, WRITE]` Source account for deposit funds
+    ///   2. `[]` System program, used to transfer the deposit
     DepositDelegatorRewards { deposit: u64 },
 }
 
@@ -643,6 +644,7 @@ pub fn deposit_delegator_rewards(
     let account_metas = vec![
         AccountMeta::new(*vote_pubkey, false),
         AccountMeta::new(*source_pubkey, true),
+        AccountMeta::new_readonly(system_program::id(), false),
     ];
 
     Instruction::new_with_bincode(
@@ -833,5 +835,33 @@ mod tests {
             #[cfg(feature = "wincode")]
             assert!(wincode::serialize(&ix).is_err());
         }
+    }
+
+    #[test]
+    fn test_deposit_delegator_rewards_includes_system_program() {
+        let vote_pubkey = Pubkey::new_unique();
+        let source_pubkey = Pubkey::new_unique();
+
+        let instruction = deposit_delegator_rewards(&vote_pubkey, &source_pubkey, 100_000);
+
+        assert_eq!(instruction.program_id, id());
+        assert_eq!(instruction.accounts.len(), 3);
+
+        let vote_meta = &instruction.accounts[0];
+        assert_eq!(vote_meta.pubkey, vote_pubkey);
+        assert!(!vote_meta.is_signer);
+        assert!(vote_meta.is_writable);
+
+        let source_meta = &instruction.accounts[1];
+        assert_eq!(source_meta.pubkey, source_pubkey);
+        assert!(source_meta.is_signer);
+        assert!(source_meta.is_writable);
+
+        // The vote program transfers the deposit by invoking the System program,
+        // which the runtime only resolves if it is one of the instruction's accounts.
+        let system_program_meta = &instruction.accounts[2];
+        assert_eq!(system_program_meta.pubkey, system_program::id());
+        assert!(!system_program_meta.is_signer);
+        assert!(!system_program_meta.is_writable);
     }
 }
