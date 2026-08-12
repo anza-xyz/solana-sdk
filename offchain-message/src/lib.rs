@@ -18,7 +18,7 @@ static_assertions::const_assert_eq!(v0::OffchainMessage::MAX_LEN_LEDGER, 1212);
 /// Check if given bytes contain only printable ASCII characters
 pub fn is_printable_ascii(data: &[u8]) -> bool {
     for &char in data {
-        if !(0x20..=0x7e).contains(&char) {
+        if !(0x20..=0x7e).contains(&char) && char != 0x0A {
             return false;
         }
     }
@@ -298,5 +298,13 @@ mod tests {
         let keypair = Keypair::new();
         let signature = message.sign(&keypair).unwrap();
         assert!(message.verify(&keypair.pubkey(), &signature).unwrap());
+    }
+
+    #[test]
+    fn test_offchain_message_ascii_with_linefeed() {
+        let message = OffchainMessage::new(0, b"Line 1\nLine 2").unwrap();
+        assert_eq!(message.get_version(), 0);
+        assert_eq!(message.get_format(), MessageFormat::RestrictedAscii);
+        assert_eq!(message.get_message().as_slice(), b"Line 1\nLine 2");
     }
 }
