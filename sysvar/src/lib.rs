@@ -101,7 +101,10 @@ pub mod stake_history;
 
 #[cfg(feature = "bincode")]
 /// A type that holds sysvar data.
-#[deprecated(since = "4.3.0", note = "Use wincode")]
+#[deprecated(
+    since = "4.3.0",
+    note = "Use `wincode::deserialize` and check the sysvar account address"
+)]
 pub trait SysvarSerialize:
     Default + Sysvar + SysvarId + serde::Serialize + serde::de::DeserializeOwned
 {
@@ -117,7 +120,10 @@ pub trait SysvarSerialize:
     ///
     /// If `account_info` does not have the same ID as the sysvar this function
     /// returns [`ProgramError::InvalidArgument`].
-    #[deprecated(since = "4.3.0", note = "Use `wincode::deserialize`")]
+    #[deprecated(
+        since = "4.3.0",
+        note = "Use `wincode::deserialize` and check the account address"
+    )]
     fn from_account_info(account_info: &AccountInfo) -> Result<Self, ProgramError> {
         if !Self::check_id(account_info.unsigned_key()) {
             return Err(ProgramError::InvalidArgument);
