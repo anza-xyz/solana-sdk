@@ -19,7 +19,7 @@ pub type TransactionResult<T> = Result<T, TransactionError>;
     feature = "frozen-abi",
     derive(AbiExample, AbiEnumVisitor, StableAbi, StableAbiSample),
     frozen_abi(
-        abi_digest = "5Us6ui9wG5UmXijBuysUoNxS4iwH8XTzhASwH3ABrgeM",
+        abi_digest = "2W49i91iPDXeXCEet6LbbpvoDJAm1HEDBfGskAmocXuu",
         abi_serializer = ["bincode", "wincode"],
         test_roundtrip = "eq_and_wire"
     )
@@ -155,6 +155,9 @@ pub enum TransactionError {
 
     /// Commit cancelled internally.
     CommitCancelled,
+
+    /// Block production bailed out
+    BailOut,
 }
 
 impl core::error::Error for TransactionError {}
@@ -240,6 +243,8 @@ impl fmt::Display for TransactionError {
              => f.write_str("Program cache hit max limit"),
             Self::CommitCancelled
              => f.write_str("CommitCancelled"),
+            Self::BailOut
+             => f.write_str("BailOut"),
         }
     }
 }
