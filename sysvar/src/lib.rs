@@ -109,7 +109,10 @@ pub trait SysvarSerialize:
     Default + Sysvar + SysvarId + serde::Serialize + serde::de::DeserializeOwned
 {
     /// The size in bytes of the sysvar as serialized account data.
-    #[deprecated(since = "4.3.0", note = "Use `SIZE` or `wincode::serialized_size`")]
+    #[deprecated(
+        since = "4.3.0",
+        note = "Use the sysvar crate's `SIZE` constant or `wincode::serialized_size`"
+    )]
     fn size_of() -> usize {
         bincode::serialized_size(&Self::default()).unwrap() as usize
     }
