@@ -196,6 +196,9 @@ impl OffchainMessage {
         if data.len() <= Self::HEADER_LEN {
             return Err(SanitizeError::ValueOutOfBounds);
         }
+        if &data[..Self::SIGNING_DOMAIN.len()] != Self::SIGNING_DOMAIN {
+            return Err(SanitizeError::InvalidValue);
+        }
         let version = data[Self::SIGNING_DOMAIN.len()];
         let data = &data[Self::SIGNING_DOMAIN.len().saturating_add(1)..];
         match version {
@@ -304,9 +307,13 @@ mod tests {
     fn test_offchain_message_rejects_invalid_signing_domain() {
         let message = OffchainMessage::new(0, b"Test Message").unwrap();
         let mut serialized = message.serialize().unwrap();
+
+        // Positive case: unmodified bytes deserialize successfully
+        assert_eq!(OffchainMessage::deserialize(&serialized).unwrap(), message);
+
+        // Negative case: mutate the first byte of the signing domain
         serialized[0] = serialized[0].wrapping_add(1);
         let result = OffchainMessage::deserialize(&serialized);
-        assert!(result.is_ok());
-        assert_eq!(result.unwrap(), message);
+        assert_eq!(result, Err(SanitizeError::InvalidValue));
     }
 }
