@@ -356,6 +356,21 @@ impl AccountSharedData {
             rent_epoch: Epoch::default(),
         }
     }
+    /// Construct an `AccountSharedData` from already-encoded `data`, taking ownership of
+    /// the buffer. Avoids the zero-fill allocation of [`AccountSharedData::new`] followed
+    /// by a separate write when the caller already has the bytes.
+    ///
+    /// To reuse an existing `Arc` buffer, or to set `executable`/`rent_epoch`, use
+    /// [`AccountSharedData::create_from_existing_shared_data`].
+    pub fn new_with_data(lamports: u64, data: Vec<u8>, owner: &Pubkey) -> Self {
+        AccountSharedData {
+            lamports,
+            data: Arc::new(data),
+            owner: *owner,
+            executable: false,
+            rent_epoch: Epoch::default(),
+        }
+    }
     pub fn new_ref(lamports: u64, space: usize, owner: &Pubkey) -> Rc<RefCell<Self>> {
         Rc::new(RefCell::new(AccountSharedData::new(lamports, space, owner)))
     }
@@ -443,6 +458,23 @@ pub mod tests {
         account2.rent_epoch = 4;
         assert!(accounts_equal(&account1, &account2));
         (account1, account2)
+    }
+
+    #[test]
+    fn test_account_shared_data_new_with_data() {
+        let key = Pubkey::new_unique();
+
+        let account = AccountSharedData::new_with_data(1, vec![1, 2, 3], &key);
+        assert!(accounts_equal(
+            &account,
+            &Account::new_with_data(1, vec![1, 2, 3], &key)
+        ));
+        assert_eq!(account.lamports(), 1);
+        assert_eq!(account.owner(), &key);
+        assert_eq!(account.data(), &[1, 2, 3]);
+        assert!(!account.executable());
+        assert_eq!(account.rent_epoch(), Epoch::default());
+        assert!(!account.is_shared());
     }
 
     #[test]
