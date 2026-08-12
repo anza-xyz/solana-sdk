@@ -299,4 +299,14 @@ mod tests {
         let signature = message.sign(&keypair).unwrap();
         assert!(message.verify(&keypair.pubkey(), &signature).unwrap());
     }
+
+    #[test]
+    fn test_offchain_message_rejects_invalid_signing_domain() {
+        let message = OffchainMessage::new(0, b"Test Message").unwrap();
+        let mut serialized = message.serialize().unwrap();
+        serialized[0] = serialized[0].wrapping_add(1);
+        let result = OffchainMessage::deserialize(&serialized);
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), message);
+    }
 }
