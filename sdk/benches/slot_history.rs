@@ -1,25 +1,7 @@
 #![feature(test)]
 
 extern crate test;
-#[allow(deprecated)]
-use {
-    solana_sdk::{
-        account::{create_account_for_test, from_account},
-        slot_history::SlotHistory,
-    },
-    test::Bencher,
-};
-
-#[bench]
-#[allow(deprecated)]
-fn bench_to_from_account(b: &mut Bencher) {
-    let mut slot_history = SlotHistory::default();
-
-    b.iter(|| {
-        let account = create_account_for_test(&slot_history);
-        slot_history = from_account::<SlotHistory, _>(&account).unwrap();
-    });
-}
+use {solana_sdk::slot_history::SlotHistory, test::Bencher};
 
 #[bench]
 fn bench_slot_history_add_new(b: &mut Bencher) {
