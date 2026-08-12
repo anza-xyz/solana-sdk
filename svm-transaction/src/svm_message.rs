@@ -12,6 +12,7 @@ use {
 
 mod sanitized_message;
 mod sanitized_transaction;
+mod sanitized_versioned_transaction;
 // inlined to avoid solana-nonce dep
 #[cfg(test)]
 static_assertions::const_assert_eq!(
@@ -20,7 +21,8 @@ static_assertions::const_assert_eq!(
 );
 const NONCED_TX_MARKER_IX_INDEX: u8 = 0;
 
-pub trait SVMStaticMessage {
+// - Debug to support legacy logging
+pub trait SVMStaticMessage: Debug {
     /// Get the transaction version.
     fn version(&self) -> TransactionVersion;
 
@@ -42,6 +44,12 @@ pub trait SVMStaticMessage {
     /// Returns the number of requested write-locks in this message.
     /// This does not consider if write-locks are demoted.
     fn num_write_locks(&self) -> u64;
+
+    /// Return the number of readonly signed static account keys.
+    fn num_readonly_signed_static_accounts(&self) -> u8;
+
+    /// Return the number of readonly unsigned static account keys.
+    fn num_readonly_unsigned_static_accounts(&self) -> u8;
 
     /// Return the recent blockhash.
     fn recent_blockhash(&self) -> &Hash;
@@ -71,15 +79,30 @@ pub trait SVMStaticMessage {
     fn message_address_table_lookups(
         &self,
     ) -> impl Iterator<Item = SVMMessageAddressTableLookup<'_>>;
-}
 
-// - Debug to support legacy logging
-pub trait SVMMessage: Debug + SVMStaticMessage {
-    /// Return the account keys.
-    fn account_keys(&self) -> AccountKeys<'_>;
-
-    /// Returns `true` if the account at `index` is writable.
-    fn is_writable(&self, index: usize) -> bool;
+    /// Returns `true` if the account at `index` was requested writable.
+    /// This does not consider if write-locks are demoted.
+    fn is_requested_writable(&self, index: usize) -> bool {
+        let num_static_account_keys = self.static_account_keys().len();
+        if index >= num_static_account_keys {
+            let num_writable_loaded_addresses = self
+                .message_address_table_lookups()
+                .map(|lookup| lookup.writable_indexes.len())
+                .sum::<usize>();
+            let loaded_addresses_index = index.saturating_sub(num_static_account_keys);
+            loaded_addresses_index < num_writable_loaded_addresses
+        } else {
+            let num_signed_accounts = self.num_transaction_signatures() as usize;
+            index
+                < num_signed_accounts
+                    .saturating_sub(usize::from(self.num_readonly_signed_static_accounts()))
+                || (index >= num_signed_accounts
+                    && index
+                        < num_static_account_keys.saturating_sub(usize::from(
+                            self.num_readonly_unsigned_static_accounts(),
+                        )))
+        }
+    }
 
     /// Returns `true` if the account at `index` is signer.
     fn is_signer(&self, index: usize) -> bool;
@@ -98,6 +121,30 @@ pub trait SVMMessage: Debug + SVMStaticMessage {
             false
         }
     }
+
+    /// For the instruction at `index`, return an iterator over input accounts
+    /// that are signers.
+    fn get_ix_signers(&self, index: usize) -> impl Iterator<Item = &Pubkey> {
+        self.instructions_iter()
+            .nth(index)
+            .into_iter()
+            .flat_map(|ix| {
+                ix.accounts
+                    .iter()
+                    .copied()
+                    .map(usize::from)
+                    .filter(|index| self.is_signer(*index))
+                    .filter_map(|signer_index| self.static_account_keys().get(signer_index))
+            })
+    }
+}
+
+pub trait SVMMessage: SVMStaticMessage {
+    /// Return the account keys.
+    fn account_keys(&self) -> AccountKeys<'_>;
+
+    /// Returns `true` if the account at `index` is writable.
+    fn is_writable(&self, index: usize) -> bool;
 
     /// If the message uses a durable nonce, return the pubkey of the nonce account
     fn get_durable_nonce(&self) -> Option<&Pubkey> {
@@ -129,22 +176,6 @@ pub trait SVMMessage: Debug + SVMStaticMessage {
                         account_keys.get(index)
                     }
                 })
-            })
-    }
-
-    /// For the instruction at `index`, return an iterator over input accounts
-    /// that are signers.
-    fn get_ix_signers(&self, index: usize) -> impl Iterator<Item = &Pubkey> {
-        self.instructions_iter()
-            .nth(index)
-            .into_iter()
-            .flat_map(|ix| {
-                ix.accounts
-                    .iter()
-                    .copied()
-                    .map(usize::from)
-                    .filter(|index| self.is_signer(*index))
-                    .filter_map(|signer_index| self.account_keys().get(signer_index))
             })
     }
 }

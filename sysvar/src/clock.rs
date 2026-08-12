@@ -57,7 +57,6 @@
 //! # use solana_msg::msg;
 //! # use solana_program_error::{ProgramError, ProgramResult};
 //! # use solana_pubkey::Pubkey;
-//! # use solana_sysvar::{Sysvar, SysvarSerialize};
 //! # use solana_sdk_ids::sysvar::clock;
 //! #
 //! fn process_instruction(
@@ -70,7 +69,8 @@
 //!
 //!     assert!(clock::check_id(clock_account_info.key));
 //!
-//!     let clock = Clock::from_account_info(clock_account_info)?;
+//!     let clock: Clock = wincode::deserialize(&clock_account_info.data.borrow())
+//!         .map_err(|_| ProgramError::InvalidArgument)?;
 //!     msg!("clock: {:#?}", clock);
 //!
 //!     Ok(())
@@ -122,6 +122,7 @@
 //! ```
 
 #[cfg(feature = "bincode")]
+#[allow(deprecated)]
 use crate::SysvarSerialize;
 pub use {
     solana_clock::{Clock, SIZE},
@@ -129,6 +130,7 @@ pub use {
 };
 
 #[cfg(feature = "bincode")]
+#[allow(deprecated)]
 impl SysvarSerialize for Clock {}
 
 #[cfg(test)]

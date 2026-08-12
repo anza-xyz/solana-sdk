@@ -1,3 +1,4 @@
+#![cfg_attr(any(target_os = "solana", target_arch = "bpf"), no_std)]
 #![cfg_attr(docsrs, feature(doc_cfg))]
 //! Hashing with the [Poseidon] hash function.
 //!
@@ -170,7 +171,7 @@ impl PoseidonHash {
     }
 }
 
-#[cfg(target_os = "solana")]
+#[cfg(any(target_os = "solana", target_arch = "bpf"))]
 pub use solana_define_syscall::definitions::sol_poseidon;
 
 /// Return a Poseidon hash for the given data with the given elliptic curve and
@@ -214,7 +215,7 @@ pub fn hashv(
 ) -> Result<PoseidonHash, PoseidonSyscallError> {
     // Perform the calculation inline, calling this from within a program is
     // not supported.
-    #[cfg(not(target_os = "solana"))]
+    #[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
     {
         use {
             ark_bn254::Fr,
@@ -259,7 +260,7 @@ pub fn hashv(
         Ok(PoseidonHash(res))
     }
     // Call via a system call to perform the calculation.
-    #[cfg(target_os = "solana")]
+    #[cfg(any(target_os = "solana", target_arch = "bpf"))]
     {
         let mut hash_result = [0; HASH_BYTES];
         let result = unsafe {

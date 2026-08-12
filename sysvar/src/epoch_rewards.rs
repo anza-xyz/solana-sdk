@@ -75,7 +75,6 @@
 //! # use solana_msg::msg;
 //! # use solana_program_error::{ProgramError, ProgramResult};
 //! # use solana_pubkey::Pubkey;
-//! # use solana_sysvar::{Sysvar, SysvarSerialize};
 //! # use solana_sdk_ids::sysvar::epoch_rewards;
 //! #
 //! fn process_instruction(
@@ -88,7 +87,9 @@
 //!
 //!     assert!(epoch_rewards::check_id(epoch_rewards_account_info.key));
 //!
-//!     let epoch_rewards = EpochRewards::from_account_info(epoch_rewards_account_info)?;
+//!     let epoch_rewards: EpochRewards =
+//!         wincode::deserialize(&epoch_rewards_account_info.data.borrow())
+//!             .map_err(|_| ProgramError::InvalidArgument)?;
 //!     msg!("epoch_rewards: {:#?}", epoch_rewards);
 //!
 //!     Ok(())
@@ -155,6 +156,7 @@
 //! ```
 
 #[cfg(feature = "bincode")]
+#[allow(deprecated)]
 use crate::SysvarSerialize;
 pub use {
     solana_epoch_rewards::{EpochRewards, SIZE},
@@ -162,4 +164,5 @@ pub use {
 };
 
 #[cfg(feature = "bincode")]
+#[allow(deprecated)]
 impl SysvarSerialize for EpochRewards {}

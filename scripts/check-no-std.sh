@@ -26,6 +26,7 @@ no_std_crates=(
   -p solana-keccak-hasher
   -p solana-msg
   -p solana-nullable
+  -p solana-poseidon
   -p solana-program-error
   -p solana-program-log
   -p solana-program-log-macro

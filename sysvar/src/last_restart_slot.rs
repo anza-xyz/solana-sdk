@@ -37,6 +37,7 @@
 //! ```
 //!
 #[cfg(feature = "bincode")]
+#[allow(deprecated)]
 use crate::SysvarSerialize;
 pub use {
     solana_last_restart_slot::{LastRestartSlot, SIZE},
@@ -44,6 +45,7 @@ pub use {
 };
 
 #[cfg(feature = "bincode")]
+#[allow(deprecated)]
 impl SysvarSerialize for LastRestartSlot {}
 
 #[cfg(test)]

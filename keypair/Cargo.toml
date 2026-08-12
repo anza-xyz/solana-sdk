@@ -16,24 +16,20 @@ all-features = true
 rustdoc-args = ["--cfg=docsrs"]
 
 [features]
-seed-derivable = [
-    "dep:solana-derivation-path",
-    "dep:solana-seed-derivable",
-    "dep:ed25519-dalek-bip32",
-]
+seed-derivable = ["dep:solana-derivation-path", "dep:solana-seed-derivable"]
 
 [dependencies]
-ed25519-dalek = { workspace = true, features = ["rand_core"] }
-ed25519-dalek-bip32 = { workspace = true, optional = true }
 five8 = { workspace = true }
 five8_core = { workspace = true } # needed to force five8 to use the newest version with `core::error::Error` support
 rand = { workspace = true }
 solana-address = { workspace = true, features = ["decode"] }
 solana-derivation-path = { workspace = true, optional = true }
+solana-ed25519 = { workspace = true }
 solana-seed-derivable = { workspace = true, optional = true }
 solana-seed-phrase = { workspace = true }
 solana-signature = { workspace = true, features = ["std", "verify"] }
 solana-signer = { workspace = true, features = ["std"] }
+zeroize = { workspace = true }
 
 [dev-dependencies]
 serde_json = { workspace = true }

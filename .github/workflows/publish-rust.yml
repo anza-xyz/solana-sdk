@@ -129,11 +129,13 @@ jobs:
           rustflags: ""
 
       - name: Run docs.rs build
+        env:
+          PACKAGE_PATH: ${{ inputs.package_path }}
         run: |
           # Mimic docs.rs build environment
           export DOCS_RS="1"
           export RUSTDOCFLAGS="--cfg docsrs"
-          cargo +nightly doc --no-deps --all-features --manifest-path "${{ inputs.package_path }}/Cargo.toml"
+          cargo +nightly doc --no-deps --all-features --manifest-path "$PACKAGE_PATH/Cargo.toml"
 
   detached-minimal-versions:
     name: Check minimal-versions on detached crate
@@ -161,12 +163,14 @@ jobs:
           tool: cargo-minimal-versions
 
       - name: Install toml-cli
-        uses: taiki-e/install-action@07b4745e0c39a41822af610387492e3e53aa222b  # v2.83.4
+        uses: taiki-e/install-action@6a1bd70eaac3c8bdf093356838d7ee09fda951cf  # v2.85.5
         with:
           tool: toml-cli
 
       - name: Run minimal-versions check
-        run: ./scripts/check-detached-minimal-versions.sh "${{ inputs.package_path }}"
+        env:
+          PACKAGE_PATH: ${{ inputs.package_path }}
+        run: ./scripts/check-detached-minimal-versions.sh "$PACKAGE_PATH"
 
   semver:
     name: Check Semver
@@ -182,16 +186,18 @@ jobs:
           cargo-cache-fallback-key: cargo-publish-semver
 
       - name: Install cargo-semver-checks
-        uses: taiki-e/install-action@07b4745e0c39a41822af610387492e3e53aa222b  # v2.83.4
+        uses: taiki-e/install-action@6a1bd70eaac3c8bdf093356838d7ee09fda951cf  # v2.85.5
         with:
           tool: toml-cli,cargo-semver-checks,cargo-release
 
       - name: Check if crate is a procedural macro
         id: is_proc_macro
         shell: bash
+        env:
+          PACKAGE_PATH: ${{ inputs.package_path }}
         run: |
           set +e # toml crashes the whole shell if it fails to find the key
-          result=$(toml get "${{ inputs.package_path }}/Cargo.toml" lib.proc-macro)
+          result=$(toml get "$PACKAGE_PATH/Cargo.toml" lib.proc-macro)
           if [[ "$result" == *"true"* ]]; then
             echo "is_proc_macro=true" >> "$GITHUB_OUTPUT"
           else
@@ -206,17 +212,23 @@ jobs:
 
       - name: Set Version
         if: ${{ steps.is_proc_macro.outputs.is_proc_macro == 'false' }}
+        env:
+          PACKAGE_PATH: ${{ inputs.package_path }}
+          LEVEL: ${{ inputs.level }}
+          VERSION: ${{ inputs.version }}
         run: |
-          if [ "${{ inputs.level }}" == "version" ]; then
-            LEVEL=${{ inputs.version }}
+          if [ "$LEVEL" == "version" ]; then
+            RELEASE_LEVEL="$VERSION"
           else
-            LEVEL=${{ inputs.level }}
+            RELEASE_LEVEL="$LEVEL"
           fi
-          cargo release $LEVEL --manifest-path "${{ inputs.package_path }}/Cargo.toml" --no-tag --no-publish --no-push --no-confirm --execute
+          cargo release "$RELEASE_LEVEL" --manifest-path "$PACKAGE_PATH/Cargo.toml" --no-tag --no-publish --no-push --no-confirm --execute
 
       - name: Check semver
         if: ${{ steps.is_proc_macro.outputs.is_proc_macro == 'false' && github.event.inputs.run_semver == 'true'}}
-        run: cargo semver-checks --manifest-path "${{ inputs.package_path }}/Cargo.toml"
+        env:
+          PACKAGE_PATH: ${{ inputs.package_path }}
+        run: cargo semver-checks --manifest-path "$PACKAGE_PATH/Cargo.toml"
 
   publish-crate:
     name: Publish crate
@@ -248,7 +260,7 @@ jobs:
           cargo-cache-fallback-key: cargo-stable
 
       - name: Install cargo-release
-        uses: taiki-e/install-action@07b4745e0c39a41822af610387492e3e53aa222b  # v2.83.4
+        uses: taiki-e/install-action@6a1bd70eaac3c8bdf093356838d7ee09fda951cf  # v2.85.5
         with:
           tool: cargo-release
 
@@ -277,11 +289,15 @@ jobs:
         id: publish
         env:
           CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+          PACKAGE_PATH: ${{ inputs.package_path }}
+          LEVEL: ${{ inputs.level }}
+          VERSION: ${{ inputs.version }}
+          DEPENDENT_VERSION: ${{ inputs.dependent_version }}
         run: |
-          if [ "${{ inputs.level }}" == "version" ]; then
-            LEVEL=${{ inputs.version }}
+          if [ "$LEVEL" == "version" ]; then
+            RELEASE_LEVEL="$VERSION"
           else
-            LEVEL=${{ inputs.level }}
+            RELEASE_LEVEL="$LEVEL"
           fi
 
           if [ "${{ inputs.dry_run }}" == "true" ]; then
@@ -290,17 +306,18 @@ jobs:
             OPTIONS=""
           fi
 
-          ./scripts/publish-rust.sh "${{ inputs.package_path }}" $LEVEL "${{ inputs.dependent_version }}" $OPTIONS
+          ./scripts/publish-rust.sh "$PACKAGE_PATH" "$RELEASE_LEVEL" "$DEPENDENT_VERSION" $OPTIONS
 
       - name: Generate a changelog
         if: github.event.inputs.create_release == 'true'
         uses: orhun/git-cliff-action@f50e11560dce63f7c33227798f90b924471a88b5  # v4.8.0
         with:
           config: "scripts/cliff.toml"
-          args: ${{ steps.publish.outputs.old_git_tag }}..HEAD --include-path "${{ inputs.package_path }}/**" --github-repo ${{ github.repository }}
+          args: ${{ steps.publish.outputs.old_git_tag }}..HEAD --include-path "${{ env.PACKAGE_PATH }}/**" --github-repo ${{ github.repository }}
         env:
           OUTPUT: TEMP_CHANGELOG.md
           GITHUB_REPO: ${{ github.repository }}
+          PACKAGE_PATH: ${{ inputs.package_path }}
 
       - name: Create GitHub release
         if: github.event.inputs.create_release == 'true' && github.event.inputs.dry_run != 'true'

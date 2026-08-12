@@ -2,7 +2,7 @@
 name = "solana-account"
 description = "Solana Account type"
 documentation = "https://docs.rs/solana-account"
-version = "4.4.0"
+version = "4.6.0"
 authors = { workspace = true }
 repository = { workspace = true }
 homepage = { workspace = true }
@@ -17,7 +17,7 @@ rustdoc-args = ["--cfg=docsrs"]
 [features]
 bincode = ["dep:bincode", "dep:solana-sysvar", "serde"]
 wincode = ["dep:wincode", "solana-pubkey/wincode"]
-dev-context-only-utils = ["bincode", "dep:qualifier_attr"]
+dev-context-only-utils = ["bincode", "wincode", "dep:qualifier_attr"]
 frozen-abi = [
     "dep:solana-frozen-abi",
     "dep:solana-frozen-abi-macro",
@@ -44,3 +44,4 @@ wincode = { workspace = true, features = ["alloc"], optional = true }
 [dev-dependencies]
 solana-account = { path = ".", features = ["dev-context-only-utils"] }
 solana-pubkey = { workspace = true, features = ["std"] }
+solana-system-interface = { workspace = true }

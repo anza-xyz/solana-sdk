@@ -2,12 +2,11 @@
 //!
 //! The _slot history sysvar_ provides access to the [`SlotHistory`] type.
 //!
-//! The [`SysvarSerialize::from_account_info`] and [`crate::Sysvar::get`] methods always return
-//! [`ProgramError::UnsupportedSysvar`] because this sysvar account is too large
-//! to process on-chain. Thus this sysvar cannot be accessed on chain, though
-//! one can still use the [`SysvarId::id`], [`SysvarId::check_id`] and
-//! [`SysvarSerialize::size_of`] methods in an on-chain program, and it can be accessed
-//! off-chain through RPC.
+//! The [`crate::Sysvar::get`] method always returns [`ProgramError::UnsupportedSysvar`]
+//! because this sysvar account is too large to process on-chain. Thus this
+//! sysvar cannot be accessed on chain, though one can still use the
+//! [`SysvarId::id`], [`SysvarId::check_id`] and [`SIZE`] in an on-chain program,
+//! and it can be accessed off-chain through RPC.
 //!
 //! [`SysvarId::id`]: https://docs.rs/solana-sysvar-id/latest/solana_sysvar_id/trait.SysvarId.html#tymethod.id
 //! [`SysvarId::check_id`]: https://docs.rs/solana-sysvar-id/latest/solana_sysvar_id/trait.SysvarId.html#tymethod.check_id
@@ -48,6 +47,7 @@
 //! ```
 
 #[cfg(feature = "bincode")]
+#[allow(deprecated)]
 use crate::SysvarSerialize;
 pub use {
     solana_account_info::AccountInfo,
@@ -57,6 +57,7 @@ pub use {
 };
 
 #[cfg(feature = "bincode")]
+#[allow(deprecated)]
 impl SysvarSerialize for SlotHistory {
     // override
     fn size_of() -> usize {
@@ -72,6 +73,7 @@ impl SysvarSerialize for SlotHistory {
 mod tests {
     use super::*;
     #[test]
+    #[allow(deprecated)]
     fn test_size_of() {
         assert_eq!(
             SlotHistory::size_of(),
