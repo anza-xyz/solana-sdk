@@ -10,7 +10,7 @@ pub use {
     instruction_error_module::*,
     solana_program_error::{
         ACCOUNT_ALREADY_INITIALIZED, ACCOUNT_BORROW_FAILED, ACCOUNT_DATA_TOO_SMALL,
-        ACCOUNT_NOT_RENT_EXEMPT, ARITHMETIC_OVERFLOW, BORSH_IO_ERROR,
+        ACCOUNT_NOT_RENT_EXEMPT, ARITHMETIC_OVERFLOW, BAIL_OUT, BORSH_IO_ERROR,
         BUILTIN_PROGRAMS_MUST_CONSUME_COMPUTE_UNITS, CUSTOM_ZERO, ILLEGAL_OWNER, IMMUTABLE,
         INCORRECT_AUTHORITY, INCORRECT_PROGRAM_ID, INSUFFICIENT_FUNDS, INVALID_ACCOUNT_DATA,
         INVALID_ACCOUNT_DATA_REALLOC, INVALID_ACCOUNT_OWNER, INVALID_ARGUMENT,
@@ -39,7 +39,7 @@ mod instruction_error_module {
         feature = "frozen-abi",
         derive(AbiExample, AbiEnumVisitor, StableAbi, StableAbiSample),
         frozen_abi(
-            abi_digest = "99sLbFrZmSAM4i28P5vPDJFtB6xDgvyT92iEJpKiMPpF",
+            abi_digest = "FeTxh6dMDyYG1EdnenTpe8vpH37xDRvfksy83XKBN671",
             abi_serializer = ["bincode", "wincode"],
             test_roundtrip = "eq_and_wire"
         )
@@ -220,6 +220,9 @@ mod instruction_error_module {
 
         /// Builtin programs must consume compute units
         BuiltinProgramsMustConsumeComputeUnits,
+
+        /// Block production bailed out
+        BailOut,
         // Note: For any new error added here an equivalent ProgramError and its
         // conversions must also be added
     }
@@ -363,6 +366,7 @@ impl fmt::Display for InstructionError {
             InstructionError::BuiltinProgramsMustConsumeComputeUnits => {
                 f.write_str("Builtin programs must consume compute units")
             }
+            InstructionError::BailOut => f.write_str("Block production bailed out"),
         }
     }
 }
@@ -404,6 +408,7 @@ where
             ARITHMETIC_OVERFLOW => Self::ArithmeticOverflow,
             IMMUTABLE => Self::Immutable,
             INCORRECT_AUTHORITY => Self::IncorrectAuthority,
+            BAIL_OUT => Self::BailOut,
             _ => {
                 // A valid custom error has no bits set in the upper 32
                 if error >> solana_program_error::BUILTIN_BIT_SHIFT == 0 {
@@ -483,6 +488,7 @@ impl TryFrom<InstructionError> for ProgramError {
             Self::Error::ArithmeticOverflow => Ok(Self::ArithmeticOverflow),
             Self::Error::Immutable => Ok(Self::Immutable),
             Self::Error::IncorrectAuthority => Ok(Self::IncorrectAuthority),
+            Self::Error::BailOut => Ok(Self::BailOut),
             _ => Err(error),
         }
     }
