@@ -14,18 +14,18 @@ fn test_zero_copy_and_constructors() {
 }
 
 #[test]
-fn test_checked_arithmetic_routing() {
+fn test_validated_arithmetic_routing() {
     // Generate valid infinity points for math operations.
     let p1 = G1Point::infinity(Endianness::Little);
     let p2 = G1Point::infinity(Endianness::Little);
 
     // Test the returning safe wrapper.
-    let sum = p1.checked_add(&p2, Endianness::Little);
+    let sum = p1.add(&p2, Endianness::Little);
     assert!(sum.is_some());
 
     // Test the in-place safe wrapper to save CUs.
     let mut out = G1Point::infinity(Endianness::Little);
-    let success = p1.checked_add_assign(&p2, &mut out, Endianness::Little);
+    let success = p1.add_assign(&p2, &mut out, Endianness::Little);
     assert!(success);
 
     // Verify both methods yielded the exact same underlying bytes.

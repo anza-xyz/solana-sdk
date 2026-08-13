@@ -14,9 +14,9 @@ verification and zero-knowledge proof (e.g., Groth16) validation.
   `bytemuck::Pod`. Developers can cast transaction instruction data directly
   into curve points without heap allocations.
 - **CU-Optimized Mutations:** Provides `_assign` variants for all group
-  operations (e.g., `checked_add_assign`), allowing in-place memory mutations
+  operations (e.g., `add_assign`), allowing in-place memory mutations
   to strictly control Compute Unit (CU) consumption.
-- **Safe & Unchecked APIs:** Exposes both fully validated `checked_` group
+- **Safe & Unchecked APIs:** Exposes both fully validated group
   operations and `_unchecked` variants that skip subgroup checks for cheaper
   point accumulation.
 - **Ergonomic Pairings:** Includes `pairing_check` for evaluating if the
@@ -48,7 +48,7 @@ let p2: &G1Point = bytemuck::cast_ref(raw_bytes_2);
 let mut out = G1Point::infinity(Endianness::Little);
 
 // 3. Perform safe, in-place addition
-let success = p1.checked_add_assign(p2, &mut out, Endianness::Little);
+let success = p1.add_assign(p2, &mut out, Endianness::Little);
 assert!(success);
 ```
 
@@ -69,7 +69,7 @@ assert!(is_valid);
 
 ### Security & Validation
 
-All `checked_` methods, multiplication operations, and decompression functions
+All operations except the `_unchecked` variants
 inherently perform full point validation. This includes checking that the
 coordinates represent valid field elements, satisfy the curve equation, and
 exist within the correct prime-order subgroup.

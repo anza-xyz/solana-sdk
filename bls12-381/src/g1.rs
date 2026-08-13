@@ -49,14 +49,14 @@ impl G1Point {
 
     /// Safely negates the point by subtracting it from infinity.
     pub fn neg(&self, endianness: Endianness) -> Option<Self> {
-        Self::infinity(endianness).checked_sub(self, endianness)
+        Self::infinity(endianness).sub(self, endianness)
     }
 
     /// In-place point addition.
     ///
     /// WARNING: This operation skips the prime-order subgroup check
     /// for performance. Only use this if inputs are known to be valid.
-    pub fn add_unchecked_assign(
+    pub fn add_assign_unchecked(
         &self,
         other: &Self,
         out: &mut Self,
@@ -109,7 +109,7 @@ impl G1Point {
     pub fn add_unchecked(&self, other: &Self, endianness: Endianness) -> Option<Self> {
         let mut result = MaybeUninit::<Self>::uninit();
         let success =
-            self.add_unchecked_assign(other, unsafe { result.assume_init_mut() }, endianness);
+            self.add_assign_unchecked(other, unsafe { result.assume_init_mut() }, endianness);
 
         if success {
             Some(unsafe { result.assume_init() })
@@ -120,18 +120,17 @@ impl G1Point {
 
     /// Safe in-place point addition.
     /// Validates both operands (field, curve, subgroup) prior to addition.
-    pub fn checked_add_assign(&self, other: &Self, out: &mut Self, endianness: Endianness) -> bool {
+    pub fn add_assign(&self, other: &Self, out: &mut Self, endianness: Endianness) -> bool {
         if !self.validate(endianness) || !other.validate(endianness) {
             return false;
         }
-        self.add_unchecked_assign(other, out, endianness)
+        self.add_assign_unchecked(other, out, endianness)
     }
 
     /// Safe point addition returning a new allocated point.
-    pub fn checked_add(&self, other: &Self, endianness: Endianness) -> Option<Self> {
+    pub fn add(&self, other: &Self, endianness: Endianness) -> Option<Self> {
         let mut result = MaybeUninit::<Self>::uninit();
-        let success =
-            self.checked_add_assign(other, unsafe { result.assume_init_mut() }, endianness);
+        let success = self.add_assign(other, unsafe { result.assume_init_mut() }, endianness);
 
         if success {
             Some(unsafe { result.assume_init() })
@@ -144,7 +143,7 @@ impl G1Point {
     ///
     /// WARNING: This operation skips the prime-order subgroup check
     /// for performance. Only use this if inputs are known to be valid.
-    pub fn sub_unchecked_assign(
+    pub fn sub_assign_unchecked(
         &self,
         other: &Self,
         out: &mut Self,
@@ -197,7 +196,7 @@ impl G1Point {
     pub fn sub_unchecked(&self, other: &Self, endianness: Endianness) -> Option<Self> {
         let mut result = MaybeUninit::<Self>::uninit();
         let success =
-            self.sub_unchecked_assign(other, unsafe { result.assume_init_mut() }, endianness);
+            self.sub_assign_unchecked(other, unsafe { result.assume_init_mut() }, endianness);
 
         if success {
             Some(unsafe { result.assume_init() })
@@ -208,18 +207,17 @@ impl G1Point {
 
     /// Safe in-place point subtraction.
     /// Validates both operands prior to subtraction.
-    pub fn checked_sub_assign(&self, other: &Self, out: &mut Self, endianness: Endianness) -> bool {
+    pub fn sub_assign(&self, other: &Self, out: &mut Self, endianness: Endianness) -> bool {
         if !self.validate(endianness) || !other.validate(endianness) {
             return false;
         }
-        self.sub_unchecked_assign(other, out, endianness)
+        self.sub_assign_unchecked(other, out, endianness)
     }
 
     /// Safe point subtraction returning a new allocated point.
-    pub fn checked_sub(&self, other: &Self, endianness: Endianness) -> Option<Self> {
+    pub fn sub(&self, other: &Self, endianness: Endianness) -> Option<Self> {
         let mut result = MaybeUninit::<Self>::uninit();
-        let success =
-            self.checked_sub_assign(other, unsafe { result.assume_init_mut() }, endianness);
+        let success = self.sub_assign(other, unsafe { result.assume_init_mut() }, endianness);
 
         if success {
             Some(unsafe { result.assume_init() })
