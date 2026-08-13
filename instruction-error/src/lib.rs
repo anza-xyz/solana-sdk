@@ -221,7 +221,9 @@ mod instruction_error_module {
         /// Builtin programs must consume compute units
         BuiltinProgramsMustConsumeComputeUnits,
 
-        /// Block production bailed out
+        /// Block production bailed out.
+        /// This discards transactions to protect the leader and does not propagate to followers.
+        /// Meaning this explicitly excludes transactions from consensus.
         BailOut,
         // Note: For any new error added here an equivalent ProgramError and its
         // conversions must also be added

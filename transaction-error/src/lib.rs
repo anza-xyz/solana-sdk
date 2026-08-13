@@ -156,7 +156,9 @@ pub enum TransactionError {
     /// Commit cancelled internally.
     CommitCancelled,
 
-    /// Block production bailed out
+    /// Block production bailed out.
+    /// This discards transactions to protect the leader and does not propagate to followers.
+    /// Meaning this explicitly excludes transactions from consensus.
     BailOut,
 }
 
