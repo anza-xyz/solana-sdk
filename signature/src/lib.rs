@@ -161,7 +161,7 @@ impl Signature {
         if signature_data.len() == 1 {
             let (signature, pubkey_bytes, message_bytes) =
                 signature_data.into_iter().next().unwrap();
-            return signature.verify(pubkey_bytes, message_bytes);
+            return signature.verify_non_strict(pubkey_bytes, message_bytes);
         }
 
         let mut batch = solana_ed25519::ed_sigs::batch::Verifier::new();
@@ -516,7 +516,7 @@ mod tests {
     }
 
     #[test]
-    fn test_batch_verify_single_item_rejects_zip215_valid_signature() {
+    fn test_batch_verify_single_item_accepts_zip215_valid_signature() {
         let mut signature = [0; SIGNATURE_BYTES];
         signature[0] = 1;
         let signatures = [Signature::from(signature); 1];
@@ -527,7 +527,7 @@ mod tests {
 
         assert!(!signatures[0].verify(&pubkeys[0], &messages[0]));
         assert!(signatures[0].verify_non_strict(&pubkeys[0], &messages[0]));
-        assert!(!Signature::batch_verify(batch_verify_items(
+        assert!(Signature::batch_verify(batch_verify_items(
             &signatures,
             &pubkeys,
             &messages,
