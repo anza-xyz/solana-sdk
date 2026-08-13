@@ -515,6 +515,25 @@ mod tests {
         )));
     }
 
+    #[test]
+    fn test_batch_verify_single_item_rejects_zip215_valid_signature() {
+        let mut signature = [0; SIGNATURE_BYTES];
+        signature[0] = 1;
+        let signatures = [Signature::from(signature); 1];
+        let mut pubkey = [0; 32];
+        pubkey[0] = 1;
+        let pubkeys = [pubkey; 1];
+        let messages: [Vec<u8>; 1] = core::array::from_fn(|_| b"message".to_vec());
+
+        assert!(!signatures[0].verify(&pubkeys[0], &messages[0]));
+        assert!(signatures[0].verify_non_strict(&pubkeys[0], &messages[0]));
+        assert!(!Signature::batch_verify(batch_verify_items(
+            &signatures,
+            &pubkeys,
+            &messages,
+        )));
+    }
+
     #[cfg(feature = "parallel")]
     #[test]
     fn test_par_batch_verify() {
