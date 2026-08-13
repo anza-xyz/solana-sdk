@@ -56,10 +56,14 @@ impl G1Point {
     ///
     /// WARNING: This operation skips the prime-order subgroup check
     /// for performance. Only use this if inputs are known to be valid.
+    ///
+    /// Returns `true` if and only if every byte of `out` was written, in
+    /// which case the caller may `assume_init` it. On `false`, `out` is
+    /// left untouched and must not be assumed initialized.
     pub fn add_assign_unchecked(
         &self,
         other: &Self,
-        out: &mut Self,
+        out: &mut MaybeUninit<Self>,
         endianness: Endianness,
     ) -> bool {
         #[cfg(target_os = "solana")]
@@ -68,13 +72,17 @@ impl G1Point {
                 Endianness::Little => solana_define_syscall::curve_constants::BLS12_381_G1_LE,
                 Endianness::Big => solana_define_syscall::curve_constants::BLS12_381_G1_BE,
             };
+            // SAFETY: the input pointers are valid for reads of their
+            // respective sizes and `out` is valid for writes of
+            // `G1_UNCOMPRESSED_POINT_SIZE` bytes. Per SIMD-0388 the syscall writes
+            // the full output buffer whenever it returns 0.
             let status = unsafe {
                 solana_define_syscall::definitions::sol_curve_group_op(
                     curve_id,
                     solana_define_syscall::curve_constants::GROUP_OP_ADD,
                     self.0.as_ptr(),
                     other.0.as_ptr(),
-                    out.0.as_mut_ptr(),
+                    out.as_mut_ptr().cast::<u8>(),
                 )
             };
             status == 0
@@ -96,7 +104,7 @@ impl G1Point {
                 right_pod,
                 end,
             ) {
-                out.0.copy_from_slice(&res.0);
+                out.write(Self(res.0));
                 true
             } else {
                 false
@@ -107,12 +115,11 @@ impl G1Point {
     /// Point addition returning a new allocated point.
     /// Skips subgroup checks.
     pub fn add_unchecked(&self, other: &Self, endianness: Endianness) -> Option<Self> {
-        let mut result = MaybeUninit::<Self>::uninit();
-        let success =
-            self.add_assign_unchecked(other, unsafe { result.assume_init_mut() }, endianness);
-
-        if success {
-            Some(unsafe { result.assume_init() })
+        let mut out = MaybeUninit::uninit();
+        if self.add_assign_unchecked(other, &mut out, endianness) {
+            // SAFETY: `add_assign_unchecked` returned `true`, so every byte of
+            // `out` has been written.
+            Some(unsafe { out.assume_init() })
         } else {
             None
         }
@@ -120,7 +127,16 @@ impl G1Point {
 
     /// Safe in-place point addition.
     /// Validates both operands (field, curve, subgroup) prior to addition.
-    pub fn add_assign(&self, other: &Self, out: &mut Self, endianness: Endianness) -> bool {
+    ///
+    /// Returns `true` if and only if every byte of `out` was written, in
+    /// which case the caller may `assume_init` it. On `false`, `out` is
+    /// left untouched and must not be assumed initialized.
+    pub fn add_assign(
+        &self,
+        other: &Self,
+        out: &mut MaybeUninit<Self>,
+        endianness: Endianness,
+    ) -> bool {
         if !self.validate(endianness) || !other.validate(endianness) {
             return false;
         }
@@ -129,11 +145,11 @@ impl G1Point {
 
     /// Safe point addition returning a new allocated point.
     pub fn add(&self, other: &Self, endianness: Endianness) -> Option<Self> {
-        let mut result = MaybeUninit::<Self>::uninit();
-        let success = self.add_assign(other, unsafe { result.assume_init_mut() }, endianness);
-
-        if success {
-            Some(unsafe { result.assume_init() })
+        let mut out = MaybeUninit::uninit();
+        if self.add_assign(other, &mut out, endianness) {
+            // SAFETY: `add_assign` returned `true`, so every byte of
+            // `out` has been written.
+            Some(unsafe { out.assume_init() })
         } else {
             None
         }
@@ -143,10 +159,14 @@ impl G1Point {
     ///
     /// WARNING: This operation skips the prime-order subgroup check
     /// for performance. Only use this if inputs are known to be valid.
+    ///
+    /// Returns `true` if and only if every byte of `out` was written, in
+    /// which case the caller may `assume_init` it. On `false`, `out` is
+    /// left untouched and must not be assumed initialized.
     pub fn sub_assign_unchecked(
         &self,
         other: &Self,
-        out: &mut Self,
+        out: &mut MaybeUninit<Self>,
         endianness: Endianness,
     ) -> bool {
         #[cfg(target_os = "solana")]
@@ -155,13 +175,17 @@ impl G1Point {
                 Endianness::Little => solana_define_syscall::curve_constants::BLS12_381_G1_LE,
                 Endianness::Big => solana_define_syscall::curve_constants::BLS12_381_G1_BE,
             };
+            // SAFETY: the input pointers are valid for reads of their
+            // respective sizes and `out` is valid for writes of
+            // `G1_UNCOMPRESSED_POINT_SIZE` bytes. Per SIMD-0388 the syscall writes
+            // the full output buffer whenever it returns 0.
             let status = unsafe {
                 solana_define_syscall::definitions::sol_curve_group_op(
                     curve_id,
                     solana_define_syscall::curve_constants::GROUP_OP_SUB,
                     self.0.as_ptr(),
                     other.0.as_ptr(),
-                    out.0.as_mut_ptr(),
+                    out.as_mut_ptr().cast::<u8>(),
                 )
             };
             status == 0
@@ -183,7 +207,7 @@ impl G1Point {
                 right_pod,
                 end,
             ) {
-                out.0.copy_from_slice(&res.0);
+                out.write(Self(res.0));
                 true
             } else {
                 false
@@ -194,12 +218,11 @@ impl G1Point {
     /// Point subtraction returning a new allocated point.
     /// Skips subgroup checks.
     pub fn sub_unchecked(&self, other: &Self, endianness: Endianness) -> Option<Self> {
-        let mut result = MaybeUninit::<Self>::uninit();
-        let success =
-            self.sub_assign_unchecked(other, unsafe { result.assume_init_mut() }, endianness);
-
-        if success {
-            Some(unsafe { result.assume_init() })
+        let mut out = MaybeUninit::uninit();
+        if self.sub_assign_unchecked(other, &mut out, endianness) {
+            // SAFETY: `sub_assign_unchecked` returned `true`, so every byte of
+            // `out` has been written.
+            Some(unsafe { out.assume_init() })
         } else {
             None
         }
@@ -207,7 +230,16 @@ impl G1Point {
 
     /// Safe in-place point subtraction.
     /// Validates both operands prior to subtraction.
-    pub fn sub_assign(&self, other: &Self, out: &mut Self, endianness: Endianness) -> bool {
+    ///
+    /// Returns `true` if and only if every byte of `out` was written, in
+    /// which case the caller may `assume_init` it. On `false`, `out` is
+    /// left untouched and must not be assumed initialized.
+    pub fn sub_assign(
+        &self,
+        other: &Self,
+        out: &mut MaybeUninit<Self>,
+        endianness: Endianness,
+    ) -> bool {
         if !self.validate(endianness) || !other.validate(endianness) {
             return false;
         }
@@ -216,11 +248,11 @@ impl G1Point {
 
     /// Safe point subtraction returning a new allocated point.
     pub fn sub(&self, other: &Self, endianness: Endianness) -> Option<Self> {
-        let mut result = MaybeUninit::<Self>::uninit();
-        let success = self.sub_assign(other, unsafe { result.assume_init_mut() }, endianness);
-
-        if success {
-            Some(unsafe { result.assume_init() })
+        let mut out = MaybeUninit::uninit();
+        if self.sub_assign(other, &mut out, endianness) {
+            // SAFETY: `sub_assign` returned `true`, so every byte of
+            // `out` has been written.
+            Some(unsafe { out.assume_init() })
         } else {
             None
         }
@@ -230,20 +262,33 @@ impl G1Point {
     ///
     /// Note: The underlying syscall inherently performs full validation
     /// (field, curve, and subgroup checks) on the input point.
-    pub fn mul_assign(&self, scalar: &Scalar, out: &mut Self, endianness: Endianness) -> bool {
+    ///
+    /// Returns `true` if and only if every byte of `out` was written, in
+    /// which case the caller may `assume_init` it. On `false`, `out` is
+    /// left untouched and must not be assumed initialized.
+    pub fn mul_assign(
+        &self,
+        scalar: &Scalar,
+        out: &mut MaybeUninit<Self>,
+        endianness: Endianness,
+    ) -> bool {
         #[cfg(target_os = "solana")]
         {
             let curve_id = match endianness {
                 Endianness::Little => solana_define_syscall::curve_constants::BLS12_381_G1_LE,
                 Endianness::Big => solana_define_syscall::curve_constants::BLS12_381_G1_BE,
             };
+            // SAFETY: the input pointers are valid for reads of their
+            // respective sizes and `out` is valid for writes of
+            // `G1_UNCOMPRESSED_POINT_SIZE` bytes. Per SIMD-0388 the syscall writes
+            // the full output buffer whenever it returns 0.
             let status = unsafe {
                 solana_define_syscall::definitions::sol_curve_group_op(
                     curve_id,
                     solana_define_syscall::curve_constants::GROUP_OP_MUL,
                     scalar.0.as_ptr(),
                     self.0.as_ptr(),
-                    out.0.as_mut_ptr(),
+                    out.as_mut_ptr().cast::<u8>(),
                 )
             };
             status == 0
@@ -265,7 +310,7 @@ impl G1Point {
                 scalar_pod,
                 end,
             ) {
-                out.0.copy_from_slice(&res.0);
+                out.write(Self(res.0));
                 true
             } else {
                 false
@@ -275,11 +320,11 @@ impl G1Point {
 
     /// Scalar multiplication returning a new allocated point.
     pub fn mul(&self, scalar: &Scalar, endianness: Endianness) -> Option<Self> {
-        let mut result = MaybeUninit::<Self>::uninit();
-        let success = self.mul_assign(scalar, unsafe { result.assume_init_mut() }, endianness);
-
-        if success {
-            Some(unsafe { result.assume_init() })
+        let mut out = MaybeUninit::uninit();
+        if self.mul_assign(scalar, &mut out, endianness) {
+            // SAFETY: `mul_assign` returned `true`, so every byte of
+            // `out` has been written.
+            Some(unsafe { out.assume_init() })
         } else {
             None
         }
@@ -337,18 +382,30 @@ impl G1Compressed {
 
     /// In-place decompression into an uncompressed affine point.
     /// Inherently performs format, field, curve, and subgroup validation.
-    pub fn decompress_assign(&self, out: &mut G1Point, endianness: Endianness) -> bool {
+    ///
+    /// Returns `true` if and only if every byte of `out` was written, in
+    /// which case the caller may `assume_init` it. On `false`, `out` is
+    /// left untouched and must not be assumed initialized.
+    pub fn decompress_assign(
+        &self,
+        out: &mut MaybeUninit<G1Point>,
+        endianness: Endianness,
+    ) -> bool {
         #[cfg(target_os = "solana")]
         {
             let curve_id = match endianness {
                 Endianness::Little => solana_define_syscall::curve_constants::BLS12_381_G1_LE,
                 Endianness::Big => solana_define_syscall::curve_constants::BLS12_381_G1_BE,
             };
+            // SAFETY: `self.0` is valid for reads of its size and `out`
+            // is valid for writes of `G1_UNCOMPRESSED_POINT_SIZE` bytes. Per
+            // SIMD-0388 the syscall writes the full output buffer
+            // whenever it returns 0.
             let status = unsafe {
                 solana_define_syscall::definitions::sol_curve_decompress(
                     curve_id,
                     self.0.as_ptr(),
-                    out.0.as_mut_ptr(),
+                    out.as_mut_ptr().cast::<u8>(),
                 )
             };
             status == 0
@@ -368,7 +425,7 @@ impl G1Compressed {
                 pod,
                 end,
             ) {
-                out.0.copy_from_slice(&res.0);
+                out.write(G1Point(res.0));
                 true
             } else {
                 false
@@ -378,11 +435,11 @@ impl G1Compressed {
 
     /// Decompresses into a new allocated affine point.
     pub fn decompress(&self, endianness: Endianness) -> Option<G1Point> {
-        let mut result = MaybeUninit::<G1Point>::uninit();
-        let success = self.decompress_assign(unsafe { result.assume_init_mut() }, endianness);
-
-        if success {
-            Some(unsafe { result.assume_init() })
+        let mut out = MaybeUninit::uninit();
+        if self.decompress_assign(&mut out, endianness) {
+            // SAFETY: `decompress_assign` returned `true`, so every byte of
+            // `out` has been written.
+            Some(unsafe { out.assume_init() })
         } else {
             None
         }

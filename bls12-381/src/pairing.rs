@@ -16,14 +16,31 @@ pub const MAX_PAIRING_LENGTH: usize = 8;
 #[repr(transparent)]
 pub struct GtElement(pub [u8; GT_ELEMENT_SIZE]);
 
+impl GtElement {
+    /// Returns the multiplicative identity of the target group for the given
+    /// endianness.
+    pub const fn identity(endianness: Endianness) -> Self {
+        let mut bytes = [0u8; GT_ELEMENT_SIZE];
+        match endianness {
+            Endianness::Little => bytes[0] = 1,
+            Endianness::Big => bytes[GT_ELEMENT_SIZE - 1] = 1,
+        }
+        Self(bytes)
+    }
+}
+
 /// In-place product of pairings for a batch of G1 and G2 points.
 ///
 /// Computes `e(P_1, Q_1) * ... * e(P_n, Q_n)` and writes the resulting
-/// `GtElement` to the `out` reference.
+/// `GtElement` into `out`.
+///
+/// Returns `true` if and only if every byte of `out` was written, in
+/// which case the caller may `assume_init` it. On `false`, `out` is
+/// left untouched and must not be assumed initialized.
 pub fn pairing_map_assign(
     g1_points: &[G1Point],
     g2_points: &[G2Point],
-    out: &mut GtElement,
+    out: &mut MaybeUninit<GtElement>,
     endianness: Endianness,
 ) -> bool {
     if g1_points.len() != g2_points.len() || g1_points.len() > MAX_PAIRING_LENGTH {
@@ -31,11 +48,7 @@ pub fn pairing_map_assign(
     }
 
     if g1_points.is_empty() {
-        out.0.fill(0);
-        match endianness {
-            Endianness::Little => out.0[0] = 1,
-            Endianness::Big => out.0[575] = 1,
-        }
+        out.write(GtElement::identity(endianness));
         return true;
     }
 
@@ -46,13 +59,17 @@ pub fn pairing_map_assign(
             Endianness::Big => solana_define_syscall::curve_constants::BLS12_381_BE,
         };
 
+        // SAFETY: the point slices are valid for reads of their respective
+        // sizes and `out` is valid for writes of `GT_ELEMENT_SIZE` bytes. Per
+        // SIMD-0388 the syscall writes the full output buffer whenever it
+        // returns 0.
         let status = unsafe {
             solana_define_syscall::definitions::sol_curve_pairing_map(
                 curve_id,
                 g1_points.len() as u64,
                 g1_points.as_ptr() as *const u8,
                 g2_points.as_ptr() as *const u8,
-                out.0.as_mut_ptr(),
+                out.as_mut_ptr().cast::<u8>(),
             )
         };
         status == 0
@@ -74,7 +91,7 @@ pub fn pairing_map_assign(
             g2_pods,
             end,
         ) {
-            out.0.copy_from_slice(&res.0);
+            out.write(GtElement(res.0));
             true
         } else {
             false
@@ -88,17 +105,12 @@ pub fn pairing_map(
     g2_points: &[G2Point],
     endianness: Endianness,
 ) -> Option<GtElement> {
-    let mut result = MaybeUninit::<GtElement>::uninit();
+    let mut out = MaybeUninit::uninit();
 
-    let success = pairing_map_assign(
-        g1_points,
-        g2_points,
-        unsafe { result.assume_init_mut() },
-        endianness,
-    );
-
-    if success {
-        Some(unsafe { result.assume_init() })
+    if pairing_map_assign(g1_points, g2_points, &mut out, endianness) {
+        // SAFETY: `pairing_map_assign` returned `true`, so every byte of `out`
+        // has been written.
+        Some(unsafe { out.assume_init() })
     } else {
         None
     }
@@ -106,10 +118,14 @@ pub fn pairing_map(
 
 /// In-place pairing for a single G1 and G2 point pair.
 /// Zero-allocation wrapper around `pairing_map_assign`.
+///
+/// Returns `true` if and only if every byte of `out` was written, in
+/// which case the caller may `assume_init` it. On `false`, `out` is
+/// left untouched and must not be assumed initialized.
 pub fn pairing_assign(
     g1_point: &G1Point,
     g2_point: &G2Point,
-    out: &mut GtElement,
+    out: &mut MaybeUninit<GtElement>,
     endianness: Endianness,
 ) -> bool {
     pairing_map_assign(
@@ -142,26 +158,15 @@ pub fn pairing_check(
     g2_points: &[G2Point],
     endianness: Endianness,
 ) -> Option<bool> {
-    let mut result = MaybeUninit::<GtElement>::uninit();
+    let mut out = MaybeUninit::uninit();
 
-    let success = pairing_map_assign(
-        g1_points,
-        g2_points,
-        unsafe { result.assume_init_mut() },
-        endianness,
-    );
-
-    if !success {
+    if !pairing_map_assign(g1_points, g2_points, &mut out, endianness) {
         return None;
     }
 
-    let gt = unsafe { result.assume_init() };
-    let mut identity = [0u8; GT_ELEMENT_SIZE];
+    // SAFETY: `pairing_map_assign` returned `true`, so every byte of `out` has
+    // been written.
+    let gt = unsafe { out.assume_init() };
 
-    match endianness {
-        Endianness::Little => identity[0] = 1,
-        Endianness::Big => identity[575] = 1,
-    }
-
-    Some(gt.0 == identity)
+    Some(gt == GtElement::identity(endianness))
 }

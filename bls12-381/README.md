@@ -14,10 +14,10 @@ verification and zero-knowledge proof (e.g., Groth16) validation.
   `bytemuck::Pod`. Developers can cast transaction instruction data directly
   into curve points without heap allocations.
 - **CU-Optimized Mutations:** Provides `_assign` variants for all group
-  operations (e.g., `add_assign`), allowing in-place memory mutations
-  to strictly control Compute Unit (CU) consumption.
-- **Safe & Unchecked APIs:** Exposes both fully validated group
-  operations and `_unchecked` variants that skip subgroup checks for cheaper
+  operations (e.g., `add_assign`), which write into a caller-supplied
+  `MaybeUninit` buffer to strictly control Compute Unit (CU) consumption.
+- **Validated & Unchecked APIs:** Group operations validate their operands by
+  default, with `_unchecked` variants that skip subgroup checks for cheaper
   point accumulation.
 - **Ergonomic Pairings:** Includes `pairing_check` for evaluating if the
   product of multiple pairings equals the identity element, avoiding costly
@@ -38,18 +38,51 @@ solana-bls12-381 = "0.1.0"
 
 ```rust
 use solana_bls12_381::{G1Point, Endianness};
+use core::mem::MaybeUninit;
 use bytemuck;
 
 // 1. Cast raw byte slices directly to G1Point references (Zero-Copy)
 let p1: &G1Point = bytemuck::cast_ref(raw_bytes_1);
 let p2: &G1Point = bytemuck::cast_ref(raw_bytes_2);
 
-// 2. Allocate output buffer
-let mut out = G1Point::infinity(Endianness::Little);
+// 2. Reserve an output buffer. It is never read before being written, so it
+//    does not need to be initialized.
+let mut out = MaybeUninit::uninit();
 
-// 3. Perform safe, in-place addition
+// 3. Perform validated, in-place addition
 let success = p1.add_assign(p2, &mut out, Endianness::Little);
 assert!(success);
+
+// SAFETY: `add_assign` returned `true`, so every byte of `out` was written.
+let sum = unsafe { out.assume_init() };
+```
+
+Every `_assign` method follows the same contract: on `true` the output buffer
+is fully initialized and may be `assume_init`ed; on `false` it is left
+untouched and must not be assumed initialized.
+
+To recycle buffers across a loop, keep the accumulator in a `MaybeUninit` and
+swap the two buffers each iteration:
+
+```rust
+use solana_bls12_381::{G1Point, Endianness};
+use core::mem::MaybeUninit;
+
+let e = Endianness::Little;
+let mut acc = MaybeUninit::new(G1Point::infinity(e));
+let mut scratch = MaybeUninit::uninit();
+
+for p in points {
+    // SAFETY: `acc` is initialized, by `new` above and by the swap below.
+    let lhs = unsafe { acc.assume_init_ref() };
+    if !lhs.add_assign_unchecked(p, &mut scratch, e) {
+        return Err(ProgramError::InvalidArgument);
+    }
+    core::mem::swap(&mut acc, &mut scratch);
+}
+
+// SAFETY: `acc` was initialized before the loop and stays initialized.
+let total = unsafe { acc.assume_init() };
 ```
 
 ### Multi-Pairing Check (e.g., BLS Signatures or ZK Proofs)
@@ -69,7 +102,7 @@ assert!(is_valid);
 
 ### Security & Validation
 
-All operations except the `_unchecked` variants
-inherently perform full point validation. This includes checking that the
-coordinates represent valid field elements, satisfy the curve equation, and
-exist within the correct prime-order subgroup.
+All group operations except the `_unchecked` variants, along with
+multiplication and decompression, inherently perform full point validation.
+This includes checking that the coordinates represent valid field elements,
+satisfy the curve equation, and exist within the correct prime-order subgroup.
