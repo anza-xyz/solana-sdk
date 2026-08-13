@@ -10,7 +10,7 @@ pub use {
     instruction_error_module::*,
     solana_program_error::{
         ACCOUNT_ALREADY_INITIALIZED, ACCOUNT_BORROW_FAILED, ACCOUNT_DATA_TOO_SMALL,
-        ACCOUNT_NOT_RENT_EXEMPT, ARITHMETIC_OVERFLOW, BAIL_OUT, BORSH_IO_ERROR,
+        ACCOUNT_NOT_RENT_EXEMPT, ARITHMETIC_OVERFLOW, BORSH_IO_ERROR,
         BUILTIN_PROGRAMS_MUST_CONSUME_COMPUTE_UNITS, CUSTOM_ZERO, ILLEGAL_OWNER, IMMUTABLE,
         INCORRECT_AUTHORITY, INCORRECT_PROGRAM_ID, INSUFFICIENT_FUNDS, INVALID_ACCOUNT_DATA,
         INVALID_ACCOUNT_DATA_REALLOC, INVALID_ACCOUNT_OWNER, INVALID_ARGUMENT,
@@ -410,7 +410,6 @@ where
             ARITHMETIC_OVERFLOW => Self::ArithmeticOverflow,
             IMMUTABLE => Self::Immutable,
             INCORRECT_AUTHORITY => Self::IncorrectAuthority,
-            BAIL_OUT => Self::BailOut,
             _ => {
                 // A valid custom error has no bits set in the upper 32
                 if error >> solana_program_error::BUILTIN_BIT_SHIFT == 0 {
@@ -490,7 +489,6 @@ impl TryFrom<InstructionError> for ProgramError {
             Self::Error::ArithmeticOverflow => Ok(Self::ArithmeticOverflow),
             Self::Error::Immutable => Ok(Self::Immutable),
             Self::Error::IncorrectAuthority => Ok(Self::IncorrectAuthority),
-            Self::Error::BailOut => Ok(Self::BailOut),
             _ => Err(error),
         }
     }

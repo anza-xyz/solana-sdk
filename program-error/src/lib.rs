@@ -45,7 +45,6 @@ pub const INVALID_ACCOUNT_OWNER: u64 = to_builtin!(23);
 pub const ARITHMETIC_OVERFLOW: u64 = to_builtin!(24);
 pub const IMMUTABLE: u64 = to_builtin!(25);
 pub const INCORRECT_AUTHORITY: u64 = to_builtin!(26);
-pub const BAIL_OUT: u64 = to_builtin!(27);
 // Warning: Any new error codes added here must also be:
 // - Added to the below conversions
 // - Added as an equivalent to ProgramError and InstructionError
@@ -85,7 +84,6 @@ pub enum ProgramError {
     ArithmeticOverflow,
     Immutable,
     IncorrectAuthority,
-    BailOut,
 }
 
 impl core::error::Error for ProgramError {}
@@ -143,8 +141,6 @@ impl fmt::Display for ProgramError {
              => f.write_str("Account is immutable"),
             ProgramError::IncorrectAuthority
              => f.write_str("Incorrect authority provided"),
-            ProgramError::BailOut
-             => f.write_str("Block production bailed out"),
         }
     }
 }
@@ -228,7 +224,6 @@ impl ProgramError {
             Self::ArithmeticOverflow => "Error: ArithmeticOverflow",
             Self::Immutable => "Error: Immutable",
             Self::IncorrectAuthority => "Error: IncorrectAuthority",
-            Self::BailOut => "Error: BailOut",
         }
     }
 }
@@ -267,7 +262,6 @@ impl From<ProgramError> for u64 {
             ProgramError::ArithmeticOverflow => ARITHMETIC_OVERFLOW,
             ProgramError::Immutable => IMMUTABLE,
             ProgramError::IncorrectAuthority => INCORRECT_AUTHORITY,
-            ProgramError::BailOut => BAIL_OUT,
             ProgramError::Custom(error) => {
                 if error == 0 {
                     CUSTOM_ZERO
@@ -310,7 +304,6 @@ impl From<u64> for ProgramError {
             ARITHMETIC_OVERFLOW => Self::ArithmeticOverflow,
             IMMUTABLE => Self::Immutable,
             INCORRECT_AUTHORITY => Self::IncorrectAuthority,
-            BAIL_OUT => Self::BailOut,
             _ => Self::Custom(error as u32),
         }
     }
