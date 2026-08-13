@@ -1,10 +1,9 @@
+#[cfg(any(feature = "bytemuck", not(target_os = "solana")))]
+use bytemuck_derive::{Pod, Zeroable};
 use {
     crate::{g1::G1Point, g2::G2Point, Endianness},
     core::mem::MaybeUninit,
 };
-
-#[cfg(any(feature = "bytemuck", not(target_os = "solana")))]
-use bytemuck_derive::{Pod, Zeroable};
 
 /// Size of a target group (Gt) element in bytes.
 pub const GT_ELEMENT_SIZE: usize = 576;
