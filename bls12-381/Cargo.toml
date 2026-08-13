@@ -17,8 +17,6 @@ rustdoc-args = ["--cfg=docsrs"]
 
 [dependencies]
 bytemuck = { workspace = true, features = ["derive", "min_const_generics"] }
-solana-define-syscall = { workspace = true }
-thiserror = { workspace = true }
 
 [target.'cfg(not(target_os = "solana"))'.dependencies]
 solana-bls12-381-syscall = { workspace = true }
