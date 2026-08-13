@@ -1,8 +1,10 @@
 use {
     crate::{scalar::Scalar, Endianness},
-    bytemuck::{Pod, Zeroable},
     core::mem::MaybeUninit,
 };
+
+#[cfg(any(feature = "bytemuck", not(target_os = "solana")))]
+use bytemuck_derive::{Pod, Zeroable};
 
 /// Size of a compressed BLS12-381 G1 point in bytes.
 pub const G1_COMPRESSED_POINT_SIZE: usize = 48;
@@ -12,13 +14,21 @@ pub const G1_UNCOMPRESSED_POINT_SIZE: usize = 96;
 
 /// Uncompressed BLS12-381 G1 affine point.
 /// Represents the `x` and `y` coordinates (96 bytes total).
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Pod, Zeroable)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[cfg_attr(
+    any(feature = "bytemuck", not(target_os = "solana")),
+    derive(Pod, Zeroable)
+)]
 #[repr(transparent)]
 pub struct G1Point(pub [u8; G1_UNCOMPRESSED_POINT_SIZE]);
 
 /// Compressed BLS12-381 G1 point.
 /// Represents the `x` coordinate with control flags in the MSB (48 bytes).
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Pod, Zeroable)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[cfg_attr(
+    any(feature = "bytemuck", not(target_os = "solana")),
+    derive(Pod, Zeroable)
+)]
 #[repr(transparent)]
 pub struct G1Compressed(pub [u8; G1_COMPRESSED_POINT_SIZE]);
 

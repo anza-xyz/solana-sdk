@@ -1,8 +1,10 @@
 use {
     crate::{g1::G1Point, g2::G2Point, Endianness},
-    bytemuck::{Pod, Zeroable},
     core::mem::MaybeUninit,
 };
+
+#[cfg(any(feature = "bytemuck", not(target_os = "solana")))]
+use bytemuck_derive::{Pod, Zeroable};
 
 /// Size of a target group (Gt) element in bytes.
 pub const GT_ELEMENT_SIZE: usize = 576;
@@ -12,7 +14,11 @@ pub const MAX_PAIRING_LENGTH: usize = 8;
 
 /// An element in the target group (Gt).
 /// Represents an element in the extension field Fq12 (576 bytes).
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Pod, Zeroable)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[cfg_attr(
+    any(feature = "bytemuck", not(target_os = "solana")),
+    derive(Pod, Zeroable)
+)]
 #[repr(transparent)]
 pub struct GtElement(pub [u8; GT_ELEMENT_SIZE]);
 

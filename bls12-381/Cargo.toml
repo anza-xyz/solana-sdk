@@ -15,10 +15,16 @@ targets = ["x86_64-unknown-linux-gnu"]
 all-features = true
 rustdoc-args = ["--cfg=docsrs"]
 
+[features]
+default = ["bytemuck"]
+bytemuck = ["dep:bytemuck", "dep:bytemuck_derive"]
+
 [dependencies]
-bytemuck = { workspace = true, features = ["derive", "min_const_generics"] }
+bytemuck = { workspace = true, features = ["min_const_generics"], optional = true }
+bytemuck_derive = { workspace = true, optional = true }
 
 [target.'cfg(not(target_os = "solana"))'.dependencies]
+bytemuck = { workspace = true, features = ["min_const_generics"] }
 solana-bls12-381-syscall = { workspace = true }
 
 [target.'cfg(target_os = "solana")'.dependencies]
@@ -26,6 +32,7 @@ solana-define-syscall = { workspace = true }
 
 [dev-dependencies]
 array-bytes = { workspace = true }
+bytemuck = { workspace = true, features = ["min_const_generics"] }
 
 [lints]
 workspace = true

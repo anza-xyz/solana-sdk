@@ -34,6 +34,12 @@ Add the following to your `Cargo.toml`:
 solana-bls12-381 = "0.1.0"
 ```
 
+The `bytemuck` feature is enabled by default and provides the `Pod` and
+`Zeroable` implementations that make zero-copy casting possible. It can be
+turned off with `default-features = false` for on-chain builds that do not
+need them, but off-chain builds always include them, since the host
+implementation depends on them internally.
+
 ### Zero-Copy Point Addition
 
 ```rust
