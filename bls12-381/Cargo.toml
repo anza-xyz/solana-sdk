@@ -23,13 +23,13 @@ bytemuck = ["dep:bytemuck", "dep:bytemuck_derive"]
 bytemuck = { workspace = true, features = ["min_const_generics"], optional = true }
 bytemuck_derive = { workspace = true, optional = true }
 
-[target.'cfg(not(target_os = "solana"))'.dependencies]
+[target.'cfg(any(target_os = "solana", target_arch = "bpf"))'.dependencies]
+solana-define-syscall = { workspace = true }
+
+[target.'cfg(not(any(target_os = "solana", target_arch = "bpf")))'.dependencies]
 bytemuck = { workspace = true, features = ["min_const_generics"] }
 bytemuck_derive = { workspace = true }
 solana-bls12-381-syscall = { workspace = true }
-
-[target.'cfg(target_os = "solana")'.dependencies]
-solana-define-syscall = { workspace = true }
 
 [dev-dependencies]
 array-bytes = { workspace = true }

@@ -1,4 +1,7 @@
-#[cfg(any(feature = "bytemuck", not(target_os = "solana")))]
+#[cfg(any(
+    feature = "bytemuck",
+    not(any(target_os = "solana", target_arch = "bpf"))
+))]
 use bytemuck_derive::{Pod, Zeroable};
 use {
     crate::{scalar::Scalar, Endianness},
@@ -15,7 +18,10 @@ pub const G2_UNCOMPRESSED_POINT_SIZE: usize = 192;
 /// Represents the `x` and `y` coordinates in the extension field (192 bytes).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 #[cfg_attr(
-    any(feature = "bytemuck", not(target_os = "solana")),
+    any(
+        feature = "bytemuck",
+        not(any(target_os = "solana", target_arch = "bpf"))
+    ),
     derive(Pod, Zeroable)
 )]
 #[repr(transparent)]
@@ -25,7 +31,10 @@ pub struct G2Point(pub [u8; G2_UNCOMPRESSED_POINT_SIZE]);
 /// Represents the `x` coordinate with control flags in the MSB (96 bytes).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 #[cfg_attr(
-    any(feature = "bytemuck", not(target_os = "solana")),
+    any(
+        feature = "bytemuck",
+        not(any(target_os = "solana", target_arch = "bpf"))
+    ),
     derive(Pod, Zeroable)
 )]
 #[repr(transparent)]
@@ -75,7 +84,7 @@ impl G2Point {
         out: &mut MaybeUninit<Self>,
         endianness: Endianness,
     ) -> bool {
-        #[cfg(target_os = "solana")]
+        #[cfg(any(target_os = "solana", target_arch = "bpf"))]
         {
             let curve_id = match endianness {
                 Endianness::Little => solana_define_syscall::curve_constants::BLS12_381_G2_LE,
@@ -97,7 +106,7 @@ impl G2Point {
             status == 0
         }
 
-        #[cfg(not(target_os = "solana"))]
+        #[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
         {
             let left_pod: &solana_bls12_381_syscall::PodG2Point = bytemuck::cast_ref(&self.0);
             let right_pod: &solana_bls12_381_syscall::PodG2Point = bytemuck::cast_ref(&other.0);
@@ -178,7 +187,7 @@ impl G2Point {
         out: &mut MaybeUninit<Self>,
         endianness: Endianness,
     ) -> bool {
-        #[cfg(target_os = "solana")]
+        #[cfg(any(target_os = "solana", target_arch = "bpf"))]
         {
             let curve_id = match endianness {
                 Endianness::Little => solana_define_syscall::curve_constants::BLS12_381_G2_LE,
@@ -200,7 +209,7 @@ impl G2Point {
             status == 0
         }
 
-        #[cfg(not(target_os = "solana"))]
+        #[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
         {
             let left_pod: &solana_bls12_381_syscall::PodG2Point = bytemuck::cast_ref(&self.0);
             let right_pod: &solana_bls12_381_syscall::PodG2Point = bytemuck::cast_ref(&other.0);
@@ -281,7 +290,7 @@ impl G2Point {
         out: &mut MaybeUninit<Self>,
         endianness: Endianness,
     ) -> bool {
-        #[cfg(target_os = "solana")]
+        #[cfg(any(target_os = "solana", target_arch = "bpf"))]
         {
             let curve_id = match endianness {
                 Endianness::Little => solana_define_syscall::curve_constants::BLS12_381_G2_LE,
@@ -303,7 +312,7 @@ impl G2Point {
             status == 0
         }
 
-        #[cfg(not(target_os = "solana"))]
+        #[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
         {
             let point_pod: &solana_bls12_381_syscall::PodG2Point = bytemuck::cast_ref(&self.0);
             let scalar_pod: &solana_bls12_381_syscall::PodScalar = bytemuck::cast_ref(&scalar.0);
@@ -343,7 +352,7 @@ impl G2Point {
     /// Checks that coordinates represent valid field elements, satisfy the
     /// curve equation, and exist within the prime-order subgroup.
     pub fn validate(&self, endianness: Endianness) -> bool {
-        #[cfg(target_os = "solana")]
+        #[cfg(any(target_os = "solana", target_arch = "bpf"))]
         {
             let curve_id = match endianness {
                 Endianness::Little => solana_define_syscall::curve_constants::BLS12_381_G2_LE,
@@ -360,7 +369,7 @@ impl G2Point {
             status == 0
         }
 
-        #[cfg(not(target_os = "solana"))]
+        #[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
         {
             let point_pod: &solana_bls12_381_syscall::PodG2Point = bytemuck::cast_ref(&self.0);
 
@@ -400,7 +409,7 @@ impl G2Compressed {
         out: &mut MaybeUninit<G2Point>,
         endianness: Endianness,
     ) -> bool {
-        #[cfg(target_os = "solana")]
+        #[cfg(any(target_os = "solana", target_arch = "bpf"))]
         {
             let curve_id = match endianness {
                 Endianness::Little => solana_define_syscall::curve_constants::BLS12_381_G2_LE,
@@ -420,7 +429,7 @@ impl G2Compressed {
             status == 0
         }
 
-        #[cfg(not(target_os = "solana"))]
+        #[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
         {
             let pod: &solana_bls12_381_syscall::PodG2Compressed = bytemuck::cast_ref(&self.0);
 

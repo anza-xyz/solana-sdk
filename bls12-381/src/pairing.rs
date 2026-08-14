@@ -1,4 +1,7 @@
-#[cfg(any(feature = "bytemuck", not(target_os = "solana")))]
+#[cfg(any(
+    feature = "bytemuck",
+    not(any(target_os = "solana", target_arch = "bpf"))
+))]
 use bytemuck_derive::{Pod, Zeroable};
 use {
     crate::{g1::G1Point, g2::G2Point, Endianness},
@@ -15,7 +18,10 @@ pub const MAX_PAIRING_LENGTH: usize = 8;
 /// Represents an element in the extension field Fq12 (576 bytes).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 #[cfg_attr(
-    any(feature = "bytemuck", not(target_os = "solana")),
+    any(
+        feature = "bytemuck",
+        not(any(target_os = "solana", target_arch = "bpf"))
+    ),
     derive(Pod, Zeroable)
 )]
 #[repr(transparent)]
@@ -57,7 +63,7 @@ pub fn pairing_map_assign(
         return true;
     }
 
-    #[cfg(target_os = "solana")]
+    #[cfg(any(target_os = "solana", target_arch = "bpf"))]
     {
         let curve_id = match endianness {
             Endianness::Little => solana_define_syscall::curve_constants::BLS12_381_LE,
@@ -80,7 +86,7 @@ pub fn pairing_map_assign(
         status == 0
     }
 
-    #[cfg(not(target_os = "solana"))]
+    #[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
     {
         let g1_pods: &[solana_bls12_381_syscall::PodG1Point] = bytemuck::cast_slice(g1_points);
         let g2_pods: &[solana_bls12_381_syscall::PodG2Point] = bytemuck::cast_slice(g2_points);
