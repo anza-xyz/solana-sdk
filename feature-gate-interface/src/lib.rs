@@ -16,10 +16,10 @@ pub mod error;
 pub mod instruction;
 pub mod state;
 
-#[cfg(feature = "bincode")]
+#[cfg(any(feature = "bincode", feature = "wincode"))]
 #[allow(deprecated)]
 pub use crate::instruction::activate;
-#[cfg(feature = "bincode")]
+#[cfg(any(feature = "bincode", feature = "wincode"))]
 pub use crate::{
     instruction::activate_with_lamports,
     state::{create_account, from_account, to_account},

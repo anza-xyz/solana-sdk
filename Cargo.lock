@@ -3557,6 +3557,7 @@ dependencies = [
  "solana-system-interface",
  "strum",
  "strum_macros",
+ "wincode",
 ]
 
 [[package]]

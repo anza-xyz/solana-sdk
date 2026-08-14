@@ -24,9 +24,22 @@ bincode = [
     "dep:solana-rent",
     "dep:solana-system-interface",
     "serde",
+    "solana-account/bincode",
+    "solana-system-interface/bincode",
 ]
-dev-context-only-utils = ["bincode"]
+dev-context-only-utils = ["bincode", "wincode"]
 serde = ["dep:serde", "dep:serde_derive"]
+wincode = [
+    "dep:solana-account",
+    "dep:solana-account-info",
+    "dep:solana-instruction",
+    "dep:solana-rent",
+    "dep:solana-system-interface",
+    "dep:wincode",
+    "solana-account/wincode",
+    "solana-system-interface/wincode",
+    "wincode/alloc",
+]
 
 [dependencies]
 bincode = { workspace = true, optional = true }
@@ -39,9 +52,11 @@ solana-program-error = { workspace = true }
 solana-pubkey = { workspace = true }
 solana-rent = { workspace = true, optional = true }
 solana-sdk-ids = { workspace = true }
-solana-system-interface = { workspace = true, optional = true, features = ["bincode"] }
+solana-system-interface = { workspace = true, optional = true }
+wincode = { workspace = true, optional = true }
 
 [dev-dependencies]
+bincode = { workspace = true }
 solana-feature-gate-interface = { path = ".", features = ["dev-context-only-utils"] }
 solana-pubkey = { workspace = true, features = ["std"] }
 strum = { workspace = true }
