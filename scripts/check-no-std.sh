@@ -50,6 +50,7 @@ no_std_crates=(
 # These are only checked in the alloc+core pass, not the core-only pass.
 no_std_alloc_crates=(
   -p solana-account-info
+  -p solana-bls12-381
   -p solana-borsh
   -p solana-curve25519
   -p solana-instruction
