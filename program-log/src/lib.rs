@@ -669,10 +669,7 @@ mod tests {
     }
     #[test]
     #[cfg(feature = "std")]
-    #[should_panic(expected = "called `Result::unwrap()` on an `Err` value: Utf8Error")]
     fn test_logger_invalid_utf8_does_not_panic() {
-        // Passes an invalid UTF-8 byte slice to the logger.
-        // Currently, the host `std` path panics because it unconditionally `unwrap()`s `from_utf8`.
         let invalid_utf8: &[u8] = &[0xff, b'a'];
         crate::logger::log_message(invalid_utf8);
     }
