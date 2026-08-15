@@ -1042,3 +1042,26 @@ mod parse_abi_serializers_tests {
         assert_eq!(parse_abi_serializers(&grouped).unwrap(), vec![Wincode]);
     }
 }
+
+#[cfg(all(test, feature = "frozen-abi"))]
+mod abi_sample_tests {
+    use {super::*, std::panic::catch_unwind, syn::parse_quote};
+
+    #[test]
+    fn test_abi_sample_empty_enum() {
+        let input = parse_quote! {
+            enum Empty {}
+        };
+        let result = catch_unwind(|| derive_abi_sample_enum_type(input));
+        assert!(result.is_err(), "Expected panic on empty enum");
+    }
+
+    #[test]
+    fn test_abi_sample_unit_struct() {
+        let input = parse_quote! {
+            struct Unit;
+        };
+        let result = catch_unwind(|| derive_abi_sample_struct_type(input));
+        assert!(result.is_err(), "Expected panic on unit struct");
+    }
+}

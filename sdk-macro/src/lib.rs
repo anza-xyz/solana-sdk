@@ -275,3 +275,26 @@ pub fn derive_clone_zeroed(input: proc_macro::TokenStream) -> proc_macro::TokenS
         .unwrap_or_else(|err| err.to_compile_error())
         .into()
 }
+
+#[cfg(test)]
+mod tests {
+    use {super::*, std::panic::catch_unwind};
+
+    #[test]
+    fn test_clone_zeroed_tuple_struct() {
+        let input = quote::quote! {
+            struct Tuple(u8);
+        };
+        let result = catch_unwind(|| derive_clone_zeroed_inner(input));
+        assert!(result.is_err(), "Expected panic on tuple struct");
+    }
+
+    #[test]
+    fn test_clone_zeroed_enum() {
+        let input = quote::quote! {
+            enum E { A }
+        };
+        let result = catch_unwind(|| derive_clone_zeroed_inner(input));
+        assert!(result.is_err(), "Expected panic on non-struct item");
+    }
+}
