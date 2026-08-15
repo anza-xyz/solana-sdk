@@ -242,7 +242,12 @@ fn derive_clone_zeroed_inner(
                         core::ptr::addr_of_mut!((*ptr).#name).write(self.#name.clone());
                     }
                 }),
-                _ => unimplemented!(),
+                _ => {
+                    return Err(syn::Error::new_spanned(
+                        &item_struct.ident,
+                        "CloneZeroed can only be derived for structs with named fields",
+                    ))
+                }
             };
             let name = &item_struct.ident;
             Ok(quote! {
@@ -263,7 +268,10 @@ fn derive_clone_zeroed_inner(
                 }
             })
         }
-        _ => unimplemented!(),
+        item => Err(syn::Error::new_spanned(
+            item,
+            "CloneZeroed cannot be derived for non-struct items",
+        )),
     }
 }
 
@@ -278,15 +286,19 @@ pub fn derive_clone_zeroed(input: proc_macro::TokenStream) -> proc_macro::TokenS
 
 #[cfg(test)]
 mod tests {
-    use {super::*, std::panic::catch_unwind};
+    use super::*;
 
     #[test]
     fn test_clone_zeroed_tuple_struct() {
         let input = quote::quote! {
             struct Tuple(u8);
         };
-        let result = catch_unwind(|| derive_clone_zeroed_inner(input));
-        assert!(result.is_err(), "Expected panic on tuple struct");
+        let result = derive_clone_zeroed_inner(input);
+        assert!(result.is_err(), "Expected error on tuple struct");
+        assert!(result
+            .unwrap_err()
+            .to_string()
+            .contains("structs with named fields"));
     }
 
     #[test]
@@ -294,7 +306,8 @@ mod tests {
         let input = quote::quote! {
             enum E { A }
         };
-        let result = catch_unwind(|| derive_clone_zeroed_inner(input));
-        assert!(result.is_err(), "Expected panic on non-struct item");
+        let result = derive_clone_zeroed_inner(input);
+        assert!(result.is_err(), "Expected error on non-struct item");
+        assert!(result.unwrap_err().to_string().contains("non-struct items"));
     }
 }

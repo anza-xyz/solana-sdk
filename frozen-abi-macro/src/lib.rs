@@ -469,7 +469,10 @@ fn derive_abi_sample_enum_type(input: ItemEnum) -> syn::Result<TokenStream2> {
             let mut fields = quote! {};
             for field in &variant_fields.unnamed {
                 if !(field.ident.is_none() && field.colon_token.is_none()) {
-                    unimplemented!("tuple enum: {:?}", field);
+                    return Err(Error::new_spanned(
+                        field,
+                        "AbiExample: tuple variant fields cannot have idents or colons",
+                    ));
                 }
                 let field_type = &field.ty;
                 fields.extend(quote! {
@@ -483,7 +486,10 @@ fn derive_abi_sample_enum_type(input: ItemEnum) -> syn::Result<TokenStream2> {
             let mut fields = quote! {};
             for field in &variant_fields.named {
                 if field.ident.is_none() || field.colon_token.is_none() {
-                    unimplemented!("tuple enum: {:?}", field);
+                    return Err(Error::new_spanned(
+                        field,
+                        "AbiExample: named variant fields must have idents and colons",
+                    ));
                 }
                 let field_type = &field.ty;
                 let field_name = &field.ident;
@@ -495,7 +501,10 @@ fn derive_abi_sample_enum_type(input: ItemEnum) -> syn::Result<TokenStream2> {
                 #type_name::#variant_name{#fields}
             });
         } else {
-            unimplemented!("{:?}", variant);
+            return Err(Error::new_spanned(
+                variant,
+                "AbiExample: unsupported variant shape",
+            ));
         }
 
         if !sample_variant_found {
@@ -505,7 +514,10 @@ fn derive_abi_sample_enum_type(input: ItemEnum) -> syn::Result<TokenStream2> {
     }
 
     if !sample_variant_found {
-        unimplemented!("empty enum");
+        return Err(Error::new_spanned(
+            &input.ident,
+            "AbiExample cannot be derived for empty enums",
+        ));
     }
 
     let mut attrs = input.attrs.clone();
@@ -552,7 +564,12 @@ fn derive_abi_sample_struct_type(input: ItemStruct) -> syn::Result<TokenStream2>
             }
             sample_fields = quote! {( #sample_fields )};
         }
-        _ => unimplemented!("fields: {:?}", fields),
+        _ => {
+            return Err(Error::new_spanned(
+                &input.ident,
+                "AbiExample cannot be derived for unit structs or unsupported field layouts",
+            ))
+        }
     }
 
     let mut attrs = input.attrs.clone();
@@ -847,7 +864,10 @@ fn quote_sample_variant(
         let mut fields = quote! {};
         for field in &variant_fields.unnamed {
             if !(field.ident.is_none() && field.colon_token.is_none()) {
-                unimplemented!();
+                return Err(Error::new_spanned(
+                    field,
+                    "AbiEnumVisitor: tuple variant fields cannot have idents or colons",
+                ));
             }
             let ty = &field.ty;
             fields.extend(quote! {
@@ -861,7 +881,10 @@ fn quote_sample_variant(
         let mut fields = quote! {};
         for field in &variant_fields.named {
             if field.ident.is_none() || field.colon_token.is_none() {
-                unimplemented!();
+                return Err(Error::new_spanned(
+                    field,
+                    "AbiEnumVisitor: named variant fields must have idents and colons",
+                ));
             }
             let field_type_name = &field.ty;
             let field_name = &field.ident;
@@ -873,7 +896,10 @@ fn quote_sample_variant(
             let sample_variant: #type_name #ty_generics = #type_name::#variant_name{#fields};
         })
     } else {
-        unimplemented!("variant: {:?}", variant)
+        Err(Error::new_spanned(
+            variant,
+            "AbiEnumVisitor: unsupported variant shape",
+        ))
     }
 }
 
@@ -1045,15 +1071,16 @@ mod parse_abi_serializers_tests {
 
 #[cfg(all(test, feature = "frozen-abi"))]
 mod abi_sample_tests {
-    use {super::*, std::panic::catch_unwind, syn::parse_quote};
+    use {super::*, syn::parse_quote};
 
     #[test]
     fn test_abi_sample_empty_enum() {
         let input = parse_quote! {
             enum Empty {}
         };
-        let result = catch_unwind(|| derive_abi_sample_enum_type(input));
-        assert!(result.is_err(), "Expected panic on empty enum");
+        let result = derive_abi_sample_enum_type(input);
+        assert!(result.is_err(), "Expected error on empty enum");
+        assert!(result.unwrap_err().to_string().contains("empty enums"));
     }
 
     #[test]
@@ -1061,7 +1088,8 @@ mod abi_sample_tests {
         let input = parse_quote! {
             struct Unit;
         };
-        let result = catch_unwind(|| derive_abi_sample_struct_type(input));
-        assert!(result.is_err(), "Expected panic on unit struct");
+        let result = derive_abi_sample_struct_type(input);
+        assert!(result.is_err(), "Expected error on unit struct");
+        assert!(result.unwrap_err().to_string().contains("unit structs"));
     }
 }
