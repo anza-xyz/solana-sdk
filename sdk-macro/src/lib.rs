@@ -230,11 +230,10 @@ pub fn pubkeys(input: TokenStream) -> TokenStream {
     TokenStream::from(quote! {#pubkeys})
 }
 
-// Sets padding in structures to zero explicitly.
-// Otherwise padding could be inconsistent across the network and lead to divergence / consensus failures.
-#[proc_macro_derive(CloneZeroed)]
-pub fn derive_clone_zeroed(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
-    match parse_macro_input!(input as syn::Item) {
+fn derive_clone_zeroed_inner(
+    input: proc_macro2::TokenStream,
+) -> syn::Result<proc_macro2::TokenStream> {
+    match syn::parse2::<syn::Item>(input)? {
         syn::Item::Struct(item_struct) => {
             let clone_statements = match item_struct.fields {
                 syn::Fields::Named(ref fields) => fields.named.iter().map(|f| {
@@ -246,7 +245,7 @@ pub fn derive_clone_zeroed(input: proc_macro::TokenStream) -> proc_macro::TokenS
                 _ => unimplemented!(),
             };
             let name = &item_struct.ident;
-            quote! {
+            Ok(quote! {
                 impl Clone for #name {
                     // Clippy lint `incorrect_clone_impl_on_copy_type` requires that clone
                     // implementations on `Copy` types are simply wrappers of `Copy`.
@@ -262,9 +261,17 @@ pub fn derive_clone_zeroed(input: proc_macro::TokenStream) -> proc_macro::TokenS
                         }
                     }
                 }
-            }
+            })
         }
         _ => unimplemented!(),
     }
-    .into()
+}
+
+// Sets padding in structures to zero explicitly.
+// Otherwise padding could be inconsistent across the network and lead to divergence / consensus failures.
+#[proc_macro_derive(CloneZeroed)]
+pub fn derive_clone_zeroed(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+    derive_clone_zeroed_inner(input.into())
+        .unwrap_or_else(|err| err.to_compile_error())
+        .into()
 }

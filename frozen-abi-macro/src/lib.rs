@@ -452,7 +452,7 @@ fn derive_stable_abi_sample_enum_type(input: ItemEnum) -> Result<TokenStream2, E
 }
 
 #[cfg(feature = "frozen-abi")]
-fn derive_abi_sample_enum_type(input: ItemEnum) -> TokenStream {
+fn derive_abi_sample_enum_type(input: ItemEnum) -> syn::Result<TokenStream2> {
     let type_name = &input.ident;
 
     let mut sample_variant = quote! {};
@@ -525,11 +525,11 @@ fn derive_abi_sample_enum_type(input: ItemEnum) -> TokenStream {
             }
         }
     };
-    result.into()
+    Ok(result)
 }
 
 #[cfg(feature = "frozen-abi")]
-fn derive_abi_sample_struct_type(input: ItemStruct) -> TokenStream {
+fn derive_abi_sample_struct_type(input: ItemStruct) -> syn::Result<TokenStream2> {
     let type_name = &input.ident;
     let fields = &input.fields;
     let mut sample_fields = quote! {};
@@ -576,7 +576,7 @@ fn derive_abi_sample_struct_type(input: ItemStruct) -> TokenStream {
         }
     };
 
-    result.into()
+    Ok(result)
 }
 
 #[cfg(feature = "frozen-abi")]
@@ -584,17 +584,19 @@ fn derive_abi_sample_struct_type(input: ItemStruct) -> TokenStream {
 pub fn derive_abi_sample(item: TokenStream) -> TokenStream {
     let item = parse_macro_input!(item as Item);
 
-    match item {
+    let expanded = match item {
         Item::Struct(input) => derive_abi_sample_struct_type(input),
         Item::Enum(input) => derive_abi_sample_enum_type(input),
-        _ => Error::new_spanned(item, "AbiSample isn't applicable; only for struct and enum")
-            .to_compile_error()
-            .into(),
-    }
+        _ => Err(Error::new_spanned(
+            item,
+            "AbiSample isn't applicable; only for struct and enum",
+        )),
+    };
+    expanded.unwrap_or_else(|err| err.to_compile_error()).into()
 }
 
 #[cfg(feature = "frozen-abi")]
-fn do_derive_abi_enum_visitor(input: ItemEnum) -> TokenStream {
+fn do_derive_abi_enum_visitor(input: ItemEnum) -> syn::Result<TokenStream2> {
     let type_name = &input.ident;
     let mut serialized_variants = quote! {};
     let mut variant_count: u64 = 0;
@@ -604,7 +606,7 @@ fn do_derive_abi_enum_visitor(input: ItemEnum) -> TokenStream {
         if filter_serde_attrs(&variant.attrs) {
             continue;
         };
-        let sample_variant = quote_sample_variant(type_name, &ty_generics, variant);
+        let sample_variant = quote_sample_variant(type_name, &ty_generics, variant)?;
         variant_count = if let Some(variant_count) = variant_count.checked_add(1) {
             variant_count
         } else {
@@ -617,7 +619,7 @@ fn do_derive_abi_enum_visitor(input: ItemEnum) -> TokenStream {
     }
 
     let type_str = format!("{type_name}");
-    (quote! {
+    Ok(quote! {
         impl #impl_generics ::solana_frozen_abi::abi_example::AbiEnumVisitor for #type_name #ty_generics #where_clause {
             fn visit_for_abi(&self, digester: &mut ::solana_frozen_abi::abi_digester::AbiDigester) -> ::solana_frozen_abi::abi_digester::DigestResult {
                 let enum_name = #type_str;
@@ -628,7 +630,7 @@ fn do_derive_abi_enum_visitor(input: ItemEnum) -> TokenStream {
                 digester.create_child()
             }
         }
-    }).into()
+    })
 }
 
 #[cfg(feature = "frozen-abi")]
@@ -636,12 +638,14 @@ fn do_derive_abi_enum_visitor(input: ItemEnum) -> TokenStream {
 pub fn derive_abi_enum_visitor(item: TokenStream) -> TokenStream {
     let item = parse_macro_input!(item as Item);
 
-    match item {
+    let expanded = match item {
         Item::Enum(input) => do_derive_abi_enum_visitor(input),
-        _ => Error::new_spanned(item, "AbiEnumVisitor not applicable; only for enum")
-            .to_compile_error()
-            .into(),
-    }
+        _ => Err(Error::new_spanned(
+            item,
+            "AbiEnumVisitor not applicable; only for enum",
+        )),
+    };
+    expanded.unwrap_or_else(|err| err.to_compile_error()).into()
 }
 
 #[cfg(feature = "frozen-abi")]
@@ -832,13 +836,13 @@ fn quote_sample_variant(
     type_name: &Ident,
     ty_generics: &syn::TypeGenerics,
     variant: &Variant,
-) -> TokenStream2 {
+) -> syn::Result<TokenStream2> {
     let variant_name = &variant.ident;
     let variant = &variant.fields;
     if *variant == Fields::Unit {
-        quote! {
+        Ok(quote! {
             let sample_variant: #type_name #ty_generics = #type_name::#variant_name;
-        }
+        })
     } else if let Fields::Unnamed(variant_fields) = variant {
         let mut fields = quote! {};
         for field in &variant_fields.unnamed {
@@ -850,9 +854,9 @@ fn quote_sample_variant(
                 <#ty>::example(),
             });
         }
-        quote! {
+        Ok(quote! {
             let sample_variant: #type_name #ty_generics = #type_name::#variant_name(#fields);
-        }
+        })
     } else if let Fields::Named(variant_fields) = variant {
         let mut fields = quote! {};
         for field in &variant_fields.named {
@@ -865,9 +869,9 @@ fn quote_sample_variant(
                 #field_name: <#field_type_name>::example(),
             });
         }
-        quote! {
+        Ok(quote! {
             let sample_variant: #type_name #ty_generics = #type_name::#variant_name{#fields};
-        }
+        })
     } else {
         unimplemented!("variant: {:?}", variant)
     }
