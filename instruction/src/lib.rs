@@ -101,6 +101,9 @@ impl Instruction {
     #[cfg(feature = "borsh")]
     /// Create a new instruction from a value, encoded with [`borsh`].
     ///
+    /// This is the infallible version of [`Instruction::try_new_with_borsh`], and will
+    /// panic if serialization fails.
+    ///
     /// [`borsh`]: https://docs.rs/borsh/latest/borsh/
     ///
     /// `program_id` is the address of the program that will execute the instruction.
@@ -149,16 +152,74 @@ impl Instruction {
         data: &T,
         accounts: Vec<AccountMeta>,
     ) -> Self {
-        let data = borsh::to_vec(data).unwrap();
-        Self {
+        Self::try_new_with_borsh(program_id, data, accounts)
+            .expect("Failed to serialize instruction data")
+    }
+
+    #[cfg(feature = "borsh")]
+    /// Fallibly create a new instruction from a value, encoded with [`borsh`].
+    ///
+    /// [`borsh`]: https://docs.rs/borsh/latest/borsh/
+    ///
+    /// `program_id` is the address of the program that will execute the instruction.
+    /// `accounts` contains a description of all accounts that may be accessed by the program.
+    ///
+    /// Borsh serialization is often preferred over bincode as it has a stable
+    /// [specification] and an [implementation in JavaScript][jsb], neither of
+    /// which are true of bincode.
+    ///
+    /// [specification]: https://borsh.io/
+    /// [jsb]: https://github.com/near/borsh-js
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use solana_pubkey::Pubkey;
+    /// # use solana_instruction::{AccountMeta, Instruction};
+    /// # use borsh::{BorshSerialize, BorshDeserialize};
+    /// #
+    /// #[derive(BorshSerialize, BorshDeserialize)]
+    /// # #[borsh(crate = "borsh")]
+    /// pub struct MyInstruction {
+    ///     pub lamports: u64,
+    /// }
+    ///
+    /// pub fn create_instruction(
+    ///     program_id: &Pubkey,
+    ///     from: &Pubkey,
+    ///     to: &Pubkey,
+    ///     lamports: u64,
+    /// ) -> Result<Instruction, borsh::io::Error> {
+    ///     let instr = MyInstruction { lamports };
+    ///
+    ///     Instruction::try_new_with_borsh(
+    ///         *program_id,
+    ///         &instr,
+    ///         vec![
+    ///             AccountMeta::new(*from, true),
+    ///             AccountMeta::new(*to, false),
+    ///         ],
+    ///    )
+    /// }
+    /// ```
+    pub fn try_new_with_borsh<T: borsh::BorshSerialize>(
+        program_id: Pubkey,
+        data: &T,
+        accounts: Vec<AccountMeta>,
+    ) -> Result<Self, borsh::io::Error> {
+        let data = borsh::to_vec(data)?;
+        Ok(Self {
             program_id,
             accounts,
             data,
-        }
+        })
     }
 
     #[cfg(feature = "bincode")]
     /// Create a new instruction from a value, encoded with [`bincode`].
+    ///
+    /// This is the infallible version of [`Instruction::try_new_with_bincode`], and will
+    /// panic if serialization fails.
     ///
     /// [`bincode`]: https://docs.rs/bincode/latest/bincode/
     ///
@@ -200,16 +261,66 @@ impl Instruction {
         data: &T,
         accounts: Vec<AccountMeta>,
     ) -> Self {
-        let data = bincode::serialize(data).unwrap();
-        Self {
+        Self::try_new_with_bincode(program_id, data, accounts)
+            .expect("Failed to serialize instruction data")
+    }
+
+    #[cfg(feature = "bincode")]
+    /// Fallibly create a new instruction from a value, encoded with [`bincode`].
+    ///
+    /// [`bincode`]: https://docs.rs/bincode/latest/bincode/
+    ///
+    /// `program_id` is the address of the program that will execute the instruction.
+    /// `accounts` contains a description of all accounts that may be accessed by the program.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use solana_pubkey::Pubkey;
+    /// # use solana_instruction::{AccountMeta, Instruction};
+    /// # use serde_derive::{Serialize, Deserialize};
+    /// #
+    /// #[derive(Serialize, Deserialize)]
+    /// pub struct MyInstruction {
+    ///     pub lamports: u64,
+    /// }
+    ///
+    /// pub fn create_instruction(
+    ///     program_id: &Pubkey,
+    ///     from: &Pubkey,
+    ///     to: &Pubkey,
+    ///     lamports: u64,
+    /// ) -> Result<Instruction, bincode::Error> {
+    ///     let instr = MyInstruction { lamports };
+    ///
+    ///     Instruction::try_new_with_bincode(
+    ///         *program_id,
+    ///         &instr,
+    ///         vec![
+    ///             AccountMeta::new(*from, true),
+    ///             AccountMeta::new(*to, false),
+    ///         ],
+    ///    )
+    /// }
+    /// ```
+    pub fn try_new_with_bincode<T: serde::Serialize>(
+        program_id: Pubkey,
+        data: &T,
+        accounts: Vec<AccountMeta>,
+    ) -> Result<Self, bincode::Error> {
+        let data = bincode::serialize(data)?;
+        Ok(Self {
             program_id,
             accounts,
             data,
-        }
+        })
     }
 
     #[cfg(feature = "wincode")]
     /// Create a new instruction from a value, encoded with [`wincode`].
+    ///
+    /// This is the infallible version of [`Instruction::try_new_with_wincode`], and will
+    /// panic if serialization fails.
     ///
     /// [`wincode`]: https://docs.rs/wincode/latest/wincode/
     ///
@@ -251,12 +362,59 @@ impl Instruction {
         data: &T,
         accounts: Vec<AccountMeta>,
     ) -> Self {
-        let data = wincode::serialize(data).unwrap();
-        Self {
+        Self::try_new_with_wincode(program_id, data, accounts)
+            .expect("Failed to serialize instruction data")
+    }
+
+    #[cfg(feature = "wincode")]
+    /// Fallibly create a new instruction from a value, encoded with [`wincode`].
+    ///
+    /// [`wincode`]: https://docs.rs/wincode/latest/wincode/
+    ///
+    /// `program_id` is the address of the program that will execute the instruction.
+    /// `accounts` contains a description of all accounts that may be accessed by the program.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use solana_pubkey::Pubkey;
+    /// # use solana_instruction::{AccountMeta, Instruction};
+    /// # use wincode::{SchemaRead, SchemaWrite, config::DefaultConfig};
+    /// #
+    /// #[derive(SchemaRead, SchemaWrite)]
+    /// pub struct MyInstruction {
+    ///     pub lamports: u64,
+    /// }
+    ///
+    /// pub fn create_instruction(
+    ///     program_id: &Pubkey,
+    ///     from: &Pubkey,
+    ///     to: &Pubkey,
+    ///     lamports: u64,
+    /// ) -> Result<Instruction, wincode::Error> {
+    ///     let instr = MyInstruction { lamports };
+    ///
+    ///     Instruction::try_new_with_wincode(
+    ///         *program_id,
+    ///         &instr,
+    ///         vec![
+    ///             AccountMeta::new(*from, true),
+    ///             AccountMeta::new(*to, false),
+    ///         ],
+    ///    )
+    /// }
+    /// ```
+    pub fn try_new_with_wincode<T: wincode::Serialize<Src = T>>(
+        program_id: Pubkey,
+        data: &T,
+        accounts: Vec<AccountMeta>,
+    ) -> Result<Self, wincode::Error> {
+        let data = wincode::serialize(data)?;
+        Ok(Self {
             program_id,
             accounts,
             data,
-        }
+        })
     }
 
     /// Create a new instruction from a byte slice.
@@ -343,4 +501,147 @@ pub struct BorrowedInstruction<'a> {
     pub program_id: &'a Pubkey,
     pub accounts: Vec<BorrowedAccountMeta<'a>>,
     pub data: &'a [u8],
+}
+
+#[cfg(test)]
+mod tests {
+    use {super::*, alloc::vec};
+
+    #[cfg(feature = "borsh")]
+    mod borsh_tests {
+        use {
+            super::*,
+            borsh::{
+                io::{
+                    Error as BorshError, ErrorKind as BorshErrorKind, Result as BorshResult, Write,
+                },
+                BorshSerialize,
+            },
+        };
+
+        struct FailingBorsh;
+        impl BorshSerialize for FailingBorsh {
+            fn serialize<W: Write>(&self, _writer: &mut W) -> BorshResult<()> {
+                Err(BorshError::new(
+                    BorshErrorKind::Other,
+                    "intentional failure",
+                ))
+            }
+        }
+
+        #[test]
+        fn test_try_new_with_borsh_failure() {
+            let result = Instruction::try_new_with_borsh(Pubkey::default(), &FailingBorsh, vec![]);
+            assert!(result.is_err());
+        }
+
+        #[test]
+        #[should_panic(expected = "Failed to serialize instruction data")]
+        fn test_new_with_borsh_panic() {
+            Instruction::new_with_borsh(Pubkey::default(), &FailingBorsh, vec![]);
+        }
+
+        #[test]
+        fn test_new_with_borsh_success() {
+            let data = 42u64;
+            let instr = Instruction::new_with_borsh(Pubkey::default(), &data, vec![]);
+            let expected_data = borsh::to_vec(&data).unwrap();
+            assert_eq!(instr.data, expected_data);
+
+            let try_instr =
+                Instruction::try_new_with_borsh(Pubkey::default(), &data, vec![]).unwrap();
+            assert_eq!(try_instr.data, expected_data);
+        }
+    }
+
+    #[cfg(feature = "bincode")]
+    mod bincode_tests {
+        use {
+            super::*,
+            serde::{ser::Error, Serialize},
+        };
+
+        struct FailingBincode;
+        impl Serialize for FailingBincode {
+            fn serialize<S: serde::Serializer>(&self, _serializer: S) -> Result<S::Ok, S::Error> {
+                Err(Error::custom("intentional failure"))
+            }
+        }
+
+        #[test]
+        fn test_try_new_with_bincode_failure() {
+            let result =
+                Instruction::try_new_with_bincode(Pubkey::default(), &FailingBincode, vec![]);
+            assert!(result.is_err());
+        }
+
+        #[test]
+        #[should_panic(expected = "Failed to serialize instruction data")]
+        fn test_new_with_bincode_panic() {
+            Instruction::new_with_bincode(Pubkey::default(), &FailingBincode, vec![]);
+        }
+
+        #[test]
+        fn test_new_with_bincode_success() {
+            let data = 42u64;
+            let instr = Instruction::new_with_bincode(Pubkey::default(), &data, vec![]);
+            let expected_data = bincode::serialize(&data).unwrap();
+            assert_eq!(instr.data, expected_data);
+
+            let try_instr =
+                Instruction::try_new_with_bincode(Pubkey::default(), &data, vec![]).unwrap();
+            assert_eq!(try_instr.data, expected_data);
+        }
+    }
+
+    #[cfg(feature = "wincode")]
+    mod wincode_tests {
+        use super::*;
+
+        struct FailingWincode;
+        unsafe impl wincode::SchemaWrite<wincode::config::DefaultConfig> for FailingWincode {
+            type Src = Self;
+
+            fn size_of(_src: &Self::Src) -> wincode::WriteResult<usize> {
+                Err(wincode::WriteError::Custom("intentional failure"))
+            }
+
+            fn write(
+                _writer: impl wincode::io::Writer,
+                _src: &Self::Src,
+            ) -> wincode::WriteResult<()> {
+                Err(wincode::WriteError::Custom("intentional failure"))
+            }
+        }
+
+        #[test]
+        fn test_try_new_with_wincode_failure() {
+            let result =
+                Instruction::try_new_with_wincode(Pubkey::default(), &FailingWincode, vec![]);
+            assert!(result.is_err());
+        }
+
+        #[test]
+        #[should_panic(expected = "Failed to serialize instruction data")]
+        fn test_new_with_wincode_panic() {
+            Instruction::new_with_wincode(Pubkey::default(), &FailingWincode, vec![]);
+        }
+
+        #[derive(wincode::SchemaWrite)]
+        struct SuccessWincode {
+            value: u64,
+        }
+
+        #[test]
+        fn test_new_with_wincode_success() {
+            let data = SuccessWincode { value: 42 };
+            let instr = Instruction::new_with_wincode(Pubkey::default(), &data, vec![]);
+            let expected_data = wincode::serialize(&data).unwrap();
+            assert_eq!(instr.data, expected_data);
+
+            let try_instr =
+                Instruction::try_new_with_wincode(Pubkey::default(), &data, vec![]).unwrap();
+            assert_eq!(try_instr.data, expected_data);
+        }
+    }
 }
