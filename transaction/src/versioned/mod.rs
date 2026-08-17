@@ -297,6 +297,7 @@ impl VersionedTransaction {
     pub fn verify_and_hash_message(
         &self,
     ) -> solana_transaction_error::TransactionResult<solana_hash::Hash> {
+        self.sanitize()?;
         let message_bytes = self.message.serialize();
         if !self
             ._verify_with_results(&message_bytes)
@@ -528,6 +529,49 @@ mod tests {
             Ok(tx) => assert_eq!(tx.verify_with_results(), vec![true; 2]),
             Err(err) => assert_eq!(Some(err), None),
         }
+    }
+
+    #[test]
+    fn test_verify_and_hash_message() {
+        let keypair = Keypair::new();
+        let message = VersionedMessage::V0(
+            MessageV0::try_compile(&keypair.pubkey(), &[], &[], Hash::default()).unwrap(),
+        );
+        let tx = VersionedTransaction::try_new(message, &[&keypair]).unwrap();
+
+        assert!(tx.verify_and_hash_message().is_ok());
+
+        let mut tx_with_missing_signature = tx.clone();
+        tx_with_missing_signature.signatures.clear();
+        assert_eq!(
+            tx_with_missing_signature.verify_and_hash_message(),
+            Err(solana_transaction_error::TransactionError::SanitizeFailure)
+        );
+
+        let mut tx_with_extra_signature = tx.clone();
+        tx_with_extra_signature
+            .signatures
+            .push(Signature::default());
+        assert_eq!(
+            tx_with_extra_signature.verify_and_hash_message(),
+            Err(solana_transaction_error::TransactionError::SanitizeFailure)
+        );
+
+        let mut tx_with_missing_static_key = tx.clone();
+        if let VersionedMessage::V0(message) = &mut tx_with_missing_static_key.message {
+            message.account_keys.clear();
+        }
+        assert_eq!(
+            tx_with_missing_static_key.verify_and_hash_message(),
+            Err(solana_transaction_error::TransactionError::SanitizeFailure)
+        );
+
+        let mut tx_with_invalid_signature = tx;
+        tx_with_invalid_signature.signatures[0] = Signature::default();
+        assert_eq!(
+            tx_with_invalid_signature.verify_and_hash_message(),
+            Err(solana_transaction_error::TransactionError::SignatureFailure)
+        );
     }
 
     fn nonced_transfer_tx() -> (Pubkey, Pubkey, VersionedTransaction) {
