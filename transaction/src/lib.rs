@@ -250,16 +250,11 @@ impl solana_frozen_abi::rand::prelude::Distribution<Transaction>
 
 impl Sanitize for Transaction {
     fn sanitize(&self) -> Result<(), SanitizeError> {
-        let num_required_signatures = usize::from(self.message.header.num_required_signatures);
-        if num_required_signatures > self.signatures.len() {
-            return Err(SanitizeError::IndexOutOfBounds);
-        }
-        if num_required_signatures < self.signatures.len() {
-            return Err(SanitizeError::InvalidValue);
-        }
-        if self.signatures.len() > self.message.account_keys.len() {
-            return Err(SanitizeError::IndexOutOfBounds);
-        }
+        versioned::VersionedTransaction::sanitize_signatures_inner(
+            usize::from(self.message.header.num_required_signatures),
+            self.message.account_keys.len(),
+            self.signatures.len(),
+        )?;
         self.message.sanitize()
     }
 }
