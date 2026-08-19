@@ -99,11 +99,13 @@ fn test_pairing_check_identity() {
 }
 
 #[test]
-fn test_empty_batch_maps_to_identity() {
+fn test_empty_batch() {
     for endianness in [Endianness::Little, Endianness::Big] {
+        // `pairing_map` mirrors the syscall: the empty product is the identity.
         let gt = pairing_map(&[], &[], endianness).expect("empty batch must succeed");
         assert_eq!(gt, GtElement::identity(endianness));
 
-        assert_eq!(pairing_check(&[], &[], endianness), Some(true));
+        // `pairing_check` refuses to succeed vacuously.
+        assert_eq!(pairing_check(&[], &[], endianness), None);
     }
 }

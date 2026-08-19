@@ -160,23 +160,52 @@ pub fn pairing(
     )
 }
 
-/// Evaluates if the product of pairings equals the identity element.
+/// Evaluates whether the product of pairings equals the identity element.
 ///
-/// Highly efficient for ZK verifiers (e.g., Groth16) as it avoids returning
-/// the raw 576-byte `GtElement` to the caller.
+/// Returns `Some(true)` if `e(P_1, Q_1) * ... * e(P_n, Q_n) == 1`,
+/// `Some(false)` if the product is some other target group element, and
+/// `None` if the check could not be run at all.
+///
+/// # Empty batches
+///
+/// Unlike [`pairing_map`], this rejects an empty batch with `None` rather
+/// than reporting the vacuously-true identity. `pairing_check` is a
+/// verification primitive, and callers typically build these slices from
+/// attacker-controlled instruction data: a zero-length batch that reports
+/// `Some(true)` is a verification bypass, not a mathematical convenience.
+/// If you genuinely want the empty product, call [`pairing_map`] and compare
+/// against [`GtElement::identity`] yourself.
+///
+/// # Correct usage
+///
+/// `None` means "the check did not run", which is not the same as
+/// "verification failed" — but both must be treated as failure:
+///
+/// ```ignore
+/// if pairing_check(g1, g2, e) != Some(true) {
+///     return Err(ProgramError::InvalidArgument);
+/// }
+/// ```
+///
+/// Never branch on `.is_some()`.
 pub fn pairing_check(
     g1_points: &[G1Point],
     g2_points: &[G2Point],
     endianness: Endianness,
 ) -> Option<bool> {
+    // A check that asserts nothing must not report success.
+    if g1_points.is_empty() {
+        return None;
+    }
+
     let mut out = MaybeUninit::uninit();
 
     if !pairing_map_assign(g1_points, g2_points, &mut out, endianness) {
         return None;
     }
 
-    // SAFETY: `pairing_map_assign` returned `true`, so every byte of `out` has
-    // been written.
+    // SAFETY: `pairing_map_assign` returned `true`, so every byte of `out`
+    // has been written.
     let gt = unsafe { out.assume_init() };
 
     Some(gt == GtElement::identity(endianness))
