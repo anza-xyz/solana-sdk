@@ -181,7 +181,10 @@ impl PodSlotHashes {
 #[cfg(test)]
 mod tests {
     use {
-        super::*, solana_hash::Hash, solana_sha256_hasher::hash, solana_slot_hashes::MAX_ENTRIES,
+        super::*,
+        solana_hash::Hash,
+        solana_sha256_hasher::hash,
+        solana_slot_hashes::{SlotHash, MAX_ENTRIES},
         test_case::test_case,
     };
 
@@ -213,7 +216,7 @@ mod tests {
     fn test_pod_slot_hashes(num_entries: usize) {
         let mut slot_hashes = vec![];
         for i in 0..num_entries {
-            slot_hashes.push((
+            slot_hashes.push(SlotHash::new(
                 i as u64,
                 hash(&[(i >> 24) as u8, (i >> 16) as u8, (i >> 8) as u8, i as u8]),
             ));
@@ -230,7 +233,7 @@ mod tests {
 
         // Assert `PodSlotHashes` and `SlotHashes` contain the same slot hashes
         // in the same order.
-        for slot in slot_hashes.iter().map(|(slot, _hash)| slot) {
+        for slot in slot_hashes.iter().map(|entry| &entry.slot) {
             // `get`:
             assert_eq!(
                 pod_slot_hashes.get(slot).unwrap().as_ref(),
