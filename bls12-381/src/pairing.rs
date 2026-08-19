@@ -4,18 +4,17 @@
 ))]
 use bytemuck_derive::{Pod, Zeroable};
 use {
-    crate::{g1::G1Point, g2::G2Point, Endianness},
+    crate::{error::Bls12381Error, g1::G1Point, g2::G2Point, Endianness},
     core::mem::MaybeUninit,
 };
 
 /// Size of a target group (Gt) element in bytes.
 pub const GT_ELEMENT_SIZE: usize = 576;
 
-/// Maximum number of pairs allowed in a single batch pairing operation.
+/// Maximum number of pairs in a single batch pairing.
 pub const MAX_PAIRING_LENGTH: usize = 8;
 
-/// An element in the target group (Gt).
-/// Represents an element in the extension field Fq12 (576 bytes).
+/// A target group (Gt) element — a point in Fq12, 576 bytes.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 #[cfg_attr(
     any(
@@ -25,11 +24,13 @@ pub const MAX_PAIRING_LENGTH: usize = 8;
     derive(Pod, Zeroable)
 )]
 #[repr(transparent)]
-pub struct GtElement(pub [u8; GT_ELEMENT_SIZE]);
+pub struct GtElement(
+    /// The raw encoding, in whichever [`Endianness`] produced it.
+    pub [u8; GT_ELEMENT_SIZE],
+);
 
 impl GtElement {
-    /// Returns the multiplicative identity of the target group for the given
-    /// endianness.
+    /// The multiplicative identity, in the given encoding.
     pub const fn identity(endianness: Endianness) -> Self {
         let mut bytes = [0u8; GT_ELEMENT_SIZE];
         match endianness {
@@ -38,29 +39,86 @@ impl GtElement {
         }
         Self(bytes)
     }
+
+    /// Whether this is the multiplicative identity.
+    ///
+    /// Evaluated locally, and cheaper than `== identity()`, which constructs a
+    /// 576-byte value solely for the comparison.
+    pub const fn is_identity(&self, endianness: Endianness) -> bool {
+        let one_index = match endianness {
+            Endianness::Little => 0,
+            Endianness::Big => GT_ELEMENT_SIZE - 1,
+        };
+        if self.0[one_index] != 1 {
+            return false;
+        }
+        let mut i = 0;
+        while i < GT_ELEMENT_SIZE {
+            if i != one_index && self.0[i] != 0 {
+                return false;
+            }
+            i += 1;
+        }
+        true
+    }
+
+    /// Copies a byte array into a target group element.
+    pub const fn from_bytes(bytes: [u8; GT_ELEMENT_SIZE]) -> Self {
+        Self(bytes)
+    }
+
+    /// Reinterprets a byte array as a target group element, without copying.
+    ///
+    /// Available under `default-features = false`.
+    pub const fn from_bytes_ref(bytes: &[u8; GT_ELEMENT_SIZE]) -> &Self {
+        // SAFETY: `GtElement` is `#[repr(transparent)]` over
+        // `[u8; GT_ELEMENT_SIZE]`, so the two have identical layout and a
+        // reference to one may be reinterpreted as a reference to the other.
+        unsafe { &*(bytes as *const [u8; GT_ELEMENT_SIZE] as *const Self) }
+    }
+
+    /// Copies out the raw 576-byte encoding. [`Self::as_bytes`] borrows
+    /// instead.
+    pub const fn to_bytes(&self) -> [u8; GT_ELEMENT_SIZE] {
+        self.0
+    }
+
+    /// Borrows the raw encoding.
+    pub const fn as_bytes(&self) -> &[u8; GT_ELEMENT_SIZE] {
+        &self.0
+    }
 }
 
-/// In-place product of pairings for a batch of G1 and G2 points.
+/// Writes `e(P_1, Q_1) * ... * e(P_n, Q_n)` into `out`.
 ///
-/// Computes `e(P_1, Q_1) * ... * e(P_n, Q_n)` and writes the resulting
-/// `GtElement` into `out`.
+/// An empty batch is the empty product and yields the identity, as SIMD-0388
+/// requires of the syscall. [`pairing_check`] deliberately differs; see its
+/// documentation.
 ///
-/// Returns `true` if and only if every byte of `out` was written, in
-/// which case the caller may `assume_init` it. On `false`, `out` is
-/// left untouched and must not be assumed initialized.
+/// # Errors
+///
+/// [`Bls12381Error::LengthMismatch`] if the slices differ in length,
+/// [`Bls12381Error::TooManyPairs`] if the batch exceeds [`MAX_PAIRING_LENGTH`],
+/// and [`Bls12381Error::InvalidInput`] if the syscall rejects a point.
+///
+/// On `Ok`, `out` is initialized and may be `assume_init`ed; on `Err` it is
+/// poisoned. See [Output buffer contract](crate#output-buffer-contract).
 pub fn pairing_map_assign(
     g1_points: &[G1Point],
     g2_points: &[G2Point],
     out: &mut MaybeUninit<GtElement>,
     endianness: Endianness,
-) -> bool {
-    if g1_points.len() != g2_points.len() || g1_points.len() > MAX_PAIRING_LENGTH {
-        return false;
+) -> Result<(), Bls12381Error> {
+    if g1_points.len() != g2_points.len() {
+        return Err(Bls12381Error::LengthMismatch);
+    }
+    if g1_points.len() > MAX_PAIRING_LENGTH {
+        return Err(Bls12381Error::TooManyPairs);
     }
 
     if g1_points.is_empty() {
         out.write(GtElement::identity(endianness));
-        return true;
+        return Ok(());
     }
 
     #[cfg(any(target_os = "solana", target_arch = "bpf"))]
@@ -71,9 +129,10 @@ pub fn pairing_map_assign(
         };
 
         // SAFETY: the point slices are valid for reads of their respective
-        // sizes and `out` is valid for writes of `GT_ELEMENT_SIZE` bytes. Per
-        // SIMD-0388 the syscall writes the full output buffer whenever it
-        // returns 0.
+        // sizes and `out` is valid for writes of `GT_ELEMENT_SIZE` bytes. The
+        // syscall writes every byte of `out` whenever it returns 0; see the
+        // "Output buffer contract" section in the crate documentation for why
+        // this holds despite not being stated in SIMD-0388.
         let status = unsafe {
             solana_define_syscall::definitions::sol_curve_pairing_map(
                 curve_id,
@@ -83,7 +142,11 @@ pub fn pairing_map_assign(
                 out.as_mut_ptr().cast::<u8>(),
             )
         };
-        status == 0
+        if status == 0 {
+            Ok(())
+        } else {
+            Err(Bls12381Error::InvalidInput)
+        }
     }
 
     #[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
@@ -103,42 +166,41 @@ pub fn pairing_map_assign(
             end,
         ) {
             out.write(GtElement(res.0));
-            true
+            Ok(())
         } else {
-            false
+            Err(Bls12381Error::InvalidInput)
         }
     }
 }
 
-/// Product of pairings returning a new allocated target group element.
+/// Allocating form of [`pairing_map_assign`].
 pub fn pairing_map(
     g1_points: &[G1Point],
     g2_points: &[G2Point],
     endianness: Endianness,
-) -> Option<GtElement> {
+) -> Result<GtElement, Bls12381Error> {
     let mut out = MaybeUninit::uninit();
 
-    if pairing_map_assign(g1_points, g2_points, &mut out, endianness) {
-        // SAFETY: `pairing_map_assign` returned `true`, so every byte of `out`
-        // has been written.
-        Some(unsafe { out.assume_init() })
-    } else {
-        None
-    }
+    pairing_map_assign(g1_points, g2_points, &mut out, endianness)?;
+
+    // SAFETY: `pairing_map_assign` returned `Ok`, so `out` is initialized.
+    Ok(unsafe { out.assume_init() })
 }
 
-/// In-place pairing for a single G1 and G2 point pair.
-/// Zero-allocation wrapper around `pairing_map_assign`.
+/// Single-pair form of [`pairing_map_assign`].
 ///
-/// Returns `true` if and only if every byte of `out` was written, in
-/// which case the caller may `assume_init` it. On `false`, `out` is
-/// left untouched and must not be assumed initialized.
+/// # Errors
+///
+/// [`Bls12381Error::InvalidInput`] if the syscall rejects either point.
+///
+/// On `Ok`, `out` is initialized and may be `assume_init`ed; on `Err` it is
+/// poisoned. See [Output buffer contract](crate#output-buffer-contract).
 pub fn pairing_assign(
     g1_point: &G1Point,
     g2_point: &G2Point,
     out: &mut MaybeUninit<GtElement>,
     endianness: Endianness,
-) -> bool {
+) -> Result<(), Bls12381Error> {
     pairing_map_assign(
         core::slice::from_ref(g1_point),
         core::slice::from_ref(g2_point),
@@ -147,12 +209,12 @@ pub fn pairing_assign(
     )
 }
 
-/// Single pairing returning a new allocated target group element.
+/// Allocating form of [`pairing_assign`].
 pub fn pairing(
     g1_point: &G1Point,
     g2_point: &G2Point,
     endianness: Endianness,
-) -> Option<GtElement> {
+) -> Result<GtElement, Bls12381Error> {
     pairing_map(
         core::slice::from_ref(g1_point),
         core::slice::from_ref(g2_point),
@@ -160,53 +222,54 @@ pub fn pairing(
     )
 }
 
-/// Evaluates whether the product of pairings equals the identity element.
+/// Whether the product of pairings is the identity.
 ///
-/// Returns `Some(true)` if `e(P_1, Q_1) * ... * e(P_n, Q_n) == 1`,
-/// `Some(false)` if the product is some other target group element, and
-/// `None` if the check could not be run at all.
+/// Returns `Ok(true)` if `e(P_1, Q_1) * ... * e(P_n, Q_n) == 1`, `Ok(false)` if
+/// the product is any other Gt element, and `Err` if the check never ran. Keeps
+/// the 576-byte [`GtElement`] off the caller's stack, which suits a Groth16
+/// verifier that would only discard it.
+///
+/// # Errors
+///
+/// [`Bls12381Error::LengthMismatch`], [`Bls12381Error::TooManyPairs`], and
+/// [`Bls12381Error::EmptyBatch`] indicate a bug in the calling program.
+/// [`Bls12381Error::InvalidInput`] means the syscall rejected a point.
 ///
 /// # Empty batches
 ///
-/// Unlike [`pairing_map`], this rejects an empty batch with `None` rather
-/// than reporting the vacuously-true identity. `pairing_check` is a
-/// verification primitive, and callers typically build these slices from
-/// attacker-controlled instruction data: a zero-length batch that reports
-/// `Some(true)` is a verification bypass, not a mathematical convenience.
-/// If you genuinely want the empty product, call [`pairing_map`] and compare
-/// against [`GtElement::identity`] yourself.
+/// [`pairing_map`] returns the identity for an empty batch; this returns
+/// [`Bls12381Error::EmptyBatch`] instead.
 ///
-/// # Correct usage
+/// # Examples
 ///
-/// `None` means "the check did not run", which is not the same as
-/// "verification failed" — but both must be treated as failure:
+/// `Err` means the check did not run, which is not the same as verification
+/// failing — but both are failures:
 ///
 /// ```ignore
-/// if pairing_check(g1, g2, e) != Some(true) {
+/// if pairing_check(g1_points, g2_points, endianness) != Ok(true) {
 ///     return Err(ProgramError::InvalidArgument);
 /// }
 /// ```
 ///
-/// Never branch on `.is_some()`.
+/// Do not branch on `.is_ok()`: it reports whether the check *ran*, not whether
+/// it passed, and the difference is a signature forgery.
 pub fn pairing_check(
     g1_points: &[G1Point],
     g2_points: &[G2Point],
     endianness: Endianness,
-) -> Option<bool> {
-    // A check that asserts nothing must not report success.
+) -> Result<bool, Bls12381Error> {
+    // A check that asserts nothing must not report success. Testing `g1_points`
+    // alone is enough — a mismatched (empty, non-empty) pair already trips the
+    // length check in `pairing_map_assign`.
     if g1_points.is_empty() {
-        return None;
+        return Err(Bls12381Error::EmptyBatch);
     }
 
     let mut out = MaybeUninit::uninit();
+    pairing_map_assign(g1_points, g2_points, &mut out, endianness)?;
 
-    if !pairing_map_assign(g1_points, g2_points, &mut out, endianness) {
-        return None;
-    }
-
-    // SAFETY: `pairing_map_assign` returned `true`, so every byte of `out`
-    // has been written.
+    // SAFETY: `pairing_map_assign` returned `Ok`, so `out` is initialized.
     let gt = unsafe { out.assume_init() };
 
-    Some(gt == GtElement::identity(endianness))
+    Ok(gt.is_identity(endianness))
 }
