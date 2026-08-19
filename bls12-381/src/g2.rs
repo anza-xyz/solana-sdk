@@ -120,7 +120,7 @@ impl G2Point {
             if i != flag_index && self.0[i] != 0 {
                 return false;
             }
-            i += 1;
+            i = i.wrapping_add(1);
         }
         true
     }
@@ -554,7 +554,7 @@ impl G2Compressed {
             if i != flag_index && self.0[i] != 0 {
                 return false;
             }
-            i += 1;
+            i = i.wrapping_add(1);
         }
         true
     }

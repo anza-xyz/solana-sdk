@@ -57,7 +57,7 @@ impl GtElement {
             if i != one_index && self.0[i] != 0 {
                 return false;
             }
-            i += 1;
+            i = i.wrapping_add(1);
         }
         true
     }

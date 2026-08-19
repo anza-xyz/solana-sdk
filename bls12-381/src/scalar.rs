@@ -1,11 +1,9 @@
+use crate::Endianness;
 #[cfg(any(
     feature = "bytemuck",
     not(any(target_os = "solana", target_arch = "bpf"))
 ))]
-use {
-    crate::Endianness,
-    bytemuck_derive::{Pod, Zeroable},
-};
+use bytemuck_derive::{Pod, Zeroable};
 
 /// Size of a BLS12-381 scalar field element in bytes.
 pub const SCALAR_SIZE: usize = 32;
@@ -59,6 +57,9 @@ impl Scalar {
     /// Widens a `u64` into a scalar. Always canonical, since `r` is far larger
     /// than `u64::MAX`.
     pub const fn from_u64(value: u64, endianness: Endianness) -> Self {
+        // Index of the first limb byte in the big-endian layout.
+        const BE_LIMB_OFFSET: usize = SCALAR_SIZE - 8;
+
         let mut bytes = [0u8; SCALAR_SIZE];
         let mut i = 0;
         match endianness {
@@ -66,14 +67,16 @@ impl Scalar {
                 let limb = value.to_le_bytes();
                 while i < 8 {
                     bytes[i] = limb[i];
-                    i += 1;
+                    i = i.wrapping_add(1);
                 }
             }
             Endianness::Big => {
                 let limb = value.to_be_bytes();
                 while i < 8 {
-                    bytes[SCALAR_SIZE - 8 + i] = limb[i];
-                    i += 1;
+                    // `i < 8` and `BE_LIMB_OFFSET + 8 == SCALAR_SIZE`, so the
+                    // sum is in bounds and never wraps.
+                    bytes[BE_LIMB_OFFSET.wrapping_add(i)] = limb[i];
+                    i = i.wrapping_add(1);
                 }
             }
         }
@@ -113,7 +116,7 @@ impl Scalar {
             if self.0[i] != 0 {
                 return false;
             }
-            i += 1;
+            i = i.wrapping_add(1);
         }
         true
     }
