@@ -135,6 +135,13 @@ fn test_assign_reports_failure_and_poisons_out() {
     assert!(!valid.add_assign(&invalid, &mut out, Endianness::Little));
     // Deliberately no `assume_init` on `out`.
 
+    // The same contract holds when the failure originates in the syscall
+    // rather than in the crate's own `validate` call: `add_assign` rejects
+    // `invalid` before the group op runs, `add_assign_unchecked` carries it
+    // through to the syscall, and both must report `false`.
+    let mut out_unchecked = MaybeUninit::uninit();
+    assert!(!valid.add_assign_unchecked(&invalid, &mut out_unchecked, Endianness::Little));
+
     // The allocating wrapper surfaces the same failure as `None`.
     assert!(valid.add(&invalid, Endianness::Little).is_none());
 }
@@ -153,7 +160,13 @@ fn test_failure_leaves_buffer_unwritten() {
     let fill = G1Point::from_bytes([0xAB; G1_UNCOMPRESSED_POINT_SIZE]);
     let mut out = MaybeUninit::new(fill);
 
-    assert!(!valid.add_assign(&invalid, &mut out, Endianness::Little));
+    // Unchecked deliberately: `add_assign` would reject `invalid` in its own
+    // `validate` call and return before the group op ever runs, which would pin
+    // an early return in this crate rather than what the syscall does to `out`
+    // on failure. The unchecked variant skips only the subgroup check — an
+    // all-ones encoding is still not a field element, so the syscall itself
+    // fails and the buffer is the syscall's to write or leave alone.
+    assert!(!valid.add_assign_unchecked(&invalid, &mut out, Endianness::Little));
 
     // SAFETY: `out` was initialized by `MaybeUninit::new`. This read is sound
     // regardless of what the syscall did; the assertion is about behavior, not
@@ -218,10 +231,14 @@ fn test_pairing_check_identity() {
     assert!(is_identity);
 }
 
-/// `pairing_map` and `pairing_check` deliberately diverge on an empty batch.
+/// `pairing_map` and `pairing_check` deliberately diverge on an empty batch,
+/// and a half-empty batch is a length mismatch rather than either.
 #[test]
 fn test_empty_batch() {
     for endianness in [Endianness::Little, Endianness::Big] {
+        let g1 = G1Point::infinity(endianness);
+        let g2 = G2Point::infinity(endianness);
+
         // `pairing_map` mirrors the syscall: the empty product is the identity.
         let gt = pairing_map(&[], &[], endianness).expect("empty batch must succeed");
         assert_eq!(gt, GtElement::identity(endianness));
@@ -234,6 +251,19 @@ fn test_empty_batch() {
         assert_eq!(
             pairing_check(&[], &[], endianness),
             Err(Bls12381Error::EmptyBatch),
+        );
+
+        // `EmptyBatch` means empty on both sides. One empty slice is a length
+        // mismatch whichever side it is on — the check that makes this true is
+        // the length comparison ahead of the empty check in `pairing_check`,
+        // without which the second assertion would report `EmptyBatch`.
+        assert_eq!(
+            pairing_check(&[g1], &[], endianness),
+            Err(Bls12381Error::LengthMismatch),
+        );
+        assert_eq!(
+            pairing_check(&[], &[g2], endianness),
+            Err(Bls12381Error::LengthMismatch),
         );
     }
 }

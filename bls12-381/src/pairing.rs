@@ -235,6 +235,10 @@ pub fn pairing(
 /// [`Bls12381Error::EmptyBatch`] indicate a bug in the calling program.
 /// [`Bls12381Error::InvalidInput`] means the syscall rejected a point.
 ///
+/// Slices of differing lengths report [`Bls12381Error::LengthMismatch`] even
+/// when one of them is empty; [`Bls12381Error::EmptyBatch`] is reserved for a
+/// batch that is empty on both sides.
+///
 /// # Empty batches
 ///
 /// [`pairing_map`] returns the identity for an empty batch; this returns
@@ -258,9 +262,16 @@ pub fn pairing_check(
     g2_points: &[G2Point],
     endianness: Endianness,
 ) -> Result<bool, Bls12381Error> {
-    // A check that asserts nothing must not report success. Testing `g1_points`
-    // alone is enough — a mismatched (empty, non-empty) pair already trips the
-    // length check in `pairing_map_assign`.
+    // Diagnosed before the empty check so that a mismatched batch reports
+    // `LengthMismatch` whichever side is the empty one. Deferring to
+    // `pairing_map_assign` would report `EmptyBatch` for `(&[], &[q])` and
+    // `LengthMismatch` for `(&[p], &[])`, for the same caller bug.
+    if g1_points.len() != g2_points.len() {
+        return Err(Bls12381Error::LengthMismatch);
+    }
+
+    // A check that asserts nothing must not report success. The lengths are
+    // equal by now, so testing `g1_points` alone covers both slices.
     if g1_points.is_empty() {
         return Err(Bls12381Error::EmptyBatch);
     }
