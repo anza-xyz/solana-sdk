@@ -39,7 +39,7 @@ mod instruction_error_module {
         feature = "frozen-abi",
         derive(AbiExample, AbiEnumVisitor, StableAbi, StableAbiSample),
         frozen_abi(
-            abi_digest = "99sLbFrZmSAM4i28P5vPDJFtB6xDgvyT92iEJpKiMPpF",
+            abi_digest = "FeTxh6dMDyYG1EdnenTpe8vpH37xDRvfksy83XKBN671",
             abi_serializer = ["bincode", "wincode"],
             test_roundtrip = "eq_and_wire"
         )
@@ -220,6 +220,11 @@ mod instruction_error_module {
 
         /// Builtin programs must consume compute units
         BuiltinProgramsMustConsumeComputeUnits,
+
+        /// Block production bailed out.
+        /// This discards transactions to protect the leader and does not propagate to followers.
+        /// Meaning this explicitly excludes transactions from consensus.
+        BailOut,
         // Note: For any new error added here an equivalent ProgramError and its
         // conversions must also be added
     }
@@ -363,6 +368,7 @@ impl fmt::Display for InstructionError {
             InstructionError::BuiltinProgramsMustConsumeComputeUnits => {
                 f.write_str("Builtin programs must consume compute units")
             }
+            InstructionError::BailOut => f.write_str("Block production bailed out"),
         }
     }
 }
