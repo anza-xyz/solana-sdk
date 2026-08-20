@@ -13,13 +13,14 @@ and zero-knowledge proof (e.g. Groth16) validation.
   `bytemuck::Pod`, so instruction data can be cast directly into curve points
   without allocation.
 - **In-place operations.** Every group operation has an `_assign` variant that
-  writes into a caller-supplied `MaybeUninit` buffer, bounding compute unit
-  consumption.
+  writes into a caller-supplied `MaybeUninit` buffer, saving ~68 CU per call
+  and keeping large results off the 4KB stack.
 - **Validated and unchecked APIs.** Group operations validate their operands by
   default; `_unchecked` variants skip the subgroup check for cheaper
   accumulation.
 - **Pairing checks.** `pairing_check` tests whether a product of pairings is the
-  identity without materializing a 576-byte `Gt` element.
+  identity without materializing a 576-byte `Gt` element, and refuses to
+  succeed on an empty batch.
 - **Dual endianness.** Big-endian (the canonical Zcash/IETF encoding) and
   little-endian layouts.
 
@@ -129,6 +130,80 @@ attacker-controlled instruction data, and a zero-length batch that reported
 `Ok(true)` would be a verification bypass. For the empty product, call
 `pairing_map` and compare against `GtElement::identity`.
 
+### Compute unit costs
+
+The syscalls themselves are charged by the runtime, at the `bls12_381_*` rates
+in `solana-program-runtime`'s execution budget. What this crate adds on top is
+small, and depends only on how a result is returned:
+
+| Wrapper                                                                                   | Added CU |
+| ----------------------------------------------------------------------------------------- | -------- |
+| `validate` — returns `bool`                                                               | 17       |
+| `_assign` forms — write into a caller's `MaybeUninit`                                     | 22       |
+| `pairing_assign`                                                                          | 23       |
+| `pairing_check` — includes the `is_identity` comparison                                   | 75       |
+| Allocating forms — `add_unchecked`, `sub_unchecked`, `neg_unchecked`, `mul`, `decompress` | 90       |
+| `pairing`, `pairing_map` — allocating                                                     | 96–106   |
+| `add` / `sub` — allocating, and issue two validation syscalls first                       | 115      |
+
+The allocating figure is the `Option<Self>` construction, not the byte copy: it
+is the same whether the output is a 96-byte G1 point or a 576-byte `Gt`
+element. Choosing an `_assign` form over its allocating counterpart therefore
+saves ~68 CU per operation, whatever the type.
+
+Purely local operations issue no syscall, so these figures are the whole cost:
+
+| Local operation                                                       | CU    |
+| --------------------------------------------------------------------- | ----- |
+| Borrow from instruction data — `from_bytes_ref`, `bytemuck::cast_ref` | 6–8   |
+| Borrow a batch of 8 — `bytemuck::cast_slice`                          | 9     |
+| Copy — `from_bytes`                                                   | 31    |
+| `is_infinity`, `is_identity`                                          | 36–42 |
+| `Scalar::is_zero`                                                     | 17    |
+
+Three consequences worth designing around:
+
+**Batch your pairings.** Only the first pair in a batch is charged at
+`bls12_381_one_pair_cost`; every additional pair is charged at
+`bls12_381_additional_pair_cost`, roughly half as much. A Groth16 verification
+issued as three separate `pairing_check` calls pays the first-pair rate three
+times over; as a single batch it pays it once, saving ~24,800 CU in syscall
+charges and 24,994 CU measured end to end.
+
+**Validate at the trust boundary, not in the loop.** The validation syscall is
+charged at roughly twelve times the addition syscall it guards. Summing eight
+points with `add` issues sixteen validation syscalls, two per iteration, since
+the accumulator is re-validated every time. Validating the eight inputs once
+and accumulating with `add_assign_unchecked` issues eight, saving 12,612 CU —
+47% of the total, and the fraction grows with batch size.
+
+**Prefer the `_assign` forms in loops.** Each call avoids the ~68 CU the
+allocating form spends constructing its `Option<Self>`. Over an eight-point
+accumulation that is 521 CU on top of the validation saving above.
+
+Borrowing a point out of instruction data costs under 10 CU by any mechanism,
+including a batch of eight, and copying one costs 31. Neither is worth
+optimizing against a 128 CU addition syscall, let alone a 25,445 CU pairing.
+
+For budgeting, the measured totals — runtime charge plus this crate's
+overhead — of the operations most likely to dominate an instruction:
+
+| Operation                                              | CU                        |
+| ------------------------------------------------------ | ------------------------- |
+| `validate` — G1 / G2                                   | 1,582 / 1,986             |
+| `add_assign_unchecked` — G1                            | 150                       |
+| `add_unchecked` — G1 / G2                              | 218 / 293                 |
+| `add` (validated) — G1 / G2                            | 3,373 / 4,255             |
+| `mul` — G1 / G2                                        | 4,718 / 8,346             |
+| `decompress` — G1 / G2                                 | 2,187 / 3,138             |
+| `pairing_check` — 1 / 3 / 8 pairs                      | 25,520 / 51,566 / 116,680 |
+| Sum of 8 untrusted G1 points, validated once, in place | 13,715                    |
+
+These are net of a no-op instruction, so add your own entrypoint and
+instruction parsing on top. Everything here fits inside the 200,000 CU default
+instruction limit: a three-pair Groth16 check leaves ~148,000 CU for the rest
+of the instruction, and even an eight-pair batch leaves ~83,000.
+
 ### Validation
 
 Group operations validate both operands by default: the coordinates are checked
@@ -137,7 +212,8 @@ lie in the prime-order subgroup. The `_unchecked` variants skip these checks.
 Multiplication and decompression are validated by the syscall itself and have no
 `_unchecked` variant.
 
-The subgroup check dominates the cost. Since the subgroup is closed under
+The subgroup check dominates the cost: the validation syscall is charged at
+roughly twelve times the addition syscall it guards. Since the subgroup is closed under
 addition, an accumulator built from validated points remains valid: validate at
 the trust boundary and accumulate with `add_assign_unchecked`.
 

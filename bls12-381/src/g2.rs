@@ -82,8 +82,34 @@ const G2_GENERATOR_LE: [u8; G2_UNCOMPRESSED_POINT_SIZE] = [
     0x99, 0x8B, 0xC2, 0x2B, 0xB0, 0xD2, 0xAC, 0x32, 0xCC, 0x34, 0xA7, 0x2E, 0xA0, 0xC4, 0x06, 0x06,
 ];
 
+/// Canonical infinity encodings, compared against by [`G2Point::is_infinity`]
+/// and used as the left operand of a negation.
+///
+/// Hoisting these out of the predicates turns a 192-byte loop into a single
+/// array comparison: measured at ~1,380 CU and ~20 CU respectively.
+const G2_INFINITY_BE: G2Point = G2Point::infinity(Endianness::Big);
+const G2_INFINITY_LE: G2Point = G2Point::infinity(Endianness::Little);
+
+/// Compressed counterparts of [`G2_INFINITY_BE`] and [`G2_INFINITY_LE`].
+const G2_COMPRESSED_INFINITY_BE: G2Compressed = G2Compressed::infinity(Endianness::Big);
+const G2_COMPRESSED_INFINITY_LE: G2Compressed = G2Compressed::infinity(Endianness::Little);
+
+/// Borrows the infinity constant for the given encoding.
+///
+/// Negation subtracts from infinity, and building that operand with
+/// [`G2Point::infinity`] zeroes 192 bytes of stack on every call. Borrowing a
+/// promoted constant reads it from `.rodata` instead.
+#[inline]
+const fn infinity_ref(endianness: Endianness) -> &'static G2Point {
+    match endianness {
+        Endianness::Big => &G2_INFINITY_BE,
+        Endianness::Little => &G2_INFINITY_LE,
+    }
+}
+
 impl G2Point {
     /// Returns the identity (infinity) element in the given encoding.
+    #[inline]
     pub const fn infinity(endianness: Endianness) -> Self {
         let mut bytes = [0u8; G2_UNCOMPRESSED_POINT_SIZE];
         match endianness {
@@ -95,6 +121,7 @@ impl G2Point {
     }
 
     /// The standard G2 base point from the Zcash/IETF specification.
+    #[inline]
     pub const fn generator(endianness: Endianness) -> Self {
         match endianness {
             Endianness::Big => Self(G2_GENERATOR_BE),
@@ -107,39 +134,37 @@ impl G2Point {
     ///
     /// Evaluated locally, without a syscall. A point that fails this check is
     /// not thereby invalid — that question belongs to [`Self::validate`].
-    pub const fn is_infinity(&self, endianness: Endianness) -> bool {
-        let flag_index = match endianness {
-            Endianness::Big => 0,
-            Endianness::Little => 95,
-        };
-        if self.0[flag_index] != 0x40 {
-            return false;
+    ///
+    /// Not `const fn`: array equality is not const-callable. The byte loop it
+    /// replaces was const, but cost ~7 CU per byte — the per-byte flag-index
+    /// test tripled what the comparison itself costs — against ~20 CU total
+    /// for the whole array here.
+    #[inline]
+    pub fn is_infinity(&self, endianness: Endianness) -> bool {
+        match endianness {
+            Endianness::Big => self.0 == G2_INFINITY_BE.0,
+            Endianness::Little => self.0 == G2_INFINITY_LE.0,
         }
-        let mut i = 0;
-        while i < G2_UNCOMPRESSED_POINT_SIZE {
-            if i != flag_index && self.0[i] != 0 {
-                return false;
-            }
-            i = i.wrapping_add(1);
-        }
-        true
     }
 
     /// Copies a byte array into a point.
     ///
     /// For instruction data, [`Self::from_bytes_ref`] or `bytemuck::cast_ref`
     /// avoid the copy.
+    #[inline]
     pub const fn from_bytes(bytes: [u8; G2_UNCOMPRESSED_POINT_SIZE]) -> Self {
         Self(bytes)
     }
 
     /// Copies out the raw 192-byte encoding. [`Self::as_bytes`] borrows
     /// instead.
+    #[inline]
     pub const fn to_bytes(&self) -> [u8; G2_UNCOMPRESSED_POINT_SIZE] {
         self.0
     }
 
     /// Borrows the raw encoding.
+    #[inline]
     pub const fn as_bytes(&self) -> &[u8; G2_UNCOMPRESSED_POINT_SIZE] {
         &self.0
     }
@@ -148,6 +173,7 @@ impl G2Point {
     ///
     /// Available under `default-features = false`, unlike `bytemuck::cast_ref`.
     /// Performs no validation.
+    #[inline]
     pub const fn from_bytes_ref(bytes: &[u8; G2_UNCOMPRESSED_POINT_SIZE]) -> &Self {
         // SAFETY: `G2Point` is `#[repr(transparent)]` over
         // `[u8; G2_UNCOMPRESSED_POINT_SIZE]`, so the two have identical
@@ -163,17 +189,19 @@ impl G2Point {
     /// On `true`, `out` is initialized and may be `assume_init`ed; on `false`
     /// it is poisoned. See
     /// [Output buffer contract](crate#output-buffer-contract).
+    #[inline]
     pub fn neg_assign_unchecked(
         &self,
         out: &mut MaybeUninit<Self>,
         endianness: Endianness,
     ) -> bool {
-        Self::infinity(endianness).sub_assign_unchecked(self, out, endianness)
+        infinity_ref(endianness).sub_assign_unchecked(self, out, endianness)
     }
 
     /// Allocating form of [`Self::neg_assign_unchecked`].
+    #[inline]
     pub fn neg_unchecked(&self, endianness: Endianness) -> Option<Self> {
-        Self::infinity(endianness).sub_unchecked(self, endianness)
+        infinity_ref(endianness).sub_unchecked(self, endianness)
     }
 
     /// Negates in place, validating `self` first.
@@ -186,6 +214,7 @@ impl G2Point {
     /// On `true`, `out` is initialized and may be `assume_init`ed; on `false`
     /// it is poisoned. See
     /// [Output buffer contract](crate#output-buffer-contract).
+    #[inline]
     pub fn neg_assign(&self, out: &mut MaybeUninit<Self>, endianness: Endianness) -> bool {
         if !self.validate(endianness) {
             return false;
@@ -194,6 +223,7 @@ impl G2Point {
     }
 
     /// Allocating form of [`Self::neg_assign`].
+    #[inline]
     pub fn neg(&self, endianness: Endianness) -> Option<Self> {
         let mut out = MaybeUninit::uninit();
         if self.neg_assign(&mut out, endianness) {
@@ -215,6 +245,7 @@ impl G2Point {
     /// On `true`, `out` is initialized and may be `assume_init`ed; on `false`
     /// it is poisoned. See
     /// [Output buffer contract](crate#output-buffer-contract).
+    #[inline]
     pub fn add_assign_unchecked(
         &self,
         other: &Self,
@@ -268,6 +299,7 @@ impl G2Point {
     }
 
     /// Allocating form of [`Self::add_assign_unchecked`].
+    #[inline]
     pub fn add_unchecked(&self, other: &Self, endianness: Endianness) -> Option<Self> {
         let mut out = MaybeUninit::uninit();
         if self.add_assign_unchecked(other, &mut out, endianness) {
@@ -284,6 +316,7 @@ impl G2Point {
     /// On `true`, `out` is initialized and may be `assume_init`ed; on `false`
     /// it is poisoned. See
     /// [Output buffer contract](crate#output-buffer-contract).
+    #[inline]
     pub fn add_assign(
         &self,
         other: &Self,
@@ -297,6 +330,7 @@ impl G2Point {
     }
 
     /// Allocating form of [`Self::add_assign`].
+    #[inline]
     pub fn add(&self, other: &Self, endianness: Endianness) -> Option<Self> {
         let mut out = MaybeUninit::uninit();
         if self.add_assign(other, &mut out, endianness) {
@@ -315,6 +349,7 @@ impl G2Point {
     /// On `true`, `out` is initialized and may be `assume_init`ed; on `false`
     /// it is poisoned. See
     /// [Output buffer contract](crate#output-buffer-contract).
+    #[inline]
     pub fn sub_assign_unchecked(
         &self,
         other: &Self,
@@ -368,6 +403,7 @@ impl G2Point {
     }
 
     /// Allocating form of [`Self::sub_assign_unchecked`].
+    #[inline]
     pub fn sub_unchecked(&self, other: &Self, endianness: Endianness) -> Option<Self> {
         let mut out = MaybeUninit::uninit();
         if self.sub_assign_unchecked(other, &mut out, endianness) {
@@ -384,6 +420,7 @@ impl G2Point {
     /// On `true`, `out` is initialized and may be `assume_init`ed; on `false`
     /// it is poisoned. See
     /// [Output buffer contract](crate#output-buffer-contract).
+    #[inline]
     pub fn sub_assign(
         &self,
         other: &Self,
@@ -397,6 +434,7 @@ impl G2Point {
     }
 
     /// Allocating form of [`Self::sub_assign`].
+    #[inline]
     pub fn sub(&self, other: &Self, endianness: Endianness) -> Option<Self> {
         let mut out = MaybeUninit::uninit();
         if self.sub_assign(other, &mut out, endianness) {
@@ -417,6 +455,7 @@ impl G2Point {
     /// On `true`, `out` is initialized and may be `assume_init`ed; on `false`
     /// it is poisoned. See
     /// [Output buffer contract](crate#output-buffer-contract).
+    #[inline]
     pub fn mul_assign(
         &self,
         scalar: &Scalar,
@@ -470,6 +509,7 @@ impl G2Point {
     }
 
     /// Allocating form of [`Self::mul_assign`].
+    #[inline]
     pub fn mul(&self, scalar: &Scalar, endianness: Endianness) -> Option<Self> {
         let mut out = MaybeUninit::uninit();
         if self.mul_assign(scalar, &mut out, endianness) {
@@ -486,6 +526,7 @@ impl G2Point {
     ///
     /// The subgroup check dominates the cost. See the README for when to hoist
     /// this out of a loop.
+    #[inline]
     pub fn validate(&self, endianness: Endianness) -> bool {
         #[cfg(any(target_os = "solana", target_arch = "bpf"))]
         {
@@ -530,6 +571,7 @@ impl G2Point {
 impl G2Compressed {
     /// Compressed infinity: compression and infinity flags set, the rest
     /// clear.
+    #[inline]
     pub const fn infinity(endianness: Endianness) -> Self {
         let mut bytes = [0u8; G2_COMPRESSED_POINT_SIZE];
         match endianness {
@@ -541,25 +583,18 @@ impl G2Compressed {
 
     /// Whether this is the canonical compressed infinity encoding. Evaluated
     /// locally, without a syscall.
-    pub const fn is_infinity(&self, endianness: Endianness) -> bool {
-        let flag_index = match endianness {
-            Endianness::Big => 0,
-            Endianness::Little => G2_COMPRESSED_POINT_SIZE - 1,
-        };
-        if self.0[flag_index] != 0xC0 {
-            return false;
+    ///
+    /// Not `const fn`; see [`G2Point::is_infinity`].
+    #[inline]
+    pub fn is_infinity(&self, endianness: Endianness) -> bool {
+        match endianness {
+            Endianness::Big => self.0 == G2_COMPRESSED_INFINITY_BE.0,
+            Endianness::Little => self.0 == G2_COMPRESSED_INFINITY_LE.0,
         }
-        let mut i = 0;
-        while i < G2_COMPRESSED_POINT_SIZE {
-            if i != flag_index && self.0[i] != 0 {
-                return false;
-            }
-            i = i.wrapping_add(1);
-        }
-        true
     }
 
     /// Copies a byte array into a compressed point.
+    #[inline]
     pub const fn from_bytes(bytes: [u8; G2_COMPRESSED_POINT_SIZE]) -> Self {
         Self(bytes)
     }
@@ -567,6 +602,7 @@ impl G2Compressed {
     /// Reinterprets a byte array as a compressed point, without copying.
     ///
     /// Available under `default-features = false`. Performs no validation.
+    #[inline]
     pub const fn from_bytes_ref(bytes: &[u8; G2_COMPRESSED_POINT_SIZE]) -> &Self {
         // SAFETY: `G2Compressed` is `#[repr(transparent)]` over
         // `[u8; G2_COMPRESSED_POINT_SIZE]`, so the two have identical layout
@@ -576,11 +612,13 @@ impl G2Compressed {
     }
 
     /// Copies out the raw compressed encoding.
+    #[inline]
     pub const fn to_bytes(&self) -> [u8; G2_COMPRESSED_POINT_SIZE] {
         self.0
     }
 
     /// Borrows the raw compressed encoding.
+    #[inline]
     pub const fn as_bytes(&self) -> &[u8; G2_COMPRESSED_POINT_SIZE] {
         &self.0
     }
@@ -592,6 +630,7 @@ impl G2Compressed {
     /// discards the result, costing exactly what [`Self::decompress`] costs.
     /// Callers that intend to decompress should do so and match on `None`
     /// rather than pay for both.
+    #[inline]
     pub fn validate(&self, endianness: Endianness) -> bool {
         let mut out = MaybeUninit::uninit();
         self.decompress_assign(&mut out, endianness)
@@ -603,6 +642,7 @@ impl G2Compressed {
     /// On `true`, `out` is initialized and may be `assume_init`ed; on `false`
     /// it is poisoned. See
     /// [Output buffer contract](crate#output-buffer-contract).
+    #[inline]
     pub fn decompress_assign(
         &self,
         out: &mut MaybeUninit<G2Point>,
@@ -650,6 +690,7 @@ impl G2Compressed {
     }
 
     /// Allocating form of [`Self::decompress_assign`].
+    #[inline]
     pub fn decompress(&self, endianness: Endianness) -> Option<G2Point> {
         let mut out = MaybeUninit::uninit();
         if self.decompress_assign(&mut out, endianness) {

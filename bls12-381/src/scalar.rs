@@ -45,17 +45,20 @@ pub struct Scalar(
 
 impl Scalar {
     /// Zero. Canonical in both encodings; takes any point to infinity.
+    #[inline]
     pub const fn zero() -> Self {
         Self([0u8; SCALAR_SIZE])
     }
 
     /// One, in the given encoding. Leaves any point unchanged.
+    #[inline]
     pub const fn one(endianness: Endianness) -> Self {
         Self::from_u64(1, endianness)
     }
 
     /// Widens a `u64` into a scalar. Always canonical, since `r` is far larger
     /// than `u64::MAX`.
+    #[inline]
     pub const fn from_u64(value: u64, endianness: Endianness) -> Self {
         // Index of the first limb byte in the big-endian layout.
         const BE_LIMB_OFFSET: usize = SCALAR_SIZE - 8;
@@ -85,6 +88,7 @@ impl Scalar {
 
     /// Copies a byte array into a scalar. Canonicity is not checked; see the
     /// type documentation.
+    #[inline]
     pub const fn from_bytes(bytes: [u8; SCALAR_SIZE]) -> Self {
         Self(bytes)
     }
@@ -92,6 +96,7 @@ impl Scalar {
     /// Reinterprets a byte array as a scalar, without copying.
     ///
     /// Available under `default-features = false`.
+    #[inline]
     pub const fn from_bytes_ref(bytes: &[u8; SCALAR_SIZE]) -> &Self {
         // SAFETY: `Scalar` is `#[repr(transparent)]` over
         // `[u8; SCALAR_SIZE]`, so the two have identical layout and a
@@ -100,24 +105,23 @@ impl Scalar {
     }
 
     /// Copies out the raw encoding.
+    #[inline]
     pub const fn to_bytes(&self) -> [u8; SCALAR_SIZE] {
         self.0
     }
 
     /// Borrows the raw encoding.
+    #[inline]
     pub const fn as_bytes(&self) -> &[u8; SCALAR_SIZE] {
         &self.0
     }
 
     /// Whether this scalar is zero.
-    pub const fn is_zero(&self) -> bool {
-        let mut i = 0;
-        while i < SCALAR_SIZE {
-            if self.0[i] != 0 {
-                return false;
-            }
-            i = i.wrapping_add(1);
-        }
-        true
+    ///
+    /// Not `const fn`: array equality is not const-callable. The byte loop it
+    /// replaces was const, but cost ~72 CU against ~10 CU here.
+    #[inline]
+    pub fn is_zero(&self) -> bool {
+        self.0 == [0u8; SCALAR_SIZE]
     }
 }

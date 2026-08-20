@@ -14,6 +14,11 @@ pub const GT_ELEMENT_SIZE: usize = 576;
 /// Maximum number of pairs in a single batch pairing.
 pub const MAX_PAIRING_LENGTH: usize = 8;
 
+/// Canonical identity encodings, compared against by
+/// [`GtElement::is_identity`].
+const GT_IDENTITY_BE: GtElement = GtElement::identity(Endianness::Big);
+const GT_IDENTITY_LE: GtElement = GtElement::identity(Endianness::Little);
+
 /// A target group (Gt) element — a point in Fq12, 576 bytes.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 #[cfg_attr(
@@ -31,6 +36,7 @@ pub struct GtElement(
 
 impl GtElement {
     /// The multiplicative identity, in the given encoding.
+    #[inline]
     pub const fn identity(endianness: Endianness) -> Self {
         let mut bytes = [0u8; GT_ELEMENT_SIZE];
         match endianness {
@@ -42,27 +48,28 @@ impl GtElement {
 
     /// Whether this is the multiplicative identity.
     ///
-    /// Evaluated locally, and cheaper than `== identity()`, which constructs a
-    /// 576-byte value solely for the comparison.
-    pub const fn is_identity(&self, endianness: Endianness) -> bool {
-        let one_index = match endianness {
-            Endianness::Little => 0,
-            Endianness::Big => GT_ELEMENT_SIZE - 1,
-        };
-        if self.0[one_index] != 1 {
-            return false;
+    /// Evaluated locally, without a syscall.
+    ///
+    /// Not `const fn`: array equality is not const-callable. The byte loop it
+    /// replaces was const, but cost ~4,055 CU — ~7 per byte, of which the
+    /// per-byte flag-index test was two thirds — against ~45 CU for the whole
+    /// array here. This is on the hot path: [`pairing_check`] calls it on
+    /// every successful verification.
+    ///
+    // Deliberately not `#[inline]`. Inlining this into `pairing_check` puts the
+    // 576-byte identity constant in the same frame as that function's 576-byte
+    // `MaybeUninit`, costing ~20 CU on every pairing check — more than the ~6
+    // CU it saves on a direct call, which no hot path makes.
+    #[inline]
+    pub fn is_identity(&self, endianness: Endianness) -> bool {
+        match endianness {
+            Endianness::Little => self.0 == GT_IDENTITY_LE.0,
+            Endianness::Big => self.0 == GT_IDENTITY_BE.0,
         }
-        let mut i = 0;
-        while i < GT_ELEMENT_SIZE {
-            if i != one_index && self.0[i] != 0 {
-                return false;
-            }
-            i = i.wrapping_add(1);
-        }
-        true
     }
 
     /// Copies a byte array into a target group element.
+    #[inline]
     pub const fn from_bytes(bytes: [u8; GT_ELEMENT_SIZE]) -> Self {
         Self(bytes)
     }
@@ -70,6 +77,7 @@ impl GtElement {
     /// Reinterprets a byte array as a target group element, without copying.
     ///
     /// Available under `default-features = false`.
+    #[inline]
     pub const fn from_bytes_ref(bytes: &[u8; GT_ELEMENT_SIZE]) -> &Self {
         // SAFETY: `GtElement` is `#[repr(transparent)]` over
         // `[u8; GT_ELEMENT_SIZE]`, so the two have identical layout and a
@@ -79,11 +87,13 @@ impl GtElement {
 
     /// Copies out the raw 576-byte encoding. [`Self::as_bytes`] borrows
     /// instead.
+    #[inline]
     pub const fn to_bytes(&self) -> [u8; GT_ELEMENT_SIZE] {
         self.0
     }
 
     /// Borrows the raw encoding.
+    #[inline]
     pub const fn as_bytes(&self) -> &[u8; GT_ELEMENT_SIZE] {
         &self.0
     }
@@ -103,6 +113,7 @@ impl GtElement {
 ///
 /// On `Ok`, `out` is initialized and may be `assume_init`ed; on `Err` it is
 /// poisoned. See [Output buffer contract](crate#output-buffer-contract).
+#[inline]
 pub fn pairing_map_assign(
     g1_points: &[G1Point],
     g2_points: &[G2Point],
@@ -174,6 +185,7 @@ pub fn pairing_map_assign(
 }
 
 /// Allocating form of [`pairing_map_assign`].
+#[inline]
 pub fn pairing_map(
     g1_points: &[G1Point],
     g2_points: &[G2Point],
@@ -195,6 +207,7 @@ pub fn pairing_map(
 ///
 /// On `Ok`, `out` is initialized and may be `assume_init`ed; on `Err` it is
 /// poisoned. See [Output buffer contract](crate#output-buffer-contract).
+#[inline]
 pub fn pairing_assign(
     g1_point: &G1Point,
     g2_point: &G2Point,
@@ -210,6 +223,7 @@ pub fn pairing_assign(
 }
 
 /// Allocating form of [`pairing_assign`].
+#[inline]
 pub fn pairing(
     g1_point: &G1Point,
     g2_point: &G2Point,
@@ -234,10 +248,6 @@ pub fn pairing(
 /// [`Bls12381Error::LengthMismatch`], [`Bls12381Error::TooManyPairs`], and
 /// [`Bls12381Error::EmptyBatch`] indicate a bug in the calling program.
 /// [`Bls12381Error::InvalidInput`] means the syscall rejected a point.
-///
-/// Slices of differing lengths report [`Bls12381Error::LengthMismatch`] even
-/// when one of them is empty; [`Bls12381Error::EmptyBatch`] is reserved for a
-/// batch that is empty on both sides.
 ///
 /// # Empty batches
 ///
