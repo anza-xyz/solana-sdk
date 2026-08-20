@@ -1025,8 +1025,10 @@ impl Transaction {
     ///
     /// # Errors
     ///
-    /// Returns [`TransactionError::SignatureFailure`] on error.
+    /// Returns [`TransactionError::SanitizeFailure`] if the transaction is malformed, or
+    /// [`TransactionError::SignatureFailure`] if any signature is invalid.
     pub fn verify(&self) -> TransactionResult<()> {
+        self.sanitize()?;
         let message_bytes = self.message_data();
         if !self
             ._verify_with_results(&message_bytes)
@@ -1044,8 +1046,10 @@ impl Transaction {
     ///
     /// # Errors
     ///
-    /// Returns [`TransactionError::SignatureFailure`] on error.
+    /// Returns [`TransactionError::SanitizeFailure`] if the transaction is malformed, or
+    /// [`TransactionError::SignatureFailure`] if any signature is invalid.
     pub fn verify_and_hash_message(&self) -> TransactionResult<Hash> {
+        self.sanitize()?;
         let message_bytes = self.message_data();
         if !self
             ._verify_with_results(&message_bytes)
@@ -1307,6 +1311,50 @@ mod tests {
         tx.message.header.num_required_signatures = 1;
         tx.signatures.truncate(1);
         assert_eq!(tx.sanitize(), Err(SanitizeError::IndexOutOfBounds));
+    }
+
+    #[test]
+    fn test_verify_sanitizes_transaction() {
+        let keypair = Keypair::new();
+        let message = Message::new(&[], Some(&keypair.pubkey()));
+        let tx = Transaction::new(&[&keypair], message, Hash::default());
+
+        assert_eq!(tx.verify(), Ok(()));
+        assert!(tx.verify_and_hash_message().is_ok());
+
+        let mut tx_with_missing_signature = tx.clone();
+        tx_with_missing_signature.signatures.clear();
+        assert_eq!(
+            tx_with_missing_signature.verify(),
+            Err(TransactionError::SanitizeFailure)
+        );
+        assert_eq!(
+            tx_with_missing_signature.verify_and_hash_message(),
+            Err(TransactionError::SanitizeFailure)
+        );
+
+        let mut tx_with_extra_signature = tx.clone();
+        tx_with_extra_signature
+            .signatures
+            .push(Signature::default());
+        assert_eq!(
+            tx_with_extra_signature.verify(),
+            Err(TransactionError::SanitizeFailure)
+        );
+
+        let mut tx_with_missing_account_key = tx.clone();
+        tx_with_missing_account_key.message.account_keys.clear();
+        assert_eq!(
+            tx_with_missing_account_key.verify(),
+            Err(TransactionError::SanitizeFailure)
+        );
+
+        let mut tx_with_invalid_signature = tx;
+        tx_with_invalid_signature.signatures[0] = Signature::default();
+        assert_eq!(
+            tx_with_invalid_signature.verify(),
+            Err(TransactionError::SignatureFailure)
+        );
     }
 
     fn create_sample_transaction() -> Transaction {
