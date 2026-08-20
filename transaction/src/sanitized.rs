@@ -466,8 +466,13 @@ mod tests {
             &[1, 2, 3],
             vec![AccountMeta::new(payer.pubkey(), true)],
         );
-        let message =
-            v1::Message::try_compile(&payer.pubkey(), &[instruction], Hash::new_unique()).unwrap();
+        let message = v1::Message::try_compile_with_config(
+            &payer.pubkey(),
+            &[instruction],
+            Hash::new_unique(),
+            v1::TransactionConfig::empty(),
+        )
+        .unwrap();
         let versioned_tx =
             VersionedTransaction::try_new(VersionedMessage::V1(message), &[&payer]).unwrap();
 

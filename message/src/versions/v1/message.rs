@@ -212,6 +212,7 @@ impl Message {
     /// # create_v1_tx(&client, instruction, &payer)?;
     /// # Ok::<(), anyhow::Error>(())
     /// ```
+    #[deprecated(since = "4.6.0", note = "Use `try_compile_with_config`")]
     pub fn try_compile(
         payer: &Address,
         instructions: &[Instruction],
