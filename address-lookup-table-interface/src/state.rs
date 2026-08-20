@@ -320,8 +320,8 @@ mod tests {
             slot_hashes.add(slot, Hash::new_unique());
         }
 
-        let most_recent_slot = slot_hashes.first().unwrap().0;
-        let least_recent_slot = slot_hashes.last().unwrap().0;
+        let most_recent_slot = slot_hashes.first().unwrap().slot;
+        let least_recent_slot = slot_hashes.last().unwrap().slot;
         assert!(least_recent_slot < most_recent_slot);
 
         // 10 was chosen because the current slot isn't necessarily the next

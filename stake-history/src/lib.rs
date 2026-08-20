@@ -21,7 +21,7 @@ use {
 
 pub const MAX_ENTRIES: usize = 512; // it should never take as many as 512 epochs to warm up or cool down
 
-/// Serialized size of a single `(Epoch, StakeHistoryEntry)` tuple
+/// Serialized size of a single [`StakeHistoryItem`]
 pub(crate) const EPOCH_AND_ENTRY_SERIALIZED_SIZE: usize = 32;
 const _: () =
     assert!(EPOCH_AND_ENTRY_SERIALIZED_SIZE == size_of::<u64>() + size_of::<StakeHistoryEntry>());
@@ -114,6 +114,55 @@ impl core::ops::Add for StakeHistoryEntry {
     }
 }
 
+/// A single entry of the [`StakeHistory`] sysvar.
+///
+/// `#[repr(C)]` and padding-free so wincode decodes the whole sysvar in one copy.
+#[repr(C)]
+#[cfg_attr(
+    feature = "frozen-abi",
+    derive(
+        solana_frozen_abi_macro::AbiExample,
+        solana_frozen_abi_macro::StableAbi,
+        solana_frozen_abi_macro::StableAbiSample
+    )
+)]
+#[cfg_attr(
+    feature = "serde",
+    derive(serde_derive::Deserialize, serde_derive::Serialize)
+)]
+#[cfg_attr(feature = "wincode", derive(wincode::SchemaRead, wincode::SchemaWrite))]
+// Big-endian targets encode integers byte-swapped, so they never qualify as zero-copy.
+#[cfg_attr(
+    all(feature = "wincode", target_endian = "little"),
+    wincode(assert_zero_copy)
+)]
+#[derive(Debug, PartialEq, Eq, Default, Clone)]
+pub struct StakeHistoryItem {
+    pub epoch: Epoch,
+    pub entry: StakeHistoryEntry,
+}
+
+// Unlike `assert_zero_copy`, this also holds on big-endian targets.
+const _: () = assert!(size_of::<StakeHistoryItem>() == EPOCH_AND_ENTRY_SERIALIZED_SIZE);
+
+impl StakeHistoryItem {
+    pub const fn new(epoch: Epoch, entry: StakeHistoryEntry) -> Self {
+        Self { epoch, entry }
+    }
+}
+
+impl From<(Epoch, StakeHistoryEntry)> for StakeHistoryItem {
+    fn from((epoch, entry): (Epoch, StakeHistoryEntry)) -> Self {
+        Self { epoch, entry }
+    }
+}
+
+impl From<StakeHistoryItem> for (Epoch, StakeHistoryEntry) {
+    fn from(StakeHistoryItem { epoch, entry }: StakeHistoryItem) -> Self {
+        (epoch, entry)
+    }
+}
+
 #[repr(C)]
 #[cfg_attr(
     feature = "frozen-abi",
@@ -129,31 +178,32 @@ impl core::ops::Add for StakeHistoryEntry {
 )]
 #[cfg_attr(feature = "wincode", derive(wincode::SchemaRead, wincode::SchemaWrite))]
 #[derive(Debug, PartialEq, Eq, Default, Clone)]
-pub struct StakeHistory(Vec<(Epoch, StakeHistoryEntry)>);
+pub struct StakeHistory(Vec<StakeHistoryItem>);
 
 impl StakeHistory {
     #[inline]
     fn latest_epoch(&self) -> Option<&Epoch> {
-        self.first().map(|(epoch, _)| epoch)
+        self.first().map(|item| &item.epoch)
     }
 
     pub fn get(&self, epoch: Epoch) -> Option<&StakeHistoryEntry> {
         self.latest_epoch()
             .and_then(|latest| latest.checked_sub(epoch))
-            .and_then(|index| self.0.get(index as usize).map(|(_, entry)| entry))
+            .and_then(|index| self.0.get(index as usize).map(|item| &item.entry))
     }
 
     pub fn add(&mut self, epoch: Epoch, entry: StakeHistoryEntry) {
-        match self.binary_search_by(|probe| epoch.cmp(&probe.0)) {
-            Ok(index) => (self.0)[index] = (epoch, entry),
-            Err(index) => (self.0).insert(index, (epoch, entry)),
+        let item = StakeHistoryItem { epoch, entry };
+        match self.binary_search_by(|probe| epoch.cmp(&probe.epoch)) {
+            Ok(index) => (self.0)[index] = item,
+            Err(index) => (self.0).insert(index, item),
         }
         (self.0).truncate(MAX_ENTRIES);
     }
 }
 
 impl Deref for StakeHistory {
-    type Target = Vec<(Epoch, StakeHistoryEntry)>;
+    type Target = Vec<StakeHistoryItem>;
     fn deref(&self) -> &Self::Target {
         &self.0
     }
@@ -188,7 +238,10 @@ mod tests {
             );
         }
         assert_eq!(stake_history.len(), MAX_ENTRIES);
-        assert_eq!(stake_history.iter().map(|entry| entry.0).min().unwrap(), 1);
+        assert_eq!(
+            stake_history.iter().map(|item| item.epoch).min().unwrap(),
+            1
+        );
         assert_eq!(stake_history.get(0), None);
         for epoch in 1..current_epoch {
             assert_eq!(
@@ -200,6 +253,27 @@ mod tests {
             );
         }
         assert_eq!(stake_history.get(current_epoch), None);
+    }
+
+    /// Deployed accounts fix the layout to a length prefix followed by packed
+    /// epoch/entry pairs. Checked against the equivalent tuple encoding.
+    #[cfg(feature = "wincode")]
+    #[test]
+    fn test_wire_compat() {
+        let mut stake_history = StakeHistory::default();
+        for i in 0..MAX_ENTRIES as u64 {
+            stake_history.add(i, StakeHistoryEntry::with_effective(i));
+        }
+        let tuples: Vec<(Epoch, StakeHistoryEntry)> =
+            stake_history.iter().cloned().map(Into::into).collect();
+
+        let expected = wincode::serialize(&tuples).unwrap();
+        assert_eq!(expected.len(), SIZE);
+        assert_eq!(wincode::serialize(&stake_history).unwrap(), expected);
+        assert_eq!(
+            wincode::deserialize::<StakeHistory>(&expected).unwrap(),
+            stake_history
+        );
     }
 
     #[cfg(feature = "sysvar")]
