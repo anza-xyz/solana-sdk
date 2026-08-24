@@ -299,31 +299,12 @@ impl VersionedTransaction {
     ) -> solana_transaction_error::TransactionResult<solana_hash::Hash> {
         self.sanitize()?;
         let message_bytes = self.message.serialize();
-        if !self
-            ._verify_with_results(&message_bytes)
-            .iter()
-            .all(|verify_result| *verify_result)
-        {
-            Err(solana_transaction_error::TransactionError::SignatureFailure)
-        } else {
-            Ok(VersionedMessage::hash_raw_message(&message_bytes))
-        }
-    }
-
-    #[cfg(feature = "verify")]
-    /// Verify the transaction and return a list of verification results
-    pub fn verify_with_results(&self) -> Vec<bool> {
-        let message_bytes = self.message.serialize();
-        self._verify_with_results(&message_bytes)
-    }
-
-    #[cfg(feature = "verify")]
-    fn _verify_with_results(&self, message_bytes: &[u8]) -> Vec<bool> {
-        self.signatures
-            .iter()
-            .zip(self.message.static_account_keys().iter())
-            .map(|(signature, pubkey)| signature.verify(pubkey.as_ref(), message_bytes))
-            .collect()
+        crate::verify_signatures(
+            &self.signatures,
+            self.message.static_account_keys(),
+            &message_bytes,
+        )?;
+        Ok(VersionedMessage::hash_raw_message(&message_bytes))
     }
 
     /// Returns true if transaction begins with an advance nonce instruction.
@@ -521,12 +502,12 @@ mod tests {
         );
 
         match VersionedTransaction::try_new(message.clone(), &[&keypair0, &keypair1]) {
-            Ok(tx) => assert_eq!(tx.verify_with_results(), vec![true; 2]),
+            Ok(tx) => assert!(tx.verify_and_hash_message().is_ok()),
             Err(err) => assert_eq!(Some(err), None),
         }
 
         match VersionedTransaction::try_new(message, &[&keypair1, &keypair0]) {
-            Ok(tx) => assert_eq!(tx.verify_with_results(), vec![true; 2]),
+            Ok(tx) => assert!(tx.verify_and_hash_message().is_ok()),
             Err(err) => assert_eq!(Some(err), None),
         }
     }

@@ -1,5 +1,5 @@
 #[cfg(feature = "verify")]
-use solana_transaction_error::{TransactionError, TransactionResult};
+use solana_transaction_error::TransactionResult;
 use {
     crate::versioned::VersionedTransaction, alloc::vec::Vec,
     solana_message::SanitizedVersionedMessage, solana_sanitize::SanitizeError,
@@ -43,22 +43,19 @@ impl SanitizedVersionedTransaction {
     ///
     /// # Errors
     ///
-    /// Returns [`TransactionError::SignatureFailure`] if any signature is invalid.
+    /// Returns [`solana_transaction_error::TransactionError::SignatureFailure`]
+    /// if any signature is invalid.
     #[cfg(feature = "verify")]
     pub fn verify_and_hash_message(&self) -> TransactionResult<solana_hash::Hash> {
         let message_bytes = self.message.message.serialize();
-        if self
-            .signatures
-            .iter()
-            .zip(self.message.message.static_account_keys())
-            .any(|(signature, pubkey)| !signature.verify(pubkey.as_ref(), &message_bytes))
-        {
-            Err(TransactionError::SignatureFailure)
-        } else {
-            Ok(solana_message::VersionedMessage::hash_raw_message(
-                &message_bytes,
-            ))
-        }
+        crate::verify_signatures(
+            &self.signatures,
+            self.message.message.static_account_keys(),
+            &message_bytes,
+        )?;
+        Ok(solana_message::VersionedMessage::hash_raw_message(
+            &message_bytes,
+        ))
     }
 
     /// Consumes the SanitizedVersionedTransaction, returning the fields individually.
@@ -77,6 +74,7 @@ mod tests {
         solana_message::{v0, VersionedMessage},
         solana_pubkey::Pubkey,
         solana_signer::Signer,
+        solana_transaction_error::TransactionError,
     };
 
     #[test]

@@ -281,17 +281,11 @@ impl SanitizedTransaction {
     /// Verify the transaction signatures
     pub fn verify(&self) -> TransactionResult<()> {
         let message_bytes = self.message_data();
-        if self
-            .signatures
-            .iter()
-            .zip(self.message.account_keys().iter())
-            .map(|(signature, pubkey)| signature.verify(pubkey.as_ref(), &message_bytes))
-            .any(|verified| !verified)
-        {
-            Err(TransactionError::SignatureFailure)
-        } else {
-            Ok(())
-        }
+        crate::verify_signatures(
+            &self.signatures,
+            self.message.static_account_keys(),
+            &message_bytes,
+        )
     }
 
     /// Validate a transaction message against locked accounts

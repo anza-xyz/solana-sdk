@@ -150,6 +150,26 @@ pub mod sanitized;
 pub mod simple_vote_transaction_checker;
 pub mod versioned;
 
+#[cfg(feature = "verify")]
+/// Verifies each signature against its corresponding account key.
+///
+/// Callers must first ensure that signature and account-key counts are sanitized.
+fn verify_signatures(
+    signatures: &[Signature],
+    account_keys: &[Address],
+    message_bytes: &[u8],
+) -> TransactionResult<()> {
+    if signatures
+        .iter()
+        .zip(account_keys)
+        .any(|(signature, pubkey)| !signature.verify(pubkey.as_ref(), message_bytes))
+    {
+        Err(TransactionError::SignatureFailure)
+    } else {
+        Ok(())
+    }
+}
+
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
 pub enum TransactionVerificationMode {
     HashOnly,
@@ -1030,15 +1050,7 @@ impl Transaction {
     pub fn verify(&self) -> TransactionResult<()> {
         self.sanitize()?;
         let message_bytes = self.message_data();
-        if !self
-            ._verify_with_results(&message_bytes)
-            .iter()
-            .all(|verify_result| *verify_result)
-        {
-            Err(TransactionError::SignatureFailure)
-        } else {
-            Ok(())
-        }
+        verify_signatures(&self.signatures, &self.message.account_keys, &message_bytes)
     }
 
     #[cfg(feature = "verify")]
@@ -1051,33 +1063,8 @@ impl Transaction {
     pub fn verify_and_hash_message(&self) -> TransactionResult<Hash> {
         self.sanitize()?;
         let message_bytes = self.message_data();
-        if !self
-            ._verify_with_results(&message_bytes)
-            .iter()
-            .all(|verify_result| *verify_result)
-        {
-            Err(TransactionError::SignatureFailure)
-        } else {
-            Ok(Message::hash_raw_message(&message_bytes))
-        }
-    }
-
-    #[cfg(feature = "verify")]
-    /// Verifies that all signers have signed the message.
-    ///
-    /// Returns a vector with the length of required signatures, where each
-    /// element is either `true` if that signer has signed, or `false` if not.
-    pub fn verify_with_results(&self) -> Vec<bool> {
-        self._verify_with_results(&self.message_data())
-    }
-
-    #[cfg(feature = "verify")]
-    pub(crate) fn _verify_with_results(&self, message_bytes: &[u8]) -> Vec<bool> {
-        self.signatures
-            .iter()
-            .zip(&self.message.account_keys)
-            .map(|(signature, pubkey)| signature.verify(pubkey.as_ref(), message_bytes))
-            .collect()
+        verify_signatures(&self.signatures, &self.message.account_keys, &message_bytes)?;
+        Ok(Message::hash_raw_message(&message_bytes))
     }
 
     /// Get the positions of the pubkeys in `account_keys` associated with signing keypairs.
