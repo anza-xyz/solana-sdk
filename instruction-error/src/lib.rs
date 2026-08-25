@@ -234,7 +234,7 @@ mod instruction_error_module {
 
 impl InstructionError {
     #[allow(deprecated)]
-    pub const VARIANTS: [Self; 54] = [
+    pub const VARIANTS: [Self; 55] = [
         Self::GenericError,
         Self::InvalidArgument,
         Self::InvalidInstructionData,
@@ -289,6 +289,7 @@ impl InstructionError {
         Self::MaxAccountsExceeded,
         Self::MaxInstructionTraceLengthExceeded,
         Self::BuiltinProgramsMustConsumeComputeUnits,
+        Self::BailOut,
     ];
 }
 
@@ -584,9 +585,7 @@ mod tests {
 
     #[test]
     fn test_instruction_error_variants_exhaustive() {
-        extern crate std;
         for variant in InstructionError::iter() {
-            std::println!("{variant}");
             assert!(InstructionError::VARIANTS.contains(&variant));
         }
     }

@@ -165,7 +165,7 @@ pub enum TransactionError {
 }
 
 impl TransactionError {
-    pub const VARIANTS: [Self; 39] = [
+    pub const VARIANTS: [Self; 40] = [
         Self::AccountInUse,
         Self::AccountLoadedTwice,
         Self::AccountNotFound,
@@ -205,6 +205,7 @@ impl TransactionError {
         Self::UnbalancedTransaction,
         Self::ProgramCacheHitMaxLimit,
         Self::CommitCancelled,
+        Self::BailOut,
     ];
 }
 
