@@ -140,6 +140,18 @@ impl TryFrom<u32> for SystemError {
     }
 }
 
+impl SystemError {
+    /// Safely converts a `u64` into a `SystemError`, returning `ProgramError::InvalidArgument`
+    /// if the value is unrecognized. Prefer this over `From<u64>` for untrusted input.
+    pub fn try_from_u64(error: u64) -> Result<Self, ProgramError> {
+        SystemError::from_u64(error).ok_or(ProgramError::InvalidArgument)
+    }
+}
+
+/// # Panics
+///
+/// Panics if the provided `error` value does not correspond to a valid `SystemError` variant.
+/// For decoding untrusted input (e.g., from logs or transaction metadata), prefer using [`SystemError::try_from_u64`].
 impl From<u64> for SystemError {
     fn from(error: u64) -> Self {
         SystemError::from_u64(error).unwrap()
@@ -160,5 +172,25 @@ mod tests {
             );
             assert_eq!(SystemError::from(variant_i64 as u64), variant);
         }
+    }
+
+    #[test]
+    fn test_system_error_try_from_u64() {
+        for variant in SystemError::iter() {
+            let variant_i64 = variant.clone() as i64;
+            assert_eq!(SystemError::try_from_u64(variant_i64 as u64), Ok(variant));
+        }
+
+        // Unknown lower value
+        assert_eq!(
+            SystemError::try_from_u64(9u64),
+            Err(super::ProgramError::InvalidArgument)
+        );
+
+        // Large upper-bit value
+        assert_eq!(
+            SystemError::try_from_u64((1u64 << 32) | 2),
+            Err(super::ProgramError::InvalidArgument)
+        );
     }
 }
