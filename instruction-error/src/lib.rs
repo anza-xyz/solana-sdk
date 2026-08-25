@@ -576,16 +576,18 @@ mod tests {
     };
 
     #[test]
-    fn test_instruction_error_variants_exhaustive() {
-        for variant in InstructionError::iter() {
-            assert!(InstructionError::VARIANTS.contains(&variant));
+    fn test_lamports_error_variants_exhaustive() {
+        for variant in LamportsError::iter() {
+            assert!(LamportsError::VARIANTS.contains(&variant));
         }
     }
 
     #[test]
-    fn test_lamports_error_variants_exhaustive() {
-        for variant in LamportsError::iter() {
-            assert!(LamportsError::VARIANTS.contains(&variant));
+    fn test_instruction_error_variants_exhaustive() {
+        extern crate std;
+        for variant in InstructionError::iter() {
+            std::println!("{variant}");
+            assert!(InstructionError::VARIANTS.contains(&variant));
         }
     }
 }
