@@ -196,6 +196,9 @@ impl OffchainMessage {
         if data.len() <= Self::HEADER_LEN {
             return Err(SanitizeError::ValueOutOfBounds);
         }
+        if !data.starts_with(Self::SIGNING_DOMAIN) {
+            return Err(SanitizeError::InvalidValue);
+        }
         let version = data[Self::SIGNING_DOMAIN.len()];
         let data = &data[Self::SIGNING_DOMAIN.len().saturating_add(1)..];
         match version {
@@ -248,6 +251,22 @@ impl OffchainMessage {
 #[cfg(test)]
 mod tests {
     use {super::*, solana_keypair::Keypair, std::str::FromStr};
+
+    #[test]
+    fn test_offchain_message_rejects_invalid_signing_domain() {
+        let message = OffchainMessage::new(0, b"Test Message").unwrap();
+        let serialized = message.serialize().unwrap();
+
+        for index in 0..OffchainMessage::SIGNING_DOMAIN.len() {
+            let mut altered = serialized.clone();
+            altered[index] ^= 1;
+
+            assert_eq!(
+                OffchainMessage::deserialize(&altered),
+                Err(SanitizeError::InvalidValue),
+            );
+        }
+    }
 
     #[test]
     fn test_offchain_message_ascii() {
