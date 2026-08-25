@@ -3779,6 +3779,8 @@ dependencies = [
  "solana-frozen-abi-macro",
  "solana-instruction-error",
  "solana-program-error",
+ "strum",
+ "strum_macros",
  "wincode",
 ]
 
@@ -4728,6 +4730,8 @@ dependencies = [
  "solana-instruction-error",
  "solana-sanitize",
  "solana-transaction-error",
+ "strum",
+ "strum_macros",
  "wincode",
 ]
 

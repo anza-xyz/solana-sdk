@@ -38,6 +38,8 @@ wincode = { workspace = true, optional = true }
 # Self-dependency enabling `wincode` so the `frozen_abi` wincode digest test can
 # serialize `TransactionError` during unit tests.
 solana-transaction-error = { path = ".", features = ["wincode"] }
+strum = { workspace = true }
+strum_macros = { workspace = true }
 
 [lints]
 workspace = true

@@ -49,7 +49,9 @@ mod instruction_error_module {
         derive(serde_derive::Serialize, serde_derive::Deserialize)
     )]
     #[cfg_attr(feature = "wincode", derive(wincode::SchemaWrite, wincode::SchemaRead))]
+    #[cfg_attr(test, derive(strum_macros::EnumIter))]
     #[derive(Debug, PartialEq, Eq, Clone)]
+    #[non_exhaustive]
     pub enum InstructionError {
         /// Deprecated! Use CustomError instead!
         /// The program instruction returned an error
@@ -227,6 +229,72 @@ mod instruction_error_module {
         BailOut,
         // Note: For any new error added here an equivalent ProgramError and its
         // conversions must also be added
+    }
+}
+
+impl InstructionError {
+    #[allow(deprecated)]
+    pub const VARIANTS: [Self; 54] = [
+        Self::GenericError,
+        Self::InvalidArgument,
+        Self::InvalidInstructionData,
+        Self::InvalidAccountData,
+        Self::AccountDataTooSmall,
+        Self::InsufficientFunds,
+        Self::IncorrectProgramId,
+        Self::MissingRequiredSignature,
+        Self::AccountAlreadyInitialized,
+        Self::UninitializedAccount,
+        Self::UnbalancedInstruction,
+        Self::ModifiedProgramId,
+        Self::ExternalAccountLamportSpend,
+        Self::ExternalAccountDataModified,
+        Self::ReadonlyLamportChange,
+        Self::ReadonlyDataModified,
+        Self::DuplicateAccountIndex,
+        Self::ExecutableModified,
+        Self::RentEpochModified,
+        Self::NotEnoughAccountKeys,
+        Self::AccountDataSizeChanged,
+        Self::AccountNotExecutable,
+        Self::AccountBorrowFailed,
+        Self::AccountBorrowOutstanding,
+        Self::DuplicateAccountOutOfSync,
+        Self::Custom(0),
+        Self::InvalidError,
+        Self::ExecutableDataModified,
+        Self::ExecutableLamportChange,
+        Self::ExecutableAccountNotRentExempt,
+        Self::UnsupportedProgramId,
+        Self::CallDepth,
+        Self::MissingAccount,
+        Self::ReentrancyNotAllowed,
+        Self::MaxSeedLengthExceeded,
+        Self::InvalidSeeds,
+        Self::InvalidRealloc,
+        Self::ComputationalBudgetExceeded,
+        Self::PrivilegeEscalation,
+        Self::ProgramEnvironmentSetupFailure,
+        Self::ProgramFailedToComplete,
+        Self::ProgramFailedToCompile,
+        Self::Immutable,
+        Self::IncorrectAuthority,
+        Self::BorshIoError,
+        Self::AccountNotRentExempt,
+        Self::InvalidAccountOwner,
+        Self::ArithmeticOverflow,
+        Self::UnsupportedSysvar,
+        Self::IllegalOwner,
+        Self::MaxAccountsDataAllocationsExceeded,
+        Self::MaxAccountsExceeded,
+        Self::MaxInstructionTraceLengthExceeded,
+        Self::BuiltinProgramsMustConsumeComputeUnits,
+    ];
+}
+
+impl core::default::Default for InstructionError {
+    fn default() -> Self {
+        Self::Custom(0)
     }
 }
 
@@ -423,11 +491,17 @@ where
 }
 
 #[derive(Debug)]
+#[cfg_attr(test, derive(strum_macros::EnumIter, PartialEq))]
+#[non_exhaustive]
 pub enum LamportsError {
     /// arithmetic underflowed
     ArithmeticUnderflow,
     /// arithmetic overflowed
     ArithmeticOverflow,
+}
+
+impl LamportsError {
+    pub const VARIANTS: [Self; 2] = [Self::ArithmeticUnderflow, Self::ArithmeticOverflow];
 }
 
 impl core::error::Error for LamportsError {}
@@ -490,6 +564,28 @@ impl TryFrom<InstructionError> for ProgramError {
             Self::Error::Immutable => Ok(Self::Immutable),
             Self::Error::IncorrectAuthority => Ok(Self::IncorrectAuthority),
             _ => Err(error),
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use {
+        super::{InstructionError, LamportsError},
+        strum::IntoEnumIterator,
+    };
+
+    #[test]
+    fn test_instruction_error_variants_exhaustive() {
+        for variant in InstructionError::iter() {
+            assert!(InstructionError::VARIANTS.contains(&variant));
+        }
+    }
+
+    #[test]
+    fn test_lamports_error_variants_exhaustive() {
+        for variant in LamportsError::iter() {
+            assert!(LamportsError::VARIANTS.contains(&variant));
         }
     }
 }

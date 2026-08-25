@@ -26,7 +26,9 @@ pub type TransactionResult<T> = Result<T, TransactionError>;
 )]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "wincode", derive(wincode::SchemaWrite, wincode::SchemaRead))]
+#[cfg_attr(test, derive(strum_macros::EnumIter))]
 #[derive(Debug, PartialEq, Eq, Clone)]
+#[non_exhaustive]
 pub enum TransactionError {
     /// An account is already being processed in another transaction in a way
     /// that does not support parallelism
@@ -162,6 +164,50 @@ pub enum TransactionError {
     BailOut,
 }
 
+impl TransactionError {
+    pub const VARIANTS: [Self; 39] = [
+        Self::AccountInUse,
+        Self::AccountLoadedTwice,
+        Self::AccountNotFound,
+        Self::ProgramAccountNotFound,
+        Self::InsufficientFundsForFee,
+        Self::InvalidAccountForFee,
+        Self::AlreadyProcessed,
+        Self::BlockhashNotFound,
+        Self::InstructionError(0, InstructionError::Custom(0)),
+        Self::CallChainTooDeep,
+        Self::MissingSignatureForFee,
+        Self::InvalidAccountIndex,
+        Self::SignatureFailure,
+        Self::InvalidProgramForExecution,
+        Self::SanitizeFailure,
+        Self::ClusterMaintenance,
+        Self::AccountBorrowOutstanding,
+        Self::WouldExceedMaxBlockCostLimit,
+        Self::UnsupportedVersion,
+        Self::InvalidWritableAccount,
+        Self::WouldExceedMaxAccountCostLimit,
+        Self::WouldExceedAccountDataBlockLimit,
+        Self::TooManyAccountLocks,
+        Self::AddressLookupTableNotFound,
+        Self::InvalidAddressLookupTableOwner,
+        Self::InvalidAddressLookupTableData,
+        Self::InvalidAddressLookupTableIndex,
+        Self::InvalidRentPayingAccount,
+        Self::WouldExceedMaxVoteCostLimit,
+        Self::WouldExceedAccountDataTotalLimit,
+        Self::DuplicateInstruction(0),
+        Self::InsufficientFundsForRent { account_index: 0 },
+        Self::MaxLoadedAccountsDataSizeExceeded,
+        Self::InvalidLoadedAccountsDataSizeLimit,
+        Self::ResanitizationNeeded,
+        Self::ProgramExecutionTemporarilyRestricted { account_index: 0 },
+        Self::UnbalancedTransaction,
+        Self::ProgramCacheHitMaxLimit,
+        Self::CommitCancelled,
+    ];
+}
+
 impl core::error::Error for TransactionError {}
 
 impl fmt::Display for TransactionError {
@@ -269,8 +315,11 @@ impl From<SanitizeMessageError> for TransactionError {
 
 #[cfg(not(target_os = "solana"))]
 #[derive(Debug, PartialEq, Eq, Clone)]
+#[cfg_attr(test, derive(strum_macros::EnumIter, Default))]
+#[non_exhaustive]
 pub enum AddressLoaderError {
     /// Address loading from lookup tables is disabled
+    #[cfg_attr(test, default)]
     Disabled,
 
     /// Failed to load slot hashes sysvar
@@ -287,6 +336,18 @@ pub enum AddressLoaderError {
 
     /// Address lookup contains an invalid index
     InvalidLookupIndex,
+}
+
+#[cfg(not(target_os = "solana"))]
+impl AddressLoaderError {
+    pub const VARIANTS: [Self; 6] = [
+        Self::Disabled,
+        Self::SlotHashesSysvarNotFound,
+        Self::LookupTableAccountNotFound,
+        Self::InvalidAccountOwner,
+        Self::InvalidAccountData,
+        Self::InvalidLookupIndex,
+    ];
 }
 
 #[cfg(not(target_os = "solana"))]
@@ -328,11 +389,23 @@ impl From<AddressLoaderError> for TransactionError {
 
 #[cfg(not(target_os = "solana"))]
 #[derive(PartialEq, Debug, Eq, Clone)]
+#[cfg_attr(test, derive(strum_macros::EnumIter))]
+#[non_exhaustive]
 pub enum SanitizeMessageError {
     IndexOutOfBounds,
     ValueOutOfBounds,
     InvalidValue,
     AddressLoaderError(AddressLoaderError),
+}
+
+#[cfg(not(target_os = "solana"))]
+impl SanitizeMessageError {
+    pub const VARIANTS: [Self; 4] = [
+        Self::IndexOutOfBounds,
+        Self::ValueOutOfBounds,
+        Self::InvalidValue,
+        Self::AddressLoaderError(AddressLoaderError::Disabled),
+    ];
 }
 
 #[cfg(not(target_os = "solana"))]
@@ -437,3 +510,32 @@ impl TransportError {
 
 #[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
 pub type TransportResult<T> = std::result::Result<T, TransportError>;
+
+#[cfg(test)]
+mod tests {
+    use {
+        super::{AddressLoaderError, SanitizeMessageError, TransactionError},
+        strum::IntoEnumIterator,
+    };
+
+    #[test]
+    fn test_transaction_error_variants_exhaustive() {
+        for variant in TransactionError::iter() {
+            assert!(TransactionError::VARIANTS.contains(&variant));
+        }
+    }
+
+    #[test]
+    fn test_address_loader_error_variants_exhaustive() {
+        for variant in AddressLoaderError::iter() {
+            assert!(AddressLoaderError::VARIANTS.contains(&variant));
+        }
+    }
+
+    #[test]
+    fn test_sanitize_message_error_variants_exhaustive() {
+        for variant in SanitizeMessageError::iter() {
+            assert!(SanitizeMessageError::VARIANTS.contains(&variant));
+        }
+    }
+}
