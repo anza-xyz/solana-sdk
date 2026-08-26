@@ -318,9 +318,20 @@ impl VersionedTransaction {
 
     #[cfg(feature = "verify")]
     fn _verify_with_results(&self, message_bytes: &[u8]) -> Vec<bool> {
+        let num_required_signatures = self.message.header().num_required_signatures as usize;
+        let static_account_keys = self.message.static_account_keys();
+        if self.signatures.len() != num_required_signatures
+            || static_account_keys.len() < num_required_signatures
+        {
+            // Mismatched lengths mean this transaction was never sanitized: zipping
+            // signatures against static keys would silently truncate to the shorter
+            // side and pair signatures with the wrong keys instead of catching this.
+            return alloc::vec![false; self.signatures.len()];
+        }
+
         self.signatures
             .iter()
-            .zip(self.message.static_account_keys().iter())
+            .zip(static_account_keys.iter())
             .map(|(signature, pubkey)| signature.verify(pubkey.as_ref(), message_bytes))
             .collect()
     }
@@ -528,6 +539,32 @@ mod tests {
             Ok(tx) => assert_eq!(tx.verify_with_results(), vec![true; 2]),
             Err(err) => assert_eq!(Some(err), None),
         }
+    }
+
+    #[test]
+    fn test_verify_with_results_signature_key_length_mismatch() {
+        let keypair0 = Keypair::new();
+        let keypair1 = Keypair::new();
+
+        let message = VersionedMessage::Legacy(LegacyMessage::new(
+            &[Instruction::new_with_bytes(
+                Pubkey::new_unique(),
+                &[],
+                vec![AccountMeta::new_readonly(keypair1.pubkey(), true)],
+            )],
+            Some(&keypair0.pubkey()),
+        ));
+
+        let mut tx = VersionedTransaction::try_new(message, &[&keypair0, &keypair1]).unwrap();
+        // Directly construct a transaction with more signatures than static
+        // account keys, bypassing sanitize().
+        tx.signatures.push(Signature::default());
+
+        assert_eq!(tx.verify_with_results(), vec![false; 3]);
+        assert_eq!(
+            tx.verify_and_hash_message(),
+            Err(solana_transaction_error::TransactionError::SignatureFailure)
+        );
     }
 
     fn nonced_transfer_tx() -> (Pubkey, Pubkey, VersionedTransaction) {
