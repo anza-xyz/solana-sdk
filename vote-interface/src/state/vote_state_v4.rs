@@ -9,7 +9,7 @@ use serde_with::serde_as;
 #[cfg(feature = "frozen-abi")]
 use solana_frozen_abi_macro::{frozen_abi, AbiExample, StableAbi, StableAbiSample};
 #[cfg(any(target_os = "solana", feature = "bincode"))]
-use solana_instruction::error::InstructionError;
+use solana_instruction_error::InstructionError;
 use {
     super::{BlockTimestamp, LandedVote, VoteInit, VoteInitV2, BLS_PUBLIC_KEY_COMPRESSED_SIZE},
     crate::authorized_voters::AuthorizedVoters,
@@ -272,7 +272,6 @@ mod tests {
         bincode::serialized_size,
         core::mem::MaybeUninit,
         rand::Rng,
-        solana_instruction::error::InstructionError,
         test_case::test_matrix,
     };
 

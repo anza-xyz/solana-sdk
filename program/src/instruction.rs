@@ -1,6 +1,8 @@
-pub use solana_instruction::{
-    error::InstructionError, AccountMeta, Instruction, ProcessedSiblingInstruction,
-    TRANSACTION_LEVEL_STACK_HEIGHT,
+pub use {
+    solana_instruction::{
+        AccountMeta, Instruction, ProcessedSiblingInstruction, TRANSACTION_LEVEL_STACK_HEIGHT,
+    },
+    solana_instruction_error::InstructionError,
 };
 
 /// Returns a sibling instruction from the processed sibling instruction list.

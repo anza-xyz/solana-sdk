@@ -3763,7 +3763,6 @@ dependencies = [
  "serde_derive",
  "solana-define-syscall",
  "solana-instruction",
- "solana-instruction-error",
  "solana-pubkey",
  "wincode",
 ]
@@ -3876,6 +3875,7 @@ dependencies = [
  "solana-frozen-abi",
  "solana-frozen-abi-macro",
  "solana-instruction",
+ "solana-instruction-error",
  "solana-loader-v3-interface",
  "solana-pubkey",
  "solana-sdk-ids",
@@ -4648,6 +4648,7 @@ dependencies = [
  "solana-get-sysvar",
  "solana-hash",
  "solana-instruction",
+ "solana-instruction-error",
  "solana-last-restart-slot",
  "solana-msg",
  "solana-program-entrypoint",

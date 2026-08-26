@@ -217,7 +217,6 @@ mod tests {
         crate::state::{VoteInit, BLS_PUBLIC_KEY_COMPRESSED_SIZE, DEFAULT_PRIOR_VOTERS_OFFSET},
         rand::Rng,
         solana_clock::Clock,
-        solana_instruction::error::InstructionError,
     };
 
     #[test]

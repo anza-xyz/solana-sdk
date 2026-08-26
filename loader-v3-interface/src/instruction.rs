@@ -4,7 +4,8 @@
 use {
     crate::{get_program_data_address, state::UpgradeableLoaderState},
     core::mem::MaybeUninit,
-    solana_instruction::{error::InstructionError, AccountMeta, Instruction},
+    solana_instruction::{AccountMeta, Instruction},
+    solana_instruction_error::InstructionError,
     solana_pubkey::Pubkey,
     solana_sdk_ids::{bpf_loader_upgradeable::id, sysvar},
     solana_system_interface::instruction as system_instruction,

@@ -231,7 +231,6 @@ mod tests {
         bincode::serialized_size,
         core::mem::MaybeUninit,
         rand::Rng,
-        solana_instruction::error::InstructionError,
     };
 
     #[test]
