@@ -190,12 +190,47 @@ pub fn bytes_are_curve_point<T: AsRef<[u8]>>(bytes: T) -> bool {
     {
         #[cfg(feature = "curve25519")]
         {
-            let Ok(compressed_edwards_y) =
-                curve25519_dalek::edwards::CompressedEdwardsY::from_slice(bytes.as_ref())
-            else {
+            use crrl::field::GF25519;
+
+            // magic numbers that are non-pub in crrl
+            const EDWARDS_D: GF25519 = GF25519::w64be(
+                0x52036CEE2B6FFE73,
+                0x8CC740797779E898,
+                0x00700A4D4141D8AB,
+                0x75EB4DCA135978A3,
+            );
+
+            // not on curve if not 32 bytes
+            let Ok(mut y) = <[u8; 32]>::try_from(bytes.as_ref()) else {
                 return false;
             };
-            compressed_edwards_y.decompress().is_some()
+
+            // y carries the sign bit of x, clear it
+            y[31] &= 0x7f;
+
+            // compute y^2
+            let yy = GF25519::decode_reduce(&y).square();
+
+            // u/v is x^2. x being the as-yet hypothetical other coord of the curve point
+            let u = yy - GF25519::ONE;
+            let v = EDWARDS_D * yy + GF25519::ONE;
+
+            // v == 0 would mean u/v is undefined and x doesnt exist, y is off-curve.
+            // the return is C-style, `v.iszero() != 0` means v is zero
+            // we must check explicitly since we work with u*v, and u == 0 _is_ on-curve
+            if v.iszero() != 0 {
+                return false;
+            }
+
+            // then legendre is a magic function i fully admit i do not understand.
+            // but the idea is (x, y) is on the curve if sqrt x^2 exists in our field mod p.
+            // the edwards decompress computes x by doing a bunch of exponentiation.
+            // but we arent doing cryptography with x, we dont need x at all
+            //
+            // so legendre is a faster way to just check if x _exists_,
+            // via a bunch of subtractions and shifts. and if the magic goes below zero,
+            // that means we arent on the curve
+            (u * v).legendre() >= 0
         }
 
         #[cfg(not(feature = "curve25519"))]
