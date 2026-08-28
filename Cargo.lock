@@ -3591,10 +3591,8 @@ dependencies = [
  "log",
  "serde",
  "serde_derive",
- "solana-clock",
  "solana-frozen-abi",
  "solana-frozen-abi-macro",
- "static_assertions",
  "wincode",
 ]
 

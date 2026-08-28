@@ -1,24 +1,25 @@
 //! Information about the network's clock, ticks, slots, etc.
 //!
-//! Time in Solana is marked primarily by _slots_, which occur approximately every
-//! 400 milliseconds, and are numbered sequentially. For every slot, a leader is
-//! chosen from the validator set, and that leader is expected to produce a new
-//! block, though sometimes leaders may fail to do so. Blocks can be identified
-//! by their slot number, and some slots do not contain a block.
+//! Time in Solana is marked primarily by _slots_, which are numbered sequentially.
+//! For every slot, a leader is chosen from the validator set, and that leader is
+//! expected to produce a new block, though sometimes leaders may fail to do so.
+//! Blocks can be identified by their slot number, and some slots do not contain a
+//! block.
 //!
 //! An approximation of the passage of real-world time can be calculated by
-//! multiplying a number of slots by [`DEFAULT_MS_PER_SLOT`], which is a constant target
-//! time for the network to produce slots. Note though that this method suffers
-//! a variable amount of drift, as the network does not produce slots at exactly
-//! the target rate, and the greater number of slots being calculated for, the
-//! greater the drift. Epochs cannot be used this way as they contain variable
-//! numbers of slots.
+//! multiplying a number of slots by [`DEFAULT_MS_PER_SLOT`], which is the SDK's
+//! default target time for the network to produce slots. Note though that this
+//! method suffers a variable amount of drift, as the network does not produce
+//! slots at exactly the target rate. Furthermore, the effective target is changed
+//! dynamically by [SIMD-0525], so clients that require the cluster's current value
+//! must not assume the SDK default reflects the cluster.
 //!
 //! The network's current view of the real-world time can always be accessed via
 //! [`Clock::unix_timestamp`], which is produced by an [oracle derived from the
 //! validator set][oracle].
 //!
 //! [oracle]: https://docs.solanalabs.com/implemented-proposals/validator-timestamp-oracle
+//! [SIMD-0525]: https://github.com/solana-foundation/solana-improvement-documents/blob/main/proposals/0525-reduce-slot-times.md
 #![no_std]
 #![cfg_attr(docsrs, feature(doc_cfg))]
 
@@ -29,28 +30,69 @@ pub mod sysvar;
 use serde_derive::{Deserialize, Serialize};
 use solana_sdk_macro::CloneZeroed;
 
-/// The default tick rate that the cluster attempts to achieve (160 per second).
+/// The number of ticks in a slot.
+pub const DEFAULT_TICKS_PER_SLOT: u64 = 64;
+
+pub const DEFAULT_NS_PER_SLOT_400_MS: u64 = 400_000_000;
+pub const DEFAULT_NS_PER_SLOT_350_MS: u64 = 350_000_000;
+pub const DEFAULT_NS_PER_SLOT_300_MS: u64 = 300_000_000;
+pub const DEFAULT_NS_PER_SLOT_250_MS: u64 = 250_000_000;
+pub const DEFAULT_NS_PER_SLOT_200_MS: u64 = 200_000_000;
+
+/// The SDK's default expected duration of a slot, in nanoseconds.
+pub const DEFAULT_NS_PER_SLOT: u64 = DEFAULT_NS_PER_SLOT_300_MS;
+
+pub const DEFAULT_NS_PER_TICK_400_MS: u64 = DEFAULT_NS_PER_SLOT_400_MS / DEFAULT_TICKS_PER_SLOT;
+pub const DEFAULT_NS_PER_TICK_350_MS: u64 = DEFAULT_NS_PER_SLOT_350_MS / DEFAULT_TICKS_PER_SLOT;
+pub const DEFAULT_NS_PER_TICK_300_MS: u64 = DEFAULT_NS_PER_SLOT_300_MS / DEFAULT_TICKS_PER_SLOT;
+pub const DEFAULT_NS_PER_TICK_250_MS: u64 = DEFAULT_NS_PER_SLOT_250_MS / DEFAULT_TICKS_PER_SLOT;
+pub const DEFAULT_NS_PER_TICK_200_MS: u64 = DEFAULT_NS_PER_SLOT_200_MS / DEFAULT_TICKS_PER_SLOT;
+
+/// The default duration of a tick, in nanoseconds.
+pub const DEFAULT_NS_PER_TICK: u64 = DEFAULT_NS_PER_TICK_300_MS;
+
+/// Whole ticks per second at each target slot time.
 ///
-/// Note that the actual tick rate at any given time should be expected to drift.
-pub const DEFAULT_TICKS_PER_SECOND: u64 = 160;
+/// Values which are not integral are rounded down. Prefer the corresponding
+/// `DEFAULT_NS_PER_TICK_*` constant when an exact duration is required.
+pub const DEFAULT_TICKS_PER_SECOND_400_MS: u64 = 1_000_000_000 / DEFAULT_NS_PER_TICK_400_MS;
+pub const DEFAULT_TICKS_PER_SECOND_350_MS: u64 = 1_000_000_000 / DEFAULT_NS_PER_TICK_350_MS;
+pub const DEFAULT_TICKS_PER_SECOND_300_MS: u64 = 1_000_000_000 / DEFAULT_NS_PER_TICK_300_MS;
+pub const DEFAULT_TICKS_PER_SECOND_250_MS: u64 = 1_000_000_000 / DEFAULT_NS_PER_TICK_250_MS;
+pub const DEFAULT_TICKS_PER_SECOND_200_MS: u64 = 1_000_000_000 / DEFAULT_NS_PER_TICK_200_MS;
+
+/// The default whole-number tick rate (213 per second).
+///
+/// Note that the exact 300 millisecond target is 213 1/3 ticks per second and
+/// that the actual tick rate at any given time should be expected to drift.
+pub const DEFAULT_TICKS_PER_SECOND: u64 = DEFAULT_TICKS_PER_SECOND_300_MS;
 
 #[cfg(test)]
-static_assertions::const_assert_eq!(MS_PER_TICK, 6);
+static_assertions::const_assert_eq!(MS_PER_TICK, 4);
 
-/// The number of milliseconds per tick (6).
-pub const MS_PER_TICK: u64 = 1000 / DEFAULT_TICKS_PER_SECOND;
+pub const MS_PER_TICK_400_MS: u64 = DEFAULT_NS_PER_TICK_400_MS / 1_000_000;
+pub const MS_PER_TICK_350_MS: u64 = DEFAULT_NS_PER_TICK_350_MS / 1_000_000;
+pub const MS_PER_TICK_300_MS: u64 = DEFAULT_NS_PER_TICK_300_MS / 1_000_000;
+pub const MS_PER_TICK_250_MS: u64 = DEFAULT_NS_PER_TICK_250_MS / 1_000_000;
+pub const MS_PER_TICK_200_MS: u64 = DEFAULT_NS_PER_TICK_200_MS / 1_000_000;
 
-// At 160 ticks/s, 64 ticks per slot implies that leader rotation and voting will happen
-// every 400 ms. A fast voting cadence ensures faster finality and convergence
-pub const DEFAULT_TICKS_PER_SLOT: u64 = 64;
+/// The number of whole milliseconds per tick (4).
+///
+/// This value is rounded down. Use [`DEFAULT_NS_PER_TICK`] for the exact target.
+pub const MS_PER_TICK: u64 = MS_PER_TICK_300_MS;
 
 pub const DEFAULT_HASHES_PER_SECOND: u64 = 10_000_000;
 
 #[cfg(test)]
-static_assertions::const_assert_eq!(DEFAULT_HASHES_PER_TICK, 62_500);
-pub const DEFAULT_HASHES_PER_TICK: u64 = DEFAULT_HASHES_PER_SECOND / DEFAULT_TICKS_PER_SECOND;
+static_assertions::const_assert_eq!(DEFAULT_HASHES_PER_TICK, 46_875);
+pub const DEFAULT_HASHES_PER_TICK_400_MS: u64 = 62_500;
+pub const DEFAULT_HASHES_PER_TICK_350_MS: u64 = 54_687;
+pub const DEFAULT_HASHES_PER_TICK_300_MS: u64 = 46_875;
+pub const DEFAULT_HASHES_PER_TICK_250_MS: u64 = 39_062;
+pub const DEFAULT_HASHES_PER_TICK_200_MS: u64 = 31_250;
+pub const DEFAULT_HASHES_PER_TICK: u64 = DEFAULT_HASHES_PER_TICK_300_MS;
 
-// 1 Dev Epoch = 400 ms * 8192 ~= 55 minutes
+// 1 Dev Epoch = 300 ms * 8192 ~= 41 minutes
 pub const DEFAULT_DEV_SLOTS_PER_EPOCH: u64 = 8192;
 
 #[cfg(test)]
@@ -58,26 +100,40 @@ static_assertions::const_assert_eq!(SECONDS_PER_DAY, 86_400);
 pub const SECONDS_PER_DAY: u64 = 24 * 60 * 60;
 
 #[cfg(test)]
-static_assertions::const_assert_eq!(TICKS_PER_DAY, 13_824_000);
-pub const TICKS_PER_DAY: u64 = DEFAULT_TICKS_PER_SECOND * SECONDS_PER_DAY;
-
-#[cfg(test)]
-static_assertions::const_assert_eq!(DEFAULT_SLOTS_PER_EPOCH, 432_000);
+static_assertions::const_assert_eq!(TICKS_PER_DAY, 18_432_000);
+pub const TICKS_PER_DAY_400_MS: u64 = SECONDS_PER_DAY * 1_000_000_000 / DEFAULT_NS_PER_TICK_400_MS;
+pub const TICKS_PER_DAY_350_MS: u64 = SECONDS_PER_DAY * 1_000_000_000 / DEFAULT_NS_PER_TICK_350_MS;
+pub const TICKS_PER_DAY_300_MS: u64 = SECONDS_PER_DAY * 1_000_000_000 / DEFAULT_NS_PER_TICK_300_MS;
+pub const TICKS_PER_DAY_250_MS: u64 = SECONDS_PER_DAY * 1_000_000_000 / DEFAULT_NS_PER_TICK_250_MS;
+pub const TICKS_PER_DAY_200_MS: u64 = SECONDS_PER_DAY * 1_000_000_000 / DEFAULT_NS_PER_TICK_200_MS;
+pub const TICKS_PER_DAY: u64 = TICKS_PER_DAY_300_MS;
 
 /// The number of slots per epoch after initial network warmup.
 ///
-/// 1 Epoch ~= 2 days.
-pub const DEFAULT_SLOTS_PER_EPOCH: u64 = 2 * TICKS_PER_DAY / DEFAULT_TICKS_PER_SLOT;
+/// At the default 300 millisecond slot time, one epoch is approximately 36 hours.
+pub const DEFAULT_SLOTS_PER_EPOCH: u64 = 432_000;
 
 // leader schedule is governed by this
 #[deprecated(since = "3.1.0", note = "Moved to solana-leader-schedule crate")]
 pub const NUM_CONSECUTIVE_LEADER_SLOTS: u64 = 4;
 
 #[cfg(test)]
-static_assertions::const_assert_eq!(DEFAULT_MS_PER_SLOT, 400);
-/// The expected duration of a slot (400 milliseconds).
-pub const DEFAULT_MS_PER_SLOT: u64 = 1_000 * DEFAULT_TICKS_PER_SLOT / DEFAULT_TICKS_PER_SECOND;
-pub const DEFAULT_S_PER_SLOT: f64 = DEFAULT_TICKS_PER_SLOT as f64 / DEFAULT_TICKS_PER_SECOND as f64;
+static_assertions::const_assert_eq!(DEFAULT_MS_PER_SLOT, 300);
+pub const DEFAULT_MS_PER_SLOT_400_MS: u64 = DEFAULT_NS_PER_SLOT_400_MS / 1_000_000;
+pub const DEFAULT_MS_PER_SLOT_350_MS: u64 = DEFAULT_NS_PER_SLOT_350_MS / 1_000_000;
+pub const DEFAULT_MS_PER_SLOT_300_MS: u64 = DEFAULT_NS_PER_SLOT_300_MS / 1_000_000;
+pub const DEFAULT_MS_PER_SLOT_250_MS: u64 = DEFAULT_NS_PER_SLOT_250_MS / 1_000_000;
+pub const DEFAULT_MS_PER_SLOT_200_MS: u64 = DEFAULT_NS_PER_SLOT_200_MS / 1_000_000;
+
+/// The SDK's default expected duration of a slot (300 milliseconds).
+pub const DEFAULT_MS_PER_SLOT: u64 = DEFAULT_MS_PER_SLOT_300_MS;
+
+pub const DEFAULT_S_PER_SLOT_400_MS: f64 = DEFAULT_MS_PER_SLOT_400_MS as f64 / 1_000.0;
+pub const DEFAULT_S_PER_SLOT_350_MS: f64 = DEFAULT_MS_PER_SLOT_350_MS as f64 / 1_000.0;
+pub const DEFAULT_S_PER_SLOT_300_MS: f64 = DEFAULT_MS_PER_SLOT_300_MS as f64 / 1_000.0;
+pub const DEFAULT_S_PER_SLOT_250_MS: f64 = DEFAULT_MS_PER_SLOT_250_MS as f64 / 1_000.0;
+pub const DEFAULT_S_PER_SLOT_200_MS: f64 = DEFAULT_MS_PER_SLOT_200_MS as f64 / 1_000.0;
+pub const DEFAULT_S_PER_SLOT: f64 = DEFAULT_S_PER_SLOT_300_MS;
 
 /// The time window of recent block hash values over which the bank will track
 /// signatures.
@@ -87,13 +143,15 @@ pub const DEFAULT_S_PER_SLOT: f64 = DEFAULT_TICKS_PER_SLOT as f64 / DEFAULT_TICK
 /// memory consumption, but requires a client to update its `recent_blockhash`
 /// more frequently. Raising the value lengthens the time a client must wait to
 /// be certain a missing transaction will not be processed by the network.
-pub const MAX_HASH_AGE_IN_SECONDS: usize = 120;
+pub const MAX_HASH_AGE_IN_SECONDS_400_MS: usize = 120;
+pub const MAX_HASH_AGE_IN_SECONDS_350_MS: usize = 105;
+pub const MAX_HASH_AGE_IN_SECONDS_300_MS: usize = 90;
+pub const MAX_HASH_AGE_IN_SECONDS_250_MS: usize = 75;
+pub const MAX_HASH_AGE_IN_SECONDS_200_MS: usize = 60;
+pub const MAX_HASH_AGE_IN_SECONDS: usize = MAX_HASH_AGE_IN_SECONDS_300_MS;
 
-#[cfg(test)]
-static_assertions::const_assert_eq!(MAX_RECENT_BLOCKHASHES, 300);
-// Number of maximum recent blockhashes (one blockhash per non-skipped slot)
-pub const MAX_RECENT_BLOCKHASHES: usize =
-    MAX_HASH_AGE_IN_SECONDS * DEFAULT_TICKS_PER_SECOND as usize / DEFAULT_TICKS_PER_SLOT as usize;
+// Maximum number of recent blockhashes (one blockhash per non-skipped slot).
+pub const MAX_RECENT_BLOCKHASHES: usize = 300;
 
 #[cfg(test)]
 static_assertions::const_assert_eq!(MAX_PROCESSING_AGE, 150);
