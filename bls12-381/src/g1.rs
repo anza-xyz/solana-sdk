@@ -73,7 +73,7 @@ const G1_GENERATOR_LE: [u8; G1_UNCOMPRESSED_POINT_SIZE] = [
 /// and used as the left operand of a negation.
 ///
 /// Hoisting these out of the predicates turns a 96-byte loop into a single
-/// array comparison: measured at ~694 CU and ~15 CU respectively.
+/// array comparison: measured at ~694 CU and ~29 CU respectively.
 const G1_INFINITY_BE: G1Point = G1Point::infinity(Endianness::Big);
 const G1_INFINITY_LE: G1Point = G1Point::infinity(Endianness::Little);
 
@@ -124,8 +124,10 @@ impl G1Point {
     ///
     /// Not `const fn`: array equality is not const-callable. The byte loop it
     /// replaces was const, but cost ~7 CU per byte — the per-byte flag-index
-    /// test tripled what the comparison itself costs — against ~15 CU total
-    /// for the whole array here.
+    /// test tripled what the comparison itself costs — against ~29 CU total
+    /// for the whole array here. The comparison lowers to the `sol_memcmp_`
+    /// syscall, whose cost does not depend on the length; folding the 96 bytes
+    /// into 64-bit words in the VM instead measured no better.
     #[inline]
     pub fn is_infinity(&self, endianness: Endianness) -> bool {
         match endianness {
