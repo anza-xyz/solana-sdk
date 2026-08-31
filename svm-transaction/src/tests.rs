@@ -10,7 +10,7 @@ use {
         VersionedMessage,
     },
     solana_pubkey::Pubkey,
-    solana_sdk_ids::system_program,
+    solana_sdk_ids::{bpf_loader_upgradeable, system_program},
     solana_system_interface::instruction::SystemInstruction,
     std::collections::HashSet,
 };
@@ -73,6 +73,7 @@ fn test_get_durable_nonce() {
     {
         let message = create_message_for_test(1, 1, vec![Pubkey::new_unique()], vec![], None);
         assert!(SVMMessage::get_durable_nonce(&message).is_none());
+        assert!(SVMStaticMessage::get_durable_nonce_static(&message, true).is_none());
     }
 
     // system program id instruction - invalid
@@ -85,6 +86,7 @@ fn test_get_durable_nonce() {
             None,
         );
         assert!(SVMMessage::get_durable_nonce(&message).is_none());
+        assert!(SVMStaticMessage::get_durable_nonce_static(&message, true).is_none());
     }
 
     // system program id instruction - not nonce
@@ -101,6 +103,7 @@ fn test_get_durable_nonce() {
             None,
         );
         assert!(SVMMessage::get_durable_nonce(&message).is_none());
+        assert!(SVMStaticMessage::get_durable_nonce_static(&message, true).is_none());
     }
 
     // system program id - nonce instruction (no accounts)
@@ -117,6 +120,7 @@ fn test_get_durable_nonce() {
             None,
         );
         assert!(SVMMessage::get_durable_nonce(&message).is_none());
+        assert!(SVMStaticMessage::get_durable_nonce_static(&message, true).is_none());
     }
 
     // system program id - nonce instruction (non-fee-payer, non-writable)
@@ -135,6 +139,7 @@ fn test_get_durable_nonce() {
             None,
         );
         assert!(SVMMessage::get_durable_nonce(&message).is_none());
+        assert!(SVMStaticMessage::get_durable_nonce_static(&message, true).is_none());
     }
 
     // system program id - nonce instruction fee-payer
@@ -152,6 +157,10 @@ fn test_get_durable_nonce() {
             None,
         );
         assert_eq!(SVMMessage::get_durable_nonce(&message), Some(&payer_nonce));
+        assert_eq!(
+            SVMStaticMessage::get_durable_nonce_static(&message, true),
+            Some(&payer_nonce)
+        );
     }
 
     // system program id - nonce instruction w/ trailing bytes fee-payer
@@ -171,6 +180,10 @@ fn test_get_durable_nonce() {
             None,
         );
         assert_eq!(SVMMessage::get_durable_nonce(&message), Some(&payer_nonce));
+        assert_eq!(
+            SVMStaticMessage::get_durable_nonce_static(&message, true),
+            Some(&payer_nonce)
+        );
     }
 
     // system program id - nonce instruction (non-fee-payer)
@@ -189,6 +202,10 @@ fn test_get_durable_nonce() {
             None,
         );
         assert_eq!(SVMMessage::get_durable_nonce(&message), Some(&nonce));
+        assert_eq!(
+            SVMStaticMessage::get_durable_nonce_static(&message, true),
+            Some(&nonce)
+        );
     }
 
     // system program id - nonce instruction (non-fee-payer, multiple accounts)
@@ -208,6 +225,10 @@ fn test_get_durable_nonce() {
             None,
         );
         assert_eq!(SVMMessage::get_durable_nonce(&message), Some(&nonce));
+        assert_eq!(
+            SVMStaticMessage::get_durable_nonce_static(&message, true),
+            Some(&nonce)
+        );
     }
 
     // system program id - nonce instruction (non-fee-payer, loaded account)
@@ -229,6 +250,59 @@ fn test_get_durable_nonce() {
             }),
         );
         assert_eq!(SVMMessage::get_durable_nonce(&message), None);
+        assert_eq!(
+            SVMStaticMessage::get_durable_nonce_static(&message, true),
+            None
+        );
+    }
+
+    // system program id - nonce instruction (nonce is program id, write-demoted)
+    {
+        let payer = Pubkey::new_unique();
+        let nonce = Pubkey::new_unique();
+        let message = create_message_for_test(
+            1,
+            2,
+            vec![payer, nonce, system_program::id()],
+            vec![
+                CompiledInstruction::new(2, &SystemInstruction::AdvanceNonceAccount, vec![1]),
+                CompiledInstruction::new_from_raw_parts(1, vec![], vec![]),
+            ],
+            None,
+        );
+        assert!(SVMMessage::get_durable_nonce(&message).is_none());
+        assert!(SVMStaticMessage::get_durable_nonce_static(&message, true).is_none());
+        assert_eq!(
+            SVMStaticMessage::get_durable_nonce_static(&message, false),
+            Some(&nonce)
+        );
+    }
+
+    // system program id - nonce instruction (nonce is program id, upgradeable loader present)
+    {
+        let payer = Pubkey::new_unique();
+        let nonce = Pubkey::new_unique();
+        let message = create_message_for_test(
+            1,
+            2,
+            vec![
+                payer,
+                nonce,
+                system_program::id(),
+                bpf_loader_upgradeable::id(),
+            ],
+            vec![
+                CompiledInstruction::new(2, &SystemInstruction::AdvanceNonceAccount, vec![1]),
+                CompiledInstruction::new_from_raw_parts(1, vec![], vec![]),
+            ],
+            None,
+        );
+        assert_eq!(SVMMessage::get_durable_nonce(&message), Some(&nonce));
+        assert!(SVMStaticMessage::get_durable_nonce_static(&message, true).is_none());
+        assert_eq!(
+            SVMStaticMessage::get_durable_nonce_static(&message, false),
+            Some(&nonce)
+        );
     }
 }
 
