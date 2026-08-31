@@ -137,6 +137,15 @@ pub trait SVMStaticMessage: Debug {
                     .filter_map(|signer_index| self.static_account_keys().get(signer_index))
             })
     }
+
+    /// If the message uses a durable nonce, return the pubkey of the nonce account.
+    /// This is identical in behavior to `SVMMessage::get_durable_nonce()`, except
+    /// we also return `None` if the nonce address is a program ID, and we do not
+    /// apply reserved key demotion. Reserved keys are never valid nonce accounts,
+    /// so they will always be rejected by account validation.
+    fn get_durable_nonce_simd602(&self) -> Option<&Pubkey> {
+        get_durable_nonce_internal(self, true).map(|(key, _index)| key)
+    }
 }
 
 pub trait SVMMessage: SVMStaticMessage {
@@ -148,35 +157,9 @@ pub trait SVMMessage: SVMStaticMessage {
 
     /// If the message uses a durable nonce, return the pubkey of the nonce account
     fn get_durable_nonce(&self) -> Option<&Pubkey> {
-        let account_keys = self.account_keys();
-        self.instructions_iter()
-            .nth(usize::from(NONCED_TX_MARKER_IX_INDEX))
-            .filter(
-                |ix| match account_keys.get(usize::from(ix.program_id_index)) {
-                    Some(program_id) => system_program::check_id(program_id),
-                    _ => false,
-                },
-            )
-            .filter(|ix| {
-                /// Serialized value of [`SystemInstruction::AdvanceNonceAccount`].
-                const SERIALIZED_ADVANCE_NONCE_ACCOUNT: [u8; 4] = 4u32.to_le_bytes();
-                const SERIALIZED_SIZE: usize = SERIALIZED_ADVANCE_NONCE_ACCOUNT.len();
-
-                ix.data
-                    .get(..SERIALIZED_SIZE)
-                    .map(|data| data == SERIALIZED_ADVANCE_NONCE_ACCOUNT)
-                    .unwrap_or(false)
-            })
-            .and_then(|ix| {
-                ix.accounts.first().and_then(|idx| {
-                    let index = usize::from(*idx);
-                    if index >= self.static_account_keys().len() || !self.is_writable(index) {
-                        None
-                    } else {
-                        account_keys.get(index)
-                    }
-                })
-            })
+        get_durable_nonce_internal(self, false)
+            .filter(|(_key, index)| self.is_writable(*index))
+            .map(|(key, _index)| key)
     }
 }
 
@@ -188,4 +171,46 @@ fn default_precompile_signature_count<'a>(
         .filter(|(program_id, _)| *program_id == precompile)
         .map(|(_, ix)| u64::from(ix.data.first().copied().unwrap_or(0)))
         .sum()
+}
+
+// after SIMD-0602 activates, we may:
+// * delete SVMMessage::get_durable_nonce()
+// * rename SVMStaticMessage::get_durable_nonce_simd602() to get_durable_nonce()
+// * delete this helper and move its body into SVMStaticMessage without
+//   the bool arg or index return
+fn get_durable_nonce_internal<T: SVMStaticMessage + ?Sized>(
+    msg: &T,
+    ban_nonce_as_program_id: bool,
+) -> Option<(&Pubkey, usize)> {
+    let account_keys = msg.static_account_keys();
+    msg.instructions_iter()
+        .nth(usize::from(NONCED_TX_MARKER_IX_INDEX))
+        .filter(
+            |ix| match account_keys.get(usize::from(ix.program_id_index)) {
+                Some(program_id) => system_program::check_id(program_id),
+                _ => false,
+            },
+        )
+        .filter(|ix| {
+            /// Serialized value of [`SystemInstruction::AdvanceNonceAccount`].
+            const SERIALIZED_ADVANCE_NONCE_ACCOUNT: [u8; 4] = 4u32.to_le_bytes();
+            const SERIALIZED_SIZE: usize = SERIALIZED_ADVANCE_NONCE_ACCOUNT.len();
+
+            ix.data
+                .get(..SERIALIZED_SIZE)
+                .map(|data| data == SERIALIZED_ADVANCE_NONCE_ACCOUNT)
+                .unwrap_or(false)
+        })
+        .and_then(|ix| {
+            ix.accounts.first().and_then(|idx| {
+                let index = usize::from(*idx);
+                if !msg.is_requested_writable(index)
+                    || (ban_nonce_as_program_id && msg.is_invoked(index))
+                {
+                    None
+                } else {
+                    account_keys.get(index).map(|key| (key, index))
+                }
+            })
+        })
 }
