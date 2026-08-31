@@ -203,9 +203,9 @@ fn get_durable_nonce<T: SVMStaticMessage + ?Sized>(
         .and_then(|ix| {
             ix.accounts.first().and_then(|idx| {
                 let index = usize::from(*idx);
-                if !msg.is_requested_writable(index) {
-                    None
-                } else if ban_nonce_as_program_id && msg.is_invoked(index) {
+                if !msg.is_requested_writable(index)
+                    || (ban_nonce_as_program_id && msg.is_invoked(index))
+                {
                     None
                 } else {
                     account_keys.get(index).map(|key| (key, index))
