@@ -16,6 +16,7 @@ use {
 };
 
 #[test]
+#[allow(deprecated)]
 fn test_get_durable_nonce() {
     fn create_message_for_test(
         num_signers: u8,

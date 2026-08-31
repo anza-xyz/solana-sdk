@@ -224,6 +224,10 @@ impl SanitizedMessage {
 
     /// Returns true if the account at the specified index is an input to some
     /// program instruction in this message.
+    #[deprecated(
+        since = "4.6.0",
+        note = "Use `solana_svm_transaction::svm_message::SVMStaticMessage::is_instruction_account()`"
+    )]
     pub fn is_instruction_account(&self, key_index: usize) -> bool {
         if let Ok(key_index) = u8::try_from(key_index) {
             self.instructions()
@@ -316,6 +320,10 @@ impl SanitizedMessage {
     }
 
     /// Get a list of signers for the instruction at the given index
+    #[deprecated(
+        since = "4.6.0",
+        note = "Use `solana_svm_transaction::svm_message::SVMStaticMessage::get_ix_signers()`"
+    )]
     pub fn get_ix_signers(&self, ix_index: usize) -> impl Iterator<Item = &Address> {
         self.instructions()
             .get(ix_index)
@@ -331,6 +339,10 @@ impl SanitizedMessage {
     }
 
     /// If the message uses a durable nonce, return the pubkey of the nonce account
+    #[deprecated(
+        since = "4.6.0",
+        note = "Use `solana_svm_transaction::svm_message::SVMMessage::get_durable_nonce()`"
+    )]
     pub fn get_durable_nonce(&self) -> Option<&Address> {
         self.instructions()
             .get(NONCED_TX_MARKER_IX_INDEX as usize)
@@ -526,6 +538,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(deprecated)]
     fn test_get_ix_signers() {
         let signer0 = Address::new_unique();
         let signer1 = Address::new_unique();

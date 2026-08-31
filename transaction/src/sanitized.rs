@@ -263,7 +263,12 @@ impl SanitizedTransaction {
 
     /// If the transaction uses a durable nonce, return the pubkey of the nonce account
     #[cfg(feature = "wincode")]
+    #[deprecated(
+        since = "4.4.0",
+        note = "Use `solana_svm_transaction::svm_message::SVMMessage::get_durable_nonce()`"
+    )]
     pub fn get_durable_nonce(&self) -> Option<&Address> {
+        #[allow(deprecated)]
         self.message.get_durable_nonce()
     }
 
