@@ -143,9 +143,6 @@ pub trait SVMStaticMessage: Debug {
     /// return `None` if the nonce address is a program ID, and we do not apply
     /// reserved key demotion. Reserved keys are never valid nonce accounts, so
     /// they will always be rejected by account validation.
-    ///
-    /// After SIMD-0602 is active on all clusters, we can delete the SVMMessage function
-    /// and rename this to `get_durable_nonce()`.
     fn get_durable_nonce_simd602(&self) -> Option<&Pubkey> {
         get_durable_nonce(self, true).map(|(key, _index)| key)
     }
@@ -176,6 +173,10 @@ fn default_precompile_signature_count<'a>(
         .sum()
 }
 
+// after SIMD-0602 activates, we may:
+// * delete SVMMessage::get_durable_nonce()
+// * rename SVMStaticMessage::get_durable_nonce_simd602() to get_durable_nonce()
+// * delete this helper and move its body into SVMStaticMessage without the bool arg
 fn get_durable_nonce<T: SVMStaticMessage + ?Sized>(
     msg: &T,
     ban_nonce_as_program_id: bool,
