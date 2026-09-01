@@ -161,95 +161,6 @@ impl Message {
     /// use anyhow::Result;
     /// use solana_instruction::{AccountMeta, Instruction};
     /// use solana_keypair::Keypair;
-    /// use solana_message::{VersionedMessage, v1};
-    /// use solana_address::Address;
-    /// use solana_rpc_client::rpc_client::RpcClient;
-    /// use solana_signer::Signer;
-    /// # mod solana_transaction {
-    /// #     pub mod versioned {
-    /// #         use solana_example_mocks::{solana_keypair::Keypair, solana_signer::SignerError};
-    /// #         use solana_message::VersionedMessage;
-    /// #         pub struct VersionedTransaction {
-    /// #             pub message: solana_message::VersionedMessage,
-    /// #         }
-    /// #         impl VersionedTransaction {
-    /// #             pub fn try_new(
-    /// #                 message: VersionedMessage,
-    /// #                 _keypairs: &[&Keypair],
-    /// #             ) -> core::result::Result<Self, solana_example_mocks::solana_signer::SignerError> {
-    /// #                 Ok(VersionedTransaction {
-    /// #                     message,
-    /// #                 })
-    /// #             }
-    /// #         }
-    /// #     }
-    /// # }
-    /// use solana_transaction::versioned::VersionedTransaction;
-    ///
-    /// fn create_v1_tx(
-    ///     client: &RpcClient,
-    ///     instruction: Instruction,
-    ///     payer: &Keypair,
-    /// ) -> Result<VersionedTransaction> {
-    ///     let blockhash = client.get_latest_blockhash()?;
-    ///     let tx = VersionedTransaction::try_new(
-    ///         VersionedMessage::V1(v1::Message::try_compile(
-    ///             &payer.pubkey(),
-    ///             &[instruction],
-    ///             blockhash,
-    ///         )?),
-    ///         &[payer],
-    ///     )?;
-    ///
-    ///     Ok(tx)
-    /// }
-    /// #
-    /// # let client = RpcClient::new(String::new());
-    /// # let payer = Keypair::new();
-    /// # let instruction = Instruction::new_with_bincode(Address::new_unique(), &(), vec![
-    /// #   AccountMeta::new(Address::new_unique(), false),
-    /// # ]);
-    /// # create_v1_tx(&client, instruction, &payer)?;
-    /// # Ok::<(), anyhow::Error>(())
-    /// ```
-    #[deprecated(since = "4.6.0", note = "Use `try_compile_with_config`")]
-    pub fn try_compile(
-        payer: &Address,
-        instructions: &[Instruction],
-        recent_blockhash: Hash,
-    ) -> Result<Self, CompileError> {
-        Self::try_compile_with_config(
-            payer,
-            instructions,
-            recent_blockhash,
-            TransactionConfig::empty(),
-        )
-    }
-
-    /// Create a signable transaction message from a `payer` public key,
-    /// `recent_blockhash`, list of `instructions` and a transaction `config`.
-    ///
-    /// # Examples
-    ///
-    /// This example uses the [`solana_rpc_client`], [`solana_account`], and [`anyhow`] crates.
-    ///
-    /// [`solana_rpc_client`]: https://docs.rs/solana-rpc-client
-    /// [`solana_account`]: https://docs.rs/solana-account
-    /// [`anyhow`]: https://docs.rs/anyhow
-    ///
-    /// ```
-    /// # use solana_example_mocks::{
-    /// #     solana_rpc_client,
-    /// #     solana_account,
-    /// #     solana_signer,
-    /// #     solana_keypair,
-    /// # };
-    /// # extern crate alloc;
-    /// # use alloc::borrow::Cow;
-    /// # use solana_account::Account;
-    /// use anyhow::Result;
-    /// use solana_instruction::{AccountMeta, Instruction};
-    /// use solana_keypair::Keypair;
     /// use solana_message::{VersionedMessage, v1, v1::TransactionConfig};
     /// use solana_address::Address;
     /// use solana_rpc_client::rpc_client::RpcClient;
@@ -748,7 +659,7 @@ mod tests {
     /// Builder for constructing V1 messages.
     ///
     /// This is used in tests to simplify message construction and validation. For
-    /// client code, users should construct messages using `try_compile` or
+    /// client code, users should construct messages using
     /// `try_compile_with_config`.
     #[derive(Debug, Clone, Default)]
     pub struct MessageBuilder {

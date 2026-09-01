@@ -7,7 +7,6 @@ use {
         AccountKeys, AddressLoader, MessageHeader, SanitizedVersionedMessage, VersionedMessage,
     },
     alloc::{borrow::Cow, vec::Vec},
-    core::convert::TryFrom,
     solana_address::Address,
     solana_hash::Hash,
     solana_instruction::{BorrowedAccountMeta, BorrowedInstruction},
@@ -16,14 +15,6 @@ use {
     solana_transaction_error::SanitizeMessageError,
     std::collections::HashSet,
 };
-
-// inlined to avoid solana_nonce dep
-const NONCED_TX_MARKER_IX_INDEX: u8 = 0;
-#[cfg(test)]
-static_assertions::const_assert_eq!(
-    NONCED_TX_MARKER_IX_INDEX,
-    solana_nonce::NONCED_TX_MARKER_IX_INDEX
-);
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct LegacyMessage<'a> {
@@ -222,22 +213,6 @@ impl SanitizedMessage {
         }
     }
 
-    /// Returns true if the account at the specified index is an input to some
-    /// program instruction in this message.
-    #[deprecated(
-        since = "4.6.0",
-        note = "Use `solana_svm_transaction::svm_message::SVMStaticMessage::is_instruction_account()`"
-    )]
-    pub fn is_instruction_account(&self, key_index: usize) -> bool {
-        if let Ok(key_index) = u8::try_from(key_index) {
-            self.instructions()
-                .iter()
-                .any(|ix| ix.accounts.contains(&key_index))
-        } else {
-            false
-        }
-    }
-
     /// Returns true if the account at the specified index is invoked as a
     /// program in this message.
     pub fn is_invoked(&self, key_index: usize) -> bool {
@@ -317,52 +292,6 @@ impl SanitizedMessage {
             Self::V0(message) => message.is_upgradeable_loader_present(),
             Self::V1(message) => message.is_upgradeable_loader_present(),
         }
-    }
-
-    /// Get a list of signers for the instruction at the given index
-    #[deprecated(
-        since = "4.6.0",
-        note = "Use `solana_svm_transaction::svm_message::SVMStaticMessage::get_ix_signers()`"
-    )]
-    pub fn get_ix_signers(&self, ix_index: usize) -> impl Iterator<Item = &Address> {
-        self.instructions()
-            .get(ix_index)
-            .into_iter()
-            .flat_map(|ix| {
-                ix.accounts
-                    .iter()
-                    .copied()
-                    .map(usize::from)
-                    .filter(|index| self.is_signer(*index))
-                    .filter_map(|signer_index| self.account_keys().get(signer_index))
-            })
-    }
-
-    /// If the message uses a durable nonce, return the pubkey of the nonce account
-    #[deprecated(
-        since = "4.6.0",
-        note = "Use `solana_svm_transaction::svm_message::SVMMessage::get_durable_nonce()`"
-    )]
-    pub fn get_durable_nonce(&self) -> Option<&Address> {
-        self.instructions()
-            .get(NONCED_TX_MARKER_IX_INDEX as usize)
-            .filter(
-                |ix| match self.account_keys().get(ix.program_id_index as usize) {
-                    Some(program_id) => solana_sdk_ids::system_program::check_id(program_id),
-                    _ => false,
-                },
-            )
-            .filter(|ix| crate::inline_nonce::is_advance_nonce_instruction_data(&ix.data))
-            .and_then(|ix| {
-                ix.accounts.first().and_then(|idx| {
-                    let idx = *idx as usize;
-                    if !self.is_writable(idx) {
-                        None
-                    } else {
-                        self.static_account_keys().get(idx)
-                    }
-                })
-            })
     }
 
     /// Returns the total number of signatures in the message.
@@ -535,50 +464,6 @@ mod tests {
         ));
 
         assert_eq!(v0_message.num_readonly_accounts(), 3);
-    }
-
-    #[test]
-    #[allow(deprecated)]
-    fn test_get_ix_signers() {
-        let signer0 = Address::new_unique();
-        let signer1 = Address::new_unique();
-        let non_signer = Address::new_unique();
-        let loader_key = Address::new_unique();
-        let instructions = vec![
-            CompiledInstruction::new(3, &(), vec![2, 0]),
-            CompiledInstruction::new(3, &(), vec![0, 1]),
-            CompiledInstruction::new(3, &(), vec![0, 0]),
-        ];
-
-        let message = SanitizedMessage::try_from_legacy_message(
-            legacy::Message::new_with_compiled_instructions(
-                2,
-                1,
-                2,
-                vec![signer0, signer1, non_signer, loader_key],
-                Hash::default(),
-                instructions,
-            ),
-            &HashSet::default(),
-        )
-        .unwrap();
-
-        assert_eq!(
-            message.get_ix_signers(0).collect::<HashSet<_>>(),
-            HashSet::from_iter([&signer0])
-        );
-        assert_eq!(
-            message.get_ix_signers(1).collect::<HashSet<_>>(),
-            HashSet::from_iter([&signer0, &signer1])
-        );
-        assert_eq!(
-            message.get_ix_signers(2).collect::<HashSet<_>>(),
-            HashSet::from_iter([&signer0])
-        );
-        assert_eq!(
-            message.get_ix_signers(3).collect::<HashSet<_>>(),
-            HashSet::default()
-        );
     }
 
     #[test]
