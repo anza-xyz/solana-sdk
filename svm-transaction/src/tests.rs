@@ -72,7 +72,6 @@ fn test_get_durable_nonce() {
     // No instructions - no nonce
     {
         let message = create_message_for_test(1, 1, vec![Pubkey::new_unique()], vec![], None);
-        assert!(SanitizedMessage::get_durable_nonce(&message).is_none());
         assert!(SVMMessage::get_durable_nonce(&message).is_none());
     }
 
@@ -85,7 +84,6 @@ fn test_get_durable_nonce() {
             vec![CompiledInstruction::new_from_raw_parts(1, vec![], vec![])],
             None,
         );
-        assert!(SanitizedMessage::get_durable_nonce(&message).is_none());
         assert!(SVMMessage::get_durable_nonce(&message).is_none());
     }
 
@@ -102,7 +100,6 @@ fn test_get_durable_nonce() {
             )],
             None,
         );
-        assert!(SanitizedMessage::get_durable_nonce(&message).is_none());
         assert!(SVMMessage::get_durable_nonce(&message).is_none());
     }
 
@@ -119,7 +116,6 @@ fn test_get_durable_nonce() {
             )],
             None,
         );
-        assert!(SanitizedMessage::get_durable_nonce(&message).is_none());
         assert!(SVMMessage::get_durable_nonce(&message).is_none());
     }
 
@@ -138,7 +134,6 @@ fn test_get_durable_nonce() {
             )],
             None,
         );
-        assert!(SanitizedMessage::get_durable_nonce(&message).is_none());
         assert!(SVMMessage::get_durable_nonce(&message).is_none());
     }
 
@@ -155,10 +150,6 @@ fn test_get_durable_nonce() {
                 vec![0],
             )],
             None,
-        );
-        assert_eq!(
-            SanitizedMessage::get_durable_nonce(&message),
-            Some(&payer_nonce)
         );
         assert_eq!(SVMMessage::get_durable_nonce(&message), Some(&payer_nonce));
     }
@@ -179,10 +170,6 @@ fn test_get_durable_nonce() {
             )],
             None,
         );
-        assert_eq!(
-            SanitizedMessage::get_durable_nonce(&message),
-            Some(&payer_nonce)
-        );
         assert_eq!(SVMMessage::get_durable_nonce(&message), Some(&payer_nonce));
     }
 
@@ -201,7 +188,6 @@ fn test_get_durable_nonce() {
             )],
             None,
         );
-        assert_eq!(SanitizedMessage::get_durable_nonce(&message), Some(&nonce));
         assert_eq!(SVMMessage::get_durable_nonce(&message), Some(&nonce));
     }
 
@@ -221,7 +207,6 @@ fn test_get_durable_nonce() {
             )],
             None,
         );
-        assert_eq!(SanitizedMessage::get_durable_nonce(&message), Some(&nonce));
         assert_eq!(SVMMessage::get_durable_nonce(&message), Some(&nonce));
     }
 
@@ -243,7 +228,6 @@ fn test_get_durable_nonce() {
                 readonly: vec![],
             }),
         );
-        assert_eq!(SanitizedMessage::get_durable_nonce(&message), None);
         assert_eq!(SVMMessage::get_durable_nonce(&message), None);
     }
 }
