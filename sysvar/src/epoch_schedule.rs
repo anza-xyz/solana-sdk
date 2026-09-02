@@ -110,7 +110,7 @@
 //! # });
 //! #
 //!     let epoch_schedule = client.get_account(&epoch_schedule::ID)?;
-//!     let data: EpochSchedule = bincode::deserialize(&epoch_schedule.data)?;
+//!     let data: EpochSchedule = wincode::deserialize(&epoch_schedule.data)?;
 //!
 //!     Ok(())
 //! }
@@ -120,14 +120,7 @@
 //! #
 //! # Ok::<(), anyhow::Error>(())
 //! ```
-#[cfg(feature = "bincode")]
-#[allow(deprecated)]
-use crate::SysvarSerialize;
 pub use {
     solana_epoch_schedule::{sysvar::PodEpochSchedule, EpochSchedule, SIZE},
     solana_sdk_ids::sysvar::epoch_schedule::{check_id, id, ID},
 };
-
-#[cfg(feature = "bincode")]
-#[allow(deprecated)]
-impl SysvarSerialize for EpochSchedule {}

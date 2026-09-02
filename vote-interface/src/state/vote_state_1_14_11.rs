@@ -53,14 +53,6 @@ pub struct VoteState1_14_11 {
 }
 
 impl VoteState1_14_11 {
-    #[deprecated(
-        since = "5.1.0",
-        note = "Use `rent.minimum_balance(VoteState1_14_11::size_of())` directly"
-    )]
-    pub fn get_rent_exempt_reserve(rent: &Rent) -> u64 {
-        rent.minimum_balance(Self::size_of())
-    }
-
     /// Upper limit on the size of the Vote State
     /// when votes.len() is MAX_LOCKOUT_HISTORY.
     pub fn size_of() -> usize {

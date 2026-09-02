@@ -33,7 +33,7 @@
 //! # });
 //! #
 //!     let slot_hashes = client.get_account(&slot_hashes::ID)?;
-//!     let data: SlotHashes = bincode::deserialize(&slot_hashes.data)?;
+//!     let data: SlotHashes = wincode::deserialize(&slot_hashes.data)?;
 //!
 //!     Ok(())
 //! }
@@ -45,9 +45,6 @@
 //! ```
 #[cfg(feature = "bytemuck")]
 use bytemuck_derive::{Pod, Zeroable};
-#[cfg(feature = "bincode")]
-#[allow(deprecated)]
-use {crate::SysvarSerialize, solana_account_info::AccountInfo};
 use {solana_clock::Slot, solana_hash::Hash};
 
 #[cfg(feature = "bytemuck")]
@@ -58,22 +55,6 @@ pub use {
     solana_slot_hashes::{SlotHashes, SIZE},
     solana_sysvar_id::SysvarId,
 };
-
-#[cfg(feature = "bincode")]
-#[allow(deprecated)]
-impl SysvarSerialize for SlotHashes {
-    // override
-    fn size_of() -> usize {
-        // hard-coded so that we don't have to construct an empty
-        SIZE
-    }
-    fn from_account_info(
-        _account_info: &AccountInfo,
-    ) -> Result<Self, solana_program_error::ProgramError> {
-        // This sysvar is too large to bincode::deserialize in-program
-        Err(solana_program_error::ProgramError::UnsupportedSysvar)
-    }
-}
 
 /// A bytemuck-compatible (plain old data) version of `SlotHash`.
 #[cfg_attr(feature = "bytemuck", derive(Pod, Zeroable))]
@@ -182,25 +163,10 @@ impl PodSlotHashes {
 mod tests {
     use {
         super::*,
-        solana_hash::Hash,
         solana_sha256_hasher::hash,
         solana_slot_hashes::{SlotHash, MAX_ENTRIES},
         test_case::test_case,
     };
-
-    #[test]
-    #[allow(deprecated)]
-    fn test_size_of() {
-        assert_eq!(
-            SlotHashes::size_of(),
-            bincode::serialized_size(
-                &(0..MAX_ENTRIES)
-                    .map(|slot| (slot as Slot, Hash::default()))
-                    .collect::<SlotHashes>()
-            )
-            .unwrap() as usize
-        );
-    }
 
     #[test_case(0)]
     #[test_case(1)]
@@ -224,7 +190,7 @@ mod tests {
 
         let check_slot_hashes = SlotHashes::new(&slot_hashes);
         let pod_slot_hashes =
-            PodSlotHashes::from_bytes(bincode::serialize(&check_slot_hashes).unwrap()).unwrap();
+            PodSlotHashes::from_bytes(wincode::serialize(&check_slot_hashes).unwrap()).unwrap();
 
         // Assert the slice of `PodSlotHash` has the same length as
         // `SlotHashes`.

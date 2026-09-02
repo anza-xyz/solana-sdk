@@ -37,8 +37,7 @@ solana-frozen-abi = { workspace = true, optional = true, features = ["frozen-abi
 solana-frozen-abi-macro = { workspace = true, optional = true }
 solana-instruction-error = { workspace = true }
 solana-pubkey = { workspace = true }
-solana-sdk-ids = { workspace = true }
-solana-sysvar = { workspace = true, features = ["bincode"], optional = true }
+solana-sysvar = { workspace = true, optional = true }
 wincode = { workspace = true, features = ["alloc"], optional = true }
 
 [dev-dependencies]

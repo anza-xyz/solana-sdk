@@ -15,9 +15,8 @@ all-features = true
 rustdoc-args = ["--cfg=docsrs"]
 
 [features]
-bincode = ["dep:bincode", "serde"]
 bytemuck = ["dep:bytemuck", "dep:bytemuck_derive"]
-dev-context-only-utils = ["bincode", "bytemuck"]
+dev-context-only-utils = ["bytemuck"]
 frozen-abi = ["dep:solana-frozen-abi", "dep:solana-frozen-abi-macro"]
 serde = [
     "dep:serde",
@@ -50,7 +49,6 @@ wincode = [
 ]
 
 [dependencies]
-bincode = { workspace = true, optional = true }
 bytemuck = { workspace = true, optional = true }
 bytemuck_derive = { workspace = true, optional = true }
 lazy_static = { workspace = true }

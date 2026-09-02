@@ -10,15 +10,6 @@ use {
 /// [standard](https://datatracker.ietf.org/doc/html/draft-irtf-cfrg-bls-signature-05#section-4.2.1).
 pub const HASH_TO_POINT_DST: &[u8] = b"BLS_SIG_BLS12381G2_XMD:SHA-256_SSWU_RO_POP_";
 
-/// Hash a message to a G2 point for signature generation and verification
-///
-/// If hashing a payload for a Proof-of-Possession (PoP), use
-/// `hash_pop_payload_to_point` instead.
-#[deprecated(since = "3.1.0", note = "Use `HashedMessage::new` instead")]
-pub fn hash_signature_message_to_point(message: &[u8]) -> G2Projective {
-    G2Projective::hash_to_curve(message, HASH_TO_POINT_DST, &[])
-}
-
 /// A hashed message (G2 affine point) for optimized verification.
 ///
 /// Reusing this value avoids repeating hash-to-curve work when the same message

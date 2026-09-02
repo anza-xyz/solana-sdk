@@ -113,10 +113,6 @@ pub const TICKS_PER_DAY: u64 = TICKS_PER_DAY_300_MS;
 /// At the default 300 millisecond slot time, one epoch is approximately 36 hours.
 pub const DEFAULT_SLOTS_PER_EPOCH: u64 = 432_000;
 
-// leader schedule is governed by this
-#[deprecated(since = "3.1.0", note = "Moved to solana-leader-schedule crate")]
-pub const NUM_CONSECUTIVE_LEADER_SLOTS: u64 = 4;
-
 #[cfg(test)]
 static_assertions::const_assert_eq!(DEFAULT_MS_PER_SLOT, 300);
 pub const DEFAULT_MS_PER_SLOT_400_MS: u64 = DEFAULT_NS_PER_SLOT_400_MS / 1_000_000;

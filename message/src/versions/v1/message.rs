@@ -40,8 +40,6 @@ pub use self::tests::MessageBuilder;
 use serde_derive::{Deserialize, Serialize};
 #[cfg(feature = "frozen-abi")]
 use solana_frozen_abi_macro::{AbiExample, StableAbi, StableAbiSample};
-#[cfg(feature = "std")]
-use std::collections::HashSet;
 #[cfg(feature = "wincode")]
 use {
     crate::v1::{WireInstructionHeader, FIXED_HEADER_SIZE},
@@ -284,33 +282,6 @@ impl Message {
     /// # Important
     ///
     /// Before loading addresses, we can't demote write locks properly so this should
-    /// not be used by the runtime. The `reserved_account_keys` parameter is optional
-    /// to allow clients to approximate writability without requiring fetching the latest
-    /// set of reserved account keys.
-    ///
-    /// Program accounts are demoted from writable to readonly, unless the upgradeable
-    /// loader is present in which case they are left as writable since upgradeable
-    /// programs need to be writable for upgrades.
-    #[cfg(feature = "std")]
-    #[deprecated(
-        since = "4.4.0",
-        note = "Use `is_maybe_writable_with_reserved_addresses` instead"
-    )]
-    pub fn is_maybe_writable(
-        &self,
-        key_index: usize,
-        reserved_account_keys: Option<&HashSet<Address>>,
-    ) -> bool {
-        self.is_maybe_writable_with_reserved_addresses(key_index, reserved_account_keys)
-    }
-
-    /// Returns `true` if the account at the specified index was requested as
-    /// writable.
-    ///
-    ///
-    /// # Important
-    ///
-    /// Before loading addresses, we can't demote write locks properly so this should
     /// not be used by the runtime. The `reserved_addresses` parameter is optional to
     /// allow clients to approximate writability without requiring fetching the latest
     /// set of protocol-reserved addresses.
@@ -525,14 +496,6 @@ unsafe impl<C: ConfigCore> SchemaWrite<C> for Message {
 
         Ok(())
     }
-}
-
-/// Serialize the message.
-#[cfg(feature = "wincode")]
-#[inline]
-#[deprecated(since = "4.1.2", note = "use `Message::serialize` instead")]
-pub fn serialize(message: &Message) -> Vec<u8> {
-    wincode::serialize(message).unwrap()
 }
 
 #[cfg(feature = "wincode")]
@@ -925,53 +888,6 @@ mod tests {
         assert!(!message.is_writable_index(1)); // readonly signer
         assert!(!message.is_writable_index(2)); // readonly unsigned
         assert!(!message.is_writable_index(999)); // out of bounds
-    }
-
-    #[test]
-    #[allow(deprecated)]
-    fn is_maybe_writable_returns_false_for_readonly_index() {
-        let message = create_test_message();
-        // Index 2 is readonly unsigned
-        assert!(!message.is_writable_index(2));
-        assert!(!message.is_maybe_writable(2, None));
-        // Even with empty reserved set
-        assert!(!message.is_maybe_writable(2, Some(&HashSet::new())));
-    }
-
-    #[test]
-    #[allow(deprecated)]
-    fn is_maybe_writable_demotes_reserved_accounts() {
-        let message = create_test_message();
-        let reserved = HashSet::from([message.account_keys[0]]);
-        // Fee payer is writable by index, but reserved → demoted
-        assert!(message.is_writable_index(0));
-        assert!(!message.is_maybe_writable(0, Some(&reserved)));
-    }
-
-    #[test]
-    #[allow(deprecated)]
-    fn is_maybe_writable_demotes_programs_without_upgradeable_loader() {
-        let message = create_test_message();
-        // Index 1 is writable unsigned, called as program, no upgradeable loader
-        assert!(message.is_writable_index(1));
-        assert!(message.is_key_called_as_program(1));
-        assert!(!message.is_upgradeable_loader_present());
-        assert!(!message.is_maybe_writable(1, None));
-    }
-
-    #[test]
-    #[allow(deprecated)]
-    fn is_maybe_writable_preserves_programs_with_upgradeable_loader() {
-        let mut message = create_test_message();
-        // Add upgradeable loader to account keys
-        message.account_keys.push(bpf_loader_upgradeable::id());
-
-        assert!(message.sanitize().is_ok());
-        assert!(message.is_writable_index(1));
-        assert!(message.is_key_called_as_program(1));
-        assert!(message.is_upgradeable_loader_present());
-        // Program not demoted because upgradeable loader is present
-        assert!(message.is_maybe_writable(1, None));
     }
 
     #[test]

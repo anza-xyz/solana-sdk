@@ -3,24 +3,9 @@ use {
     crate::state::Feature,
     solana_instruction::{AccountMeta, Instruction},
     solana_pubkey::Pubkey,
-    solana_rent::Rent,
     solana_sdk_ids::{feature::id, incinerator, system_program},
     solana_system_interface::instruction as system_instruction,
 };
-
-/// Activate a feature
-#[cfg(any(feature = "bincode", feature = "wincode"))]
-#[deprecated(
-    since = "3.1.0",
-    note = "Use `activate_with_lamports` with `rent.minimum_balance(Feature::size_of())` instead"
-)]
-pub fn activate(feature_id: &Pubkey, funding_address: &Pubkey, rent: &Rent) -> Vec<Instruction> {
-    activate_with_lamports(
-        feature_id,
-        funding_address,
-        rent.minimum_balance(Feature::size_of()),
-    )
-}
 
 #[cfg(any(feature = "bincode", feature = "wincode"))]
 pub fn activate_with_lamports(

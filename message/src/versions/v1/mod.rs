@@ -11,15 +11,6 @@ pub use cached::*;
 use solana_hash::Hash;
 pub use {config::*, error::*, message::*};
 
-/// A type definition for an  instruction header:
-///  - program_id_index
-///  - num_accounts
-///  - data_len
-///
-/// This is used to parse the instruction portion of a V1 message.
-#[deprecated(since = "4.3.0", note = "Use WireInstructionHeader instead")]
-pub type InstructionHeader = (u8, u8, [u8; 2]);
-
 #[cfg_attr(feature = "wincode", derive(wincode::SchemaRead, wincode::SchemaWrite))]
 #[cfg_attr(feature = "wincode", wincode(assert_zero_copy))]
 #[repr(C)]

@@ -14,8 +14,6 @@ pub use loaded::*;
 use serde_derive::{Deserialize, Serialize};
 #[cfg(feature = "frozen-abi")]
 use solana_frozen_abi_macro::{frozen_abi, AbiExample, StableAbi, StableAbiSample};
-#[cfg(feature = "std")]
-use std::collections::HashSet;
 use {
     crate::{
         compiled_instruction::CompiledInstruction,
@@ -394,28 +392,6 @@ impl Message {
     /// # Important
     ///
     /// Before loading addresses, we can't demote write locks properly so this should
-    /// not be used by the runtime. The `reserved_account_keys` param is optional to
-    /// allow clients to approximate writability without requiring fetching the latest
-    /// set of reserved account keys.
-    #[cfg(feature = "std")]
-    #[deprecated(
-        since = "4.4.0",
-        note = "Use `is_maybe_writable_with_reserved_addresses` instead"
-    )]
-    pub fn is_maybe_writable(
-        &self,
-        key_index: usize,
-        reserved_account_keys: Option<&HashSet<Address>>,
-    ) -> bool {
-        self.is_maybe_writable_with_reserved_addresses(key_index, reserved_account_keys)
-    }
-
-    /// Returns true if the account at the specified index was requested as
-    /// writable.
-    ///
-    /// # Important
-    ///
-    /// Before loading addresses, we can't demote write locks properly so this should
     /// not be used by the runtime. The `reserved_addresses` param is optional to
     /// allow clients to approximate writability without requiring fetching the latest
     /// set of protocol-reserved addresses.
@@ -761,44 +737,5 @@ mod tests {
                 }],
             })
         );
-    }
-
-    #[test]
-    #[allow(deprecated)]
-    fn test_is_maybe_writable() {
-        let key0 = Address::new_unique();
-        let key1 = Address::new_unique();
-        let key2 = Address::new_unique();
-        let key3 = Address::new_unique();
-        let key4 = Address::new_unique();
-        let key5 = Address::new_unique();
-
-        let message = Message {
-            header: MessageHeader {
-                num_required_signatures: 3,
-                num_readonly_signed_accounts: 2,
-                num_readonly_unsigned_accounts: 1,
-            },
-            account_keys: vec![key0, key1, key2, key3, key4, key5],
-            address_table_lookups: vec![MessageAddressTableLookup {
-                account_key: Address::new_unique(),
-                writable_indexes: vec![0],
-                readonly_indexes: vec![1],
-            }],
-            ..Message::default()
-        };
-
-        let reserved_account_keys = HashSet::from([key3]);
-
-        assert!(message.is_maybe_writable(0, Some(&reserved_account_keys)));
-        assert!(!message.is_maybe_writable(1, Some(&reserved_account_keys)));
-        assert!(!message.is_maybe_writable(2, Some(&reserved_account_keys)));
-        assert!(!message.is_maybe_writable(3, Some(&reserved_account_keys)));
-        assert!(message.is_maybe_writable(3, None));
-        assert!(message.is_maybe_writable(4, Some(&reserved_account_keys)));
-        assert!(!message.is_maybe_writable(5, Some(&reserved_account_keys)));
-        assert!(message.is_maybe_writable(6, Some(&reserved_account_keys)));
-        assert!(!message.is_maybe_writable(7, Some(&reserved_account_keys)));
-        assert!(!message.is_maybe_writable(8, Some(&reserved_account_keys)));
     }
 }

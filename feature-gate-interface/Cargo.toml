@@ -21,7 +21,6 @@ bincode = [
     "dep:solana-account",
     "dep:solana-account-info",
     "dep:solana-instruction",
-    "dep:solana-rent",
     "dep:solana-system-interface",
     "serde",
     "solana-account/bincode",
@@ -33,7 +32,6 @@ wincode = [
     "dep:solana-account",
     "dep:solana-account-info",
     "dep:solana-instruction",
-    "dep:solana-rent",
     "dep:solana-system-interface",
     "dep:wincode",
     "solana-account/wincode",
@@ -50,7 +48,6 @@ solana-account-info = { workspace = true, optional = true }
 solana-instruction = { workspace = true, optional = true }
 solana-program-error = { workspace = true }
 solana-pubkey = { workspace = true }
-solana-rent = { workspace = true, optional = true }
 solana-sdk-ids = { workspace = true }
 solana-system-interface = { workspace = true, optional = true }
 wincode = { workspace = true, optional = true }

@@ -111,7 +111,7 @@
 //! # });
 //! #
 //!     let rent = client.get_account(&rent::ID)?;
-//!     let data: Rent = bincode::deserialize(&rent.data)?;
+//!     let data: Rent = wincode::deserialize(&rent.data)?;
 //!
 //!     Ok(())
 //! }
@@ -121,14 +121,7 @@
 //! #
 //! # Ok::<(), anyhow::Error>(())
 //! ```
-#[cfg(feature = "bincode")]
-#[allow(deprecated)]
-use crate::SysvarSerialize;
 pub use {
     solana_rent::{Rent, SIZE},
     solana_sdk_ids::sysvar::rent::{check_id, id, ID},
 };
-
-#[cfg(feature = "bincode")]
-#[allow(deprecated)]
-impl SysvarSerialize for Rent {}

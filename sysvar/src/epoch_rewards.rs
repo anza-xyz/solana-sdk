@@ -56,7 +56,7 @@
 //! #     active: true,
 //! #     ..EpochRewards::default()
 //! # };
-//! # let mut d: Vec<u8> = bincode::serialize(&epoch_rewards).unwrap();
+//! # let mut d: Vec<u8> = wincode::serialize(&epoch_rewards).unwrap();
 //! # let a = AccountInfo::new(&p, false, false, l, &mut d, &p, false);
 //! # let accounts = &[a.clone(), a];
 //! # process_instruction(
@@ -105,7 +105,7 @@
 //! #     active: true,
 //! #     ..EpochRewards::default()
 //! # };
-//! # let mut d: Vec<u8> = bincode::serialize(&epoch_rewards).unwrap();
+//! # let mut d: Vec<u8> = wincode::serialize(&epoch_rewards).unwrap();
 //! # let a = AccountInfo::new(&p, false, false, l, &mut d, &p, false);
 //! # let accounts = &[a.clone(), a];
 //! # process_instruction(
@@ -135,7 +135,7 @@
 //! #       active: true,
 //! #       ..EpochRewards::default()
 //! #   };
-//! #   let data: Vec<u8> = bincode::serialize(&epoch_rewards)?;
+//! #   let data: Vec<u8> = wincode::serialize(&epoch_rewards)?;
 //! #   client.set_get_account_response(epoch_rewards::ID, Account {
 //! #       lamports: 1120560,
 //! #       data,
@@ -144,7 +144,7 @@
 //! # });
 //! #
 //!     let epoch_rewards = client.get_account(&epoch_rewards::ID)?;
-//!     let data: EpochRewards = bincode::deserialize(&epoch_rewards.data)?;
+//!     let data: EpochRewards = wincode::deserialize(&epoch_rewards.data)?;
 //!
 //!     Ok(())
 //! }
@@ -155,14 +155,7 @@
 //! # Ok::<(), anyhow::Error>(())
 //! ```
 
-#[cfg(feature = "bincode")]
-#[allow(deprecated)]
-use crate::SysvarSerialize;
 pub use {
     solana_epoch_rewards::{EpochRewards, SIZE},
     solana_sdk_ids::sysvar::epoch_rewards::{check_id, id, ID},
 };
-
-#[cfg(feature = "bincode")]
-#[allow(deprecated)]
-impl SysvarSerialize for EpochRewards {}

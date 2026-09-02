@@ -1,7 +1,4 @@
 //! This sysvar is deprecated and unused.
-#[cfg(feature = "bincode")]
-#[allow(deprecated)]
-use crate::SysvarSerialize;
 #[cfg(feature = "serde")]
 use serde_derive::{Deserialize, Serialize};
 pub use solana_sdk_ids::sysvar::rewards::{check_id, id, ID};
@@ -31,19 +28,3 @@ impl Rewards {
     }
 }
 impl Sysvar for Rewards {}
-#[cfg(feature = "bincode")]
-#[allow(deprecated)]
-impl SysvarSerialize for Rewards {}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_size_of() {
-        assert_eq!(
-            wincode::serialized_size(&Rewards::default()).unwrap() as usize,
-            SIZE,
-        );
-    }
-}

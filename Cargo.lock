@@ -3145,7 +3145,6 @@ dependencies = [
  "solana-frozen-abi-macro",
  "solana-instruction-error",
  "solana-pubkey",
- "solana-sdk-ids",
  "solana-system-interface",
  "solana-sysvar",
  "wincode",
@@ -3576,7 +3575,6 @@ dependencies = [
  "solana-instruction",
  "solana-program-error",
  "solana-pubkey",
- "solana-rent",
  "solana-sdk-ids",
  "solana-system-interface",
  "strum",
@@ -4630,7 +4628,6 @@ version = "4.3.0"
 dependencies = [
  "anyhow",
  "base64",
- "bincode",
  "bytemuck",
  "bytemuck_derive",
  "lazy_static",

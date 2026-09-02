@@ -2,8 +2,6 @@
 use alloc::vec::Vec;
 #[cfg(feature = "frozen-abi")]
 use solana_frozen_abi_macro::{frozen_abi, AbiEnumVisitor, AbiExample, StableAbi, StableAbiSample};
-#[cfg(feature = "std")]
-use std::collections::HashSet;
 use {
     crate::{
         compiled_instruction::CompiledInstruction, legacy::Message as LegacyMessage,
@@ -103,26 +101,6 @@ impl VersionedMessage {
     /// message.
     pub fn is_signer(&self, index: usize) -> bool {
         index < usize::from(self.header().num_required_signatures)
-    }
-
-    /// Returns true if the account at the specified index is writable by the
-    /// instructions in this message.
-    ///
-    /// # Important
-    ///
-    /// Since dynamically loaded addresses can't have write locks demoted without
-    /// loading addresses, this shouldn't be used in the runtime.
-    #[cfg(feature = "std")]
-    #[deprecated(
-        since = "4.4.0",
-        note = "Use `is_maybe_writable_with_reserved_addresses` instead"
-    )]
-    pub fn is_maybe_writable(
-        &self,
-        index: usize,
-        reserved_account_keys: Option<&HashSet<Address>>,
-    ) -> bool {
-        self.is_maybe_writable_with_reserved_addresses(index, reserved_account_keys)
     }
 
     /// Returns true if the account at the specified index is writable by the

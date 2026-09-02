@@ -8,14 +8,11 @@ use {
     solana_clock::{Epoch, INITIAL_RENT_EPOCH},
     solana_instruction_error::LamportsError,
     solana_pubkey::Pubkey,
-    solana_sdk_ids::{bpf_loader, bpf_loader_deprecated, bpf_loader_upgradeable, loader_v4},
     std::{cell::RefCell, fmt, mem::MaybeUninit, ops::Deref, ptr, rc::Rc, sync::Arc},
 };
 
 #[cfg(feature = "bincode")]
 mod bincode;
-#[cfg(feature = "bincode")]
-pub use bincode::*;
 
 // NOTE: the wincode codec surface is not a peer of the bincode module above. Instead of
 // duplicating the inherent `new_data`/`serialize_data`/... methods, wincode is exposed
@@ -435,15 +432,6 @@ pub fn create_is_signer_account_infos<'a>(
         })
         .collect()
 }
-
-/// Replacement for the executable flag: An account being owned by one of these contains a program.
-#[deprecated(since = "4.3.0", note = "no longer available as a constant")]
-pub const PROGRAM_OWNERS: &[Pubkey] = &[
-    bpf_loader_upgradeable::id(),
-    bpf_loader::id(),
-    bpf_loader_deprecated::id(),
-    loader_v4::id(),
-];
 
 #[cfg(test)]
 pub mod tests {
