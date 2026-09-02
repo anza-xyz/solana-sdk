@@ -7,6 +7,7 @@ use {
 
 /// Reasons the vote might have had an error
 #[derive(Debug, Clone, PartialEq, Eq, FromPrimitive, ToPrimitive)]
+#[non_exhaustive]
 pub enum VoteError {
     VoteTooOld,
     SlotsMismatch,

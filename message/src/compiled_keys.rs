@@ -19,6 +19,7 @@ pub(crate) struct CompiledKeys {
 }
 
 #[derive(PartialEq, Debug, Eq, Clone)]
+#[non_exhaustive]
 pub enum CompileError {
     AccountIndexOverflow,
     AddressTableLookupIndexOverflow,

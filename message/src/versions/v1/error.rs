@@ -2,6 +2,7 @@ use solana_sanitize::SanitizeError;
 
 /// Errors that can occur when working with V1 messages.
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[non_exhaustive]
 pub enum MessageError {
     /// Input buffer is too small during deserialization.
     BufferTooSmall,
