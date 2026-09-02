@@ -459,7 +459,7 @@ jobs:
           cargo-cache-key: cargo-stable-wasm
 
       - name: Install wasm-pack
-        uses: taiki-e/install-action@6a1bd70eaac3c8bdf093356838d7ee09fda951cf  # v2.85.5
+        uses: taiki-e/install-action@fcf5432d9f50d67e37ee6e29bdb7a224ff67b4a7  # v2.86.8
         with:
           tool: wasm-pack
 
