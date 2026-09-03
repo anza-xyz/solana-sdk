@@ -139,12 +139,12 @@ pub trait SVMStaticMessage: Debug {
     }
 
     /// If the message uses a durable nonce, return the pubkey of the nonce account.
-    /// This is identical in behavior to `get_durable_nonce()`, except we also
-    /// return `None` if the nonce address is a program ID, and we do not apply
-    /// reserved key demotion. Reserved keys are never valid nonce accounts, so
-    /// they will always be rejected by account validation.
+    /// This is identical in behavior to `SVMMessage::get_durable_nonce()`, except
+    /// we also return `None` if the nonce address is a program ID, and we do not
+    /// apply reserved key demotion. Reserved keys are never valid nonce accounts,
+    /// so they will always be rejected by account validation.
     fn get_durable_nonce_simd602(&self) -> Option<&Pubkey> {
-        get_durable_nonce(self, true).map(|(key, _index)| key)
+        get_durable_nonce_internal(self, true).map(|(key, _index)| key)
     }
 }
 
@@ -157,7 +157,7 @@ pub trait SVMMessage: SVMStaticMessage {
 
     /// If the message uses a durable nonce, return the pubkey of the nonce account
     fn get_durable_nonce(&self) -> Option<&Pubkey> {
-        get_durable_nonce(self, false)
+        get_durable_nonce_internal(self, false)
             .filter(|(_key, index)| self.is_writable(*index))
             .map(|(key, _index)| key)
     }
@@ -176,8 +176,9 @@ fn default_precompile_signature_count<'a>(
 // after SIMD-0602 activates, we may:
 // * delete SVMMessage::get_durable_nonce()
 // * rename SVMStaticMessage::get_durable_nonce_simd602() to get_durable_nonce()
-// * delete this helper and move its body into SVMStaticMessage without the bool arg
-fn get_durable_nonce<T: SVMStaticMessage + ?Sized>(
+// * delete this helper and move its body into SVMStaticMessage without
+//   the bool arg or index return
+fn get_durable_nonce_internal<T: SVMStaticMessage + ?Sized>(
     msg: &T,
     ban_nonce_as_program_id: bool,
 ) -> Option<(&Pubkey, usize)> {
