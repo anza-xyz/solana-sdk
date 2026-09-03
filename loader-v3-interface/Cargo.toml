@@ -17,13 +17,7 @@ rustdoc-args = ["--cfg=docsrs"]
 [features]
 dev-context-only-utils = ["wincode"]
 frozen-abi = ["dep:solana-frozen-abi", "dep:solana-frozen-abi-macro", "serde"]
-serde = [
-    "dep:serde",
-    "dep:serde_bytes",
-    "dep:serde_derive",
-    "dep:solana-serde",
-    "solana-pubkey/serde",
-]
+serde = ["dep:serde", "dep:serde_bytes", "dep:serde_derive", "solana-pubkey/serde"]
 wincode = [
     "dep:solana-system-interface",
     "dep:wincode",
@@ -43,17 +37,12 @@ solana-instruction = { workspace = true, features = ["std"] }
 solana-instruction-error = { workspace = true }
 solana-pubkey = { workspace = true, features = ["curve25519"] }
 solana-sdk-ids = { workspace = true }
-solana-serde = { workspace = true, optional = true }
 solana-system-interface = { workspace = true, optional = true }
 wincode = { workspace = true, optional = true }
 
 [dev-dependencies]
 bincode = { workspace = true }
-solana-loader-v3-interface = { path = ".", features = [
-    "dev-context-only-utils",
-    "serde",
-    "wincode",
-] }
+solana-loader-v3-interface = { path = ".", features = ["dev-context-only-utils", "serde"] }
 test-case = { workspace = true }
 
 [lints]
