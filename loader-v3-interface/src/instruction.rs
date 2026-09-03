@@ -501,6 +501,8 @@ pub fn set_upgrade_authority_checked(
 }
 
 #[cfg(feature = "wincode")]
+#[deprecated(since = "8.1.1", note = "Use `close_buffer` instead")]
+#[allow(deprecated)]
 /// Returns the instructions required to close a buffer account
 pub fn close(
     close_address: &Pubkey,
@@ -518,6 +520,10 @@ pub fn close(
 }
 
 #[cfg(feature = "wincode")]
+#[deprecated(
+    since = "8.1.1",
+    note = "Use `close_uninitialized`, `close_buffer`, or `close_program` instead"
+)]
 /// Returns the instructions required to close program, buffer, or uninitialized account
 pub fn close_any(
     close_address: &Pubkey,
@@ -540,6 +546,97 @@ pub fn close_any(
         id(),
         &UpgradeableLoaderInstruction::Close { tombstone },
         metas,
+    )
+}
+
+#[cfg(feature = "wincode")]
+/// Returns the instruction required to close an uninitialized account owned by
+/// the upgradeable loader.
+///
+/// Note a legacy tombstone's ProgramData account is also uninitialized, but
+/// reclaiming it (per SIMD-0432) requires the program account as well. See
+/// [`reclaim_tombstone`].
+pub fn close_uninitialized(close_address: &Pubkey, recipient_address: &Pubkey) -> Instruction {
+    Instruction::new_with_wincode(
+        id(),
+        &UpgradeableLoaderInstruction::Close { tombstone: false },
+        vec![
+            AccountMeta::new(*close_address, false),
+            AccountMeta::new(*recipient_address, false),
+        ],
+    )
+}
+
+#[cfg(feature = "wincode")]
+/// Returns the instruction required to close a buffer account.
+pub fn close_buffer(
+    buffer_address: &Pubkey,
+    recipient_address: &Pubkey,
+    authority_address: &Pubkey,
+) -> Instruction {
+    Instruction::new_with_wincode(
+        id(),
+        &UpgradeableLoaderInstruction::Close { tombstone: false },
+        vec![
+            AccountMeta::new(*buffer_address, false),
+            AccountMeta::new(*recipient_address, false),
+            AccountMeta::new_readonly(*authority_address, true),
+        ],
+    )
+}
+
+#[cfg(feature = "wincode")]
+/// Returns the instruction required to close a program.
+///
+/// The account closed is the program's ProgramData account, derived from
+/// `program_address`.
+///
+/// SIMD-0432: when `tombstone` is `false` the program account is defunded and
+/// its address becomes reclaimable once the account is garbage collected. When
+/// `true` the program account is permanently tombstoned, locking the address.
+///
+/// Without SIMD-0432 active the `tombstone` parameter has no effect, and the
+/// program account is always tombstoned.
+pub fn close_program(
+    program_address: &Pubkey,
+    recipient_address: &Pubkey,
+    authority_address: &Pubkey,
+    tombstone: bool,
+) -> Instruction {
+    let programdata_address = get_program_data_address(program_address);
+    Instruction::new_with_wincode(
+        id(),
+        &UpgradeableLoaderInstruction::Close { tombstone },
+        vec![
+            AccountMeta::new(programdata_address, false),
+            AccountMeta::new(*recipient_address, false),
+            AccountMeta::new_readonly(*authority_address, true),
+            AccountMeta::new(*program_address, false),
+        ],
+    )
+}
+
+#[cfg(feature = "wincode")]
+/// Returns the instruction required to reclaim a legacy tombstone: a program
+/// closed before SIMD-0432, whose program account remains funded while its
+/// ProgramData account is closed.
+///
+/// The upgrade authority was discarded along with the ProgramData account, so
+/// the program account itself must sign.
+///
+/// The ProgramData and program accounts are both defunded and garbage collected,
+/// making the program address reclaimable.
+pub fn reclaim_tombstone(program_address: &Pubkey, recipient_address: &Pubkey) -> Instruction {
+    let programdata_address = get_program_data_address(program_address);
+    Instruction::new_with_wincode(
+        id(),
+        &UpgradeableLoaderInstruction::Close { tombstone: false },
+        vec![
+            AccountMeta::new(programdata_address, false),
+            AccountMeta::new(*recipient_address, false),
+            AccountMeta::new_readonly(*program_address, true),
+            AccountMeta::new(*program_address, false),
+        ],
     )
 }
 
