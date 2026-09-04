@@ -2,6 +2,7 @@
 use std::sync::LazyLock;
 use {
     crate::{
+        blst_pairing,
         error::BlsError,
         hash::{HashedMessage, HashedPoPPayload, PreparedHashedMessage},
         proof_of_possession::{AsProofOfPossessionAffine, ProofOfPossessionAffine},
@@ -85,8 +86,12 @@ pub trait VerifySignature: AsPubkeyAffine {
         signature: &S,
         hashed_message: &HashedMessage,
     ) -> Result<(), BlsError> {
-        let prepared_hashed_message = PreparedHashedMessage::from_hashed_message(hashed_message);
-        self.verify_signature_prepared(signature, &prepared_hashed_message)
+        let pubkey_affine = self.try_as_affine()?;
+        let signature_affine = signature.try_as_affine()?;
+        pubkey_affine
+            ._verify_signature(&signature_affine, hashed_message)
+            .then_some(())
+            .ok_or(BlsError::VerificationFailed)
     }
 
     /// Uses this public key to verify any convertible signature type using a prepared message.
@@ -111,8 +116,17 @@ impl PubkeyAffine {
         signature: &SignatureAffine,
         hashed_message: &HashedMessage,
     ) -> bool {
-        let hashed_message_prepared = G2Prepared::from(hashed_message.0);
-        self._verify_signature_prepared(signature, &hashed_message_prepared)
+        if bool::from(self.0.is_identity()) {
+            return false;
+        }
+
+        // The verification equation is e(pubkey, H(m)) = e(g1, signature).
+        // Both G2 inputs are used exactly once here, so neither benefits from
+        // line precomputation: run a plain Miller loop on each side and compare
+        // them with a single final exponentiation.
+        let lhs = blst_pairing::miller_loop(self.0.as_ref(), hashed_message.0.as_ref());
+        let rhs = blst_pairing::miller_loop(blst_pairing::g1_generator(), signature.0.as_ref());
+        blst_pairing::final_verify(&lhs, &rhs)
     }
 
     pub(crate) fn _verify_signature_prepared(
@@ -155,27 +169,11 @@ impl PubkeyAffine {
             return false;
         }
 
-        // The verification equation is e(pubkey, H(pubkey)) == e(g1, proof).
-        // This is rewritten to e(pubkey, H(pubkey)) * e(-g1, proof) = 1 for batching.
-        let hashed_pubkey = hashed_payload.0;
-        let hashed_pubkey_prepared = G2Prepared::from(hashed_pubkey);
-        let proof_prepared = G2Prepared::from(proof.0);
-
-        // Use the static value if std is available, otherwise compute it
-        #[cfg(feature = "std")]
-        let neg_g1_generator = &*NEG_G1_GENERATOR_AFFINE;
-        #[cfg(not(feature = "std"))]
-        #[allow(clippy::arithmetic_side_effects)]
-        let neg_g1_generator_val: G1Affine = (-G1Projective::generator()).into();
-        #[cfg(not(feature = "std"))]
-        let neg_g1_generator = &neg_g1_generator_val;
-
-        let miller_loop_result = Bls12::multi_miller_loop(&[
-            (&self.0, &hashed_pubkey_prepared),
-            // Reuse the same pre-computed static value here for efficiency
-            (neg_g1_generator, &proof_prepared),
-        ]);
-
-        miller_loop_result.final_exponentiation() == Gt::identity()
+        // The verification equation is e(pubkey, H(pubkey)) = e(g1, proof).
+        // Same shape as `_verify_signature`: two single-use G2 inputs, so plain
+        // Miller loops with no line precomputation.
+        let lhs = blst_pairing::miller_loop(self.0.as_ref(), hashed_payload.0.as_ref());
+        let rhs = blst_pairing::miller_loop(blst_pairing::g1_generator(), proof.0.as_ref());
+        blst_pairing::final_verify(&lhs, &rhs)
     }
 }

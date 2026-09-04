@@ -41,6 +41,8 @@ pub mod keypair;
 #[macro_use]
 pub(crate) mod macros;
 #[cfg(not(target_os = "solana"))]
+pub(crate) mod blst_pairing;
+#[cfg(not(target_os = "solana"))]
 pub mod hash;
 pub mod proof_of_possession;
 pub mod pubkey;
