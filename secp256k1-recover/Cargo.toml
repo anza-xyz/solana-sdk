@@ -33,7 +33,7 @@ k256 = { workspace = true }
 [dev-dependencies]
 anyhow = { workspace = true }
 borsh = { workspace = true }
-rand = "0.8" # k256 still uses rand_core v0.6
+rand = "0.8"  # k256 still uses rand_core v0.6
 solana-example-mocks = { workspace = true }
 solana-instruction = { workspace = true, features = ["borsh"] }
 solana-keccak-hasher = { workspace = true, features = ["sha3"] }

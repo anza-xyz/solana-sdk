@@ -300,26 +300,17 @@ jobs:
         run: ./scripts/check-doc.sh
 
   sort:
-    name: Check sorting of crate dependencies
+    name: Check TOML formatting and sorting
     runs-on: ubuntu-latest
     needs: [sanity]
     steps:
       - name: Git Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
 
-      - name: Setup Environment
-        uses: ./.github/actions/setup
-        with:
-          nightly-toolchain: true
-          cargo-cache-key: cargo-nightly-sort
-          cargo-cache-fallback-key: cargo-nightly
+      - name: Install Tombi
+        uses: tombi-toml/setup-tombi@a440d8b4f102acf7963db4fd2a99ca02e17f88f6 # v1.5.0
 
-      - name: Install cargo-sort
-        uses: taiki-e/cache-cargo-install-action@417450f3c33ee20393705369577571770643d4c7  # v3.0.7
-        with:
-          tool: cargo-sort@2.1.1
-
-      - name: Check toml ordering
+      - name: Check TOML formatting and sorting
         run: ./scripts/check-sort.sh
 
   check-dcou:

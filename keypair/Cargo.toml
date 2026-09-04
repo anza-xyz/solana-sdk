@@ -20,7 +20,7 @@ seed-derivable = ["dep:solana-derivation-path", "dep:solana-seed-derivable"]
 
 [dependencies]
 five8 = { workspace = true }
-five8_core = { workspace = true } # needed to force five8 to use the newest version with `core::error::Error` support
+five8_core = { workspace = true }  # needed to force five8 to use the newest version with `core::error::Error` support
 rand = { workspace = true }
 solana-address = { workspace = true, features = ["decode"] }
 solana-derivation-path = { workspace = true, optional = true }

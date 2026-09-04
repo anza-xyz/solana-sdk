@@ -122,7 +122,7 @@ repository = "https://github.com/anza-xyz/solana-sdk"
 homepage = "https://anza.xyz/"
 license = "Apache-2.0"
 edition = "2021"
-rust-version = "1.89.0"                          # solana platform-tools rust version
+rust-version = "1.89.0"  # solana platform-tools rust version
 
 [workspace.lints.rust.unexpected_cfgs]
 level = "warn"
@@ -187,7 +187,7 @@ group = "0.13.0"
 hex = "0.4.3"
 hmac = "0.12.1"
 im = "15.1.0"
-imbl = ">= 6.0.0, < 8.0.0" # agave needs v7 for perf, but sdk needs v6 for min rust version 1.81; change to "7.0.0" when sdk >= rust 1.85
+imbl = ">= 6.0.0, < 8.0.0"  # agave needs v7 for perf, but sdk needs v6 for min rust version 1.81; change to "7.0.0" when sdk >= rust 1.85
 indicatif = "0.18.4"
 itertools = "0.12.1"
 js-sys = "0.3.77"
@@ -215,11 +215,11 @@ rand_chacha = "0.9.0"
 rayon = "1.10.0"
 regex = "1.11"
 reqwest = { version = "0.13.2", default-features = false }
-serde = { version = "1.0.226", default-features = false } # must match the serde_derive version, see https://github.com/serde-rs/serde/issues/2584#issuecomment-1685252251
+serde = { version = "1.0.226", default-features = false }  # must match the serde_derive version, see https://github.com/serde-rs/serde/issues/2584#issuecomment-1685252251
 serde-big-array = "0.5.1"
 serde_bytes = "0.11.15"
 serde_core = { version = "1.0.226", default-features = false }  # must match the serde version, see https://github.com/serde-rs/serde/issues/2584#issuecomment-1685252251
-serde_derive = "1.0.226" # must match the serde version, see https://github.com/serde-rs/serde/issues/2584#issuecomment-1685252251
+serde_derive = "1.0.226"  # must match the serde version, see https://github.com/serde-rs/serde/issues/2584#issuecomment-1685252251
 serde_json = "1.0.139"
 serde_with = { version = "3.12.0", default-features = false }
 serial_test = "2.0.0"
