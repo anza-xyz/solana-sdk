@@ -86,7 +86,7 @@ const G2_GENERATOR_LE: [u8; G2_UNCOMPRESSED_POINT_SIZE] = [
 /// and used as the left operand of a negation.
 ///
 /// Hoisting these out of the predicates turns a 192-byte loop into a single
-/// array comparison: measured at ~1,380 CU and ~20 CU respectively.
+/// array comparison: measured at ~1,380 CU and ~28 CU respectively.
 const G2_INFINITY_BE: G2Point = G2Point::infinity(Endianness::Big);
 const G2_INFINITY_LE: G2Point = G2Point::infinity(Endianness::Little);
 

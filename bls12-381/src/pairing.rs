@@ -52,14 +52,15 @@ impl GtElement {
     ///
     /// Not `const fn`: array equality is not const-callable. The byte loop it
     /// replaces was const, but cost ~4,055 CU — ~7 per byte, of which the
-    /// per-byte flag-index test was two thirds — against ~45 CU for the whole
-    /// array here. This is on the hot path: [`pairing_check`] calls it on
-    /// every successful verification.
+    /// per-byte flag-index test was two thirds — against ~28 CU here. This is
+    /// on the hot path: [`pairing_check`] calls it on every successful
+    /// verification.
     ///
-    // Deliberately not `#[inline]`. Inlining this into `pairing_check` puts the
-    // 576-byte identity constant in the same frame as that function's 576-byte
-    // `MaybeUninit`, costing ~20 CU on every pairing check — more than the ~6
-    // CU it saves on a direct call, which no hot path makes.
+    /// The comparison lowers to the `sol_memcmp_` syscall, whose cost does not
+    /// depend on the length, so all 576 bytes cost the same as eight would.
+    ///
+    // `#[inline]` is load-bearing: `#[inline(never)]` measured 6 CU worse both
+    // standalone and inside `pairing_check`.
     #[inline]
     pub fn is_identity(&self, endianness: Endianness) -> bool {
         match endianness {
@@ -104,6 +105,11 @@ impl GtElement {
 /// An empty batch is the empty product and yields the identity, as SIMD-0388
 /// requires of the syscall. [`pairing_check`] deliberately differs; see its
 /// documentation.
+///
+/// The syscall validates every input itself — field membership, the curve
+/// equation, and subgroup membership — so calling [`G1Point::validate`] or
+/// [`G2Point::validate`] on the operands first pays for the same checks twice,
+/// at ~1,576 CU per G1 point and ~1,977 per G2 point.
 ///
 /// # Errors
 ///
@@ -243,6 +249,10 @@ pub fn pairing(
 /// the 576-byte [`GtElement`] off the caller's stack, which suits a Groth16
 /// verifier that would only discard it.
 ///
+/// Like [`pairing_map_assign`], the syscall fully validates every input, so the
+/// points do not need a separate [`G1Point::validate`] or
+/// [`G2Point::validate`] pass first.
+///
 /// # Errors
 ///
 /// [`Bls12381Error::LengthMismatch`], [`Bls12381Error::TooManyPairs`], and
@@ -290,7 +300,10 @@ pub fn pairing_check(
     pairing_map_assign(g1_points, g2_points, &mut out, endianness)?;
 
     // SAFETY: `pairing_map_assign` returned `Ok`, so `out` is initialized.
-    let gt = unsafe { out.assume_init() };
+    //
+    // Borrowed rather than `assume_init`ed: moving the value out is a 576-byte
+    // copy that LLVM does not elide, measured at 20 CU on every call.
+    let gt = unsafe { out.assume_init_ref() };
 
     Ok(gt.is_identity(endianness))
 }

@@ -119,7 +119,7 @@ impl Scalar {
     /// Whether this scalar is zero.
     ///
     /// Not `const fn`: array equality is not const-callable. The byte loop it
-    /// replaces was const, but cost ~72 CU against ~10 CU here.
+    /// replaces was const, but cost ~72 CU against ~13 CU here.
     #[inline]
     pub fn is_zero(&self) -> bool {
         self.0 == [0u8; SCALAR_SIZE]
