@@ -6,7 +6,7 @@ use {
         hash::{HashedMessage, PreparedHashedMessage},
         keypair::Keypair,
         pubkey::{PopVerified, Pubkey, PubkeyProjective, VerifyPop, VerifySignature},
-        signature::{Signature, SignatureAffineUnchecked, SignatureProjective},
+        signature::{Signature, SignatureAffine, SignatureAffineUnchecked, SignatureProjective},
     },
     std::hint::black_box,
 };
@@ -25,6 +25,31 @@ fn bench_single_signature(c: &mut Criterion) {
     group.bench_function("verify_signature", |b| {
         b.iter(|| black_box(keypair.public.verify_signature(&signature, message)).unwrap());
     });
+
+    let signature_affine = SignatureAffine::from(&signature);
+    let hashed_message = HashedMessage::new(message);
+    let prepared_hashed_message = PreparedHashedMessage::from_hashed_message(&hashed_message);
+    group.bench_function("verify_signature_pre_hashed", |b| {
+        b.iter(|| {
+            black_box(
+                keypair
+                    .public
+                    .verify_signature_pre_hashed(&signature_affine, &hashed_message),
+            )
+            .unwrap()
+        });
+    });
+    group.bench_function("verify_signature_prepared", |b| {
+        b.iter(|| {
+            black_box(
+                keypair
+                    .public
+                    .verify_signature_prepared(&signature_affine, &prepared_hashed_message),
+            )
+            .unwrap()
+        });
+    });
+
     group.finish();
 }
 
