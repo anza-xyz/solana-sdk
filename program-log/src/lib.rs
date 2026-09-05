@@ -667,4 +667,10 @@ mod tests {
 
         assert!(&*logger == "fal@".as_bytes());
     }
+    #[test]
+    #[cfg(feature = "std")]
+    fn test_logger_invalid_utf8_does_not_panic() {
+        let invalid_utf8: &[u8] = &[0xff, b'a'];
+        crate::logger::log_message(invalid_utf8);
+    }
 }
