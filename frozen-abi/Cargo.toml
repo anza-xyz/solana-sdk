@@ -19,6 +19,8 @@ default = []
 # activate the frozen-abi feature when we actually want to do frozen-abi testing,
 # otherwise leave it off because it requires nightly Rust
 frozen-abi = ["dep:wincode", "solana-frozen-abi-macro/frozen-abi"]
+fuzz-bolero = ["dep:bolero", "frozen-abi"]
+fuzz-bolero-repro = ["fuzz-bolero"]
 
 [dependencies]
 boxcar = { workspace = true }
@@ -38,6 +40,7 @@ thiserror = { workspace = true }
 # These dependencies are used only to back `frozen-abi` StableAbi API,
 # to avoid version skew and keep digest computation stable regardless of consumer dependencies.
 bincode = "1.3.3"
+bolero = { workspace = true, optional = true }
 im = { workspace = true, features = ["rayon", "serde"] }
 imbl = { workspace = true, features = ["rayon", "serde"] }
 memmap2 = { workspace = true }
