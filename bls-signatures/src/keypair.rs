@@ -92,18 +92,24 @@ impl TryFrom<&[u8]> for Keypair {
     type Error = BlsError;
     fn try_from(bytes: &[u8]) -> Result<Self, Self::Error> {
         if bytes.len() != BLS_KEYPAIR_SIZE {
-            return Err(BlsError::ParseFromBytes);
+            return Err(BlsError::InvalidEncodedLength {
+                expected: BLS_KEYPAIR_SIZE,
+                actual: bytes.len(),
+            });
         }
 
         let secret = SecretKey::try_from(&bytes[..BLS_SECRET_KEY_SIZE])?;
         let pubkey_bytes: &[u8; BLS_PUBLIC_KEY_AFFINE_SIZE] = bytes[BLS_SECRET_KEY_SIZE..]
             .try_into()
-            .map_err(|_| BlsError::ParseFromBytes)?;
+            .map_err(|_| BlsError::InvalidEncodedLength {
+                expected: BLS_PUBLIC_KEY_AFFINE_SIZE,
+                actual: bytes.len().saturating_sub(BLS_SECRET_KEY_SIZE),
+            })?;
         let public = PubkeyAffine::try_from(pubkey_bytes)?;
 
         let expected_public: PubkeyAffine = PubkeyProjective::from_secret(&secret).into();
         if expected_public != public {
-            return Err(BlsError::ParseFromBytes);
+            return Err(BlsError::KeypairMismatch);
         }
 
         Ok(Self {
@@ -194,6 +200,22 @@ impl Keypair {
 #[cfg(test)]
 mod tests {
     use {super::*, tempfile::NamedTempFile};
+
+    #[test]
+    fn test_keypair_mismatch() {
+        let keypair1 = Keypair::new();
+        let keypair2 = Keypair::new();
+
+        let mut bytes = Zeroizing::new([0u8; BLS_KEYPAIR_SIZE]);
+        let secret_bytes: Zeroizing<[u8; BLS_SECRET_KEY_SIZE]> = (&keypair1.secret).into();
+        bytes[..BLS_SECRET_KEY_SIZE].copy_from_slice(secret_bytes.as_slice());
+        bytes[BLS_SECRET_KEY_SIZE..].copy_from_slice(&keypair2.public.to_bytes_uncompressed());
+
+        assert_eq!(
+            Keypair::try_from(bytes.as_slice()).unwrap_err(),
+            BlsError::KeypairMismatch
+        );
+    }
 
     #[test]
     fn test_keygen_derive() {

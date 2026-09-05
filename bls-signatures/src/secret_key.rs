@@ -129,7 +129,10 @@ impl TryFrom<&[u8]> for SecretKey {
     type Error = BlsError;
     fn try_from(src: &[u8]) -> Result<Self, Self::Error> {
         if src.len() != BLS_SECRET_KEY_SIZE {
-            return Err(BlsError::ParseFromBytes);
+            return Err(BlsError::InvalidEncodedLength {
+                expected: BLS_SECRET_KEY_SIZE,
+                actual: src.len(),
+            });
         }
         let mut bytes = Zeroizing::new([0u8; BLS_SECRET_KEY_SIZE]);
         bytes.copy_from_slice(src);
@@ -154,5 +157,22 @@ impl TryFrom<&[u8]> for SecretKey {
 impl From<&SecretKey> for Zeroizing<[u8; BLS_SECRET_KEY_SIZE]> {
     fn from(secret_key: &SecretKey) -> Self {
         Zeroizing::new(secret_key.0.to_bytes_le())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_secret_key_invalid_length() {
+        let invalid_bytes = [0u8; 31];
+        assert_eq!(
+            SecretKey::try_from(&invalid_bytes[..]).unwrap_err(),
+            BlsError::InvalidEncodedLength {
+                expected: BLS_SECRET_KEY_SIZE,
+                actual: 31,
+            }
+        );
     }
 }

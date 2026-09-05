@@ -259,6 +259,52 @@ mod tests {
         assert_eq!(pubkey_compressed, pubkey_compressed_from_string);
     }
 
+    #[test]
+    fn test_invalid_base64() {
+        let invalid_b64 = "This is not valid base64!@#$";
+        assert_eq!(
+            Pubkey::from_str(invalid_b64).unwrap_err(),
+            BlsError::InvalidBase64
+        );
+    }
+
+    #[test]
+    fn test_invalid_base64_length() {
+        // A base64 string that is within string length bounds, but decodes to wrong byte length
+        let valid_bytes = [0u8; 47];
+        use base64::Engine;
+        let base64_str = base64::engine::general_purpose::STANDARD.encode(valid_bytes);
+        assert_eq!(
+            Pubkey::from_str(&base64_str).unwrap_err(),
+            BlsError::InvalidEncodedLength {
+                expected: BLS_PUBLIC_KEY_AFFINE_SIZE,
+                actual: 47
+            }
+        );
+    }
+
+    #[test]
+    fn test_string_length_exceeded() {
+        let overlong_b64 = "A".repeat(BLS_PUBLIC_KEY_AFFINE_BASE64_SIZE + 1);
+        assert_eq!(
+            Pubkey::from_str(&overlong_b64).unwrap_err(),
+            BlsError::StringLengthExceeded {
+                max: BLS_PUBLIC_KEY_AFFINE_BASE64_SIZE,
+                actual: BLS_PUBLIC_KEY_AFFINE_BASE64_SIZE + 1
+            }
+        );
+    }
+
+    #[test]
+    fn test_invalid_point_encoding() {
+        let invalid_bytes = [255u8; BLS_PUBLIC_KEY_COMPRESSED_SIZE];
+        let pubkey_compressed = PubkeyCompressed(invalid_bytes);
+        assert_eq!(
+            PubkeyProjective::try_from(&pubkey_compressed).unwrap_err(),
+            BlsError::InvalidPointEncoding
+        );
+    }
+
     #[cfg(feature = "serde")]
     #[test]
     fn serialize_and_deserialize_pubkey() {
@@ -318,13 +364,21 @@ mod tests {
 
         assert_eq!(
             PubkeyProjective::try_from(pubkey_long_bytes.as_slice()).unwrap_err(),
-            BlsError::ParseFromBytes
+            BlsError::InvalidLengthMultiple {
+                expected_compressed: BLS_PUBLIC_KEY_COMPRESSED_SIZE,
+                expected_uncompressed: BLS_PUBLIC_KEY_AFFINE_SIZE,
+                actual: 49,
+            }
         );
 
         let pubkey_short_bytes = &pubkey_bytes[..47];
         assert_eq!(
             PubkeyProjective::try_from(pubkey_short_bytes).unwrap_err(),
-            BlsError::ParseFromBytes
+            BlsError::InvalidLengthMultiple {
+                expected_compressed: BLS_PUBLIC_KEY_COMPRESSED_SIZE,
+                expected_uncompressed: BLS_PUBLIC_KEY_AFFINE_SIZE,
+                actual: 47,
+            }
         );
     }
 
@@ -359,14 +413,14 @@ mod tests {
         // Assert compressed byte conversion fails
         let id_pk_compressed: PubkeyCompressed = (&id_pk_proj).into();
         let recovered = PubkeyProjective::try_from(&id_pk_compressed);
-        assert_eq!(recovered.unwrap_err(), BlsError::PointConversion);
+        assert_eq!(recovered.unwrap_err(), BlsError::IdentityPointRejected);
 
         // Assert uncompressed byte conversion fails
         let id_pk_uncompressed: Pubkey = (&id_pk_proj).into();
         let recovered_uncompressed = PubkeyProjective::try_from(&id_pk_uncompressed);
         assert_eq!(
             recovered_uncompressed.unwrap_err(),
-            BlsError::PointConversion
+            BlsError::IdentityPointRejected
         );
     }
 }

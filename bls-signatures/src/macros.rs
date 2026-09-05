@@ -7,14 +7,20 @@ macro_rules! impl_from_str {
                 use base64::Engine;
 
                 if s.len() > $base64_len {
-                    return Err(Self::Err::ParseFromString);
+                    return Err(Self::Err::StringLengthExceeded {
+                        max: $base64_len,
+                        actual: s.len(),
+                    });
                 }
                 let mut bytes = [0u8; $bytes_len];
                 let decoded_len = base64::prelude::BASE64_STANDARD
                     .decode_slice(s, &mut bytes)
-                    .map_err(|_| Self::Err::ParseFromString)?;
+                    .map_err(|_| Self::Err::InvalidBase64)?;
                 if decoded_len != $bytes_len {
-                    Err(Self::Err::ParseFromString)
+                    Err(Self::Err::InvalidEncodedLength {
+                        expected: $bytes_len,
+                        actual: decoded_len,
+                    })
                 } else {
                     Ok($type(bytes))
                 }
@@ -122,11 +128,11 @@ macro_rules! impl_bls_conversions {
             fn try_from(bytes: &$uncompressed) -> Result<Self, Self::Error> {
                 let maybe_point: Option<$blstrs_affine> =
                     <$blstrs_affine>::from_uncompressed(&bytes.0).into();
-                let point = maybe_point.ok_or(crate::error::BlsError::PointConversion)?;
+                let point = maybe_point.ok_or(crate::error::BlsError::InvalidPointEncoding)?;
                 if $reject_identity
                     && bool::from(group::prime::PrimeCurveAffine::is_identity(&point))
                 {
-                    return Err(crate::error::BlsError::PointConversion);
+                    return Err(crate::error::BlsError::IdentityPointRejected);
                 }
                 Ok(Self(point))
             }
@@ -144,11 +150,11 @@ macro_rules! impl_bls_conversions {
             fn try_from(bytes: &$compressed) -> Result<Self, Self::Error> {
                 let maybe_point: Option<$blstrs_affine> =
                     <$blstrs_affine>::from_compressed(&bytes.0).into();
-                let point = maybe_point.ok_or(crate::error::BlsError::PointConversion)?;
+                let point = maybe_point.ok_or(crate::error::BlsError::InvalidPointEncoding)?;
                 if $reject_identity
                     && bool::from(group::prime::PrimeCurveAffine::is_identity(&point))
                 {
-                    return Err(crate::error::BlsError::PointConversion);
+                    return Err(crate::error::BlsError::IdentityPointRejected);
                 }
                 Ok(Self(point))
             }
@@ -391,19 +397,29 @@ macro_rules! impl_bls_conversions {
 
             fn try_from(bytes: &[u8]) -> Result<Self, Self::Error> {
                 if bytes.len() == $uncompressed_size {
-                    let array: [u8; $uncompressed_size] = bytes
-                        .try_into()
-                        .map_err(|_| crate::error::BlsError::ParseFromBytes)?;
+                    let array: [u8; $uncompressed_size] = bytes.try_into().map_err(|_| {
+                        crate::error::BlsError::InvalidEncodedLength {
+                            expected: $uncompressed_size,
+                            actual: bytes.len(),
+                        }
+                    })?;
                     let wrapper = $uncompressed(array);
                     Self::try_from(&wrapper)
                 } else if bytes.len() == $compressed_size {
-                    let array: [u8; $compressed_size] = bytes
-                        .try_into()
-                        .map_err(|_| crate::error::BlsError::ParseFromBytes)?;
+                    let array: [u8; $compressed_size] = bytes.try_into().map_err(|_| {
+                        crate::error::BlsError::InvalidEncodedLength {
+                            expected: $compressed_size,
+                            actual: bytes.len(),
+                        }
+                    })?;
                     let wrapper = $compressed(array);
                     Self::try_from(&wrapper)
                 } else {
-                    Err(crate::error::BlsError::ParseFromBytes)
+                    Err(crate::error::BlsError::InvalidLengthMultiple {
+                        expected_compressed: $compressed_size,
+                        expected_uncompressed: $uncompressed_size,
+                        actual: bytes.len(),
+                    })
                 }
             }
         }
@@ -413,19 +429,29 @@ macro_rules! impl_bls_conversions {
 
             fn try_from(bytes: &[u8]) -> Result<Self, Self::Error> {
                 if bytes.len() == $uncompressed_size {
-                    let array: [u8; $uncompressed_size] = bytes
-                        .try_into()
-                        .map_err(|_| crate::error::BlsError::ParseFromBytes)?;
+                    let array: [u8; $uncompressed_size] = bytes.try_into().map_err(|_| {
+                        crate::error::BlsError::InvalidEncodedLength {
+                            expected: $uncompressed_size,
+                            actual: bytes.len(),
+                        }
+                    })?;
                     let wrapper = $uncompressed(array);
                     Self::try_from(&wrapper)
                 } else if bytes.len() == $compressed_size {
-                    let array: [u8; $compressed_size] = bytes
-                        .try_into()
-                        .map_err(|_| crate::error::BlsError::ParseFromBytes)?;
+                    let array: [u8; $compressed_size] = bytes.try_into().map_err(|_| {
+                        crate::error::BlsError::InvalidEncodedLength {
+                            expected: $compressed_size,
+                            actual: bytes.len(),
+                        }
+                    })?;
                     let wrapper = $compressed(array);
                     Self::try_from(&wrapper)
                 } else {
-                    Err(crate::error::BlsError::ParseFromBytes)
+                    Err(crate::error::BlsError::InvalidLengthMultiple {
+                        expected_compressed: $compressed_size,
+                        expected_uncompressed: $uncompressed_size,
+                        actual: bytes.len(),
+                    })
                 }
             }
         }
@@ -491,7 +517,7 @@ macro_rules! impl_unchecked_conversions {
             type Error = crate::error::BlsError;
             fn try_from(bytes: $compressed_type) -> Result<Self, Self::Error> {
                 let point = Option::from(<$internal_type>::from_compressed_unchecked(&bytes.0))
-                    .ok_or(crate::error::BlsError::PointConversion)?;
+                    .ok_or(crate::error::BlsError::InvalidPointEncoding)?;
                 Ok(Self(point))
             }
         }
@@ -510,7 +536,7 @@ macro_rules! impl_unchecked_conversions {
             type Error = crate::error::BlsError;
             fn try_from(bytes: $uncompressed_type) -> Result<Self, Self::Error> {
                 let point = Option::from(<$internal_type>::from_uncompressed_unchecked(&bytes.0))
-                    .ok_or(crate::error::BlsError::PointConversion)?;
+                    .ok_or(crate::error::BlsError::InvalidPointEncoding)?;
                 Ok(Self(point))
             }
         }
