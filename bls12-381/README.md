@@ -13,7 +13,7 @@ and zero-knowledge proof (e.g. Groth16) validation.
   `bytemuck::Pod`, so instruction data can be cast directly into curve points
   without allocation.
 - **In-place operations.** Every group operation has an `_assign` variant that
-  writes into a caller-supplied `MaybeUninit` buffer, saving ~36 CU per call
+  writes into a caller-supplied `MaybeUninit` buffer, saving ~37 CU per call
   and keeping large results off the 4KB stack.
 - **Validated and unchecked APIs.** Group operations validate their operands by
   default; `_unchecked` variants skip the subgroup check for cheaper
@@ -78,41 +78,49 @@ network. `test_success_writes_full_buffer` pins the property.
 Nothing constrains what a _failing_ syscall leaves in the buffer, hence the
 poisoning rule above rather than a guarantee that the buffer is left untouched.
 
-To reuse buffers across a loop, keep two `MaybeUninit` buffers and alternate
-which one is the accumulator:
+To reuse buffers across a loop, keep two `MaybeUninit` buffers, point a pair of
+references at them, and swap the *references* each iteration:
 
 ```rust
 use solana_bls12_381::{G1Point, Endianness};
 use core::mem::MaybeUninit;
 
 let e = Endianness::Little;
-let mut a = MaybeUninit::new(points[0]);
-let mut b = MaybeUninit::uninit();
 
-// Two additions per iteration, so the result lands back in `a` and no buffer
-// ever has to move. The early returns are load-bearing: on failure the
-// destination is poisoned and must not be read afterwards.
-for pair in points[1..].chunks_exact(2) {
-    // SAFETY: `a` is initialized, by `new` above and by the second add below.
-    if !unsafe { a.assume_init_ref() }.add_assign_unchecked(&pair[0], &mut b, e) {
+// The empty sum is infinity, so this loop is total: it needs no special case
+// for an empty slice and cannot panic on one.
+let mut buf_a = MaybeUninit::new(G1Point::infinity(e));
+let mut buf_b = MaybeUninit::uninit();
+let (mut acc, mut scratch) = (&mut buf_a, &mut buf_b);
+
+for p in points {
+    // SAFETY: `acc` is initialized, by `new` above and by the previous
+    // iteration's add.
+    let lhs = unsafe { acc.assume_init_ref() };
+    // The early return is load-bearing: on failure `scratch` is poisoned and
+    // must not become the accumulator or be read afterwards.
+    if !lhs.add_assign_unchecked(p, &mut *scratch, e) {
         return Err(ProgramError::InvalidArgument);
     }
-    // SAFETY: the add above returned `true`, so `b` is initialized.
-    if !unsafe { b.assume_init_ref() }.add_assign_unchecked(&pair[1], &mut a, e) {
-        return Err(ProgramError::InvalidArgument);
-    }
+    // Swaps two pointers, not two points.
+    core::mem::swap(&mut acc, &mut scratch);
 }
 
-// SAFETY: `a` was initialized before the loop and stays initialized.
-let total = unsafe { a.assume_init() };
+// SAFETY: `acc` was initialized before the loop and stays initialized.
+let total = unsafe { acc.assume_init() };
 ```
 
-Do **not** `core::mem::swap` the two buffers instead. Swapping two 96-byte
-`G1Point`s is three `sol_memcpy_` syscalls, ~53 CU per iteration; over an
-eight-point sum that is 374 CU on top of 988 CU of actual additions. Alternating
-between two fixed buffers moves nothing. Handle an odd number of points with one
-extra add after the loop, in whichever direction leaves the total where you want
-it.
+The `&mut` indirection is the whole point. Swapping the two `MaybeUninit`
+buffers *by value* — the obvious way to write this — moves 96 bytes three times
+through a temporary, which on SBF is three `sol_memcpy_` syscalls at ~54 CU per
+iteration. Over an eight-point sum that is 1,546 CU against 1,112 for the
+version above: 434 CU, 28% of the accumulation, for a change that is otherwise
+invisible.
+
+Seeding from `points[0]` instead of infinity would save one addition (~144 CU),
+but it panics on an empty slice, and a panic aborts the transaction. If the
+points come from instruction data, reject the empty case explicitly with
+`split_first` before taking that saving.
 
 ### Multi-pairing check (BLS signatures, ZK proofs)
 
@@ -149,15 +157,16 @@ small, and depends only on how a result is returned:
 | Wrapper                                                                                   | Added CU |
 | ----------------------------------------------------------------------------------------- | -------- |
 | `validate` — returns `bool`                                                               | 11       |
-| `_assign` forms — write into a caller's `MaybeUninit`                                     | 14–16    |
+| `_assign` forms — write into a caller's `MaybeUninit`                                     | 13–17    |
 | `pairing_map_assign`                                                                      | 16       |
 | `pairing_check` — includes the `is_identity` comparison                                   | 69       |
-| Allocating forms — `add_unchecked`, `sub_unchecked`, `neg_unchecked`, `mul`, `decompress` | 36–38    |
+| Allocating forms — `add_unchecked`, `sub_unchecked`, `neg_unchecked`, `mul`, `decompress` | 51–54    |
 
-The allocating figure is the `Option<Self>` construction, not the byte copy: it
-is the same whether the output is a 96-byte G1 point or a 576-byte `Gt`
-element. Choosing an `_assign` form over its allocating counterpart therefore
-saves ~36 CU per operation, whatever the type.
+The allocating figure is dominated by the `Option<Self>` construction rather
+than the byte copy: it is roughly the same whether the output is a 96-byte G1
+point or a 576-byte `Gt` element. Choosing an `_assign` form over its
+allocating counterpart therefore saves ~37 CU per operation, whatever the type
+— the difference between the last two rows.
 
 Purely local operations issue no syscall, so these figures are the whole cost:
 
@@ -187,8 +196,12 @@ overhead — of the operations most likely to dominate an instruction:
 | `mul_assign` — G1                                            | 4,642                               |
 | `decompress_assign` — G1 / G2                                | 2,114 / 3,063                       |
 | `pairing_check` — 1 / 2 / 3 / 8 pairs                        | 25,514 / 38,536 / 51,559 / 116,675  |
-| Sum of 8 untrusted G1 points, validated once, in place       | 13,586                              |
-| Sum of 8 untrusted G2 points, validated once, in place       | 17,335                              |
+| Sum of 8 untrusted G1 points, validated once, in place       | 13,712                              |
+| Sum of 8 untrusted G2 points, validated once, in place       | 17,565                              |
+
+The two sums use the loop documented above, infinity seed included. Figures
+reproduce to within ~2 CU: adding or removing code elsewhere in a program
+perturbs codegen by about that much, so treat differences under ~5 CU as noise.
 
 These are net of a no-op instruction, so add your own entrypoint and
 instruction parsing on top. Everything here fits inside the 200,000 CU default
@@ -215,28 +228,29 @@ issued as one batch measures 51,559 CU against 76,539 as three separate calls �
 
 **Validate at the trust boundary, not in the loop.** The validation syscall is
 charged at roughly twelve times the addition syscall it guards. Summing eight
-points with `add_assign` re-validates the accumulator every iteration: 23,397 CU
-against 13,586 for validating the eight inputs once and accumulating with
-`add_assign_unchecked`. The fraction grows with batch size.
+points with `add_assign` re-validates the accumulator every iteration: 26,322 CU
+against 13,712 for validating the eight inputs once and accumulating with
+`add_assign_unchecked` — 48% of the total. The fraction grows with batch size.
 
-**Alternate two buffers instead of swapping them.** `core::mem::swap` on two
-`MaybeUninit<G1Point>`s is three `sol_memcpy_` syscalls. Over an eight-point sum
-the swapping loop measures 1,362 CU against 988 for the alternating loop shown
-above — 374 CU, 27% of the accumulation.
+**Swap the references, not the buffers.** `core::mem::swap` on two
+`MaybeUninit<G1Point>`s is three `sol_memcpy_` syscalls; on two `&mut` to them
+it is two register moves. Over an eight-point sum the by-value loop measures
+1,546 CU against 1,112 for the by-reference loop shown above — 434 CU, 28% of
+the accumulation.
 
-**Prefer the `_assign` forms in loops.** Each call avoids the ~36 CU the
+**Prefer the `_assign` forms in loops.** Each call avoids the ~37 CU the
 allocating form spends constructing its `Option<Self>`.
 
 **Take points uncompressed when you can afford the bytes.** Decompression
 validates, so it replaces rather than adds to a `validate` — but it costs 2,114
-CU against 1,576. Eight uncompressed points cost 13,586 CU to validate and sum;
-the same eight compressed cost 17,830. That is 4,244 CU for 384 bytes of
+CU against 1,576. Eight uncompressed points cost 13,712 CU to validate and sum;
+the same eight compressed cost 17,975. That is 4,263 CU for 384 bytes of
 instruction data.
 
 **Put the many-element side of the protocol in G1.** Every G1 operation is
 cheaper than its G2 counterpart: 1,576 against 1,977 to validate, 144 against
 219 to add, 2,114 against 3,063 to decompress. Aggregating eight points costs
-13,586 CU in G1 and 17,335 in G2.
+13,712 CU in G1 and 17,565 in G2.
 
 **Endianness is free.** The runtime charges the same for the `_LE` and `_BE`
 curve IDs, and selecting between them costs nothing measurable in the wrapper.

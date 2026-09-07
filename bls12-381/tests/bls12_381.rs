@@ -477,3 +477,59 @@ fn test_scalar_constructors() {
         assert_eq!(G1Point::from_bytes_ref(g.as_bytes()), &g);
     }
 }
+
+/// Pins the accumulation loop the README tells callers to copy.
+///
+/// The loop is documented as total — the empty sum is infinity — and as
+/// producing the same result as repeated `add`. Both properties are easy to
+/// break while optimizing the buffer handling, and a program that copied a
+/// broken version would either panic on an empty slice or silently drop a
+/// point, so they are checked here rather than left to the prose.
+#[test]
+fn test_readme_accumulation_pattern() {
+    fn sum(points: &[G1Point], e: Endianness) -> Option<G1Point> {
+        let mut buf_a = MaybeUninit::new(G1Point::infinity(e));
+        let mut buf_b = MaybeUninit::uninit();
+        let (mut acc, mut scratch) = (&mut buf_a, &mut buf_b);
+
+        for p in points {
+            // SAFETY: `acc` is initialized, by `new` above and by the previous
+            // iteration's add.
+            let lhs = unsafe { acc.assume_init_ref() };
+            if !lhs.add_assign_unchecked(p, &mut *scratch, e) {
+                return None;
+            }
+            core::mem::swap(&mut acc, &mut scratch);
+        }
+
+        // SAFETY: `acc` was initialized before the loop and stays initialized.
+        Some(unsafe { acc.assume_init() })
+    }
+
+    for e in [Endianness::Little, Endianness::Big] {
+        let g = G1Point::generator(e);
+
+        // Total: the empty sum is the identity, with no panic.
+        assert_eq!(sum(&[], e), Some(G1Point::infinity(e)));
+
+        // Every length agrees with `k * G`, which catches both a dropped point
+        // and a double-counted one. Odd and even lengths both matter: a
+        // pairwise-unrolled loop gets one of the two wrong.
+        let mut points = Vec::new();
+        for k in 1..=8u64 {
+            points.push(g.mul(&Scalar::from_u64(k, e), e).expect("k * G"));
+
+            let expected = g
+                .mul(&Scalar::from_u64(k * (k + 1) / 2, e), e)
+                .expect("triangular multiple");
+            assert_eq!(
+                sum(&points, e),
+                Some(expected),
+                "sum of the first {k} multiples of G, {e:?}"
+            );
+        }
+
+        // The accumulator is a real point, not just the right bytes.
+        assert!(sum(&points, e).expect("sum").validate(e));
+    }
+}
