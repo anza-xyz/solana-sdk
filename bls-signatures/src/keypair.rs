@@ -1,14 +1,17 @@
 #[cfg(feature = "solana-signer-derive")]
 use solana_signer::Signer;
 #[cfg(feature = "std")]
-use std::{
-    boxed::Box,
-    error,
-    fs::{self, File, OpenOptions},
-    io::{Read, Write},
-    path::Path,
-    string::String,
-    vec::Vec,
+use {
+    crate::secret_bytes::SecretString,
+    std::{
+        boxed::Box,
+        error,
+        fs::{self, File, OpenOptions},
+        io::{Read, Write},
+        path::Path,
+        vec::Vec,
+    },
+    zeroize::Zeroizing,
 };
 use {
     crate::{
@@ -18,10 +21,11 @@ use {
             PopVerified, PubkeyAffine, PubkeyProjective, VerifySignature,
             BLS_PUBLIC_KEY_AFFINE_SIZE,
         },
+        secret_bytes::SecretBytes,
         secret_key::{SecretKey, BLS_SECRET_KEY_SIZE},
         signature::{AsSignatureAffine, SignatureProjective},
     },
-    zeroize::{Zeroize, ZeroizeOnDrop, Zeroizing},
+    zeroize::{Zeroize, ZeroizeOnDrop},
 };
 
 /// Size of BLS keypair in bytes
@@ -118,17 +122,17 @@ impl From<&Keypair> for [u8; BLS_KEYPAIR_SIZE] {
         // WARNING: `bytes` contains raw secret-key material. Callers should zeroize the returned
         // buffer as soon as they are done using it.
         let mut bytes = [0u8; BLS_KEYPAIR_SIZE];
-        let secret_bytes: Zeroizing<[u8; BLS_SECRET_KEY_SIZE]> = (&keypair.secret).into();
+        let secret_bytes: SecretBytes<BLS_SECRET_KEY_SIZE> = (&keypair.secret).into();
         bytes[..BLS_SECRET_KEY_SIZE].copy_from_slice(secret_bytes.as_slice());
         bytes[BLS_SECRET_KEY_SIZE..].copy_from_slice(&keypair.public.to_bytes_uncompressed());
         bytes
     }
 }
 
-impl From<&Keypair> for Zeroizing<[u8; BLS_KEYPAIR_SIZE]> {
+impl From<&Keypair> for SecretBytes<BLS_KEYPAIR_SIZE> {
     fn from(keypair: &Keypair) -> Self {
-        let mut bytes = Zeroizing::new([0u8; BLS_KEYPAIR_SIZE]);
-        let secret_bytes: Zeroizing<[u8; BLS_SECRET_KEY_SIZE]> = (&keypair.secret).into();
+        let mut bytes = SecretBytes::<BLS_KEYPAIR_SIZE>::zeroed();
+        let secret_bytes: SecretBytes<BLS_SECRET_KEY_SIZE> = (&keypair.secret).into();
         bytes[..BLS_SECRET_KEY_SIZE].copy_from_slice(secret_bytes.as_slice());
         bytes[BLS_SECRET_KEY_SIZE..].copy_from_slice(&keypair.public.to_bytes_uncompressed());
         bytes
@@ -152,9 +156,9 @@ impl Keypair {
     pub fn write_json<W: Write>(
         &self,
         writer: &mut W,
-    ) -> Result<Zeroizing<String>, Box<dyn error::Error>> {
-        let bytes: Zeroizing<[u8; BLS_KEYPAIR_SIZE]> = self.into();
-        let json = Zeroizing::new(serde_json::to_string(bytes.as_slice())?);
+    ) -> Result<SecretString, Box<dyn error::Error>> {
+        let bytes: SecretBytes<BLS_KEYPAIR_SIZE> = self.into();
+        let json = SecretString::new(serde_json::to_string(bytes.as_slice())?);
         writer.write_all(json.as_bytes())?;
         Ok(json)
     }
@@ -162,7 +166,7 @@ impl Keypair {
     pub fn write_json_file<F: AsRef<Path>>(
         &self,
         outfile: F,
-    ) -> Result<Zeroizing<String>, Box<dyn core::error::Error>> {
+    ) -> Result<SecretString, Box<dyn core::error::Error>> {
         let outfile = outfile.as_ref();
 
         if let Some(outdir) = outfile.parent() {

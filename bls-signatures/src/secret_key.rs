@@ -4,6 +4,7 @@ use {
         hash::{hash_bound_pop_to_projective, hash_message_to_projective},
         proof_of_possession::ProofOfPossessionProjective,
         pubkey::PubkeyProjective,
+        secret_bytes::SecretBytes,
         signature::SignatureProjective,
     },
     blst::{blst_keygen, blst_scalar},
@@ -52,7 +53,7 @@ impl ZeroizeOnDrop for SecretKey {}
 
 impl SecretKey {
     /// Parses a canonical, non-zero secret scalar from little-endian bytes.
-    fn parse_scalar(bytes: &Zeroizing<[u8; BLS_SECRET_KEY_SIZE]>) -> Result<Scalar, BlsError> {
+    fn parse_scalar(bytes: &SecretBytes<BLS_SECRET_KEY_SIZE>) -> Result<Scalar, BlsError> {
         let scalar: Option<Scalar> = Scalar::from_bytes_le(bytes).into();
         let scalar = scalar.ok_or(BlsError::FieldDecode)?;
         if bool::from(scalar.is_zero()) {
@@ -83,7 +84,7 @@ impl SecretKey {
                 0,
             );
         }
-        let bytes = Zeroizing::new(scalar.b);
+        let bytes = SecretBytes::new(scalar.b);
         Self::parse_scalar(&bytes).map(Self)
     }
 
@@ -131,28 +132,31 @@ impl TryFrom<&[u8]> for SecretKey {
         if src.len() != BLS_SECRET_KEY_SIZE {
             return Err(BlsError::ParseFromBytes);
         }
-        let mut bytes = Zeroizing::new([0u8; BLS_SECRET_KEY_SIZE]);
-        bytes.copy_from_slice(src);
+        let mut bytes = SecretBytes::<BLS_SECRET_KEY_SIZE>::zeroed();
+        bytes.as_mut_slice().copy_from_slice(src);
         Self::parse_scalar(&bytes).map(Self)
     }
 }
 
-/// Converts a secret key into a zeroizing little-endian byte buffer.
+/// Converts a secret key into a little-endian byte buffer that is zeroized on
+/// drop.
 ///
 /// If a caller explicitly needs a plain `[u8; BLS_SECRET_KEY_SIZE]`, they can
-/// copy it out of the zeroizing wrapper:
+/// copy it out of the wrapper:
 ///
 /// ```
-/// use zeroize::Zeroizing;
-/// use solana_bls_signatures::secret_key::{SecretKey, BLS_SECRET_KEY_SIZE};
+/// use solana_bls_signatures::{
+///     secret_bytes::SecretBytes,
+///     secret_key::{SecretKey, BLS_SECRET_KEY_SIZE},
+/// };
 ///
 /// let secret_key = SecretKey::new();
-/// let zeroizing_bytes: Zeroizing<[u8; BLS_SECRET_KEY_SIZE]> = (&secret_key).into();
+/// let secret_bytes: SecretBytes<BLS_SECRET_KEY_SIZE> = (&secret_key).into();
 /// let mut raw_bytes = [0u8; BLS_SECRET_KEY_SIZE];
-/// raw_bytes.copy_from_slice(zeroizing_bytes.as_slice());
+/// raw_bytes.copy_from_slice(secret_bytes.as_slice());
 /// ```
-impl From<&SecretKey> for Zeroizing<[u8; BLS_SECRET_KEY_SIZE]> {
+impl From<&SecretKey> for SecretBytes<BLS_SECRET_KEY_SIZE> {
     fn from(secret_key: &SecretKey) -> Self {
-        Zeroizing::new(secret_key.0.to_bytes_le())
+        SecretBytes::new(secret_key.0.to_bytes_le())
     }
 }
