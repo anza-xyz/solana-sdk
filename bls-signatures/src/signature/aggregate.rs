@@ -3,9 +3,10 @@ use rayon::prelude::*;
 use {
     crate::{
         error::BlsError,
+        scalar::Scalar,
         signature::points::{AddToSignatureProjective, SignatureProjective},
     },
-    blstrs::{G2Projective, Scalar},
+    blstrs::G2Projective,
 };
 
 impl SignatureProjective {
@@ -60,7 +61,7 @@ impl SignatureProjective {
             signature.add_to_accumulator(&mut point)?;
 
             points.push(point.0);
-            scalar_values.push(*scalar);
+            scalar_values.push(scalar.0);
         }
 
         Ok(SignatureProjective(G2Projective::multi_exp(

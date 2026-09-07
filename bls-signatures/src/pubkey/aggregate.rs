@@ -4,8 +4,9 @@ use {
     crate::{
         error::BlsError,
         pubkey::points::{AddToPubkeyProjective, AggregatePubkey, PopVerified, PubkeyProjective},
+        scalar::Scalar,
     },
-    blstrs::{G1Projective, Scalar},
+    blstrs::G1Projective,
 };
 
 impl PubkeyProjective {
@@ -62,7 +63,7 @@ impl PubkeyProjective {
             pubkey.0.add_to_accumulator(&mut point)?;
 
             points.push(point.0);
-            scalar_values.push(*scalar);
+            scalar_values.push(scalar.0);
         }
 
         Ok(AggregatePubkey(PubkeyProjective(G1Projective::multi_exp(

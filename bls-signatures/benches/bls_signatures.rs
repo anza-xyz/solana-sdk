@@ -1,11 +1,10 @@
 use {
-    blstrs::Scalar,
     criterion::{criterion_group, criterion_main, Criterion},
-    ff::Field,
     solana_bls_signatures::{
         hash::{HashedMessage, PreparedHashedMessage},
         keypair::Keypair,
         pubkey::{PopVerified, Pubkey, PubkeyProjective, VerifyPop, VerifySignature},
+        scalar::Scalar,
         signature::{Signature, SignatureAffineUnchecked, SignatureProjective},
     },
     std::hint::black_box,
@@ -47,9 +46,7 @@ fn bench_aggregate(c: &mut Criterion) {
             .collect();
 
         // Generate random scalars for MSM benchmark
-        let scalars: Vec<Scalar> = (0..*num_validators)
-            .map(|_| Scalar::random(&mut rand::thread_rng()))
-            .collect();
+        let scalars: Vec<Scalar> = (0..*num_validators).map(|_| Scalar::random()).collect();
 
         // Benchmark for aggregating multiple signatures
         group.bench_function(format!("{num_validators} signature aggregation"), |b| {

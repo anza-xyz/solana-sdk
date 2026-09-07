@@ -56,7 +56,6 @@ subtle = { workspace = true, optional = true }
 [dev-dependencies]
 bincode = { workspace = true }
 criterion = { workspace = true }
-ff = { workspace = true }
 hex = { workspace = true }
 solana-bls-signatures = { path = ".", features = ["std"] }
 solana-keypair = { workspace = true }

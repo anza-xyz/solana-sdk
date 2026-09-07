@@ -17,6 +17,7 @@ pub use crate::{
     pubkey::{
         AsPubkeyProjective, PubkeyAffineUnchecked, PubkeyProjective, VerifyPop, VerifySignature,
     },
+    scalar::Scalar,
     secret_bytes::{SecretBytes, SecretString},
     secret_key::{SecretKey, BLS_SECRET_KEY_SIZE},
     signature::{
@@ -45,6 +46,8 @@ pub(crate) mod macros;
 pub mod hash;
 pub mod proof_of_possession;
 pub mod pubkey;
+#[cfg(not(target_os = "solana"))]
+pub mod scalar;
 #[cfg(not(target_os = "solana"))]
 pub mod secret_bytes;
 #[cfg(not(target_os = "solana"))]
