@@ -62,7 +62,7 @@ jobs:
           fetch-depth: 0 # full history to check for whitespace / conflict markers
 
       - name: Summarise workflow inputs
-        uses: solana-program/actions/workflow-inputs@v1
+        uses: solana-program/actions/workflow-inputs@35ada2e9a5e7d83c1321903810b2f73c2787abb2  # v1
 
       - name: Setup Environment
         uses: ./.github/actions/setup
