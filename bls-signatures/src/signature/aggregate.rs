@@ -6,7 +6,7 @@ use {
         scalar::Scalar,
         signature::points::{AddToSignatureProjective, SignatureProjective},
     },
-    blstrs::G2Projective,
+    blstrs::{G2Projective, Scalar as BlstrsScalar},
 };
 
 impl SignatureProjective {
@@ -40,10 +40,32 @@ impl SignatureProjective {
     }
 
     // Aggregate a list of signatures and scalar elements using MSM on these signatures
-    #[allow(clippy::arithmetic_side_effects)]
+    #[deprecated(
+        since = "3.5.0",
+        note = "Please use `SignatureProjective::aggregate_with_weights` instead, which takes \
+                `solana_bls_signatures::Scalar` rather than `blstrs::Scalar`"
+    )]
     pub fn aggregate_with_scalars<'a, S: AddToSignatureProjective + ?Sized + 'a>(
         signatures: impl ExactSizeIterator<Item = &'a S>,
-        scalars: impl ExactSizeIterator<Item = &'a Scalar>,
+        scalars: impl ExactSizeIterator<Item = &'a BlstrsScalar>,
+    ) -> Result<SignatureProjective, BlsError> {
+        Self::multi_exp(signatures, scalars.copied())
+    }
+
+    /// Aggregate a list of signatures, each weighted by a scalar, using MSM.
+    pub fn aggregate_with_weights<'a, S: AddToSignatureProjective + ?Sized + 'a>(
+        signatures: impl ExactSizeIterator<Item = &'a S>,
+        weights: impl ExactSizeIterator<Item = &'a Scalar>,
+    ) -> Result<SignatureProjective, BlsError> {
+        Self::multi_exp(signatures, weights.map(|weight| weight.0))
+    }
+
+    /// The multi-scalar multiplication shared by [`Self::aggregate_with_weights`]
+    /// and its deprecated `blstrs`-typed counterpart.
+    #[allow(clippy::arithmetic_side_effects)]
+    fn multi_exp<'a, S: AddToSignatureProjective + ?Sized + 'a>(
+        signatures: impl ExactSizeIterator<Item = &'a S>,
+        scalars: impl ExactSizeIterator<Item = BlstrsScalar>,
     ) -> Result<SignatureProjective, BlsError> {
         if signatures.len() != scalars.len() {
             return Err(BlsError::InputLengthMismatch);
@@ -61,7 +83,7 @@ impl SignatureProjective {
             signature.add_to_accumulator(&mut point)?;
 
             points.push(point.0);
-            scalar_values.push(scalar.0);
+            scalar_values.push(scalar);
         }
 
         Ok(SignatureProjective(G2Projective::multi_exp(
@@ -118,5 +140,30 @@ impl SignatureProjective {
         }
 
         Ok(aggregate)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::{keypair::Keypair, scalar::Scalar, signature::SignatureProjective};
+
+    #[test]
+    #[allow(deprecated)]
+    fn test_deprecated_aggregate_with_scalars_matches_weights() {
+        let message = b"test message";
+        let signatures = [
+            Keypair::new().sign(message),
+            Keypair::new().sign(message),
+            Keypair::new().sign(message),
+        ];
+        let weights = [Scalar::random(), Scalar::random(), Scalar::random()];
+        let blstrs_weights: alloc::vec::Vec<_> = weights.iter().map(|weight| weight.0).collect();
+
+        let from_weights =
+            SignatureProjective::aggregate_with_weights(signatures.iter(), weights.iter()).unwrap();
+        let from_scalars =
+            SignatureProjective::aggregate_with_scalars(signatures.iter(), blstrs_weights.iter())
+                .unwrap();
+        assert_eq!(from_weights, from_scalars);
     }
 }

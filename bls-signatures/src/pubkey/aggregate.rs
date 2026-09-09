@@ -6,7 +6,7 @@ use {
         pubkey::points::{AddToPubkeyProjective, AggregatePubkey, PopVerified, PubkeyProjective},
         scalar::Scalar,
     },
-    blstrs::G1Projective,
+    blstrs::{G1Projective, Scalar as BlstrsScalar},
 };
 
 impl PubkeyProjective {
@@ -42,10 +42,33 @@ impl PubkeyProjective {
     }
 
     /// Aggregate a list of Proof-of-Possession verified public keys with scalars.
-    #[allow(clippy::arithmetic_side_effects)]
+    #[deprecated(
+        since = "3.5.0",
+        note = "Please use `PubkeyProjective::aggregate_with_weights` instead, which takes \
+                `solana_bls_signatures::Scalar` rather than `blstrs::Scalar`"
+    )]
     pub fn aggregate_with_scalars<'a, P: AddToPubkeyProjective + ?Sized + 'a>(
         pubkeys: impl ExactSizeIterator<Item = &'a PopVerified<P>>,
-        scalars: impl ExactSizeIterator<Item = &'a Scalar>,
+        scalars: impl ExactSizeIterator<Item = &'a BlstrsScalar>,
+    ) -> Result<AggregatePubkey<PubkeyProjective>, BlsError> {
+        Self::multi_exp(pubkeys, scalars.copied())
+    }
+
+    /// Aggregate a list of Proof-of-Possession verified public keys, each
+    /// weighted by a scalar.
+    pub fn aggregate_with_weights<'a, P: AddToPubkeyProjective + ?Sized + 'a>(
+        pubkeys: impl ExactSizeIterator<Item = &'a PopVerified<P>>,
+        weights: impl ExactSizeIterator<Item = &'a Scalar>,
+    ) -> Result<AggregatePubkey<PubkeyProjective>, BlsError> {
+        Self::multi_exp(pubkeys, weights.map(|weight| weight.0))
+    }
+
+    /// The multi-scalar multiplication shared by [`Self::aggregate_with_weights`]
+    /// and its deprecated `blstrs`-typed counterpart.
+    #[allow(clippy::arithmetic_side_effects)]
+    fn multi_exp<'a, P: AddToPubkeyProjective + ?Sized + 'a>(
+        pubkeys: impl ExactSizeIterator<Item = &'a PopVerified<P>>,
+        scalars: impl ExactSizeIterator<Item = BlstrsScalar>,
     ) -> Result<AggregatePubkey<PubkeyProjective>, BlsError> {
         if pubkeys.len() != scalars.len() {
             return Err(BlsError::InputLengthMismatch);
@@ -63,7 +86,7 @@ impl PubkeyProjective {
             pubkey.0.add_to_accumulator(&mut point)?;
 
             points.push(point.0);
-            scalar_values.push(scalar.0);
+            scalar_values.push(scalar);
         }
 
         Ok(AggregatePubkey(PubkeyProjective(G1Projective::multi_exp(
@@ -121,5 +144,29 @@ impl PubkeyProjective {
         }
 
         Ok(AggregatePubkey(aggregate))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::{keypair::Keypair, pubkey::PubkeyProjective, scalar::Scalar};
+
+    #[test]
+    #[allow(deprecated)]
+    fn test_deprecated_aggregate_with_scalars_matches_weights() {
+        let pubkeys = [
+            Keypair::new().public,
+            Keypair::new().public,
+            Keypair::new().public,
+        ];
+        let weights = [Scalar::random(), Scalar::random(), Scalar::random()];
+        let blstrs_weights: alloc::vec::Vec<_> = weights.iter().map(|weight| weight.0).collect();
+
+        let from_weights =
+            PubkeyProjective::aggregate_with_weights(pubkeys.iter(), weights.iter()).unwrap();
+        let from_scalars =
+            PubkeyProjective::aggregate_with_scalars(pubkeys.iter(), blstrs_weights.iter())
+                .unwrap();
+        assert_eq!(from_weights, from_scalars);
     }
 }

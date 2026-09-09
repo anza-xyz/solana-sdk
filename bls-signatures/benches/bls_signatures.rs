@@ -63,7 +63,7 @@ fn bench_aggregate(c: &mut Criterion) {
                         .map(|bytes| SignatureAffineUnchecked::try_from(bytes).expect("valid sig"))
                         .collect();
 
-                    let aggregated_proj = SignatureProjective::aggregate_with_scalars(
+                    let aggregated_proj = SignatureProjective::aggregate_with_weights(
                         unchecked_sigs.iter(),
                         scalars.iter(),
                     )

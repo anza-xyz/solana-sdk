@@ -160,3 +160,13 @@ impl From<&SecretKey> for SecretBytes<BLS_SECRET_KEY_SIZE> {
         SecretBytes::new(secret_key.0.to_bytes_le())
     }
 }
+
+/// Converts a secret key into a zeroizing little-endian byte buffer.
+///
+/// Prefer the [`SecretBytes`] conversion above, which does not require a direct
+/// dependency on `zeroize`. This impl is retained for backward compatibility.
+impl From<&SecretKey> for Zeroizing<[u8; BLS_SECRET_KEY_SIZE]> {
+    fn from(secret_key: &SecretKey) -> Self {
+        Zeroizing::new(secret_key.0.to_bytes_le())
+    }
+}
