@@ -24,24 +24,6 @@ fn test_get_durable_nonce() {
         instructions: Vec<CompiledInstruction>,
         loaded_addresses: Option<LoadedAddresses>,
     ) -> SanitizedMessage {
-        create_message_for_test_with_reserved_keys(
-            num_signers,
-            num_writable,
-            account_keys,
-            instructions,
-            loaded_addresses,
-            &HashSet::new(),
-        )
-    }
-
-    fn create_message_for_test_with_reserved_keys(
-        num_signers: u8,
-        num_writable: u8,
-        account_keys: Vec<Pubkey>,
-        instructions: Vec<CompiledInstruction>,
-        loaded_addresses: Option<LoadedAddresses>,
-        reserved_account_keys: &HashSet<Pubkey>,
-    ) -> SanitizedMessage {
         let header = MessageHeader {
             num_required_signatures: num_signers,
             num_readonly_signed_accounts: 0,
@@ -82,7 +64,7 @@ fn test_get_durable_nonce() {
         SanitizedMessage::try_new(
             SanitizedVersionedMessage::try_new(versioned_message).unwrap(),
             loader,
-            reserved_account_keys,
+            &HashSet::new(),
         )
         .unwrap()
     }
@@ -91,7 +73,7 @@ fn test_get_durable_nonce() {
     {
         let message = create_message_for_test(1, 1, vec![Pubkey::new_unique()], vec![], None);
         assert!(SVMMessage::get_durable_nonce(&message).is_none());
-        assert!(SVMStaticMessage::get_durable_nonce_static(&message).is_none());
+        assert!(SVMStaticMessage::get_durable_nonce_static(&message, true).is_none());
     }
 
     // system program id instruction - invalid
@@ -104,7 +86,7 @@ fn test_get_durable_nonce() {
             None,
         );
         assert!(SVMMessage::get_durable_nonce(&message).is_none());
-        assert!(SVMStaticMessage::get_durable_nonce_static(&message).is_none());
+        assert!(SVMStaticMessage::get_durable_nonce_static(&message, true).is_none());
     }
 
     // system program id instruction - not nonce
@@ -121,7 +103,7 @@ fn test_get_durable_nonce() {
             None,
         );
         assert!(SVMMessage::get_durable_nonce(&message).is_none());
-        assert!(SVMStaticMessage::get_durable_nonce_static(&message).is_none());
+        assert!(SVMStaticMessage::get_durable_nonce_static(&message, true).is_none());
     }
 
     // system program id - nonce instruction (no accounts)
@@ -138,7 +120,7 @@ fn test_get_durable_nonce() {
             None,
         );
         assert!(SVMMessage::get_durable_nonce(&message).is_none());
-        assert!(SVMStaticMessage::get_durable_nonce_static(&message).is_none());
+        assert!(SVMStaticMessage::get_durable_nonce_static(&message, true).is_none());
     }
 
     // system program id - nonce instruction (non-fee-payer, non-writable)
@@ -157,7 +139,7 @@ fn test_get_durable_nonce() {
             None,
         );
         assert!(SVMMessage::get_durable_nonce(&message).is_none());
-        assert!(SVMStaticMessage::get_durable_nonce_static(&message).is_none());
+        assert!(SVMStaticMessage::get_durable_nonce_static(&message, true).is_none());
     }
 
     // system program id - nonce instruction fee-payer
@@ -176,7 +158,7 @@ fn test_get_durable_nonce() {
         );
         assert_eq!(SVMMessage::get_durable_nonce(&message), Some(&payer_nonce));
         assert_eq!(
-            SVMStaticMessage::get_durable_nonce_static(&message),
+            SVMStaticMessage::get_durable_nonce_static(&message, true),
             Some(&payer_nonce)
         );
     }
@@ -199,7 +181,7 @@ fn test_get_durable_nonce() {
         );
         assert_eq!(SVMMessage::get_durable_nonce(&message), Some(&payer_nonce));
         assert_eq!(
-            SVMStaticMessage::get_durable_nonce_static(&message),
+            SVMStaticMessage::get_durable_nonce_static(&message, true),
             Some(&payer_nonce)
         );
     }
@@ -221,7 +203,7 @@ fn test_get_durable_nonce() {
         );
         assert_eq!(SVMMessage::get_durable_nonce(&message), Some(&nonce));
         assert_eq!(
-            SVMStaticMessage::get_durable_nonce_static(&message),
+            SVMStaticMessage::get_durable_nonce_static(&message, true),
             Some(&nonce)
         );
     }
@@ -244,7 +226,7 @@ fn test_get_durable_nonce() {
         );
         assert_eq!(SVMMessage::get_durable_nonce(&message), Some(&nonce));
         assert_eq!(
-            SVMStaticMessage::get_durable_nonce_static(&message),
+            SVMStaticMessage::get_durable_nonce_static(&message, true),
             Some(&nonce)
         );
     }
@@ -268,7 +250,10 @@ fn test_get_durable_nonce() {
             }),
         );
         assert_eq!(SVMMessage::get_durable_nonce(&message), None);
-        assert_eq!(SVMStaticMessage::get_durable_nonce_static(&message), None);
+        assert_eq!(
+            SVMStaticMessage::get_durable_nonce_static(&message, true),
+            None
+        );
     }
 
     // system program id - nonce instruction (nonce is program id, write-demoted)
@@ -286,11 +271,14 @@ fn test_get_durable_nonce() {
             None,
         );
         assert!(SVMMessage::get_durable_nonce(&message).is_none());
-        assert!(SVMStaticMessage::get_durable_nonce_static(&message).is_none());
+        assert!(SVMStaticMessage::get_durable_nonce_static(&message, true).is_none());
+        assert_eq!(
+            SVMStaticMessage::get_durable_nonce_static(&message, false),
+            Some(&nonce)
+        );
     }
 
     // system program id - nonce instruction (nonce is program id, upgradeable loader present)
-    // legacy relies on write demotion, which the loader disables; SIMD-0602 rejects outright
     {
         let payer = Pubkey::new_unique();
         let nonce = Pubkey::new_unique();
@@ -310,7 +298,11 @@ fn test_get_durable_nonce() {
             None,
         );
         assert_eq!(SVMMessage::get_durable_nonce(&message), Some(&nonce));
-        assert!(SVMStaticMessage::get_durable_nonce_static(&message).is_none());
+        assert!(SVMStaticMessage::get_durable_nonce_static(&message, true).is_none());
+        assert_eq!(
+            SVMStaticMessage::get_durable_nonce_static(&message, false),
+            Some(&nonce)
+        );
     }
 }
 
