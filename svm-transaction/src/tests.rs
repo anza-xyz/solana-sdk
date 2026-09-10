@@ -91,7 +91,7 @@ fn test_get_durable_nonce() {
     {
         let message = create_message_for_test(1, 1, vec![Pubkey::new_unique()], vec![], None);
         assert!(SVMMessage::get_durable_nonce(&message).is_none());
-        assert!(SVMStaticMessage::get_durable_nonce_simd602(&message).is_none());
+        assert!(SVMStaticMessage::get_durable_nonce_static(&message).is_none());
     }
 
     // system program id instruction - invalid
@@ -104,7 +104,7 @@ fn test_get_durable_nonce() {
             None,
         );
         assert!(SVMMessage::get_durable_nonce(&message).is_none());
-        assert!(SVMStaticMessage::get_durable_nonce_simd602(&message).is_none());
+        assert!(SVMStaticMessage::get_durable_nonce_static(&message).is_none());
     }
 
     // system program id instruction - not nonce
@@ -121,7 +121,7 @@ fn test_get_durable_nonce() {
             None,
         );
         assert!(SVMMessage::get_durable_nonce(&message).is_none());
-        assert!(SVMStaticMessage::get_durable_nonce_simd602(&message).is_none());
+        assert!(SVMStaticMessage::get_durable_nonce_static(&message).is_none());
     }
 
     // system program id - nonce instruction (no accounts)
@@ -138,7 +138,7 @@ fn test_get_durable_nonce() {
             None,
         );
         assert!(SVMMessage::get_durable_nonce(&message).is_none());
-        assert!(SVMStaticMessage::get_durable_nonce_simd602(&message).is_none());
+        assert!(SVMStaticMessage::get_durable_nonce_static(&message).is_none());
     }
 
     // system program id - nonce instruction (non-fee-payer, non-writable)
@@ -157,7 +157,7 @@ fn test_get_durable_nonce() {
             None,
         );
         assert!(SVMMessage::get_durable_nonce(&message).is_none());
-        assert!(SVMStaticMessage::get_durable_nonce_simd602(&message).is_none());
+        assert!(SVMStaticMessage::get_durable_nonce_static(&message).is_none());
     }
 
     // system program id - nonce instruction fee-payer
@@ -176,7 +176,7 @@ fn test_get_durable_nonce() {
         );
         assert_eq!(SVMMessage::get_durable_nonce(&message), Some(&payer_nonce));
         assert_eq!(
-            SVMStaticMessage::get_durable_nonce_simd602(&message),
+            SVMStaticMessage::get_durable_nonce_static(&message),
             Some(&payer_nonce)
         );
     }
@@ -199,7 +199,7 @@ fn test_get_durable_nonce() {
         );
         assert_eq!(SVMMessage::get_durable_nonce(&message), Some(&payer_nonce));
         assert_eq!(
-            SVMStaticMessage::get_durable_nonce_simd602(&message),
+            SVMStaticMessage::get_durable_nonce_static(&message),
             Some(&payer_nonce)
         );
     }
@@ -221,7 +221,7 @@ fn test_get_durable_nonce() {
         );
         assert_eq!(SVMMessage::get_durable_nonce(&message), Some(&nonce));
         assert_eq!(
-            SVMStaticMessage::get_durable_nonce_simd602(&message),
+            SVMStaticMessage::get_durable_nonce_static(&message),
             Some(&nonce)
         );
     }
@@ -244,7 +244,7 @@ fn test_get_durable_nonce() {
         );
         assert_eq!(SVMMessage::get_durable_nonce(&message), Some(&nonce));
         assert_eq!(
-            SVMStaticMessage::get_durable_nonce_simd602(&message),
+            SVMStaticMessage::get_durable_nonce_static(&message),
             Some(&nonce)
         );
     }
@@ -268,7 +268,7 @@ fn test_get_durable_nonce() {
             }),
         );
         assert_eq!(SVMMessage::get_durable_nonce(&message), None);
-        assert_eq!(SVMStaticMessage::get_durable_nonce_simd602(&message), None);
+        assert_eq!(SVMStaticMessage::get_durable_nonce_static(&message), None);
     }
 
     // system program id - nonce instruction (nonce is program id, write-demoted)
@@ -286,7 +286,7 @@ fn test_get_durable_nonce() {
             None,
         );
         assert!(SVMMessage::get_durable_nonce(&message).is_none());
-        assert!(SVMStaticMessage::get_durable_nonce_simd602(&message).is_none());
+        assert!(SVMStaticMessage::get_durable_nonce_static(&message).is_none());
     }
 
     // system program id - nonce instruction (nonce is program id, upgradeable loader present)
@@ -310,7 +310,7 @@ fn test_get_durable_nonce() {
             None,
         );
         assert_eq!(SVMMessage::get_durable_nonce(&message), Some(&nonce));
-        assert!(SVMStaticMessage::get_durable_nonce_simd602(&message).is_none());
+        assert!(SVMStaticMessage::get_durable_nonce_static(&message).is_none());
     }
 }
 
