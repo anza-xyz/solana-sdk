@@ -14,4 +14,4 @@
 #![allow(clippy::arithmetic_side_effects)]
 #![no_std]
 
-pub use {solana_instruction_v4::*, solana_instruction_error as error};
+pub use {solana_instruction_error as error, solana_instruction_v4::*};

@@ -27,8 +27,8 @@ syscalls = ["solana-instruction-v4/syscalls"]
 wincode = ["solana-instruction-v4/wincode"]
 
 [dependencies]
-solana-instruction-v4 = { package = "solana-instruction", version = "4.0.0" }
 solana-instruction-error = { workspace = true, features = ["num-traits"] }
+solana-instruction-v4 = { package = "solana-instruction", version = "4.0.0" }
 
 [lints]
 workspace = true
