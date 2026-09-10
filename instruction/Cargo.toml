@@ -15,32 +15,20 @@ all-features = true
 rustdoc-args = ["--cfg=docsrs"]
 
 [features]
-bincode = ["dep:bincode", "dep:serde"]
-borsh = ["dep:borsh"]
+bincode = ["solana-instruction-v4/bincode"]
+borsh = ["solana-instruction-v4/borsh"]
 default = ["std"]
 # The `frozen-abi` feature is unused. Remove with the next breaking release.
-frozen-abi = []
-serde = ["serde/alloc", "dep:serde_derive", "solana-pubkey/serde"]
+frozen-abi = ["solana-instruction-v4/frozen-abi"]
+serde = ["solana-instruction-v4/serde"]
 # The `std` feature is currently unused and retained for backwards compatibility.
-std = []
-syscalls = []
-wincode = ["dep:wincode", "solana-pubkey/wincode"]
+std = ["solana-instruction-v4/std"]
+syscalls = ["solana-instruction-v4/syscalls"]
+wincode = ["solana-instruction-v4/wincode"]
 
 [dependencies]
-bincode = { workspace = true, optional = true }
-borsh = { workspace = true, optional = true }
-serde = { workspace = true, optional = true }
-serde_derive = { workspace = true, optional = true }
+solana-instruction-v4 = { package = "solana-instruction", version = "4.0.0" }
 solana-instruction-error = { workspace = true, features = ["num-traits"] }
-solana-pubkey = { workspace = true, default-features = false }
-wincode = { workspace = true, features = ["alloc"], optional = true }
-
-[target.'cfg(target_os = "solana")'.dependencies]
-solana-define-syscall = { workspace = true }
-
-[dev-dependencies]
-solana-instruction = { path = ".", features = ["borsh"] }
-solana-pubkey = { workspace = true, features = ["std"] }
 
 [lints]
 workspace = true
