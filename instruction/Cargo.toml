@@ -9,6 +9,17 @@ homepage = { workspace = true }
 license = { workspace = true }
 edition = { workspace = true }
 
+[package.metadata.cargo-semver-checks.lints]
+# cargo-semver-checks performs checks on the exported symbol graph, so re-exports
+# are considered different elements and they will be flagged as breaking changes
+# even if the public API is equivalent.
+declarative_macro_missing = "allow"
+enum_missing = "allow"
+function_missing = "allow"
+module_missing = "allow"
+pub_module_level_const_missing = "allow"
+struct_missing = "allow"
+
 [package.metadata.docs.rs]
 targets = ["x86_64-unknown-linux-gnu"]
 all-features = true
@@ -28,7 +39,7 @@ wincode = ["solana-instruction-v4/wincode"]
 
 [dependencies]
 solana-instruction-error = { workspace = true, features = ["num-traits"] }
-solana-instruction-v4 = { package = "solana-instruction", version = "4.0.0" }
+solana-instruction-v4 = { package = "solana-instruction", version = "4.0" }
 
 [lints]
 workspace = true
