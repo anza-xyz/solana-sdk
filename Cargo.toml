@@ -305,7 +305,7 @@ solana-pubkey = { path = "pubkey", version = "4.3.0", default-features = false }
 solana-rent = { path = "rent", version = "4.4.0", default-features = false }
 solana-reward-info = { path = "reward-info", version = "7.0.0" }
 solana-sanitize = { path = "sanitize", version = "3.0.0" }
-solana-sdk = { path = "sdk", version = "4.0.1" }
+solana-sdk = { path = "sdk", version = "5.0.0" }
 solana-sdk-ids = { path = "sdk-ids", version = "3.0.0" }
 solana-sdk-macro = { path = "sdk-macro", version = "3.0.1" }
 solana-sdk-wasm-js = { path = "sdk-wasm-js", version = "3.0.0" }
