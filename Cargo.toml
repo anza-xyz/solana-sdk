@@ -293,7 +293,7 @@ solana-poh-config = { path = "poh-config", version = "3.1.0" }
 solana-poseidon = { path = "poseidon", version = "5.0.0" }
 solana-precompile-error = { path = "precompile-error", version = "3.0.0" }
 solana-presigner = { path = "presigner", version = "4.0.0" }
-solana-program = { path = "program", version = "4.1.0", default-features = false }
+solana-program = { path = "program", version = "5.0.0", default-features = false }
 solana-program-entrypoint = { path = "program-entrypoint", version = "3.0.0" }
 solana-program-error = { path = "program-error", version = "3.0.0" }
 solana-program-log = { path = "program-log", version = "1.2.0" }
