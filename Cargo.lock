@@ -3195,7 +3195,7 @@ dependencies = [
  "solana-frozen-abi",
  "solana-frozen-abi-macro",
  "solana-hash",
- "solana-instruction 3.5.0",
+ "solana-instruction 3.5.1",
  "solana-nullable",
  "solana-program-error",
  "solana-sanitize",
@@ -3219,7 +3219,7 @@ dependencies = [
  "solana-frozen-abi",
  "solana-frozen-abi-macro",
  "solana-hash",
- "solana-instruction 3.5.0",
+ "solana-instruction 3.5.1",
  "solana-instruction-error",
  "solana-pubkey",
  "solana-sdk-ids",
@@ -3357,7 +3357,7 @@ dependencies = [
  "solana-commitment-config",
  "solana-epoch-info",
  "solana-hash",
- "solana-instruction 3.5.0",
+ "solana-instruction 3.5.1",
  "solana-keypair",
  "solana-message",
  "solana-pubkey",
@@ -3419,7 +3419,7 @@ dependencies = [
  "serde_derive",
  "solana-frozen-abi",
  "solana-frozen-abi-macro",
- "solana-instruction 3.5.0",
+ "solana-instruction 3.5.1",
  "solana-sdk-ids",
 ]
 
@@ -3429,7 +3429,7 @@ version = "3.1.0"
 dependencies = [
  "solana-account-info",
  "solana-define-syscall",
- "solana-instruction 3.5.0",
+ "solana-instruction 3.5.1",
  "solana-program-entrypoint",
  "solana-program-error",
  "solana-pubkey",
@@ -3491,7 +3491,7 @@ version = "3.0.0"
 dependencies = [
  "bytemuck",
  "bytemuck_derive",
- "solana-instruction 3.5.0",
+ "solana-instruction 3.5.1",
  "solana-sdk-ids",
 ]
 
@@ -3563,7 +3563,7 @@ dependencies = [
  "serde",
  "serde_derive",
  "solana-hash",
- "solana-instruction 3.5.0",
+ "solana-instruction 3.5.1",
  "solana-nonce",
  "solana-pubkey",
  "solana-sdk-ids",
@@ -3581,7 +3581,7 @@ dependencies = [
  "solana-account",
  "solana-account-info",
  "solana-feature-gate-interface",
- "solana-instruction 3.5.0",
+ "solana-instruction 3.5.1",
  "solana-program-error",
  "solana-pubkey",
  "solana-rent",
@@ -3763,7 +3763,7 @@ dependencies = [
 
 [[package]]
 name = "solana-instruction"
-version = "3.5.0"
+version = "3.5.1"
 dependencies = [
  "solana-instruction 4.0.0",
  "solana-instruction-error",
@@ -3817,7 +3817,7 @@ dependencies = [
  "qualifier_attr",
  "solana-account-info",
  "solana-address",
- "solana-instruction 3.5.0",
+ "solana-instruction 3.5.1",
  "solana-instruction-error",
  "solana-program-error",
  "solana-sanitize",
@@ -3876,7 +3876,7 @@ dependencies = [
  "serde",
  "serde_bytes",
  "serde_derive",
- "solana-instruction 3.5.0",
+ "solana-instruction 3.5.1",
  "solana-pubkey",
  "solana-sdk-ids",
 ]
@@ -3891,7 +3891,7 @@ dependencies = [
  "serde_derive",
  "solana-frozen-abi",
  "solana-frozen-abi-macro",
- "solana-instruction 3.5.0",
+ "solana-instruction 3.5.1",
  "solana-loader-v3-interface",
  "solana-pubkey",
  "solana-sdk-ids",
@@ -3921,7 +3921,7 @@ dependencies = [
  "solana-frozen-abi",
  "solana-frozen-abi-macro",
  "solana-hash",
- "solana-instruction 3.5.0",
+ "solana-instruction 3.5.1",
  "solana-instruction-error",
  "solana-message",
  "solana-nonce",
@@ -4101,7 +4101,7 @@ dependencies = [
  "solana-frozen-abi",
  "solana-frozen-abi-macro",
  "solana-hash",
- "solana-instruction 3.5.0",
+ "solana-instruction 3.5.1",
  "solana-instruction-error",
  "solana-instructions-sysvar",
  "solana-keccak-hasher",
@@ -4298,7 +4298,7 @@ dependencies = [
  "log",
  "solana-address",
  "solana-hash",
- "solana-instruction 3.5.0",
+ "solana-instruction 3.5.1",
  "solana-keypair",
  "solana-message",
  "solana-packet",
@@ -4315,7 +4315,7 @@ version = "1.0.0"
 dependencies = [
  "js-sys",
  "solana-address",
- "solana-instruction 3.5.0",
+ "solana-instruction 3.5.1",
  "solana-sdk-wasm-js",
  "wasm-bindgen",
 ]
@@ -4333,7 +4333,7 @@ dependencies = [
  "serde_derive",
  "solana-account-info",
  "solana-example-mocks",
- "solana-instruction 3.5.0",
+ "solana-instruction 3.5.1",
  "solana-instructions-sysvar",
  "solana-keccak-hasher",
  "solana-msg",
@@ -4355,7 +4355,7 @@ dependencies = [
  "solana-example-mocks",
  "solana-frozen-abi",
  "solana-frozen-abi-macro",
- "solana-instruction 3.5.0",
+ "solana-instruction 3.5.1",
  "solana-keccak-hasher",
  "solana-program-error",
  "solana-pubkey",
@@ -4368,7 +4368,7 @@ version = "3.0.0"
 dependencies = [
  "bytemuck",
  "openssl",
- "solana-instruction 3.5.0",
+ "solana-instruction 3.5.1",
  "solana-sdk-ids",
 ]
 
@@ -4548,7 +4548,7 @@ dependencies = [
 name = "solana-stable-layout"
 version = "3.0.1"
 dependencies = [
- "solana-instruction 3.5.0",
+ "solana-instruction 3.5.1",
  "solana-pubkey",
 ]
 
@@ -4602,7 +4602,7 @@ dependencies = [
  "solana-example-mocks",
  "solana-frozen-abi",
  "solana-frozen-abi-macro",
- "solana-instruction 3.5.0",
+ "solana-instruction 3.5.1",
  "solana-msg",
  "solana-nonce",
  "solana-program-entrypoint",
@@ -4663,7 +4663,7 @@ dependencies = [
  "solana-frozen-abi-macro",
  "solana-get-sysvar",
  "solana-hash",
- "solana-instruction 3.5.0",
+ "solana-instruction 3.5.1",
  "solana-last-restart-slot",
  "solana-msg",
  "solana-program-entrypoint",
@@ -4710,7 +4710,7 @@ dependencies = [
  "solana-frozen-abi",
  "solana-frozen-abi-macro",
  "solana-hash",
- "solana-instruction 3.5.0",
+ "solana-instruction 3.5.1",
  "solana-instruction-error",
  "solana-keypair",
  "solana-message",
@@ -4769,7 +4769,7 @@ dependencies = [
  "solana-frozen-abi",
  "solana-frozen-abi-macro",
  "solana-hash",
- "solana-instruction 3.5.0",
+ "solana-instruction 3.5.1",
  "solana-instruction-error",
  "solana-pubkey",
  "solana-rent",
