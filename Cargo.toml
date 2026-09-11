@@ -241,7 +241,7 @@ solana-bls12-381 = { path = "bls12-381", version = "0.1.0" }
 solana-bls12-381-syscall = "0.1.1"
 solana-bn254 = { path = "bn254", version = "3.0.0" }
 solana-borsh = { path = "borsh", version = "3.0.0" }
-solana-client-traits = { path = "client-traits", version = "4.1.0" }
+solana-client-traits = { path = "client-traits", version = "5.0.0" }
 solana-clock = { path = "clock", version = "4.0.0" }
 solana-cluster-type = { path = "cluster-type", version = "3.2.0" }
 solana-commitment-config = { path = "commitment-config", version = "3.0.0" }
