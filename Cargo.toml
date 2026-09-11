@@ -367,3 +367,7 @@ opt-level = 1
 # Enable optimizations for procmacros for faster recompile
 [profile.dev.build-override]
 opt-level = 1
+
+[patch.crates-io]
+solana-define-syscall = { path = "define-syscall" }
+solana-pubkey = { path = "pubkey" }
