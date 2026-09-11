@@ -3140,7 +3140,7 @@ dependencies = [
  "serde_derive",
  "solana-account",
  "solana-account-info",
- "solana-clock",
+ "solana-clock 3.2.0",
  "solana-frozen-abi",
  "solana-frozen-abi-macro",
  "solana-instruction-error",
@@ -3215,7 +3215,7 @@ dependencies = [
  "serde",
  "serde_derive",
  "solana-address-lookup-table-interface",
- "solana-clock",
+ "solana-clock 3.2.0",
  "solana-frozen-abi",
  "solana-frozen-abi-macro",
  "solana-hash",
@@ -3372,14 +3372,22 @@ dependencies = [
 name = "solana-clock"
 version = "3.2.0"
 dependencies = [
+ "solana-clock 4.0.0",
+ "static_assertions",
+]
+
+[[package]]
+name = "solana-clock"
+version = "4.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "178fc0c31655aa16190cc112919dcdf279437e14b2f2f9790fe1ec29157ff20c"
+dependencies = [
  "serde",
  "serde_derive",
- "solana-clock",
  "solana-get-sysvar",
  "solana-sdk-ids",
  "solana-sdk-macro",
  "solana-sysvar-id",
- "static_assertions",
  "wincode",
 ]
 
@@ -3527,7 +3535,7 @@ version = "3.3.0"
 dependencies = [
  "serde",
  "serde_derive",
- "solana-clock",
+ "solana-clock 3.2.0",
  "solana-epoch-schedule",
  "solana-frozen-abi",
  "solana-frozen-abi-macro",
@@ -3590,7 +3598,7 @@ dependencies = [
  "log",
  "serde",
  "serde_derive",
- "solana-clock",
+ "solana-clock 3.2.0",
  "solana-frozen-abi",
  "solana-frozen-abi-macro",
  "static_assertions",
@@ -3662,7 +3670,7 @@ dependencies = [
  "serde",
  "serde_derive",
  "solana-account",
- "solana-clock",
+ "solana-clock 3.2.0",
  "solana-cluster-type",
  "solana-epoch-schedule",
  "solana-fee-calculator",
@@ -4041,7 +4049,7 @@ version = "3.1.0"
 dependencies = [
  "serde",
  "serde_derive",
- "solana-clock",
+ "solana-clock 3.2.0",
  "solana-frozen-abi",
  "solana-frozen-abi-macro",
  "static_assertions",
@@ -4082,7 +4090,7 @@ dependencies = [
  "solana-big-mod-exp",
  "solana-blake3-hasher",
  "solana-borsh",
- "solana-clock",
+ "solana-clock 3.2.0",
  "solana-cpi",
  "solana-define-syscall",
  "solana-epoch-rewards",
@@ -4196,7 +4204,7 @@ dependencies = [
  "proptest",
  "serde",
  "serde_derive",
- "solana-clock",
+ "solana-clock 3.2.0",
  "solana-frozen-abi",
  "solana-frozen-abi-macro",
  "solana-get-sysvar",
@@ -4552,7 +4560,7 @@ dependencies = [
  "bincode",
  "serde",
  "serde_derive",
- "solana-clock",
+ "solana-clock 3.2.0",
  "solana-example-mocks",
  "solana-frozen-abi",
  "solana-frozen-abi-macro",
@@ -4645,7 +4653,7 @@ dependencies = [
  "serde_derive",
  "serial_test",
  "solana-account-info",
- "solana-clock",
+ "solana-clock 3.2.0",
  "solana-define-syscall",
  "solana-epoch-rewards",
  "solana-epoch-schedule",
@@ -4756,7 +4764,7 @@ dependencies = [
  "serde",
  "serde_derive",
  "serde_with",
- "solana-clock",
+ "solana-clock 3.2.0",
  "solana-epoch-schedule",
  "solana-frozen-abi",
  "solana-frozen-abi-macro",

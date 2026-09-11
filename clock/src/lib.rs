@@ -25,10 +25,6 @@
 #[cfg(feature = "sysvar")]
 pub mod sysvar;
 
-#[cfg(feature = "serde")]
-use serde_derive::{Deserialize, Serialize};
-use solana_sdk_macro::CloneZeroed;
-
 /// The default tick rate that the cluster attempts to achieve (160 per second).
 ///
 /// Note that the actual tick rate at any given time should be expected to drift.
@@ -111,92 +107,8 @@ pub const MAX_TRANSACTION_FORWARDING_DELAY: usize = 6;
 pub const FORWARD_TRANSACTIONS_TO_LEADER_AT_SLOT_OFFSET: u64 = 2;
 pub const HOLD_TRANSACTIONS_SLOT_OFFSET: u64 = 20;
 
-/// The unit of time given to a leader for encoding a block.
-///
-/// It is some number of _ticks_ long.
-pub type Slot = u64;
-
-/// Uniquely distinguishes every version of a slot.
-///
-/// The `BankId` is unique even if the slot number of two different slots is the
-/// same. This can happen in the case of e.g. duplicate slots.
-pub type BankId = u64;
-
-/// The unit of time a given leader schedule is honored.
-///
-/// It lasts for some number of [`Slot`]s.
-pub type Epoch = u64;
-
 pub const GENESIS_EPOCH: Epoch = 0;
 // must be sync with Account::rent_epoch::default()
 pub const INITIAL_RENT_EPOCH: Epoch = 0;
 
-/// An index to the slots of a epoch.
-pub type SlotIndex = u64;
-
-/// The number of slots in a epoch.
-pub type SlotCount = u64;
-
-/// An approximate measure of real-world time.
-///
-/// Expressed as Unix time (i.e. seconds since the Unix epoch).
-pub type UnixTimestamp = i64;
-
-/// A representation of network time.
-///
-/// All members of `Clock` start from 0 upon network boot.
-#[repr(C)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "wincode", derive(wincode::SchemaWrite, wincode::SchemaRead))]
-#[derive(Debug, CloneZeroed, Default, PartialEq, Eq)]
-pub struct Clock {
-    /// The current `Slot`.
-    pub slot: Slot,
-    /// The timestamp of the first `Slot` in this `Epoch`.
-    pub epoch_start_timestamp: UnixTimestamp,
-    /// The current `Epoch`.
-    pub epoch: Epoch,
-    /// The future `Epoch` for which the leader schedule has
-    /// most recently been calculated.
-    pub leader_schedule_epoch: Epoch,
-    /// The approximate real world time of the current slot.
-    ///
-    /// This value was originally computed from genesis creation time and
-    /// network time in slots, incurring a lot of drift. Following activation of
-    /// the [`timestamp_correction` and `timestamp_bounding`][tsc] features it
-    /// is calculated using a [validator timestamp oracle][oracle].
-    ///
-    /// [tsc]: https://docs.solanalabs.com/implemented-proposals/bank-timestamp-correction
-    /// [oracle]: https://docs.solanalabs.com/implemented-proposals/validator-timestamp-oracle
-    pub unix_timestamp: UnixTimestamp,
-}
-
-/// Serialized size of the `Clock` sysvar account.
-pub const SIZE: usize = size_of::<Clock>();
-const _: () = assert!(SIZE == 40);
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_size_of() {
-        assert_eq!(
-            wincode::serialized_size(&Clock::default()).unwrap() as usize,
-            SIZE,
-        );
-    }
-
-    #[test]
-    fn test_clone() {
-        let clock = Clock {
-            slot: 1,
-            epoch_start_timestamp: 2,
-            epoch: 3,
-            leader_schedule_epoch: 4,
-            unix_timestamp: 5,
-        };
-        let cloned_clock = clock.clone();
-        assert_eq!(cloned_clock, clock);
-    }
-}
+pub use solana_clock_v4::{BankId, Clock, Epoch, Slot, SlotCount, SlotIndex, UnixTimestamp, SIZE};

@@ -369,5 +369,11 @@ opt-level = 1
 opt-level = 1
 
 [patch.crates-io]
+solana-address = { path = "address" }
 solana-define-syscall = { path = "define-syscall" }
+solana-get-sysvar = { path = "get-sysvar" }
+solana-program-error = { path = "program-error" }
 solana-pubkey = { path = "pubkey" }
+solana-sdk-ids = { path = "sdk-ids" }
+solana-sdk-macro = { path = "sdk-macro" }
+solana-sysvar-id = { path = "sysvar-id" }

@@ -9,25 +9,29 @@ homepage = { workspace = true }
 license = { workspace = true }
 edition = { workspace = true }
 
+[package.metadata.cargo-semver-checks.lints]
+# cargo-semver-checks performs checks on the exported symbol graph, so re-exports
+# are considered different elements and they will be flagged as breaking changes
+# even if the public API is equivalent.
+declarative_macro_missing = "allow"
+enum_missing = "allow"
+function_missing = "allow"
+module_missing = "allow"
+pub_module_level_const_missing = "allow"
+struct_missing = "allow"
+
 [package.metadata.docs.rs]
 targets = ["x86_64-unknown-linux-gnu"]
 all-features = true
 rustdoc-args = ["--cfg=docsrs"]
 
 [features]
-serde = ["dep:serde", "dep:serde_derive"]
-sysvar = ["dep:solana-get-sysvar", "dep:solana-sdk-ids", "dep:solana-sysvar-id"]
-wincode = ["dep:wincode"]
+serde = ["solana-clock-v4/serde"]
+sysvar = ["solana-clock-v4/sysvar"]
+wincode = ["solana-clock-v4/wincode"]
 
 [dependencies]
-serde = { workspace = true, optional = true }
-serde_derive = { workspace = true, optional = true }
-solana-get-sysvar = { workspace = true, optional = true }
-solana-sdk-ids = { workspace = true, optional = true }
-solana-sdk-macro = { workspace = true }
-solana-sysvar-id = { workspace = true, optional = true }
-wincode = { workspace = true, optional = true }
+solana-clock-v4 = { package = "solana-clock", version = "4.0.0" }
 
 [dev-dependencies]
-solana-clock = { path = ".", features = ["sysvar", "wincode"] }
 static_assertions = { workspace = true }
