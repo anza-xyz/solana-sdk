@@ -1,6 +1,5 @@
 use {
     crate::{prepared_g2::PreparedG2, proof_of_possession::POP_DST},
-    alloc::vec::Vec,
     blstrs::{G2Affine, G2Projective},
 };
 
@@ -74,14 +73,47 @@ pub(crate) fn hash_message_to_projective(message: &[u8]) -> G2Projective {
     G2Projective::hash_to_curve(message, HASH_TO_POINT_DST, &[])
 }
 
+#[cfg(test)]
 pub(crate) fn hash_pop_to_projective(payload: &[u8]) -> G2Projective {
     G2Projective::hash_to_curve(payload, POP_DST, &[])
 }
 
 pub(crate) fn hash_bound_pop_to_projective(payload: &[u8], pubkey_bytes: &[u8]) -> G2Projective {
-    let capacity = payload.len().saturating_add(pubkey_bytes.len());
-    let mut bound_payload = Vec::with_capacity(capacity);
-    bound_payload.extend_from_slice(payload);
-    bound_payload.extend_from_slice(pubkey_bytes);
-    hash_pop_to_projective(&bound_payload)
+    // blst hashes augmentation before the message, preserving
+    // H(payload || pubkey_bytes) under POP_DST without a temporary buffer.
+    G2Projective::hash_to_curve(pubkey_bytes, POP_DST, payload)
+}
+
+#[cfg(test)]
+mod tests {
+    use {super::*, alloc::vec::Vec};
+
+    #[test]
+    fn test_pop_hash_matches_concatenated_input() {
+        for payload_len in [0, 1, 15, 16, 17, 63, 64, 65, 127, 128, 129, 1024] {
+            let payload: Vec<u8> = [0x00, 0x7f, 0x80, 0xff]
+                .into_iter()
+                .cycle()
+                .take(payload_len)
+                .collect();
+            for pubkey_len in [0, 1, 48, 96] {
+                let pubkey_bytes: Vec<u8> = [0xa5, 0x00, 0xff, 0x19]
+                    .into_iter()
+                    .cycle()
+                    .take(pubkey_len)
+                    .collect();
+
+                // Reproduce the old input construction independently.
+                let mut joined = payload.clone();
+                joined.extend_from_slice(&pubkey_bytes);
+                let expected = G2Projective::hash_to_curve(&joined, POP_DST, &[]);
+                let actual = HashedPoPPayload::new(&payload, &pubkey_bytes);
+                assert_eq!(
+                    actual.0,
+                    G2Affine::from(expected),
+                    "payload_len={payload_len}, pubkey_len={pubkey_len}"
+                );
+            }
+        }
+    }
 }

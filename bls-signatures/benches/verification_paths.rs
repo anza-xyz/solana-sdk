@@ -6,15 +6,18 @@ use {
     criterion::{criterion_group, criterion_main, Criterion},
     solana_bls_signatures::{
         error::BlsError,
-        hash::{HashedMessage, PreparedHashedMessage},
+        hash::{HashedMessage, HashedPoPPayload, PreparedHashedMessage},
         keypair::Keypair,
-        pubkey::VerifySignature,
+        proof_of_possession::ProofOfPossessionAffine,
+        pubkey::{VerifyPop, VerifySignature},
         signature::{SignatureAffine, SignatureCompressed, SignatureProjective},
     },
     std::{hint::black_box, time::Duration},
 };
 
 fn verification_paths(c: &mut Criterion) {
+    proof_of_possession_paths(c);
+
     #[cfg(feature = "parallel")]
     parallel_aggregate_paths(c);
 
@@ -305,6 +308,67 @@ fn parallel_aggregate_paths(c: &mut Criterion) {
                 })
             });
         });
+    }
+
+    group.finish();
+}
+
+fn proof_of_possession_paths(c: &mut Criterion) {
+    // Match the allocation regression fixtures and keep setup outside timing.
+    let keypair = Keypair::derive(&[42u8; 32]).expect("derive PoP fixture key");
+    let other_keypair = Keypair::derive(&[43u8; 32]).expect("derive other PoP key");
+    let pubkey = *keypair.public;
+    let pubkey_bytes = pubkey.to_bytes_compressed();
+    let custom_payload: &[u8] = b"solana-pop-alloc";
+    let mut group = c.benchmark_group("bls_pop");
+
+    for (mode, payload) in [("standard", None), ("custom", Some(custom_payload))] {
+        let payload_bytes = payload.unwrap_or(&[]);
+        let hashed = HashedPoPPayload::new(payload_bytes, &pubkey_bytes);
+        let valid: ProofOfPossessionAffine = keypair.proof_of_possession(payload).into();
+        let wrong: ProofOfPossessionAffine = other_keypair.proof_of_possession(payload).into();
+
+        group.bench_function(format!("hash/{mode}"), |b| {
+            b.iter(|| {
+                black_box(HashedPoPPayload::new(
+                    black_box(payload_bytes),
+                    black_box(&pubkey_bytes),
+                ))
+            });
+        });
+
+        for (status, proof, expected) in [
+            ("valid", &valid, Ok(())),
+            ("wrong_key", &wrong, Err(BlsError::VerificationFailed)),
+        ] {
+            assert_eq!(
+                pubkey.verify_proof_of_possession(proof, payload),
+                expected,
+                "pop/raw/{mode}/{status}",
+            );
+            assert_eq!(
+                pubkey.verify_proof_of_possession_pre_hashed(proof, &hashed),
+                expected,
+                "pop/pre_hashed/{mode}/{status}",
+            );
+
+            group.bench_function(format!("raw/{mode}/{status}"), |b| {
+                b.iter(|| {
+                    black_box(
+                        black_box(&pubkey)
+                            .verify_proof_of_possession(black_box(proof), black_box(payload)),
+                    )
+                });
+            });
+            group.bench_function(format!("pre_hashed/{mode}/{status}"), |b| {
+                b.iter(|| {
+                    black_box(black_box(&pubkey).verify_proof_of_possession_pre_hashed(
+                        black_box(proof),
+                        black_box(&hashed),
+                    ))
+                });
+            });
+        }
     }
 
     group.finish();

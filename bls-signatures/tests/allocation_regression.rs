@@ -8,9 +8,10 @@
 use {
     solana_bls_signatures::{
         error::BlsError,
-        hash::{HashedMessage, PreparedHashedMessage},
+        hash::{HashedMessage, HashedPoPPayload, PreparedHashedMessage},
         keypair::Keypair,
-        pubkey::VerifySignature,
+        proof_of_possession::ProofOfPossessionAffine,
+        pubkey::{VerifyPop, VerifySignature},
         signature::{SignatureAffine, SignatureCompressed, SignatureProjective},
     },
     std::{
@@ -109,6 +110,12 @@ fn check_budget(
             (0, 0)
         }
         name if name.starts_with("par_aggregate/prepared/") => (0, 0),
+        // PoP hashing streams the payload and public key without a temporary buffer.
+        "hash_pop/standard" => (0, 0),
+        "hash_pop/custom" => (0, 0),
+        name if name.starts_with("pop/raw/standard/") => (0, 0),
+        name if name.starts_with("pop/raw/custom/") => (0, 0),
+        name if name.starts_with("pop/pre_hashed/") => (0, 0),
         _ => panic!("missing allocation budget for {label}"),
     };
 
@@ -268,6 +275,8 @@ fn run_allocation_regression() {
             true
         });
 
+        measure_pop_paths(&keypair, &other_keypair);
+
         for (status, encoded, expected) in [
             ("valid", &valid, Ok(())),
             ("wrong_message", &wrong, Err(BlsError::VerificationFailed)),
@@ -354,4 +363,42 @@ fn run_allocation_regression() {
     }
 
     println!("\nAllocation budgets and verification outcomes passed.");
+}
+
+fn measure_pop_paths(keypair: &Keypair, other_keypair: &Keypair) {
+    let pubkey = *keypair.public;
+    let pubkey_bytes = pubkey.to_bytes_compressed();
+    let custom_payload: &[u8] = b"solana-pop-alloc";
+
+    for (mode, payload) in [("standard", None), ("custom", Some(custom_payload))] {
+        // Fixture construction happens with allocation counting disabled.
+        let payload_bytes = payload.unwrap_or(&[]);
+        let hashed = HashedPoPPayload::new(payload_bytes, &pubkey_bytes);
+        let valid: ProofOfPossessionAffine = keypair.proof_of_possession(payload).into();
+        let wrong: ProofOfPossessionAffine = other_keypair.proof_of_possession(payload).into();
+
+        measure(&format!("hash_pop/{mode}"), || {
+            black_box(HashedPoPPayload::new(
+                black_box(payload_bytes),
+                black_box(&pubkey_bytes),
+            ));
+            true
+        });
+
+        // The wrong proof is a valid group point belonging to another key.
+        for (status, proof, expected) in [
+            ("valid", &valid, Ok(())),
+            ("wrong_key", &wrong, Err(BlsError::VerificationFailed)),
+        ] {
+            measure(&format!("pop/raw/{mode}/{status}"), || {
+                black_box(&pubkey).verify_proof_of_possession(black_box(proof), black_box(payload))
+                    == expected
+            });
+            measure(&format!("pop/pre_hashed/{mode}/{status}"), || {
+                black_box(&pubkey)
+                    .verify_proof_of_possession_pre_hashed(black_box(proof), black_box(&hashed))
+                    == expected
+            });
+        }
+    }
 }
