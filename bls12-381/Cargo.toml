@@ -34,6 +34,9 @@ solana-bls12-381-syscall = { workspace = true }
 [dev-dependencies]
 array-bytes = { workspace = true }
 bytemuck = { workspace = true, features = ["min_const_generics"] }
+serde = { workspace = true }
+serde_derive = { workspace = true }
+serde_json = { workspace = true }
 
 [lints]
 workspace = true
