@@ -189,6 +189,41 @@
 //! }
 //! ```
 //!
+//! You can also generate the StableAbi serialization tests, without attaching
+//! `#[frozen_abi(...)]` to the type. The type still needs a sample source, such as
+//! `StableAbiSample` or a manual `Distribution` implementation:
+//!
+//! ```rust,ignore
+//! #[derive(PartialEq, StableAbiSample, wincode::SchemaWrite, wincode::SchemaRead)]
+//! struct MyRoundtripType {
+//!     a: u64,
+//!     b: bool,
+//! }
+//!
+//! solana_frozen_abi_macro::generate_serialization_test!(
+//!     MyRoundtripType,
+//!     strategy = "random",
+//!     serializer = "wincode",
+//!     abi_digest = "...",
+//!     test_roundtrip = "eq_and_wire",
+//! );
+//! ```
+//!
+//! For fuzzing, enable the `fuzz-bolero` feature and use `strategy = "bolero_fuzzer"`.
+//! The generated test uses `bolero::check!()` so it can be run with the fuzzing engines
+//! supported by bolero.
+//!
+//! Corpus and crashes are stored per type in root e.g. `__fuzz__/MyType_wincode`.
+//!
+//! ```rust,ignore
+//! solana_frozen_abi_macro::generate_serialization_test!(
+//!     MyRoundtripType,
+//!     strategy = "bolero_fuzzer",
+//!     serializer = "wincode",
+//!     test_roundtrip = "eq_and_wire",
+//! );
+//! ```
+//!
 //! ## Edge Cases
 //!
 //! 1. It will not detect field name or order changes, nor same size type swaps (e.g., `i64`
@@ -225,6 +260,9 @@ pub mod stable_abi;
 #[cfg(feature = "frozen-abi")]
 #[macro_use]
 extern crate solana_frozen_abi_macro;
+
+#[cfg(all(feature = "fuzz-bolero", not(target_os = "solana")))]
+pub use bolero;
 
 #[cfg(all(feature = "frozen-abi", not(target_os = "solana")))]
 pub use {bincode, rand, rand_chacha, wincode};
