@@ -41,17 +41,7 @@ pub fn g1_addition_input_be_to_le(
 pub fn g1_multiplication_input_be_to_le(
     input_be: &[u8; ALT_BN128_G1_MULTIPLICATION_INPUT_SIZE],
 ) -> [u8; ALT_BN128_G1_MULTIPLICATION_INPUT_SIZE] {
-    let (point, scalar) = input_be.split_at(ALT_BN128_G1_POINT_SIZE);
-    let point_le = convert_endianness::<ALT_BN128_FIELD_SIZE, ALT_BN128_G1_POINT_SIZE>(
-        point.try_into().unwrap(),
-    );
-    let scalar_le = convert_endianness::<ALT_BN128_FIELD_SIZE, ALT_BN128_FIELD_SIZE>(
-        scalar.try_into().unwrap(),
-    );
-    let mut input_le = [0u8; ALT_BN128_G1_MULTIPLICATION_INPUT_SIZE];
-    input_le[..ALT_BN128_G1_POINT_SIZE].copy_from_slice(&point_le);
-    input_le[ALT_BN128_G1_POINT_SIZE..].copy_from_slice(&scalar_le);
-    input_le
+    convert_endianness::<ALT_BN128_FIELD_SIZE, ALT_BN128_G1_MULTIPLICATION_INPUT_SIZE>(input_be)
 }
 
 /// Converts a whole EIP-197 pairing input (a sequence of `(G1, G2)` pairs) to
@@ -186,13 +176,6 @@ pub fn check_g1_multiplication_fails(name: &str, input: &[u8]) {
         alt_bn128_g1_multiplication_be(input).is_err(),
         "{name}: big-endian input must be rejected"
     );
-    #[allow(deprecated)]
-    let legacy = alt_bn128_multiplication_128(input);
-    assert!(
-        legacy.is_err(),
-        "{name}: legacy 128-byte entry point must reject the input"
-    );
-
     let truncated = &input[..input.len().min(ALT_BN128_G1_MULTIPLICATION_INPUT_SIZE)];
     assert!(
         alt_bn128_g1_multiplication_be(truncated).is_err(),

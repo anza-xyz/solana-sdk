@@ -438,15 +438,10 @@ mod tests {
                 Err(AltBn128Error::InvalidInputData)
             );
 
-            let mut flagged_le = [0u8; ALT_BN128_G1_MULTIPLICATION_INPUT_SIZE];
-            flagged_le[..ALT_BN128_G1_POINT_SIZE].copy_from_slice(&convert_endianness::<
+            let flagged_le = convert_endianness::<
                 ALT_BN128_FIELD_SIZE,
-                ALT_BN128_G1_POINT_SIZE,
-            >(
-                &clean_be[..ALT_BN128_G1_POINT_SIZE].try_into().unwrap(),
-            ));
-            flagged_le[ALT_BN128_G1_POINT_SIZE] = 3;
-            flagged_le[63] |= bit;
+                ALT_BN128_G1_MULTIPLICATION_INPUT_SIZE,
+            >(&flagged_be);
             assert_eq!(
                 alt_bn128_versioned_g1_multiplication(
                     VersionedG1Multiplication::V2,

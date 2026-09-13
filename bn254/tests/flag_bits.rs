@@ -14,11 +14,7 @@
 
 mod common;
 
-use {
-    common::*,
-    serde_derive::Deserialize,
-    solana_bn254::{prelude::*, versioned::*},
-};
+use {common::*, serde_derive::Deserialize, solana_bn254::versioned::*};
 
 #[derive(Deserialize)]
 #[serde(rename_all = "PascalCase")]
@@ -42,50 +38,33 @@ fn g1_addition_rejects_flag_bits() {
 
     // The original syscall version lets flag bits on the last coordinate
     // through. Pinning that here keeps the new version load-bearing.
-    let accepted_by_v0 = cases
-        .iter()
-        .filter(|case| {
-            alt_bn128_versioned_g1_addition(
-                VersionedG1Addition::V0,
-                &hex2bytes(&case.input),
-                Endianness::BE,
-            )
-            .is_ok()
-        })
-        .count();
-    assert!(accepted_by_v0 > 0);
+    let accepted_by_v0 = cases.iter().any(|case| {
+        alt_bn128_versioned_g1_addition(
+            VersionedG1Addition::V0,
+            &hex2bytes(&case.input),
+            Endianness::BE,
+        )
+        .is_ok()
+    });
+    assert!(accepted_by_v0);
 }
 
 #[test]
 fn g1_multiplication_rejects_flag_bits() {
     let cases = load(include_str!("data/flag_bit_multiplication_cases.json"));
     for case in &cases {
-        let input = hex2bytes(&case.input);
-        assert!(
-            alt_bn128_g1_multiplication_be(&input).is_err(),
-            "{}: big-endian input must be rejected",
-            case.name
-        );
-        let input_le = g1_multiplication_input_be_to_le(&input.try_into().unwrap());
-        assert!(
-            alt_bn128_g1_multiplication_le(&input_le).is_err(),
-            "{}: little-endian input must be rejected",
-            case.name
-        );
+        check_g1_multiplication_fails(&case.name, &hex2bytes(&case.input));
     }
 
-    let accepted_by_v1 = cases
-        .iter()
-        .filter(|case| {
-            alt_bn128_versioned_g1_multiplication(
-                VersionedG1Multiplication::V1,
-                &hex2bytes(&case.input),
-                Endianness::BE,
-            )
-            .is_ok()
-        })
-        .count();
-    assert!(accepted_by_v1 > 0);
+    let accepted_by_v1 = cases.iter().any(|case| {
+        alt_bn128_versioned_g1_multiplication(
+            VersionedG1Multiplication::V1,
+            &hex2bytes(&case.input),
+            Endianness::BE,
+        )
+        .is_ok()
+    });
+    assert!(accepted_by_v1);
 }
 
 #[test]
@@ -95,16 +74,13 @@ fn pairing_rejects_flag_bits() {
         check_pairing_fails(&case.name, &hex2bytes(&case.input));
     }
 
-    let accepted_by_v1 = cases
-        .iter()
-        .filter(|case| {
-            alt_bn128_versioned_pairing(
-                VersionedPairing::V1,
-                &hex2bytes(&case.input),
-                Endianness::BE,
-            )
-            .is_ok()
-        })
-        .count();
-    assert!(accepted_by_v1 > 0);
+    let accepted_by_v1 = cases.iter().any(|case| {
+        alt_bn128_versioned_pairing(
+            VersionedPairing::V1,
+            &hex2bytes(&case.input),
+            Endianness::BE,
+        )
+        .is_ok()
+    });
+    assert!(accepted_by_v1);
 }
