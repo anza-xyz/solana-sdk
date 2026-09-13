@@ -17,6 +17,7 @@ use {
 
 fn verification_paths(c: &mut Criterion) {
     proof_of_possession_paths(c);
+    distinct_prepared_paths(c);
 
     #[cfg(feature = "parallel")]
     parallel_aggregate_paths(c);
@@ -371,6 +372,80 @@ fn proof_of_possession_paths(c: &mut Criterion) {
         }
     }
 
+    group.finish();
+}
+
+fn distinct_prepared_paths(c: &mut Criterion) {
+    let keypair = Keypair::derive(&[42u8; 32]).expect("derive fixture key");
+    let other_keypair = Keypair::derive(&[43u8; 32]).expect("derive second fixture key");
+    let public_keys = [keypair.public, other_keypair.public];
+    let message_a: &[u8] = b"distinct allocation A";
+    let message_b: &[u8] = b"distinct allocation B";
+
+    #[cfg(feature = "parallel")]
+    let pool = rayon::ThreadPoolBuilder::new()
+        .num_threads(2)
+        .build()
+        .expect("build distinct benchmark pool");
+    #[cfg(feature = "parallel")]
+    {
+        drop(pool.broadcast(|_| ()));
+        std::thread::sleep(Duration::from_millis(100));
+        println!("distinct prepared timing: inside a private two-worker Rayon pool");
+    }
+    println!("distinct prepared timing includes aggregation; message preparations are reused");
+
+    let mut group = c.benchmark_group("bls_distinct_prepared");
+    for (shape, messages) in [
+        ("unique", [message_a, message_b]),
+        ("shared", [message_a, message_a]),
+    ] {
+        let preparations = messages.map(PreparedHashedMessage::new);
+        let valid: [SignatureAffine; 2] = [
+            keypair.sign(messages[0]).into(),
+            other_keypair.sign(messages[1]).into(),
+        ];
+        let wrong = [keypair.sign(b"wrong distinct message").into(), valid[1]];
+
+        for (status, signatures, expected) in [
+            ("valid", &valid, Ok(())),
+            ("wrong_message", &wrong, Err(BlsError::VerificationFailed)),
+        ] {
+            let seq = || {
+                SignatureProjective::verify_distinct_prepared(
+                    black_box(&public_keys).iter(),
+                    black_box(signatures).iter(),
+                    black_box(&preparations).iter(),
+                )
+            };
+            #[cfg(feature = "parallel")]
+            assert_eq!(pool.install(seq), expected, "seq/{shape}/{status}");
+            #[cfg(not(feature = "parallel"))]
+            assert_eq!(seq(), expected, "seq/{shape}/{status}");
+
+            group.bench_function(format!("seq/{shape}/{status}"), |b| {
+                #[cfg(feature = "parallel")]
+                b.iter_custom(|iterations| time_on_worker(&pool, iterations, seq));
+                #[cfg(not(feature = "parallel"))]
+                b.iter(|| black_box(seq()));
+            });
+
+            #[cfg(feature = "parallel")]
+            {
+                let par = || {
+                    SignatureProjective::par_verify_distinct_prepared(
+                        black_box(&public_keys),
+                        black_box(signatures),
+                        black_box(&preparations),
+                    )
+                };
+                assert_eq!(pool.install(par), expected, "par/{shape}/{status}");
+                group.bench_function(format!("par/{shape}/{status}"), |b| {
+                    b.iter_custom(|iterations| time_on_worker(&pool, iterations, par));
+                });
+            }
+        }
+    }
     group.finish();
 }
 

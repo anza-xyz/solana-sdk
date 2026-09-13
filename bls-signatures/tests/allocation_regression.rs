@@ -116,6 +116,11 @@ fn check_budget(
         name if name.starts_with("pop/raw/standard/") => (0, 0),
         name if name.starts_with("pop/raw/custom/") => (0, 0),
         name if name.starts_with("pop/pre_hashed/") => (0, 0),
+        // Prepared distinct-message screening with two affine inputs.
+        name if name.starts_with("distinct/prepared/seq/unique/") => (3, 1_008),
+        name if name.starts_with("distinct/prepared/seq/shared/") => (3, 1_008),
+        name if name.starts_with("distinct/prepared/par/unique/") => (3, 1_008),
+        name if name.starts_with("distinct/prepared/par/shared/") => (3, 1_008),
         _ => panic!("missing allocation budget for {label}"),
     };
 
@@ -240,6 +245,7 @@ fn run_allocation_regression() {
     println!("raw_compressed also decodes the compressed signature each time.");
     println!("Counts include destruction of temporaries within each operation.");
     println!("aggregate rows include aggregation of two affine keys and signatures.");
+    println!("distinct/prepared rows use two affine keys/signatures and reused preparations.");
     #[cfg(feature = "parallel")]
     println!("par_aggregate rows call the parallel helpers with the same two inputs.");
 
@@ -276,6 +282,7 @@ fn run_allocation_regression() {
         });
 
         measure_pop_paths(&keypair, &other_keypair);
+        measure_distinct_prepared_paths(&keypair, &other_keypair);
 
         for (status, encoded, expected) in [
             ("valid", &valid, Ok(())),
@@ -398,6 +405,47 @@ fn measure_pop_paths(keypair: &Keypair, other_keypair: &Keypair) {
                 black_box(&pubkey)
                     .verify_proof_of_possession_pre_hashed(black_box(proof), black_box(&hashed))
                     == expected
+            });
+        }
+    }
+}
+
+fn measure_distinct_prepared_paths(keypair: &Keypair, other_keypair: &Keypair) {
+    let public_keys = [keypair.public, other_keypair.public];
+    let message_a: &[u8] = b"distinct allocation A";
+    let message_b: &[u8] = b"distinct allocation B";
+
+    for (shape, messages) in [
+        ("unique", [message_a, message_b]),
+        ("shared", [message_a, message_a]),
+    ] {
+        // Build and retain fixtures with counting disabled.
+        let preparations = messages.map(PreparedHashedMessage::new);
+        let valid: [SignatureAffine; 2] = [
+            keypair.sign(messages[0]).into(),
+            other_keypair.sign(messages[1]).into(),
+        ];
+        let wrong = [keypair.sign(b"wrong distinct message").into(), valid[1]];
+
+        for (status, signatures, expected) in [
+            ("valid", &valid, Ok(())),
+            ("wrong_message", &wrong, Err(BlsError::VerificationFailed)),
+        ] {
+            measure(&format!("distinct/prepared/seq/{shape}/{status}"), || {
+                SignatureProjective::verify_distinct_prepared(
+                    black_box(&public_keys).iter(),
+                    black_box(signatures).iter(),
+                    black_box(&preparations).iter(),
+                ) == expected
+            });
+
+            #[cfg(feature = "parallel")]
+            measure(&format!("distinct/prepared/par/{shape}/{status}"), || {
+                SignatureProjective::par_verify_distinct_prepared(
+                    black_box(&public_keys),
+                    black_box(signatures),
+                    black_box(&preparations),
+                ) == expected
             });
         }
     }
