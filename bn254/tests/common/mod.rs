@@ -32,13 +32,13 @@ fn zero_pad(input: &[u8], len: usize) -> Vec<u8> {
     padded
 }
 
-fn g1_addition_input_be_to_le(
+pub fn g1_addition_input_be_to_le(
     input_be: &[u8; ALT_BN128_G1_ADDITION_INPUT_SIZE],
 ) -> [u8; ALT_BN128_G1_ADDITION_INPUT_SIZE] {
     convert_endianness::<ALT_BN128_FIELD_SIZE, ALT_BN128_G1_ADDITION_INPUT_SIZE>(input_be)
 }
 
-fn g1_multiplication_input_be_to_le(
+pub fn g1_multiplication_input_be_to_le(
     input_be: &[u8; ALT_BN128_G1_MULTIPLICATION_INPUT_SIZE],
 ) -> [u8; ALT_BN128_G1_MULTIPLICATION_INPUT_SIZE] {
     let (point, scalar) = input_be.split_at(ALT_BN128_G1_POINT_SIZE);
