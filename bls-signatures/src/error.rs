@@ -9,9 +9,9 @@ pub enum BlsError {
     #[error("Key derivation failed")]
     KeyDerivation,
     #[error("Point representation conversion failed")]
-    PointConversion, // TODO: could be more specific here
+    PointConversion,
     #[error("Failed to parse from string")]
-    ParseFromString, // TODO: update after more precise error handling
+    ParseFromString,
     #[error("Failed to parse from bytes")]
     ParseFromBytes,
     #[error("The length of inputs do not match")]
