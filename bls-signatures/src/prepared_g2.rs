@@ -54,9 +54,11 @@ impl PreparedG2 {
 }
 
 #[allow(clippy::arithmetic_side_effects)]
-pub(crate) fn multi_miller_loop(terms: &[(&G1Affine, &PreparedG2)]) -> blst_fp12 {
+pub(crate) fn multi_miller_loop<'a, 'b>(
+    terms: impl IntoIterator<Item = (&'a G1Affine, &'b PreparedG2)>,
+) -> blst_fp12 {
     let mut result = blst_fp12::default();
-    for (index, (point, prepared)) in terms.iter().enumerate() {
+    for (index, (point, prepared)) in terms.into_iter().enumerate() {
         let term = prepared.miller_loop(point);
         if index == 0 {
             result = term;

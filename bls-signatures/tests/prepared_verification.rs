@@ -103,6 +103,34 @@ fn prepared_verification_preserves_signature_errors() {
             expected,
             "{label}: prepared verification",
         );
+        assert_eq!(
+            SignatureProjective::verify_distinct_aggregated_pre_hashed(
+                core::iter::once(&keypair.public),
+                &signature,
+                core::iter::once(&hashed),
+            ),
+            expected,
+            "{label}: pre-hashed aggregate screening",
+        );
+        assert_eq!(
+            SignatureProjective::verify_distinct_aggregated_prepared(
+                core::iter::once(&keypair.public),
+                &signature,
+                core::iter::once(&prepared),
+            ),
+            expected,
+            "{label}: prepared aggregate screening",
+        );
+        #[cfg(feature = "parallel")]
+        assert_eq!(
+            SignatureProjective::par_verify_distinct_aggregated_prepared(
+                core::slice::from_ref(&keypair.public),
+                &signature,
+                core::slice::from_ref(&prepared),
+            ),
+            expected,
+            "{label}: parallel prepared aggregate screening",
+        );
     }
 }
 
@@ -152,6 +180,93 @@ fn prepared_screening_preserves_duplicate_message_grouping() {
             ),
             expected,
             "prepared aggregate screening",
+        );
+        #[cfg(feature = "parallel")]
+        {
+            assert_eq!(
+                SignatureProjective::par_verify_distinct_aggregated_prepared(
+                    &public_keys,
+                    &aggregate_signature,
+                    &preparations,
+                ),
+                expected,
+                "parallel prepared aggregate screening",
+            );
+            assert_eq!(
+                SignatureProjective::par_verify_distinct_prepared(
+                    &public_keys,
+                    &signatures,
+                    &preparations,
+                ),
+                expected,
+                "parallel prepared screening with signature aggregation",
+            );
+        }
+    }
+}
+
+#[cfg(feature = "parallel")]
+#[test]
+fn parallel_distinct_screening_preserves_public_key_errors() {
+    use solana_bls_signatures::pubkey::{
+        AsPubkeyAffine, PopVerified, PubkeyAffine, PubkeyCompressed, PubkeyProjective,
+    };
+
+    let keypair = Keypair::derive(&[48u8; 32]).unwrap();
+    let messages: [&[u8]; 3] = [b"first", b"second", b"third"];
+    let hashes = messages.map(HashedMessage::new);
+    let preparations: Vec<_> = hashes
+        .iter()
+        .map(PreparedHashedMessage::from_hashed_message)
+        .collect();
+    let signatures = messages.map(|message| keypair.sign(message));
+    let aggregate_signature = SignatureProjective::aggregate(signatures.iter()).unwrap();
+
+    let malformed = PubkeyCompressed([0u8; 48]);
+    let decode_error = malformed
+        .try_as_affine()
+        .expect_err("all-zero bytes must not decode as a public key");
+    let compressed = PubkeyCompressed::from(*keypair.public);
+    // The keypair already supplies a PoP-verified key.
+    let valid_keys = [unsafe { PopVerified::new_unchecked(compressed) }; 3];
+    assert_eq!(
+        SignatureProjective::par_verify_distinct_aggregated_prepared(
+            &valid_keys,
+            &aggregate_signature,
+            &preparations,
+        ),
+        Ok(()),
+    );
+
+    for bad_index in 0..valid_keys.len() {
+        let mut public_keys = valid_keys;
+        // Deliberately bypass PoP validation to exercise malformed-key rejection.
+        public_keys[bad_index] = unsafe { PopVerified::new_unchecked(malformed) };
+        assert_eq!(
+            SignatureProjective::par_verify_distinct_aggregated_prepared(
+                &public_keys,
+                &aggregate_signature,
+                &preparations,
+            ),
+            Err(decode_error.clone()),
+            "prepared screening: malformed key at {bad_index}",
+        );
+    }
+
+    let identity = PubkeyAffine::from(PubkeyProjective::identity());
+    let malformed_signature = SignatureCompressed([0u8; 96]);
+    for bad_index in 0..valid_keys.len() {
+        let mut public_keys = [keypair.public; 3];
+        // An invalid key must be rejected before decoding the aggregate signature.
+        public_keys[bad_index] = unsafe { PopVerified::new_unchecked(identity) };
+        assert_eq!(
+            SignatureProjective::par_verify_distinct_aggregated_prepared(
+                &public_keys,
+                &malformed_signature,
+                &preparations,
+            ),
+            Err(BlsError::VerificationFailed),
+            "prepared screening: identity key at {bad_index} precedes signature decoding",
         );
     }
 }
