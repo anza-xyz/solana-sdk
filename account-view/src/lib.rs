@@ -599,6 +599,61 @@ impl<T: ?Sized> Drop for RefMut<'_, T> {
     }
 }
 
+/// Convenience function for accessing the next item in an [`AccountView`]
+/// iterator.
+///
+/// This is simply a wrapper around [`Iterator::next`] that returns a
+/// [`ProgramError`] instead of an option.
+///
+/// # Errors
+///
+/// Returns [`ProgramError::NotEnoughAccountKeys`] if there are no more items in
+/// the iterator.
+///
+/// # Examples
+///
+/// ```
+/// use solana_account_view::{AccountView, next_account_view};
+/// use solana_address::Address;
+/// use solana_program_error::ProgramResult;
+/// # use solana_account_view::RuntimeAccount;
+/// # use solana_program_error::ProgramError;
+///
+/// pub fn process_instruction(
+///     program_id: &Address,
+///     accounts: &mut [AccountView],
+///     instruction_data: &[u8],
+/// ) -> ProgramResult {
+///     let accounts_iter = &mut accounts.iter_mut();
+///     let signer = next_account_view(accounts_iter)?;
+///     let payer = next_account_view(accounts_iter)?;
+///
+///     // do stuff ...
+///
+///     Ok(())
+/// }
+/// # let p = Address::new_from_array([1; 32]);
+/// # let mut data = [0u64; size_of::<RuntimeAccount>() / size_of::<u64>()];
+/// # let raw = data.as_mut_ptr() as *mut RuntimeAccount;
+/// # let mut a = unsafe { AccountView::new_unchecked(raw) };
+/// # let mut b = unsafe { AccountView::new_unchecked(raw) };
+/// # let mut accounts = [a, b];
+/// # process_instruction(
+/// #    &p,
+/// #    &mut accounts,
+/// #    &[],
+/// # )?;
+/// # Ok::<(), ProgramError>(())
+/// ```
+#[inline(always)]
+pub fn next_account_view<I>(iter: &mut I) -> Result<I::Item, ProgramError>
+where
+    I: Iterator,
+    I::Item: Deref<Target = AccountView>,
+{
+    iter.next().ok_or(ProgramError::NotEnoughAccountKeys)
+}
+
 #[cfg(test)]
 mod tests {
     use {
