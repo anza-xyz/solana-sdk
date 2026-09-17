@@ -61,6 +61,22 @@ ones above.
 The `pointAdd*`, `pointMulAdd*` and `pairingTest` state tests use different
 helper contracts and are not included.
 
+## Flag-bit vectors
+
+| File | Base vectors |
+| --- | --- |
+| `flag_bit_addition_cases.json` | G1 generator doubling, go-ethereum `chfast1` |
+| `flag_bit_multiplication_cases.json` | G1 generator and `chfast1` point, scalar 3 |
+| `flag_bit_pairing_cases.json` | go-ethereum `jeff1` (two pairs) |
+
+Regression vectors for <https://github.com/anza-xyz/agave/issues/3379>.
+Each row takes a valid input and sets bit 254 (`0x40`) or bit 255 (`0x80`)
+of one 32-byte coordinate. Under EIP-196/197 such an element is at least
+the modulus and the input is rejected; go-ethereum v1.17.5 and
+`revm-precompile` 43.0.2 both reject every row as an invalid field element.
+The pre-fix syscall versions strip the bits of the last coordinate as
+`ark-serialize` point flags and accept the input.
+
 ## G2 vectors
 
 `addition_g2_cases.json` and `multiplication_g2_cases.json` are Solana-only
