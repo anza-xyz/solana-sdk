@@ -1196,4 +1196,111 @@ mod tests {
         b: (),
         c: bool,
     }
+
+    #[cfg(feature = "fuzz-bolero")]
+    #[derive(wincode::SchemaWrite, wincode::SchemaRead, PartialEq)]
+    struct TestFuzzerFeed {
+        a: u8,
+        b: bool,
+        c: Option<Vec<u16>>,
+        d: [u8; 32],
+    }
+
+    #[cfg(feature = "fuzz-bolero")]
+    #[derive(
+        serde::Serialize, serde::Deserialize, wincode::SchemaWrite, wincode::SchemaRead, PartialEq,
+    )]
+    struct TestFuzzerFeedTwoSerializers {
+        a: u8,
+        b: bool,
+        c: Option<Vec<u16>>,
+        d: [u8; 32],
+    }
+
+    #[cfg(feature = "fuzz-bolero")]
+    #[derive(wincode::SchemaWrite, wincode::SchemaRead, PartialEq)]
+    struct TestFuzzerMultiTypeA {}
+
+    #[cfg(feature = "fuzz-bolero")]
+    #[derive(wincode::SchemaWrite, wincode::SchemaRead, PartialEq)]
+    struct TestFuzzerMultiTypeB {}
+
+    #[derive(
+        solana_frozen_abi_macro::StableAbiSample,
+        wincode::SchemaWrite,
+        wincode::SchemaRead,
+        PartialEq,
+    )]
+    struct TestRandomStableAbiFeed {
+        a: u64,
+        b: bool,
+        c: [u8; 32],
+        d: (u8, u8),
+    }
+
+    #[cfg(feature = "fuzz-bolero")]
+    mod bolero_fuzzer {
+        solana_frozen_abi_macro::generate_serialization_test!(
+            super::TestFuzzerFeed,
+            strategy = "bolero_fuzzer",
+            serializer = "wincode",
+            test_roundtrip = "eq_and_wire"
+        );
+        solana_frozen_abi_macro::generate_serialization_test!(
+            super::TestFuzzerFeedTwoSerializers,
+            strategy = "bolero_fuzzer",
+            serializer = ["bincode", "wincode"],
+            test_roundtrip = "eq_and_wire"
+        );
+        solana_frozen_abi_macro::generate_serialization_test!(
+            [super::TestFuzzerMultiTypeA, super::TestFuzzerMultiTypeB],
+            strategy = "bolero_fuzzer",
+            test_roundtrip = "eq_and_wire"
+        );
+    }
+
+    mod random {
+        solana_frozen_abi_macro::generate_serialization_test!(
+            super::TestRandomStableAbiFeed,
+            strategy = "random",
+            serializer = "wincode",
+            abi_digest = "AgNkEpErnFBuy7iTAEUUAC1fbvokEkhbsfFnx4DtXAvY",
+            test_roundtrip = "eq_and_wire"
+        );
+    }
+
+    // Intentionally broken type used to exercise fuzz repro workflows. The
+    // feature gate keeps it out of normal fuzz targets.
+    #[cfg(feature = "fuzz-bolero-repro")]
+    const TRIGGER: [u8; 16] = [215, 58, 145, 236, 66, 184, 111, 21, 164, 205, 9, 114, 254, 49, 136, 91];
+
+    #[cfg(feature = "fuzz-bolero-repro")]
+    #[derive(PartialEq, wincode::SchemaRead)]
+    struct TestFuzzerRareBreak([u8; 16]);
+
+    #[cfg(feature = "fuzz-bolero-repro")]
+    unsafe impl<C: wincode::config::ConfigCore> wincode::SchemaWrite<C>
+        for TestFuzzerRareBreak
+    {
+        type Src = Self;
+
+        fn size_of(src: &Self::Src) -> wincode::WriteResult<usize> {
+            <[u8; 16] as wincode::SchemaWrite<C>>::size_of(&src.0)
+        }
+
+        fn write(writer: impl wincode::io::Writer, src: &Self::Src) -> wincode::WriteResult<()> {
+            assert!(src.0 != TRIGGER, "rare trigger hit: only the committed corpus reaches this");
+            <[u8; 16] as wincode::SchemaWrite<C>>::write(writer, &src.0)
+        }
+    }
+
+    #[cfg(feature = "fuzz-bolero-repro")]
+    mod bolero_repro {
+        solana_frozen_abi_macro::generate_serialization_test!(
+            super::TestFuzzerRareBreak,
+            strategy = "bolero_fuzzer",
+            serializer = "wincode",
+            test_roundtrip = "eq_and_wire"
+        );
+    }
 }
