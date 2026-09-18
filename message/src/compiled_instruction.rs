@@ -1,6 +1,6 @@
 #[cfg(feature = "serde")]
 use serde_derive::{Deserialize, Serialize};
-#[cfg(feature = "frozen-abi")]
+#[cfg(feature = "stable-abi")]
 use solana_frozen_abi_macro::{frozen_abi, AbiExample, StableAbi, StableAbiSample};
 use {alloc::vec::Vec, solana_address::Address, solana_sanitize::Sanitize};
 #[cfg(feature = "wincode")]
@@ -17,7 +17,7 @@ use {
 ///
 /// [`Message`]: crate::Message
 #[cfg_attr(
-    feature = "frozen-abi",
+    feature = "stable-abi",
     derive(AbiExample, StableAbi, StableAbiSample),
     frozen_abi(
         abi_digest = "ANAoDM13eiKa3WRnfiwYi8jcgaEgC32xHWyA8xVAkUGV",

@@ -31,19 +31,27 @@ wincode = [
     "solana-pubkey/wincode",
 ]
 frozen-abi = [
-    "dep:solana-frozen-abi",
-    "dep:solana-frozen-abi-macro",
     "solana-fee-calculator/frozen-abi",
+    "solana-frozen-abi-macro/frozen-abi",
+    "solana-frozen-abi/frozen-abi",
     "solana-hash/frozen-abi",
     "solana-pubkey/frozen-abi",
+    "stable-abi",
+]
+stable-abi = [
+    "solana-fee-calculator/stable-abi",
+    "solana-frozen-abi-macro/stable-abi",
+    "solana-frozen-abi/stable-abi",
+    "solana-hash/stable-abi",
+    "solana-pubkey/stable-abi",
 ]
 
 [dependencies]
 serde = { workspace = true, optional = true }
 serde_derive = { workspace = true, optional = true }
 solana-fee-calculator = { workspace = true }
-solana-frozen-abi = { workspace = true, optional = true, features = ["frozen-abi"] }
-solana-frozen-abi-macro = { workspace = true, optional = true, features = ["frozen-abi"] }
+solana-frozen-abi = { workspace = true, optional = true }
+solana-frozen-abi-macro = { workspace = true, optional = true }
 solana-hash = { workspace = true, features = ["copy", "decode"] }
 solana-pubkey = { workspace = true, default-features = false }
 solana-sha256-hasher = { workspace = true }

@@ -3,10 +3,10 @@
 #![no_std]
 #[cfg(feature = "serde")]
 use serde_derive::{Deserialize, Serialize};
-#[cfg(feature = "frozen-abi")]
+#[cfg(feature = "stable-abi")]
 use solana_frozen_abi_macro::{frozen_abi, AbiEnumVisitor, AbiExample, StableAbi, StableAbiSample};
 #[cfg(any(
-    feature = "frozen-abi",
+    feature = "stable-abi",
     not(any(target_os = "solana", target_arch = "bpf"))
 ))]
 extern crate std;
@@ -16,7 +16,7 @@ pub type TransactionResult<T> = Result<T, TransactionError>;
 
 /// Reasons a transaction might be rejected.
 #[cfg_attr(
-    feature = "frozen-abi",
+    feature = "stable-abi",
     derive(AbiExample, AbiEnumVisitor, StableAbi, StableAbiSample),
     frozen_abi(
         abi_digest = "2W49i91iPDXeXCEet6LbbpvoDJAm1HEDBfGskAmocXuu",

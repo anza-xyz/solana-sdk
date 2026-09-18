@@ -112,10 +112,10 @@
 //! ```
 
 extern crate alloc;
-#[cfg(any(feature = "frozen-abi", feature = "std"))]
+#[cfg(any(feature = "stable-abi", feature = "std"))]
 extern crate std;
 
-#[cfg(feature = "frozen-abi")]
+#[cfg(feature = "stable-abi")]
 use solana_frozen_abi_macro::{frozen_abi, AbiExample, StableAbi};
 #[cfg(feature = "wincode")]
 pub use solana_signer::{signers::Signers, SignerError};
@@ -206,7 +206,7 @@ const NONCED_TX_MARKER_IX_INDEX: u8 = 0;
 /// transaction's `Message` is both a signer and the expected fee-payer, then
 /// redundantly specifying the fee-payer is not strictly required.
 #[cfg_attr(
-    feature = "frozen-abi",
+    feature = "stable-abi",
     derive(AbiExample, StableAbi),
     frozen_abi(
         api_digest = "ADDDuk3dAZJ5hDxue8v4btH7nhEyngxUpXaC7A4k8gyQ",
@@ -235,7 +235,7 @@ pub struct Transaction {
     pub message: Message,
 }
 
-#[cfg(feature = "frozen-abi")]
+#[cfg(feature = "stable-abi")]
 impl solana_frozen_abi::rand::prelude::Distribution<Transaction>
     for solana_frozen_abi::rand::distr::StandardUniform
 {

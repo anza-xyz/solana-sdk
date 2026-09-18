@@ -3,7 +3,7 @@
 #![cfg_attr(feature = "frozen-abi", feature(min_specialization))]
 #[cfg(feature = "num-traits")]
 use num_traits::ToPrimitive;
-#[cfg(feature = "frozen-abi")]
+#[cfg(feature = "stable-abi")]
 extern crate std;
 use {core::fmt, solana_program_error::ProgramError};
 pub use {
@@ -23,7 +23,7 @@ pub use {
 
 #[allow(deprecated)]
 mod instruction_error_module {
-    #[cfg(feature = "frozen-abi")]
+    #[cfg(feature = "stable-abi")]
     use solana_frozen_abi_macro::{
         frozen_abi, AbiEnumVisitor, AbiExample, StableAbi, StableAbiSample,
     };
@@ -36,7 +36,7 @@ mod instruction_error_module {
     /// dangerous to include error strings from 3rd party crates because they could
     /// change at any time and changes to them are difficult to detect.
     #[cfg_attr(
-        feature = "frozen-abi",
+        feature = "stable-abi",
         derive(AbiExample, AbiEnumVisitor, StableAbi, StableAbiSample),
         frozen_abi(
             abi_digest = "FeTxh6dMDyYG1EdnenTpe8vpH37xDRvfksy83XKBN671",

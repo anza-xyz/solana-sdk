@@ -38,7 +38,7 @@ type SignatureData<'a> = (&'a Signature, &'a [u8], &'a [u8]);
 /// A 64-byte Ed25519 signature.
 #[repr(transparent)]
 #[cfg_attr(
-    feature = "frozen-abi",
+    feature = "stable-abi",
     derive(
         solana_frozen_abi_macro::AbiExample,
         solana_frozen_abi_macro::StableAbi,

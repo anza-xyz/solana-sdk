@@ -25,7 +25,7 @@ pub const BLS_PUBLIC_KEY_AFFINE_SIZE: usize = 96;
 pub const BLS_PUBLIC_KEY_AFFINE_BASE64_SIZE: usize = 128;
 
 /// A serialized BLS public key in a compressed point representation.
-#[cfg_attr(feature = "frozen-abi", derive(solana_frozen_abi_macro::AbiExample))]
+#[cfg_attr(feature = "stable-abi", derive(solana_frozen_abi_macro::AbiExample))]
 #[cfg_attr(feature = "serde", cfg_eval::cfg_eval, serde_as)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "wincode", derive(SchemaRead, SchemaWrite))]
@@ -52,7 +52,7 @@ impl_from_str!(
 );
 
 /// A serialized BLS public key in an affine point representation.
-#[cfg_attr(feature = "frozen-abi", derive(solana_frozen_abi_macro::AbiExample))]
+#[cfg_attr(feature = "stable-abi", derive(solana_frozen_abi_macro::AbiExample))]
 #[cfg_attr(feature = "serde", cfg_eval::cfg_eval, serde_as)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "wincode", derive(SchemaRead, SchemaWrite))]

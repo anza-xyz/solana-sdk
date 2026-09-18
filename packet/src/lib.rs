@@ -2,7 +2,7 @@
 #![cfg_attr(feature = "frozen-abi", feature(min_specialization))]
 #![cfg_attr(docsrs, feature(doc_cfg))]
 
-#[cfg(feature = "frozen-abi")]
+#[cfg(feature = "stable-abi")]
 use solana_frozen_abi_macro::{frozen_abi, AbiExample, StableAbi, StableAbiSample};
 #[cfg(feature = "bincode")]
 use {
@@ -73,7 +73,7 @@ bitflags! {
     }
 }
 
-#[cfg_attr(feature = "frozen-abi", derive(AbiExample, StableAbi, StableAbiSample))]
+#[cfg_attr(feature = "stable-abi", derive(AbiExample, StableAbi, StableAbiSample))]
 #[cfg_attr(feature = "wincode", derive(SchemaWrite, SchemaRead))]
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -102,7 +102,7 @@ impl ::solana_frozen_abi::abi_example::EvenAsOpaque for PacketFlags {
     const TYPE_NAME_MATCHER: &'static str = "::_::InternalBitFlags";
 }
 
-#[cfg(feature = "frozen-abi")]
+#[cfg(feature = "stable-abi")]
 impl ::solana_frozen_abi::stable_abi::StableAbi for PacketFlags {
     fn random_with_context(
         rng: &mut (impl ::solana_frozen_abi::rand::RngCore + ?Sized),
@@ -198,7 +198,7 @@ unsafe impl<'de, const N: usize, C: ConfigCore> SchemaRead<'de, C> for LenPrefix
 // https://docs.rs/serde_with/latest/serde_with/guide/serde_as/index.html#gating-serde_as-on-features
 #[cfg_attr(feature = "serde", cfg_eval::cfg_eval, serde_as)]
 #[cfg_attr(
-    feature = "frozen-abi",
+    feature = "stable-abi",
     derive(AbiExample, StableAbi, StableAbiSample),
     frozen_abi(
         abi_digest = "5MtHLJ3g6mJfsz9KfxnUgjksRUXSETinR9jZZiYuE7fh",

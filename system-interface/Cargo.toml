@@ -22,12 +22,18 @@ crate-type = ["rlib"]
 alloc = []
 bincode = ["alloc", "serde", "solana-instruction/bincode"]
 frozen-abi = [
-    "dep:solana-frozen-abi",
-    "dep:solana-frozen-abi-macro",
-    "serde",
-    "std",
     "solana-address/frozen-abi",
+    "solana-frozen-abi-macro/frozen-abi",
+    "solana-frozen-abi/frozen-abi",
+    "stable-abi",
+]
+stable-abi = [
+    "serde",
+    "solana-address/stable-abi",
     "solana-address/std",
+    "solana-frozen-abi-macro/stable-abi",
+    "solana-frozen-abi/stable-abi",
+    "std",
 ]
 serde = ["dep:serde", "dep:serde_derive", "serde/alloc", "solana-address/serde"]
 std = []
@@ -43,8 +49,8 @@ num-traits = { workspace = true }
 serde = { workspace = true, optional = true }
 serde_derive = { workspace = true, optional = true }
 solana-address = { workspace = true, features = ["decode"] }
-solana-frozen-abi = { workspace = true, features = ["frozen-abi"], optional = true }
-solana-frozen-abi-macro = { workspace = true, features = ["frozen-abi"], optional = true }
+solana-frozen-abi = { workspace = true, optional = true }
+solana-frozen-abi-macro = { workspace = true, optional = true }
 solana-instruction = { workspace = true, features = ["std"], optional = true }
 solana-msg = { workspace = true }
 solana-program-error = { workspace = true }

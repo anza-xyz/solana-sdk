@@ -16,16 +16,29 @@ rustdoc-args = ["--cfg=docsrs"]
 
 [features]
 frozen-abi = [
-    "dep:solana-frozen-abi",
-    "dep:solana-frozen-abi-macro",
     "solana-account/frozen-abi",
     "solana-cluster-type/frozen-abi",
     "solana-epoch-schedule/frozen-abi",
     "solana-fee-calculator/frozen-abi",
+    "solana-frozen-abi-macro/frozen-abi",
+    "solana-frozen-abi/frozen-abi",
     "solana-inflation/frozen-abi",
     "solana-poh-config/frozen-abi",
     "solana-pubkey/frozen-abi",
     "solana-rent/frozen-abi",
+    "stable-abi",
+]
+stable-abi = [
+    "solana-account/stable-abi",
+    "solana-cluster-type/stable-abi",
+    "solana-epoch-schedule/stable-abi",
+    "solana-fee-calculator/stable-abi",
+    "solana-frozen-abi-macro/stable-abi",
+    "solana-frozen-abi/stable-abi",
+    "solana-inflation/stable-abi",
+    "solana-poh-config/stable-abi",
+    "solana-pubkey/stable-abi",
+    "solana-rent/stable-abi",
 ]
 serde = [
     "dep:serde",
@@ -51,7 +64,7 @@ solana-clock = { workspace = true }
 solana-cluster-type = { workspace = true }
 solana-epoch-schedule = { workspace = true }
 solana-fee-calculator = { workspace = true }
-solana-frozen-abi = { workspace = true, optional = true, features = ["frozen-abi"] }
+solana-frozen-abi = { workspace = true, optional = true }
 solana-frozen-abi-macro = { workspace = true, optional = true }
 solana-hash = { workspace = true }
 solana-inflation = { workspace = true }

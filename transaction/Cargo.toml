@@ -20,11 +20,19 @@ default = ["std"]
 blake3 = ["solana-message/blake3", "wincode"]
 dev-context-only-utils = ["blake3", "serde", "verify", "solana-hash/atomic"]
 frozen-abi = [
-    "dep:solana-frozen-abi",
-    "dep:solana-frozen-abi-macro",
-    "solana-transaction-error/frozen-abi",
-    "solana-signature/frozen-abi",
+    "solana-frozen-abi-macro/frozen-abi",
+    "solana-frozen-abi/frozen-abi",
     "solana-message/frozen-abi",
+    "solana-signature/frozen-abi",
+    "solana-transaction-error/frozen-abi",
+    "stable-abi",
+]
+stable-abi = [
+    "solana-frozen-abi-macro/stable-abi",
+    "solana-frozen-abi/stable-abi",
+    "solana-message/stable-abi",
+    "solana-signature/stable-abi",
+    "solana-transaction-error/stable-abi",
 ]
 serde = [
     "dep:serde",
@@ -49,8 +57,8 @@ wincode = [
 serde = { workspace = true, optional = true }
 serde_derive = { workspace = true, optional = true }
 solana-address = { workspace = true }
-solana-frozen-abi = { workspace = true, optional = true, features = ["frozen-abi"] }
-solana-frozen-abi-macro = { workspace = true, optional = true, features = ["frozen-abi"] }
+solana-frozen-abi = { workspace = true, optional = true }
+solana-frozen-abi-macro = { workspace = true, optional = true }
 solana-hash = { workspace = true }
 solana-instruction = { workspace = true }
 solana-instruction-error = { workspace = true }

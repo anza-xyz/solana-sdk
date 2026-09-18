@@ -1,6 +1,6 @@
 #[cfg(feature = "serde")]
 use serde_derive::{Deserialize, Serialize};
-#[cfg(feature = "frozen-abi")]
+#[cfg(feature = "stable-abi")]
 use solana_frozen_abi_macro::{AbiEnumVisitor, AbiExample};
 #[cfg(all(not(feature = "wincode"), feature = "bincode"))]
 use solana_instruction_error::InstructionError;
@@ -45,7 +45,7 @@ pub enum LookupTableStatus {
 }
 
 /// Address lookup table metadata
-#[cfg_attr(feature = "frozen-abi", derive(AbiExample))]
+#[cfg_attr(feature = "stable-abi", derive(AbiExample))]
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[cfg_attr(feature = "wincode", derive(SchemaRead, SchemaWrite))]
 #[derive(Debug, PartialEq, Eq, Clone)]
@@ -125,7 +125,7 @@ impl LookupTableMeta {
 }
 
 /// Program account states
-#[cfg_attr(feature = "frozen-abi", derive(AbiEnumVisitor, AbiExample))]
+#[cfg_attr(feature = "stable-abi", derive(AbiEnumVisitor, AbiExample))]
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[cfg_attr(feature = "wincode", derive(SchemaRead, SchemaWrite))]
 #[derive(Debug, PartialEq, Eq, Clone)]
@@ -137,7 +137,7 @@ pub enum ProgramState {
     LookupTable(LookupTableMeta),
 }
 
-#[cfg_attr(feature = "frozen-abi", derive(AbiExample))]
+#[cfg_attr(feature = "stable-abi", derive(AbiExample))]
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct AddressLookupTable<'a> {
     pub meta: LookupTableMeta,

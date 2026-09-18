@@ -9,7 +9,7 @@ pub use solana_sdk_ids::compute_budget::{check_id, id, ID};
 
 /// Compute Budget Instructions
 #[cfg_attr(
-    feature = "frozen-abi",
+    feature = "stable-abi",
     derive(
         solana_frozen_abi_macro::AbiExample,
         solana_frozen_abi_macro::AbiEnumVisitor

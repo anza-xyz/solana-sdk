@@ -9,7 +9,7 @@ const DEFAULT_NS_PER_TICK: u64 = 4_687_500;
 #[cfg(test)]
 static_assertions::const_assert_eq!(DEFAULT_NS_PER_TICK, solana_clock::DEFAULT_NS_PER_TICK);
 
-#[cfg_attr(feature = "frozen-abi", derive(solana_frozen_abi_macro::AbiExample))]
+#[cfg_attr(feature = "stable-abi", derive(solana_frozen_abi_macro::AbiExample))]
 #[cfg_attr(
     feature = "serde",
     derive(serde_derive::Deserialize, serde_derive::Serialize)

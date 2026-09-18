@@ -5,10 +5,10 @@
 #![allow(clippy::arithmetic_side_effects)]
 
 extern crate alloc;
-#[cfg(feature = "frozen-abi")]
+#[cfg(feature = "stable-abi")]
 extern crate std;
 
-#[cfg(feature = "frozen-abi")]
+#[cfg(feature = "stable-abi")]
 use solana_frozen_abi_macro::AbiExample;
 use {alloc::vec::Vec, core::convert::TryFrom};
 #[cfg(feature = "serde")]
@@ -29,7 +29,7 @@ mod wincode;
 /// bytes. Each byte follows the same pattern until the 3rd byte. The 3rd
 /// byte may only have the 2 least-significant bits set, otherwise the encoded
 /// value will overflow the u16.
-#[cfg_attr(feature = "frozen-abi", derive(AbiExample))]
+#[cfg_attr(feature = "stable-abi", derive(AbiExample))]
 pub struct ShortU16(pub u16);
 
 #[cfg(feature = "serde")]
