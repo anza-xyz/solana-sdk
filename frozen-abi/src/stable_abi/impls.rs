@@ -370,7 +370,7 @@ impl StableAbi for SocketAddr {
     }
 }
 
-#[cfg(all(test, feature = "frozen-abi"))]
+#[cfg(all(test, feature = "stable-abi"))]
 mod tests {
     use {
         crate::stable_abi::context::{SequenceLenMax, SequenceLenRange},
@@ -379,6 +379,8 @@ mod tests {
     };
 
     const ABI_SHARED_WINCODE_VS_BINCODE: &str = "AgNkEpErnFBuy7iTAEUUAC1fbvokEkhbsfFnx4DtXAvY";
+    // the api digester only exists under `frozen-abi`
+    #[cfg_attr(not(feature = "frozen-abi"), allow(dead_code))]
     const API_SHARED_SERIALIZERS: &str = "CKtY7bQJ1TMwbRQA93kKfaUMA3FjHSnvyWiuRQTvfhRh";
     // A single type whose ABI is digested with both `bincode` and `wincode`,
     // which must agree on the shared digest. Each serializer gets its own
@@ -391,7 +393,7 @@ mod tests {
         wincode::SchemaWrite,
     )]
     #[cfg_attr(
-        feature = "frozen-abi",
+        feature = "stable-abi",
         derive(
             solana_frozen_abi_macro::AbiExample,
             solana_frozen_abi_macro::StableAbi
@@ -426,7 +428,7 @@ mod tests {
     // Verify abi_digest-only: no API digest, should still run ABI test.
     #[derive(PartialEq, wincode::SchemaWrite, wincode::SchemaRead)]
     #[cfg_attr(
-        feature = "frozen-abi",
+        feature = "stable-abi",
         derive(solana_frozen_abi_macro::StableAbi),
         solana_frozen_abi_macro::frozen_abi(
             abi_digest = "AgNkEpErnFBuy7iTAEUUAC1fbvokEkhbsfFnx4DtXAvY",
@@ -463,7 +465,7 @@ mod tests {
         wincode::SchemaWrite,
     )]
     #[cfg_attr(
-        feature = "frozen-abi",
+        feature = "stable-abi",
         derive(
             solana_frozen_abi_macro::StableAbi,
             solana_frozen_abi_macro::StableAbiSample
@@ -485,7 +487,7 @@ mod tests {
     // Verify stable abi sample derive (all fields with rand distribution)
     #[derive(PartialEq, wincode::SchemaWrite, wincode::SchemaRead)]
     #[cfg_attr(
-        feature = "frozen-abi",
+        feature = "stable-abi",
         derive(
             solana_frozen_abi_macro::StableAbi,
             solana_frozen_abi_macro::StableAbiSample
@@ -505,7 +507,7 @@ mod tests {
 
     #[derive(PartialEq, wincode::SchemaWrite, wincode::SchemaRead)]
     #[cfg_attr(
-        feature = "frozen-abi",
+        feature = "stable-abi",
         derive(
             solana_frozen_abi_macro::StableAbi,
             solana_frozen_abi_macro::StableAbiSample
@@ -525,7 +527,7 @@ mod tests {
 
     #[derive(PartialEq, wincode::SchemaWrite, wincode::SchemaRead)]
     #[cfg_attr(
-        feature = "frozen-abi",
+        feature = "stable-abi",
         derive(
             solana_frozen_abi_macro::StableAbi,
             solana_frozen_abi_macro::StableAbiSample
@@ -544,7 +546,7 @@ mod tests {
     // Verify stable abi sample derive (fields mixed, mostly without implementation of rand distribution)
     #[derive(PartialEq, wincode::SchemaWrite, wincode::SchemaRead)]
     #[cfg_attr(
-        feature = "frozen-abi",
+        feature = "stable-abi",
         derive(
             solana_frozen_abi_macro::StableAbi,
             solana_frozen_abi_macro::StableAbiSample
@@ -570,7 +572,7 @@ mod tests {
 
     #[derive(PartialEq, wincode::SchemaWrite, wincode::SchemaRead)]
     #[cfg_attr(
-        feature = "frozen-abi",
+        feature = "stable-abi",
         derive(
             solana_frozen_abi_macro::StableAbi,
             solana_frozen_abi_macro::StableAbiSample
@@ -589,7 +591,7 @@ mod tests {
 
     #[derive(PartialEq, wincode::SchemaWrite, wincode::SchemaRead)]
     #[cfg_attr(
-        feature = "frozen-abi",
+        feature = "stable-abi",
         derive(
             solana_frozen_abi_macro::StableAbi,
             solana_frozen_abi_macro::StableAbiSample
@@ -617,7 +619,7 @@ mod tests {
         "G7kuFGzwY6HwSytv6UsjWVEAbhrfv2n2gmchE27mSRiM";
     #[derive(PartialEq, wincode::SchemaWrite, wincode::SchemaRead)]
     #[cfg_attr(
-        feature = "frozen-abi",
+        feature = "stable-abi",
         derive(solana_frozen_abi_macro::StableAbi, solana_frozen_abi_macro::StableAbiSample),
         solana_frozen_abi_macro::frozen_abi(
             abi_digest = ABI_DIGEST_EQUIVALENT_FIELD_STRUCTURES,
@@ -633,7 +635,7 @@ mod tests {
 
     #[derive(PartialEq, serde_derive::Serialize, serde_derive::Deserialize)]
     #[cfg_attr(
-        feature = "frozen-abi",
+        feature = "stable-abi",
         derive(solana_frozen_abi_macro::StableAbi, solana_frozen_abi_macro::StableAbiSample),
         solana_frozen_abi_macro::frozen_abi(
             abi_digest = ABI_DIGEST_EQUIVALENT_FIELD_STRUCTURES,
@@ -647,7 +649,7 @@ mod tests {
         "14qLvWX4UebbLBaKi6v31A8xDfXU8ifX8DqCGbpAwjtD";
     #[derive(PartialEq, wincode::SchemaWrite, wincode::SchemaRead)]
     #[cfg_attr(
-        feature = "frozen-abi",
+        feature = "stable-abi",
         derive(solana_frozen_abi_macro::StableAbi, solana_frozen_abi_macro::StableAbiSample),
         solana_frozen_abi_macro::frozen_abi(
             abi_digest = ABI_DIGEST_EQUIVALENT_BYTE_SEQUENCES,
@@ -665,7 +667,7 @@ mod tests {
 
     #[derive(PartialEq, serde_derive::Serialize, serde_derive::Deserialize)]
     #[cfg_attr(
-        feature = "frozen-abi",
+        feature = "stable-abi",
         derive(solana_frozen_abi_macro::StableAbi, solana_frozen_abi_macro::StableAbiSample),
         solana_frozen_abi_macro::frozen_abi(
             abi_digest = ABI_DIGEST_EQUIVALENT_BYTE_SEQUENCES,
@@ -685,7 +687,7 @@ mod tests {
         "9pGP5GGD2HxDRCQeDv3rPGTfVH9SzkZCXMSGHpZnzz4G";
     #[derive(PartialEq, wincode::SchemaWrite, wincode::SchemaRead)]
     #[cfg_attr(
-        feature = "frozen-abi",
+        feature = "stable-abi",
         derive(solana_frozen_abi_macro::StableAbi, solana_frozen_abi_macro::StableAbiSample),
         solana_frozen_abi_macro::frozen_abi(
             abi_digest = ABI_DIGEST_EQUIVALENT_KEY_VALUE_SEQUENCES,
@@ -703,7 +705,7 @@ mod tests {
 
     #[derive(PartialEq, serde_derive::Serialize, serde_derive::Deserialize)]
     #[cfg_attr(
-        feature = "frozen-abi",
+        feature = "stable-abi",
         derive(solana_frozen_abi_macro::StableAbi, solana_frozen_abi_macro::StableAbiSample),
         solana_frozen_abi_macro::frozen_abi(
             abi_digest = ABI_DIGEST_EQUIVALENT_KEY_VALUE_SEQUENCES,
@@ -726,7 +728,7 @@ mod tests {
     #[cfg(target_pointer_width = "64")]
     #[derive(PartialEq, wincode::SchemaWrite, wincode::SchemaRead)]
     #[cfg_attr(
-        feature = "frozen-abi",
+        feature = "stable-abi",
         derive(
             solana_frozen_abi_macro::StableAbi,
             solana_frozen_abi_macro::StableAbiSample
@@ -749,7 +751,7 @@ mod tests {
 
     #[derive(PartialEq, wincode::SchemaWrite, wincode::SchemaRead)]
     #[cfg_attr(
-        feature = "frozen-abi",
+        feature = "stable-abi",
         derive(
             solana_frozen_abi_macro::StableAbi,
             solana_frozen_abi_macro::StableAbiSample
@@ -777,7 +779,7 @@ mod tests {
 
     #[derive(PartialEq, wincode::SchemaWrite, wincode::SchemaRead)]
     #[cfg_attr(
-        feature = "frozen-abi",
+        feature = "stable-abi",
         derive(
             solana_frozen_abi_macro::StableAbi,
             solana_frozen_abi_macro::StableAbiSample
@@ -796,7 +798,7 @@ mod tests {
 
     #[derive(PartialEq, wincode::SchemaWrite, wincode::SchemaRead)]
     #[cfg_attr(
-        feature = "frozen-abi",
+        feature = "stable-abi",
         derive(
             solana_frozen_abi_macro::StableAbi,
             solana_frozen_abi_macro::StableAbiSample
@@ -816,7 +818,7 @@ mod tests {
     }
     #[derive(PartialEq, wincode::SchemaWrite, wincode::SchemaRead)]
     #[cfg_attr(
-        feature = "frozen-abi",
+        feature = "stable-abi",
         derive(
             solana_frozen_abi_macro::StableAbi,
             solana_frozen_abi_macro::StableAbiSample
@@ -839,7 +841,7 @@ mod tests {
         ({ $($body:tt)* }) => {
             #[derive(PartialEq, wincode::SchemaWrite, wincode::SchemaRead)]
             #[cfg_attr(
-                feature = "frozen-abi",
+                feature = "stable-abi",
                 derive(
                     solana_frozen_abi_macro::StableAbi,
                     solana_frozen_abi_macro::StableAbiSample
@@ -866,7 +868,7 @@ mod tests {
 
     #[derive(PartialEq, wincode::SchemaWrite, wincode::SchemaRead)]
     #[cfg_attr(
-        feature = "frozen-abi",
+        feature = "stable-abi",
         derive(
             solana_frozen_abi_macro::StableAbi,
             solana_frozen_abi_macro::StableAbiSample
@@ -903,7 +905,7 @@ mod tests {
                         $($(
                             #[derive $derives]
                             #[cfg_attr(
-                                feature = "frozen-abi",
+                                feature = "stable-abi",
                                 derive(
                                     solana_frozen_abi_macro::StableAbi,
                                     solana_frozen_abi_macro::StableAbiSample
@@ -1055,7 +1057,7 @@ mod tests {
     const ARRAY_LEN: usize = 1;
     #[derive(PartialEq, wincode::SchemaWrite, wincode::SchemaRead)]
     #[cfg_attr(
-        feature = "frozen-abi",
+        feature = "stable-abi",
         derive(
             solana_frozen_abi_macro::StableAbi,
             solana_frozen_abi_macro::StableAbiSample
@@ -1067,7 +1069,7 @@ mod tests {
 
     #[derive(PartialEq, wincode::SchemaWrite, wincode::SchemaRead)]
     #[cfg_attr(
-        feature = "frozen-abi",
+        feature = "stable-abi",
         derive(
             solana_frozen_abi_macro::StableAbi,
             solana_frozen_abi_macro::StableAbiSample
@@ -1083,7 +1085,7 @@ mod tests {
 
     #[derive(PartialEq, wincode::SchemaWrite, wincode::SchemaRead)]
     #[cfg_attr(
-        feature = "frozen-abi",
+        feature = "stable-abi",
         derive(
             solana_frozen_abi_macro::StableAbi,
             solana_frozen_abi_macro::StableAbiSample
@@ -1102,7 +1104,7 @@ mod tests {
     // do not add missing wincode::SchemaRead to this type
     #[derive(wincode::SchemaWrite)]
     #[cfg_attr(
-        feature = "frozen-abi",
+        feature = "stable-abi",
         derive(
             solana_frozen_abi_macro::StableAbi,
             solana_frozen_abi_macro::StableAbiSample
@@ -1121,7 +1123,7 @@ mod tests {
 
     #[derive(wincode::SchemaWrite, wincode::SchemaRead)]
     #[cfg_attr(
-        feature = "frozen-abi",
+        feature = "stable-abi",
         derive(
             solana_frozen_abi_macro::StableAbi,
             solana_frozen_abi_macro::StableAbiSample
@@ -1140,7 +1142,7 @@ mod tests {
 
     #[derive(wincode::SchemaWrite, wincode::SchemaRead)]
     #[cfg_attr(
-        feature = "frozen-abi",
+        feature = "stable-abi",
         derive(
             solana_frozen_abi_macro::StableAbi,
             solana_frozen_abi_macro::StableAbiSample
@@ -1162,7 +1164,7 @@ mod tests {
     const SKIP_VS_UNIT_DIGEST: &str = "8po7NHArG1np5zmKWjxaG5WzZwDz8uzZRr4u3WJ8LDuX";
     #[derive(wincode::SchemaWrite, wincode::SchemaRead)]
     #[cfg_attr(
-        feature = "frozen-abi",
+        feature = "stable-abi",
         derive(
             solana_frozen_abi_macro::StableAbi,
             solana_frozen_abi_macro::StableAbiSample
@@ -1181,7 +1183,7 @@ mod tests {
 
     #[derive(wincode::SchemaWrite, wincode::SchemaRead)]
     #[cfg_attr(
-        feature = "frozen-abi",
+        feature = "stable-abi",
         derive(
             solana_frozen_abi_macro::StableAbi,
             solana_frozen_abi_macro::StableAbiSample

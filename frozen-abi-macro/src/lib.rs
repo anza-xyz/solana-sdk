@@ -5,7 +5,7 @@ use proc_macro::TokenStream;
 
 // Define dummy macro_attribute and macro_derive for stable rustc
 
-#[cfg(not(feature = "frozen-abi"))]
+#[cfg(not(feature = "stable-abi"))]
 #[proc_macro_attribute]
 pub fn frozen_abi(_attrs: TokenStream, item: TokenStream) -> TokenStream {
     item
@@ -23,13 +23,13 @@ pub fn derive_abi_enum_visitor(_item: TokenStream) -> TokenStream {
     "".parse().unwrap()
 }
 
-#[cfg(not(feature = "frozen-abi"))]
+#[cfg(not(feature = "stable-abi"))]
 #[proc_macro_derive(StableAbi)]
 pub fn derive_stable_abi(_item: TokenStream) -> TokenStream {
     "".parse().unwrap()
 }
 
-#[cfg(feature = "frozen-abi")]
+#[cfg(feature = "stable-abi")]
 #[proc_macro_derive(StableAbi)]
 pub fn derive_stable_abi(item: TokenStream) -> TokenStream {
     let item = parse_macro_input!(item as Item);
@@ -63,13 +63,13 @@ pub fn derive_stable_abi(item: TokenStream) -> TokenStream {
     expanded.into()
 }
 
-#[cfg(not(feature = "frozen-abi"))]
+#[cfg(not(feature = "stable-abi"))]
 #[proc_macro_derive(StableAbiSample, attributes(stable_abi_sample))]
 pub fn derive_stable_abi_sample(_item: TokenStream) -> TokenStream {
     "".parse().unwrap()
 }
 
-#[cfg(feature = "frozen-abi")]
+#[cfg(feature = "stable-abi")]
 #[proc_macro_derive(StableAbiSample, attributes(stable_abi_sample))]
 pub fn derive_stable_abi_sample(item: TokenStream) -> TokenStream {
     let item = parse_macro_input!(item as Item);
@@ -84,24 +84,28 @@ pub fn derive_stable_abi_sample(item: TokenStream) -> TokenStream {
     expanded.unwrap_or_else(|err| err.to_compile_error()).into()
 }
 
-#[cfg(feature = "frozen-abi")]
-use proc_macro2::{Span, TokenStream as TokenStream2, TokenTree};
-#[cfg(feature = "frozen-abi")]
-use quote::{quote, ToTokens};
-#[cfg(feature = "frozen-abi")]
+#[cfg(feature = "stable-abi")]
+use proc_macro2::{Span, TokenStream as TokenStream2};
+#[cfg(feature = "stable-abi")]
+use quote::quote;
+#[cfg(any(feature = "frozen-abi", all(test, feature = "stable-abi")))]
+use quote::ToTokens;
+#[cfg(feature = "stable-abi")]
 use syn::{
-    parse_macro_input, Attribute, Error, Expr, ExprLit, Fields, Ident, Item, ItemEnum, ItemStruct,
-    ItemType, Lit, LitStr, Variant,
+    parse_macro_input, Error, Expr, ExprLit, Fields, Ident, Item, ItemEnum, ItemStruct, ItemType,
+    Lit, LitStr, Variant,
 };
-
 #[cfg(feature = "frozen-abi")]
+use {proc_macro2::TokenTree, syn::Attribute};
+
+#[cfg(feature = "stable-abi")]
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum AbiSerializer {
     Bincode,
     Wincode,
 }
 
-#[cfg(feature = "frozen-abi")]
+#[cfg(feature = "stable-abi")]
 impl AbiSerializer {
     fn from_lit_str(lit: &LitStr) -> Result<Self, Error> {
         match lit.value().as_str() {
@@ -134,7 +138,7 @@ impl AbiSerializer {
 /// Parse the `abi_serializer` attribute value, which may be either a single
 /// string literal (e.g. `"wincode"`) or a list of string literals
 /// (e.g. `["bincode", "wincode"]`).
-#[cfg(feature = "frozen-abi")]
+#[cfg(feature = "stable-abi")]
 fn parse_abi_serializers(expr: &Expr) -> Result<Vec<AbiSerializer>, Error> {
     fn lit_str(expr: &Expr) -> Result<&LitStr, Error> {
         match expr {
@@ -169,14 +173,14 @@ fn parse_abi_serializers(expr: &Expr) -> Result<Vec<AbiSerializer>, Error> {
     }
 }
 
-#[cfg(feature = "frozen-abi")]
+#[cfg(feature = "stable-abi")]
 enum RoundtripTest {
     No,
     WireOnly,
     EqAndWire,
 }
 
-#[cfg(feature = "frozen-abi")]
+#[cfg(feature = "stable-abi")]
 fn parse_roundtrip_test(value: Option<&LitStr>) -> Result<RoundtripTest, Error> {
     match value {
         None => Ok(RoundtripTest::WireOnly),
@@ -232,14 +236,14 @@ fn filter_allow_attrs(attrs: &mut Vec<Attribute>) {
     });
 }
 
-#[cfg(feature = "frozen-abi")]
+#[cfg(feature = "stable-abi")]
 struct StableAbiSampleOptions {
     with_expr: Option<TokenStream2>,
     ctx_expr: Option<TokenStream2>,
     skip: bool,
 }
 
-#[cfg(feature = "frozen-abi")]
+#[cfg(feature = "stable-abi")]
 fn parse_stable_abi_sample_options(field: &syn::Field) -> Result<StableAbiSampleOptions, Error> {
     let mut with_expr: Option<TokenStream2> = None;
     let mut ctx_expr: Option<TokenStream2> = None;
@@ -295,7 +299,7 @@ fn parse_stable_abi_sample_options(field: &syn::Field) -> Result<StableAbiSample
     })
 }
 
-#[cfg(feature = "frozen-abi")]
+#[cfg(feature = "stable-abi")]
 fn stable_abi_sample_field_expr(field: &syn::Field) -> Result<TokenStream2, Error> {
     let options = parse_stable_abi_sample_options(field)?;
     let ty = &field.ty;
@@ -325,7 +329,7 @@ fn stable_abi_sample_field_expr(field: &syn::Field) -> Result<TokenStream2, Erro
     }
 }
 
-#[cfg(feature = "frozen-abi")]
+#[cfg(feature = "stable-abi")]
 fn add_stable_abi_type_param_bounds(mut generics: syn::Generics) -> syn::Generics {
     generics.type_params_mut().for_each(|type_param| {
         type_param.bounds.push(syn::parse_quote!(
@@ -335,7 +339,7 @@ fn add_stable_abi_type_param_bounds(mut generics: syn::Generics) -> syn::Generic
     generics
 }
 
-#[cfg(feature = "frozen-abi")]
+#[cfg(feature = "stable-abi")]
 fn derive_stable_abi_sample_struct_type(input: ItemStruct) -> Result<TokenStream2, Error> {
     let type_name = &input.ident;
     let generics = add_stable_abi_type_param_bounds(input.generics);
@@ -381,7 +385,7 @@ fn derive_stable_abi_sample_struct_type(input: ItemStruct) -> Result<TokenStream
     })
 }
 
-#[cfg(feature = "frozen-abi")]
+#[cfg(feature = "stable-abi")]
 fn stable_abi_sample_enum_variant_expr(
     type_name: &Ident,
     ty_generics: &syn::TypeGenerics,
@@ -414,7 +418,7 @@ fn stable_abi_sample_enum_variant_expr(
     }
 }
 
-#[cfg(feature = "frozen-abi")]
+#[cfg(feature = "stable-abi")]
 fn derive_stable_abi_sample_enum_type(input: ItemEnum) -> Result<TokenStream2, Error> {
     let type_name = &input.ident;
     let variants = &input.variants;
@@ -665,7 +669,7 @@ pub fn derive_abi_enum_visitor(item: TokenStream) -> TokenStream {
     expanded.unwrap_or_else(|err| err.to_compile_error()).into()
 }
 
-#[cfg(feature = "frozen-abi")]
+#[cfg(feature = "stable-abi")]
 fn quote_for_test(
     test_mod_ident: &Ident,
     type_name: &Ident,
@@ -674,6 +678,9 @@ fn quote_for_test(
     abi_serializers: &[AbiSerializer],
     roundtrip_test: RoundtripTest,
 ) -> TokenStream2 {
+    // `api_digest` belongs to `frozen-abi`, not to `stable-abi`
+    let expected_api_digest = expected_api_digest.filter(|_| cfg!(feature = "frozen-abi"));
+
     let test_api = if let Some(expected_api_digest) = expected_api_digest {
         quote! {
                 #[test]
@@ -785,6 +792,11 @@ fn quote_for_test(
         TokenStream2::new()
     };
 
+    // Skip the module rather than emit an empty one, since its unused import would warn.
+    if test_api.is_empty() && test_abi.is_empty() {
+        return TokenStream2::new();
+    }
+
     quote! {
         #[cfg(test)]
         mod #test_mod_ident {
@@ -795,12 +807,12 @@ fn quote_for_test(
     }
 }
 
-#[cfg(feature = "frozen-abi")]
+#[cfg(feature = "stable-abi")]
 fn test_mod_name(type_name: &Ident) -> Ident {
     Ident::new(&format!("{type_name}_frozen_abi"), Span::call_site())
 }
 
-#[cfg(feature = "frozen-abi")]
+#[cfg(feature = "stable-abi")]
 fn frozen_abi_type_alias(
     input: ItemType,
     expected_api_digest: Option<&Expr>,
@@ -824,7 +836,7 @@ fn frozen_abi_type_alias(
     result.into()
 }
 
-#[cfg(feature = "frozen-abi")]
+#[cfg(feature = "stable-abi")]
 fn frozen_abi_struct_type(
     input: ItemStruct,
     expected_api_digest: Option<&Expr>,
@@ -903,7 +915,7 @@ fn quote_sample_variant(
     }
 }
 
-#[cfg(feature = "frozen-abi")]
+#[cfg(feature = "stable-abi")]
 fn frozen_abi_enum_type(
     input: ItemEnum,
     expected_api_digest: Option<&Expr>,
@@ -927,7 +939,7 @@ fn frozen_abi_enum_type(
     result.into()
 }
 
-#[cfg(feature = "frozen-abi")]
+#[cfg(feature = "stable-abi")]
 #[proc_macro_attribute]
 pub fn frozen_abi(attrs: TokenStream, item: TokenStream) -> TokenStream {
     let mut api_expected_digest: Option<Expr> = None;
@@ -1000,7 +1012,7 @@ pub fn frozen_abi(attrs: TokenStream, item: TokenStream) -> TokenStream {
     }
 }
 
-#[cfg(all(test, feature = "frozen-abi"))]
+#[cfg(all(test, feature = "stable-abi"))]
 mod parse_abi_serializers_tests {
     use {
         super::*,

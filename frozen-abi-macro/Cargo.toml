@@ -19,10 +19,10 @@ proc-macro = true
 
 [features]
 default = ["frozen-abi"]
-# Deprecated: `frozen-abi` is now enabled by default and no longer needs to be
-# requested explicitly. It is retained for backward compatibility and will be
-# removed in a future release.
-frozen-abi = []
+# Generates the `AbiExample`/`AbiEnumVisitor` code for the api digester (`api_digest`).
+frozen-abi = ["stable-abi"]
+# Generates the `StableAbi` digester code for `abi_digest`.
+stable-abi = []
 
 [dependencies]
 proc-macro2 = { workspace = true }
