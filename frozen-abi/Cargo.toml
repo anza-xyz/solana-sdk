@@ -18,7 +18,10 @@ rustdoc-args = ["--cfg=docsrs"]
 default = []
 # activate the frozen-abi feature when we actually want to do frozen-abi testing,
 # otherwise leave it off because it requires nightly Rust
-frozen-abi = ["dep:wincode", "solana-frozen-abi-macro/frozen-abi"]
+# it adds the `AbiExample` api digester (`api_digest`) on top of `stable-abi`
+frozen-abi = ["solana-frozen-abi-macro/frozen-abi", "stable-abi"]
+# the `StableAbi` digester (`abi_digest`) alone, buildable on stable Rust
+stable-abi = ["dep:wincode", "solana-frozen-abi-macro/stable-abi"]
 
 [dependencies]
 boxcar = { workspace = true }
