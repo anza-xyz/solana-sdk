@@ -7,7 +7,7 @@ use {
 
 // mod because we need 'Account' below to have the name 'Account' to match expected serialization
 mod account_serialize {
-    #[cfg(feature = "stable-abi")]
+    #[cfg(feature = "frozen-abi")]
     use solana_frozen_abi_macro::{frozen_abi, AbiExample};
     use {
         crate::ReadableAccount,
@@ -17,7 +17,7 @@ mod account_serialize {
     };
     #[repr(C)]
     #[cfg_attr(
-        feature = "stable-abi",
+        feature = "frozen-abi",
         derive(AbiExample),
         frozen_abi(digest = "62EqVoynUFvuui7DVfqWCvZP7bxKGJGioeSBnWrdjRME")
     )]

@@ -13,8 +13,10 @@
 
 #[cfg(feature = "serde")]
 use serde_derive::{Deserialize, Serialize};
+#[cfg(feature = "frozen-abi")]
+use solana_frozen_abi_macro::{frozen_abi, AbiExample};
 #[cfg(feature = "stable-abi")]
-use solana_frozen_abi_macro::{frozen_abi, AbiExample, StableAbi, StableAbiSample};
+use solana_frozen_abi_macro::{StableAbi, StableAbiSample};
 use {
     crate::{
         compiled_instruction::CompiledInstruction, compiled_keys::CompiledKeys,
@@ -93,10 +95,11 @@ fn sample_legacy_header(
 // NOTE: Serialization-related changes must be paired with the custom serialization
 // for versioned messages in the `RemainingLegacyMessage` struct.
 #[cfg_attr(
-    feature = "stable-abi",
+    feature = "frozen-abi",
     frozen_abi(digest = "GXpvLNiMCnjnZpQEDKpc2NBpsqmRnAX7ZTCy9JmvG8Dg"),
-    derive(AbiExample, StableAbi, StableAbiSample)
+    derive(AbiExample)
 )]
+#[cfg_attr(feature = "stable-abi", derive(StableAbi, StableAbiSample))]
 #[cfg_attr(
     feature = "serde",
     derive(Deserialize, Serialize),

@@ -2,7 +2,7 @@
 
 #![cfg_attr(feature = "frozen-abi", feature(min_specialization))]
 #![cfg_attr(docsrs, feature(doc_cfg))]
-#[cfg(feature = "stable-abi")]
+#[cfg(feature = "frozen-abi")]
 use solana_frozen_abi_macro::{frozen_abi, AbiExample};
 #[cfg(feature = "serde")]
 use {
@@ -47,7 +47,7 @@ pub const DEFAULT_GENESIS_DOWNLOAD_PATH: &str = "/genesis.tar.bz2";
 pub const UNUSED_DEFAULT: u64 = 1024;
 
 #[cfg_attr(
-    feature = "stable-abi",
+    feature = "frozen-abi",
     derive(AbiExample),
     frozen_abi(digest = "5QrfiDhg9p5a9YRN8LrSUxEFj3M4PpBWRLruhefaQr2c")
 )]
