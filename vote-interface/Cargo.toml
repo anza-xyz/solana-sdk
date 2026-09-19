@@ -29,13 +29,21 @@ dev-context-only-utils = [
     "solana-pubkey/dev-context-only-utils",
 ]
 frozen-abi = [
-    "dep:rand",
-    "dep:solana-frozen-abi",
-    "dep:solana-frozen-abi-macro",
-    "serde",
+    "solana-frozen-abi-macro/frozen-abi",
+    "solana-frozen-abi/frozen-abi",
     "solana-hash/frozen-abi",
     "solana-pubkey/frozen-abi",
     "solana-short-vec/frozen-abi",
+    "stable-abi",
+]
+stable-abi = [
+    "dep:rand",
+    "serde",
+    "solana-frozen-abi-macro/stable-abi",
+    "solana-frozen-abi/stable-abi",
+    "solana-hash/stable-abi",
+    "solana-pubkey/stable-abi",
+    "solana-short-vec/stable-abi",
 ]
 serde = [
     "dep:cfg_eval",
@@ -70,8 +78,8 @@ serde = { workspace = true, optional = true }
 serde_derive = { workspace = true, optional = true }
 serde_with = { workspace = true, features = ["macros"], optional = true }
 solana-clock = { workspace = true }
-solana-frozen-abi = { workspace = true, features = ["frozen-abi"], optional = true }
-solana-frozen-abi-macro = { workspace = true, features = ["frozen-abi"], optional = true }
+solana-frozen-abi = { workspace = true, optional = true }
+solana-frozen-abi-macro = { workspace = true, optional = true }
 solana-hash = { workspace = true, features = ["decode"] }
 solana-instruction = { workspace = true, features = ["std"] }
 solana-instruction-error = { workspace = true, features = ["num-traits"] }

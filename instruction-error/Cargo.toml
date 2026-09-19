@@ -16,7 +16,8 @@ all-features = true
 rustdoc-args = ["--cfg=docsrs"]
 
 [features]
-frozen-abi = ["dep:solana-frozen-abi", "dep:solana-frozen-abi-macro", "serde"]
+frozen-abi = ["solana-frozen-abi-macro/frozen-abi", "solana-frozen-abi/frozen-abi", "stable-abi"]
+stable-abi = ["serde", "solana-frozen-abi-macro/stable-abi", "solana-frozen-abi/stable-abi"]
 num-traits = ["dep:num-traits"]
 serde = ["dep:serde", "dep:serde_derive"]
 wincode = ["dep:wincode"]
@@ -25,7 +26,7 @@ wincode = ["dep:wincode"]
 num-traits = { workspace = true, optional = true }
 serde = { workspace = true, optional = true }
 serde_derive = { workspace = true, optional = true }
-solana-frozen-abi = { workspace = true, optional = true, features = ["frozen-abi"] }
+solana-frozen-abi = { workspace = true, optional = true }
 solana-frozen-abi-macro = { workspace = true, optional = true }
 solana-program-error = { workspace = true }
 wincode = { workspace = true, optional = true }

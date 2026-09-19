@@ -17,7 +17,8 @@ rustdoc-args = ["--cfg=docsrs"]
 [features]
 bytemuck = ["dep:bytemuck", "dep:bytemuck_derive"]
 dev-context-only-utils = ["bytemuck"]
-frozen-abi = ["dep:solana-frozen-abi", "dep:solana-frozen-abi-macro"]
+frozen-abi = ["solana-frozen-abi-macro/frozen-abi", "solana-frozen-abi/frozen-abi", "stable-abi"]
+stable-abi = ["solana-frozen-abi-macro/stable-abi", "solana-frozen-abi/stable-abi"]
 serde = [
     "dep:serde",
     "dep:serde_derive",
@@ -59,7 +60,7 @@ solana-clock = { workspace = true, features = ["sysvar"] }
 solana-epoch-rewards = { workspace = true, features = ["sysvar"] }
 solana-epoch-schedule = { workspace = true, features = ["sysvar"] }
 solana-fee-calculator = { workspace = true }
-solana-frozen-abi = { workspace = true, optional = true, features = ["frozen-abi"] }
+solana-frozen-abi = { workspace = true, optional = true }
 solana-frozen-abi-macro = { workspace = true, optional = true }
 solana-get-sysvar = { workspace = true }
 solana-hash = { workspace = true, features = ["bytemuck"] }

@@ -15,13 +15,14 @@ all-features = true
 rustdoc-args = ["--cfg=docsrs"]
 
 [features]
-frozen-abi = ["dep:solana-frozen-abi"]
+frozen-abi = ["solana-frozen-abi/frozen-abi", "stable-abi"]
+stable-abi = ["solana-frozen-abi/stable-abi"]
 serde = ["dep:serde", "dep:serde_derive"]
 
 [dependencies]
 serde = { workspace = true, optional = true }
 serde_derive = { workspace = true, optional = true }
-solana-frozen-abi = { workspace = true, optional = true, features = ["frozen-abi"] }
+solana-frozen-abi = { workspace = true, optional = true }
 
 [lints]
 workspace = true

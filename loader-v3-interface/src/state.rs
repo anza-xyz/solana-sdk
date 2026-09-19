@@ -3,7 +3,7 @@ use solana_pubkey::Pubkey;
 use wincode::{SchemaRead, SchemaWrite};
 
 /// Upgradeable loader account states
-#[cfg_attr(feature = "frozen-abi", derive(solana_frozen_abi_macro::AbiExample))]
+#[cfg_attr(feature = "stable-abi", derive(solana_frozen_abi_macro::AbiExample))]
 #[cfg_attr(
     feature = "serde",
     derive(serde_derive::Deserialize, serde_derive::Serialize)

@@ -3,7 +3,7 @@
 #![cfg_attr(feature = "frozen-abi", feature(min_specialization))]
 #[cfg(feature = "borsh")]
 use borsh::{BorshDeserialize, BorshSchema, BorshSerialize};
-#[cfg(feature = "frozen-abi")]
+#[cfg(feature = "stable-abi")]
 extern crate std;
 #[cfg(feature = "bytemuck")]
 use bytemuck_derive::{Pod, Zeroable};
@@ -32,7 +32,7 @@ pub const HASH_BYTES: usize = 64;
 pub const MAX_BASE58_LEN: usize = 88;
 
 /// A hash; the 64-byte output of the SHA-512 hashing algorithm.
-#[cfg_attr(feature = "frozen-abi", derive(solana_frozen_abi_macro::AbiExample))]
+#[cfg_attr(feature = "stable-abi", derive(solana_frozen_abi_macro::AbiExample))]
 #[cfg_attr(
     feature = "borsh",
     derive(BorshSerialize, BorshDeserialize),

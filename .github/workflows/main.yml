@@ -418,6 +418,7 @@ jobs:
       - name: Setup Environment
         uses: ./.github/actions/setup
         with:
+          stable-toolchain: true
           nightly-toolchain: true
           cargo-cache-key: cargo-nightly-miri
           cargo-cache-fallback-key: cargo-nightly

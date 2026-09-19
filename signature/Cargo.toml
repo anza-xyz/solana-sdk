@@ -20,7 +20,8 @@ default = ["std", "alloc"]
 alloc = ["wincode?/alloc"]
 batch-verify = ["alloc", "verify", "solana-ed25519/alloc", "solana-ed25519/rand_core"]
 bytemuck = ["dep:bytemuck", "dep:bytemuck_derive"]
-frozen-abi = ["dep:solana-frozen-abi", "dep:solana-frozen-abi-macro", "std"]
+frozen-abi = ["solana-frozen-abi-macro/frozen-abi", "solana-frozen-abi/frozen-abi", "stable-abi"]
+stable-abi = ["solana-frozen-abi-macro/stable-abi", "solana-frozen-abi/stable-abi", "std"]
 parallel = ["std", "batch-verify", "dep:rayon"]
 rand = ["dep:rand"]
 serde = ["dep:serde", "dep:serde_derive", "dep:serde-big-array"]
@@ -38,8 +39,8 @@ serde = { workspace = true, optional = true }
 serde-big-array = { workspace = true, optional = true }
 serde_derive = { workspace = true, optional = true }
 solana-ed25519 = { workspace = true, optional = true }
-solana-frozen-abi = { workspace = true, optional = true, features = ["frozen-abi"] }
-solana-frozen-abi-macro = { workspace = true, optional = true, features = ["frozen-abi"] }
+solana-frozen-abi = { workspace = true, optional = true }
+solana-frozen-abi-macro = { workspace = true, optional = true }
 solana-sanitize = { workspace = true }
 wincode = { workspace = true, optional = true }
 

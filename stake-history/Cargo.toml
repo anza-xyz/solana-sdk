@@ -15,7 +15,8 @@ all-features = true
 rustdoc-args = ["--cfg=docsrs"]
 
 [features]
-frozen-abi = ["dep:solana-frozen-abi", "dep:solana-frozen-abi-macro"]
+frozen-abi = ["solana-frozen-abi-macro/frozen-abi", "solana-frozen-abi/frozen-abi", "stable-abi"]
+stable-abi = ["solana-frozen-abi-macro/stable-abi", "solana-frozen-abi/stable-abi"]
 serde = ["dep:serde", "dep:serde_derive", "serde/alloc"]
 sysvar = ["dep:solana-get-sysvar", "dep:solana-sdk-ids", "dep:solana-sysvar-id"]
 wincode = ["dep:wincode", "wincode/alloc"]
@@ -24,7 +25,7 @@ wincode = ["dep:wincode", "wincode/alloc"]
 serde = { workspace = true, optional = true }
 serde_derive = { workspace = true, optional = true }
 solana-clock = { workspace = true }
-solana-frozen-abi = { workspace = true, optional = true, features = ["frozen-abi"] }
+solana-frozen-abi = { workspace = true, optional = true }
 solana-frozen-abi-macro = { workspace = true, optional = true }
 solana-get-sysvar = { workspace = true, optional = true }
 solana-sdk-ids = { workspace = true, optional = true }

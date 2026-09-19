@@ -4,7 +4,8 @@ use {
 };
 
 const HASH_BYTES: usize = 32;
-#[derive(AbiExample, Debug, PartialEq)]
+#[derive(Debug, PartialEq)]
+#[cfg_attr(feature = "frozen-abi", derive(AbiExample))]
 pub struct Hash(pub [u8; HASH_BYTES]);
 
 #[derive(Default)]

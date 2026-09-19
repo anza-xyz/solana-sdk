@@ -1,6 +1,6 @@
 #[cfg(feature = "serde")]
 use serde_derive::{Deserialize, Serialize};
-#[cfg(feature = "frozen-abi")]
+#[cfg(feature = "stable-abi")]
 use solana_frozen_abi_macro::{AbiExample, StableAbi, StableAbiSample};
 #[cfg(feature = "wincode")]
 use wincode::{SchemaRead, SchemaWrite};
@@ -12,7 +12,7 @@ use {
 const DURABLE_NONCE_HASH_PREFIX: &[u8] = "DURABLE_NONCE".as_bytes();
 
 #[repr(transparent)]
-#[cfg_attr(feature = "frozen-abi", derive(AbiExample, StableAbiSample, StableAbi))]
+#[cfg_attr(feature = "stable-abi", derive(AbiExample, StableAbiSample, StableAbi))]
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[cfg_attr(feature = "wincode", derive(SchemaWrite, SchemaRead))]
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
@@ -22,7 +22,7 @@ pub struct DurableNonce(Hash);
 ///
 /// This is stored within [`State`] for initialized nonce accounts.
 #[repr(C)]
-#[cfg_attr(feature = "frozen-abi", derive(AbiExample, StableAbiSample, StableAbi))]
+#[cfg_attr(feature = "stable-abi", derive(AbiExample, StableAbiSample, StableAbi))]
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[cfg_attr(feature = "wincode", derive(SchemaWrite, SchemaRead))]
 #[derive(Debug, Default, PartialEq, Eq, Clone)]
@@ -77,7 +77,7 @@ impl DurableNonce {
 ///
 /// When created in memory with [`State::default`] or when deserialized from an
 /// uninitialized account, a nonce account will be [`State::Uninitialized`].
-#[cfg_attr(feature = "frozen-abi", derive(AbiExample, StableAbiSample, StableAbi))]
+#[cfg_attr(feature = "stable-abi", derive(AbiExample, StableAbiSample, StableAbi))]
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[cfg_attr(feature = "wincode", derive(SchemaWrite, SchemaRead))]
 #[derive(Debug, Default, PartialEq, Eq, Clone)]

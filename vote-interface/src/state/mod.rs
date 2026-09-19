@@ -4,7 +4,7 @@
 use arbitrary::Arbitrary;
 #[cfg(feature = "serde")]
 use serde_derive::{Deserialize, Serialize};
-#[cfg(feature = "frozen-abi")]
+#[cfg(feature = "stable-abi")]
 use solana_frozen_abi_macro::{AbiExample, StableAbi, StableAbiSample};
 use {
     crate::authorized_voters::AuthorizedVoters,
@@ -48,7 +48,7 @@ pub const VOTE_CREDITS_GRACE_SLOTS: u8 = 2;
 // Maximum number of credits to award for a vote; this number of credits is awarded to votes on slots that land within the grace period. After that grace period, vote credits are reduced.
 pub const VOTE_CREDITS_MAXIMUM_PER_SLOT: u8 = 16;
 
-#[cfg_attr(feature = "frozen-abi", derive(AbiExample, StableAbi, StableAbiSample))]
+#[cfg_attr(feature = "stable-abi", derive(AbiExample, StableAbi, StableAbiSample))]
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[cfg_attr(feature = "wincode", derive(wincode::SchemaWrite, wincode::SchemaRead))]
 #[derive(Default, Debug, PartialEq, Eq, Copy, Clone)]
@@ -58,7 +58,7 @@ pub struct Lockout {
     /// Effectively bounded by `MAX_LOCKOUT_HISTORY`, the cap applied to it as the
     /// lockout exponent in [`Lockout::lockout`]; the ABI sample uses that range.
     #[cfg_attr(
-        feature = "frozen-abi",
+        feature = "stable-abi",
         stable_abi_sample(with = "sampling::sample_confirmation_count(rng)")
     )]
     confirmation_count: u32,
@@ -116,7 +116,7 @@ impl Lockout {
 /// starting at `LOCKOUT_SAMPLE_SLOT_BASE` and grow by up to
 /// `LOCKOUT_SAMPLE_SLOT_STEP` per lockout; the (optional) root sits just below
 /// the base, so the first delta-encoded offset is always non-negative.
-#[cfg(any(feature = "frozen-abi", test))]
+#[cfg(any(feature = "stable-abi", test))]
 mod sampling {
     use {
         super::{Lockout, MAX_LOCKOUT_HISTORY},
@@ -154,7 +154,7 @@ mod sampling {
     }
 }
 
-#[cfg_attr(feature = "frozen-abi", derive(AbiExample, StableAbi, StableAbiSample))]
+#[cfg_attr(feature = "stable-abi", derive(AbiExample, StableAbi, StableAbiSample))]
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[cfg_attr(feature = "wincode", derive(wincode::SchemaWrite, wincode::SchemaRead))]
 #[derive(Default, Debug, PartialEq, Eq, Copy, Clone)]
@@ -192,7 +192,7 @@ impl From<Lockout> for LandedVote {
     }
 }
 
-#[cfg_attr(feature = "frozen-abi", derive(AbiExample, StableAbi, StableAbiSample))]
+#[cfg_attr(feature = "stable-abi", derive(AbiExample, StableAbi, StableAbiSample))]
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[cfg_attr(feature = "wincode", derive(wincode::SchemaWrite, wincode::SchemaRead))]
 #[derive(Debug, Default, PartialEq, Eq, Clone)]
@@ -207,7 +207,7 @@ const MAX_ITEMS: usize = 32;
 
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[cfg_attr(feature = "wincode", derive(wincode::SchemaWrite, wincode::SchemaRead))]
-#[cfg_attr(feature = "frozen-abi", derive(AbiExample, StableAbi, StableAbiSample))]
+#[cfg_attr(feature = "stable-abi", derive(AbiExample, StableAbi, StableAbiSample))]
 #[derive(Debug, PartialEq, Eq, Clone)]
 #[cfg_attr(feature = "dev-context-only-utils", derive(Arbitrary))]
 pub struct CircBuf<I> {
@@ -266,7 +266,7 @@ impl<I> CircBuf<I> {
 mod compact {
     #[cfg(feature = "serde")]
     use serde_derive::{Deserialize, Serialize};
-    #[cfg(feature = "frozen-abi")]
+    #[cfg(feature = "stable-abi")]
     use solana_frozen_abi_macro::{AbiExample, StableAbi, StableAbiSample};
     use {
         super::{Lockout, TowerSync, VoteStateUpdate},
@@ -281,7 +281,7 @@ mod compact {
         wincode::{containers, SchemaRead, SchemaWrite},
     };
 
-    #[cfg_attr(feature = "frozen-abi", derive(AbiExample, StableAbi, StableAbiSample))]
+    #[cfg_attr(feature = "stable-abi", derive(AbiExample, StableAbi, StableAbiSample))]
     #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
     #[cfg_attr(feature = "wincode", derive(SchemaWrite, SchemaRead))]
     struct LockoutOffset {

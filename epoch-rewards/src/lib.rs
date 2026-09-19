@@ -20,7 +20,7 @@ use serde_derive::{Deserialize, Serialize};
 use {solana_hash::Hash, solana_sdk_macro::CloneZeroed};
 
 #[repr(C, align(16))]
-#[cfg_attr(feature = "frozen-abi", derive(solana_frozen_abi_macro::AbiExample))]
+#[cfg_attr(feature = "stable-abi", derive(solana_frozen_abi_macro::AbiExample))]
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[cfg_attr(feature = "wincode", derive(wincode::SchemaWrite, wincode::SchemaRead))]
 #[derive(Debug, PartialEq, Eq, Default, CloneZeroed)]

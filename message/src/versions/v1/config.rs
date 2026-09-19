@@ -1,11 +1,11 @@
 #[cfg(feature = "serde")]
 use serde_derive::{Deserialize, Serialize};
-#[cfg(feature = "frozen-abi")]
+#[cfg(feature = "stable-abi")]
 use solana_frozen_abi_macro::{frozen_abi, AbiExample, StableAbi, StableAbiSample};
 
 /// Compute budget configuration for V1 transactions.
 #[cfg_attr(
-    feature = "frozen-abi",
+    feature = "stable-abi",
     derive(AbiExample, StableAbi, StableAbiSample),
     frozen_abi(
         abi_digest = "7vsBq6gqhX7ZZE6LHVDjiwK5YmSA9Dvc5rCXgLyr32UP",
@@ -125,7 +125,7 @@ impl From<TransactionConfig> for TransactionConfigMask {
 ///
 /// Each bit (or bit pair) corresponds to a specific configuration field.
 /// The config values array contains entries only for fields whose bits are set.
-#[cfg_attr(feature = "frozen-abi", derive(AbiExample))]
+#[cfg_attr(feature = "stable-abi", derive(AbiExample))]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub struct TransactionConfigMask(pub u32);
 

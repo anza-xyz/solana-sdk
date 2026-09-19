@@ -2,13 +2,13 @@
 #![cfg_attr(docsrs, feature(doc_cfg))]
 #[cfg(feature = "serde")]
 use serde_derive::{Deserialize, Serialize};
-#[cfg(feature = "frozen-abi")]
+#[cfg(feature = "stable-abi")]
 use solana_frozen_abi_macro::{AbiEnumVisitor, AbiExample};
 use std::fmt;
 #[cfg(feature = "wincode")]
 use wincode::{SchemaRead, SchemaWrite};
 
-#[cfg_attr(feature = "frozen-abi", derive(AbiExample, AbiEnumVisitor))]
+#[cfg_attr(feature = "stable-abi", derive(AbiExample, AbiEnumVisitor))]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "wincode", derive(SchemaRead, SchemaWrite))]
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
