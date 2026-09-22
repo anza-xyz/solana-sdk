@@ -792,11 +792,6 @@ fn quote_for_test(
         TokenStream2::new()
     };
 
-    // Skip the module rather than emit an empty one, since its unused import would warn.
-    if test_api.is_empty() && test_abi.is_empty() {
-        return TokenStream2::new();
-    }
-
     quote! {
         #[cfg(test)]
         mod #test_mod_ident {
@@ -970,6 +965,18 @@ pub fn frozen_abi(attrs: TokenStream, item: TokenStream) -> TokenStream {
         return Error::new_spanned(
             TokenStream2::from(item),
             "missing required attribute: #[frozen_abi(api_digest = \"...\" or abi_digest = \"...\")]",
+        )
+        .to_compile_error()
+        .into();
+    }
+
+    // `api_digest` is dropped without `frozen-abi`, so such a type would end up with no test
+    // at all. Reject it instead of digesting nothing.
+    if !cfg!(feature = "frozen-abi") && abi_expected_digest.is_none() {
+        return Error::new_spanned(
+            TokenStream2::from(item),
+            "`api_digest` needs the `frozen-abi` feature. Gate this type on `frozen-abi`, or add \
+             an `abi_digest`.",
         )
         .to_compile_error()
         .into();
