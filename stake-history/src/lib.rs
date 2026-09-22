@@ -5,7 +5,7 @@
 #![cfg_attr(docsrs, feature(doc_cfg))]
 #![cfg_attr(feature = "frozen-abi", feature(min_specialization))]
 
-#[cfg(feature = "frozen-abi")]
+#[cfg(feature = "stable-abi")]
 extern crate std;
 
 extern crate alloc;
@@ -34,7 +34,7 @@ const _: () = assert!(SIZE == 16_392);
 
 #[repr(C)]
 #[cfg_attr(
-    feature = "frozen-abi",
+    feature = "stable-abi",
     derive(
         solana_frozen_abi_macro::AbiExample,
         solana_frozen_abi_macro::StableAbi,
@@ -119,7 +119,7 @@ impl core::ops::Add for StakeHistoryEntry {
 /// `#[repr(C)]` and padding-free so wincode decodes the whole sysvar in one copy.
 #[repr(C)]
 #[cfg_attr(
-    feature = "frozen-abi",
+    feature = "stable-abi",
     derive(
         solana_frozen_abi_macro::AbiExample,
         solana_frozen_abi_macro::StableAbi,
@@ -165,7 +165,7 @@ impl From<StakeHistoryItem> for (Epoch, StakeHistoryEntry) {
 
 #[repr(C)]
 #[cfg_attr(
-    feature = "frozen-abi",
+    feature = "stable-abi",
     derive(
         solana_frozen_abi_macro::AbiExample,
         solana_frozen_abi_macro::StableAbi,

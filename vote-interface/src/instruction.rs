@@ -1,6 +1,6 @@
 //! Vote program instructions
 
-#[cfg(feature = "frozen-abi")]
+#[cfg(feature = "stable-abi")]
 use solana_frozen_abi_macro::{frozen_abi, StableAbi, StableAbiSample};
 use {
     super::state::TowerSync,
@@ -30,7 +30,7 @@ use {
 };
 
 #[repr(u8)]
-#[cfg_attr(feature = "frozen-abi", derive(StableAbi, StableAbiSample))]
+#[cfg_attr(feature = "stable-abi", derive(StableAbi, StableAbiSample))]
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[cfg_attr(feature = "wincode", derive(SchemaWrite, SchemaRead))]
 #[derive(Debug, PartialEq, Eq, Clone)]
@@ -40,7 +40,7 @@ pub enum CommissionKind {
 }
 
 #[cfg_attr(
-    feature = "frozen-abi",
+    feature = "stable-abi",
     frozen_abi(
         abi_digest = "9bqZ5L1KnMFnjQPMoRtfhdgUok3G5W2KKRGuw8uwbkuY",
         abi_serializer = ["bincode", "wincode"]

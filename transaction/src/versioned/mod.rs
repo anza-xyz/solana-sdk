@@ -1,6 +1,6 @@
 //! Defines a transaction which supports multiple versions of messages.
 
-#[cfg(feature = "frozen-abi")]
+#[cfg(feature = "stable-abi")]
 use solana_frozen_abi_macro::{frozen_abi, AbiExample, StableAbi};
 use {
     crate::Transaction,
@@ -66,7 +66,7 @@ impl TransactionVersion {
 // NOTE: Serialization-related changes must be paired with the direct read at sigverify.
 /// An atomic transaction
 #[cfg_attr(
-    feature = "frozen-abi",
+    feature = "stable-abi",
     derive(AbiExample, StableAbi),
     frozen_abi(
         abi_digest = "DFvqfzN7BvZXod7qDFqR2g3Qo6fXvHNtghaxyAgmuhJX",
@@ -102,7 +102,7 @@ pub struct VersionedTransaction {
 //     count fits in a single prefix byte, so the derived sampling is reused.
 //   * V1 writes signatures as a fixed-length array sized by the header, so the
 //     signature count must equal `num_required_signatures`.
-#[cfg(feature = "frozen-abi")]
+#[cfg(feature = "stable-abi")]
 impl solana_frozen_abi::rand::prelude::Distribution<VersionedTransaction>
     for solana_frozen_abi::rand::distr::StandardUniform
 {

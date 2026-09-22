@@ -20,12 +20,19 @@ default = ["std"]
 blake3 = ["dep:blake3"]
 dev-context-only-utils = ["blake3", "wincode"]
 frozen-abi = [
-    "dep:solana-frozen-abi",
-    "dep:solana-frozen-abi-macro",
     "solana-address/frozen-abi",
+    "solana-frozen-abi-macro/frozen-abi",
+    "solana-frozen-abi/frozen-abi",
     "solana-hash/frozen-abi",
-    "serde",
     "solana-short-vec/frozen-abi",
+    "stable-abi",
+]
+stable-abi = [
+    "serde",
+    "solana-address/stable-abi",
+    "solana-frozen-abi-macro/stable-abi",
+    "solana-frozen-abi/stable-abi",
+    "solana-hash/stable-abi",
 ]
 serde = [
     "dep:serde",
@@ -49,7 +56,7 @@ blake3 = { workspace = true, features = ["traits-preview"], optional = true }
 serde = { workspace = true, optional = true }
 serde_derive = { workspace = true, optional = true }
 solana-address = { workspace = true }
-solana-frozen-abi = { workspace = true, optional = true, features = ["frozen-abi"] }
+solana-frozen-abi = { workspace = true, optional = true }
 solana-frozen-abi-macro = { workspace = true, optional = true }
 solana-hash = { workspace = true, features = ["decode", "sanitize"] }
 solana-instruction = { workspace = true }

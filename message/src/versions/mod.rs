@@ -1,6 +1,6 @@
 #[cfg(any(feature = "wincode", feature = "serde"))]
 use alloc::vec::Vec;
-#[cfg(feature = "frozen-abi")]
+#[cfg(feature = "stable-abi")]
 use solana_frozen_abi_macro::{frozen_abi, AbiEnumVisitor, AbiExample, StableAbi, StableAbiSample};
 use {
     crate::{
@@ -48,7 +48,7 @@ pub const MESSAGE_VERSION_PREFIX: u8 = 0x80;
 /// is bit is not set, all bytes are used to encode the legacy `Message`
 /// format.
 #[cfg_attr(
-    feature = "frozen-abi",
+    feature = "stable-abi",
     derive(AbiEnumVisitor, AbiExample, StableAbi, StableAbiSample),
     frozen_abi(
         digest = "9xQQLkQntX2QKgwxbbpeuNrs5V2WopsBa11su46WWCro",

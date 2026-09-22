@@ -14,7 +14,9 @@
 #[cfg(feature = "serde")]
 use serde_derive::{Deserialize, Serialize};
 #[cfg(feature = "frozen-abi")]
-use solana_frozen_abi_macro::{frozen_abi, AbiExample, StableAbi, StableAbiSample};
+use solana_frozen_abi_macro::{frozen_abi, AbiExample};
+#[cfg(feature = "stable-abi")]
+use solana_frozen_abi_macro::{StableAbi, StableAbiSample};
 use {
     crate::{
         compiled_instruction::CompiledInstruction, compiled_keys::CompiledKeys,
@@ -67,7 +69,7 @@ fn compile_instructions(ixs: &[Instruction], keys: &[Address]) -> Vec<CompiledIn
 /// `MESSAGE_VERSION_PREFIX`, otherwise it would decode as a versioned message.
 /// Masking the prefix bit keeps a sampled legacy message self-consistent across
 /// a serialize/deserialize roundtrip.
-#[cfg(feature = "frozen-abi")]
+#[cfg(feature = "stable-abi")]
 fn sample_legacy_header(
     rng: &mut (impl solana_frozen_abi::rand::RngCore + ?Sized),
 ) -> MessageHeader {
@@ -95,8 +97,9 @@ fn sample_legacy_header(
 #[cfg_attr(
     feature = "frozen-abi",
     frozen_abi(digest = "GXpvLNiMCnjnZpQEDKpc2NBpsqmRnAX7ZTCy9JmvG8Dg"),
-    derive(AbiExample, StableAbi, StableAbiSample)
+    derive(AbiExample)
 )]
+#[cfg_attr(feature = "stable-abi", derive(StableAbi, StableAbiSample))]
 #[cfg_attr(
     feature = "serde",
     derive(Deserialize, Serialize),
@@ -108,7 +111,7 @@ pub struct Message {
     /// The message header, identifying signed and read-only `account_keys`.
     // NOTE: Serialization-related changes must be paired with the direct read at sigverify.
     #[cfg_attr(
-        feature = "frozen-abi",
+        feature = "stable-abi",
         stable_abi_sample(with = "sample_legacy_header(rng)")
     )]
     pub header: MessageHeader,

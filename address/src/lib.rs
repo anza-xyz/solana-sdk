@@ -85,7 +85,7 @@ pub const PDA_MARKER: &[u8; 21] = b"ProgramDerivedAddress";
 /// [`Keypair`]: https://docs.rs/solana-sdk/latest/solana_sdk/signer/keypair/struct.Keypair.html
 #[repr(transparent)]
 #[cfg_attr(
-    feature = "frozen-abi",
+    feature = "stable-abi",
     derive(
         solana_frozen_abi_macro::AbiExample,
         solana_frozen_abi_macro::StableAbi,

@@ -3,7 +3,7 @@
 #![cfg_attr(feature = "frozen-abi", feature(min_specialization))]
 #[cfg(feature = "borsh")]
 use borsh::{BorshDeserialize, BorshSchema, BorshSerialize};
-#[cfg(any(feature = "rand", feature = "frozen-abi"))]
+#[cfg(any(feature = "rand", feature = "stable-abi"))]
 extern crate std;
 #[cfg(feature = "bytemuck")]
 use bytemuck_derive::{Pod, Zeroable};
@@ -20,7 +20,7 @@ use solana_sanitize::Sanitize;
 extern crate alloc;
 #[cfg(feature = "borsh")]
 use alloc::string::ToString;
-#[cfg(feature = "frozen-abi")]
+#[cfg(feature = "stable-abi")]
 use solana_frozen_abi_macro::{AbiExample, StableAbi, StableAbiSample};
 #[cfg(feature = "wincode")]
 use wincode::{SchemaRead, SchemaWrite};
@@ -42,7 +42,7 @@ pub const MAX_BASE58_LEN: usize = 44;
 ///
 /// [SHA-256]: https://en.wikipedia.org/wiki/SHA-2
 /// [blake3]: https://github.com/BLAKE3-team/BLAKE3
-#[cfg_attr(feature = "frozen-abi", derive(AbiExample, StableAbiSample, StableAbi))]
+#[cfg_attr(feature = "stable-abi", derive(AbiExample, StableAbiSample, StableAbi))]
 #[cfg_attr(
     feature = "borsh",
     derive(BorshSerialize, BorshDeserialize),

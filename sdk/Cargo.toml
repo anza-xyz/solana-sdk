@@ -46,14 +46,23 @@ dev-context-only-utils = [
     "solana-transaction/dev-context-only-utils",
 ]
 frozen-abi = [
-    "solana-fee-structure/frozen-abi",
     "solana-account/frozen-abi",
+    "solana-fee-structure/frozen-abi",
     "solana-inflation/frozen-abi",
     "solana-program/frozen-abi",
     "solana-short-vec/frozen-abi",
     "solana-signature/frozen-abi",
-    "solana-transaction/frozen-abi",
     "solana-transaction-error/frozen-abi",
+    "solana-transaction/frozen-abi",
+    "stable-abi",
+]
+stable-abi = [
+    "solana-account/stable-abi",
+    "solana-inflation/stable-abi",
+    "solana-program/stable-abi",
+    "solana-signature/stable-abi",
+    "solana-transaction-error/stable-abi",
+    "solana-transaction/stable-abi",
 ]
 
 [dependencies]

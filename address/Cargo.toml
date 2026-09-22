@@ -25,11 +25,13 @@ decode = ["dep:five8", "dep:five8_const", "error"]
 dev-context-only-utils = ["dep:arbitrary", "rand"]
 error = ["dep:solana-program-error"]
 frozen-abi = [
-    "dep:solana-frozen-abi",
-    "dep:solana-frozen-abi-macro",
     "dep:solana-program-error",
+    "solana-frozen-abi-macro/frozen-abi",
+    "solana-frozen-abi/frozen-abi",
+    "stable-abi",
     "std",
 ]
+stable-abi = ["solana-frozen-abi-macro/stable-abi", "solana-frozen-abi/stable-abi"]
 nullable = ["dep:solana-nullable"]
 rand = ["dep:rand", "atomic", "std"]
 sanitize = ["dep:solana-sanitize"]
@@ -52,8 +54,8 @@ serde = { workspace = true, optional = true }
 serde_derive = { workspace = true, optional = true }
 sha2-const-stable = { version = "0.1.0", optional = true }
 solana-atomic-u64 = { workspace = true, optional = true }
-solana-frozen-abi = { workspace = true, features = ["frozen-abi"], optional = true }
-solana-frozen-abi-macro = { workspace = true, features = ["frozen-abi"], optional = true }
+solana-frozen-abi = { workspace = true, optional = true }
+solana-frozen-abi-macro = { workspace = true, optional = true }
 solana-nullable = { workspace = true, optional = true }
 solana-program-error = { workspace = true, optional = true }
 solana-sanitize = { workspace = true, optional = true }

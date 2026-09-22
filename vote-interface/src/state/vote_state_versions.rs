@@ -1,7 +1,7 @@
 use crate::state::{vote_state_1_14_11::VoteState1_14_11, VoteStateV3, VoteStateV4};
 #[cfg(test)]
 use arbitrary::{Arbitrary, Unstructured};
-#[cfg(feature = "frozen-abi")]
+#[cfg(feature = "stable-abi")]
 use solana_frozen_abi_macro::{frozen_abi, StableAbi, StableAbiSample};
 #[cfg(any(target_os = "solana", feature = "bincode"))]
 use solana_instruction_error::InstructionError;
@@ -13,7 +13,7 @@ use {
 };
 
 #[cfg_attr(
-    feature = "frozen-abi",
+    feature = "stable-abi",
     frozen_abi(
         abi_digest = "292pqhdmS6k7yrk5pUSQBpiQq1MLHb15pu6oM5WnWcug",
         abi_serializer = ["bincode", "wincode"]

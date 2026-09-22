@@ -41,12 +41,12 @@
 //! reasons.
 
 extern crate alloc;
-#[cfg(any(feature = "frozen-abi", feature = "std"))]
+#[cfg(any(feature = "stable-abi", feature = "std"))]
 extern crate std;
 
 #[cfg(feature = "serde")]
 use serde_derive::{Deserialize, Serialize};
-#[cfg(feature = "frozen-abi")]
+#[cfg(feature = "stable-abi")]
 use solana_frozen_abi_macro::{frozen_abi, AbiExample, StableAbi, StableAbiSample};
 #[cfg(feature = "std")]
 use std::collections::HashSet;
@@ -121,7 +121,7 @@ pub const MESSAGE_HEADER_LENGTH: usize = 3;
 ///
 /// [PoH]: https://docs.solanalabs.com/consensus/synchronization
 #[cfg_attr(
-    feature = "frozen-abi",
+    feature = "stable-abi",
     derive(AbiExample, StableAbi, StableAbiSample),
     frozen_abi(
         abi_digest = "BoNk47PmBYTf1fzuJoZ8tcFm9EVnFjv8v7bDccreDvgB",

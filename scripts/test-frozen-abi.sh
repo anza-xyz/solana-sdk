@@ -8,6 +8,5 @@ cd "${src_root}"
 ./cargo nightly hack --features frozen-abi --ignore-unknown-features test --lib -- test_abi_digest --nocapture
 ./cargo nightly hack --features frozen-abi --ignore-unknown-features test --lib -- test_api_digest --nocapture
 
-# `stable-abi` trades the api digester for building on stable Rust
-./cargo stable test -p solana-frozen-abi --features stable-abi --lib
-./cargo stable test -p solana-frozen-abi-macro --no-default-features --features stable-abi --lib
+# `stable-abi` drops the api digester, so these digests run on stable Rust
+./cargo stable hack --features stable-abi --ignore-unknown-features test --lib -- test_abi_digest --nocapture

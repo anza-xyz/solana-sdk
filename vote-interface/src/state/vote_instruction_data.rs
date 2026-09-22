@@ -1,4 +1,4 @@
-#[cfg(feature = "frozen-abi")]
+#[cfg(feature = "stable-abi")]
 use solana_frozen_abi_macro::{frozen_abi, AbiExample, StableAbi, StableAbiSample};
 use {
     crate::state::{
@@ -17,7 +17,7 @@ use {
 };
 
 #[cfg_attr(
-    feature = "frozen-abi",
+    feature = "stable-abi",
     frozen_abi(
         api_digest = "GvUzgtcxhKVVxPAjSntXGPqjLZK5ovgZzCiUP1tDpB9q",
         abi_digest = "6kXER3mQxF3R1Th74tQFGfYUWJfBakNZZVyU4rTrNEek",
@@ -52,7 +52,7 @@ impl Vote {
 }
 
 #[cfg_attr(
-    feature = "frozen-abi",
+    feature = "stable-abi",
     frozen_abi(
         api_digest = "CxyuwbaEdzP7jDCZyxjgQvLGXadBUZF3LoUvbSpQ6tYN",
         abi_digest = "VRLZyFD5255zgCbMPBFExQyw2wyY41U6h4yCe5oT9tR",
@@ -66,13 +66,13 @@ impl Vote {
 pub struct VoteStateUpdate {
     /// The proposed tower
     #[cfg_attr(
-        feature = "frozen-abi",
+        feature = "stable-abi",
         stable_abi_sample(with = "super::sampling::sample_lockouts(rng)")
     )]
     pub lockouts: VecDeque<Lockout>,
     /// The proposed root
     #[cfg_attr(
-        feature = "frozen-abi",
+        feature = "stable-abi",
         stable_abi_sample(with = "super::sampling::sample_root(rng)")
     )]
     pub root: Option<Slot>,
@@ -119,7 +119,7 @@ impl VoteStateUpdate {
 }
 
 #[cfg_attr(
-    feature = "frozen-abi",
+    feature = "stable-abi",
     frozen_abi(
         api_digest = "6UDiQMH4wbNwkMHosPMtekMYu2Qa6CHPZ2ymK4mc6FGu",
         abi_digest = "FUbrVcYe9LvPfr6PEk3E27YybVodHTfgZ7SnVzi3bR7",
@@ -133,13 +133,13 @@ impl VoteStateUpdate {
 pub struct TowerSync {
     /// The proposed tower
     #[cfg_attr(
-        feature = "frozen-abi",
+        feature = "stable-abi",
         stable_abi_sample(with = "super::sampling::sample_lockouts(rng)")
     )]
     pub lockouts: VecDeque<Lockout>,
     /// The proposed root
     #[cfg_attr(
-        feature = "frozen-abi",
+        feature = "stable-abi",
         stable_abi_sample(with = "super::sampling::sample_root(rng)")
     )]
     pub root: Option<Slot>,
@@ -229,7 +229,7 @@ impl TowerSync {
     }
 }
 
-#[cfg_attr(feature = "frozen-abi", derive(StableAbi, StableAbiSample))]
+#[cfg_attr(feature = "stable-abi", derive(StableAbi, StableAbiSample))]
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[cfg_attr(feature = "wincode", derive(wincode::SchemaWrite, wincode::SchemaRead))]
 #[derive(Default, Debug, PartialEq, Eq, Clone, Copy)]
@@ -243,7 +243,7 @@ pub struct VoteInit {
 #[cfg_attr(feature = "serde", cfg_eval::cfg_eval, serde_as)]
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[cfg_attr(feature = "wincode", derive(wincode::SchemaWrite, wincode::SchemaRead))]
-#[cfg_attr(feature = "frozen-abi", derive(StableAbi, StableAbiSample))]
+#[cfg_attr(feature = "stable-abi", derive(StableAbi, StableAbiSample))]
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub struct VoteInitV2 {
     pub node_pubkey: Pubkey,
@@ -281,7 +281,7 @@ impl Default for VoteInitV2 {
 #[cfg_attr(feature = "serde", cfg_eval::cfg_eval, serde_as)]
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[cfg_attr(feature = "wincode", derive(wincode::SchemaWrite, wincode::SchemaRead))]
-#[cfg_attr(feature = "frozen-abi", derive(StableAbi, StableAbiSample))]
+#[cfg_attr(feature = "stable-abi", derive(StableAbi, StableAbiSample))]
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub struct VoterWithBLSArgs {
     #[cfg_attr(
@@ -305,7 +305,7 @@ impl Default for VoterWithBLSArgs {
     }
 }
 
-#[cfg_attr(feature = "frozen-abi", derive(StableAbi, StableAbiSample))]
+#[cfg_attr(feature = "stable-abi", derive(StableAbi, StableAbiSample))]
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[cfg_attr(feature = "wincode", derive(wincode::SchemaWrite, wincode::SchemaRead))]
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
@@ -315,7 +315,7 @@ pub enum VoteAuthorize {
     VoterWithBLS(VoterWithBLSArgs),
 }
 
-#[cfg_attr(feature = "frozen-abi", derive(StableAbi, StableAbiSample))]
+#[cfg_attr(feature = "stable-abi", derive(StableAbi, StableAbiSample))]
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[cfg_attr(feature = "wincode", derive(wincode::SchemaWrite, wincode::SchemaRead))]
 #[derive(Debug, PartialEq, Eq, Clone)]
@@ -326,7 +326,7 @@ pub struct VoteAuthorizeWithSeedArgs {
     pub new_authority: Pubkey,
 }
 
-#[cfg_attr(feature = "frozen-abi", derive(StableAbi, StableAbiSample))]
+#[cfg_attr(feature = "stable-abi", derive(StableAbi, StableAbiSample))]
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[cfg_attr(feature = "wincode", derive(wincode::SchemaWrite, wincode::SchemaRead))]
 #[derive(Debug, PartialEq, Eq, Clone)]
