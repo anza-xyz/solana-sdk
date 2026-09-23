@@ -4045,7 +4045,7 @@ dependencies = [
 
 [[package]]
 name = "solana-program"
-version = "5.0.0"
+version = "5.1.0"
 dependencies = [
  "solana-account-info",
  "solana-big-mod-exp",
