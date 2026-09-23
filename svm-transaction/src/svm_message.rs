@@ -137,18 +137,14 @@ pub trait SVMStaticMessage: Debug {
                     .filter_map(|signer_index| self.static_account_keys().get(signer_index))
             })
     }
-}
 
-pub trait SVMMessage: SVMStaticMessage {
-    /// Return the account keys.
-    fn account_keys(&self) -> AccountKeys<'_>;
-
-    /// Returns `true` if the account at `index` is writable.
-    fn is_writable(&self, index: usize) -> bool;
-
-    /// If the message uses a durable nonce, return the pubkey of the nonce account
-    fn get_durable_nonce(&self) -> Option<&Pubkey> {
-        let account_keys = self.account_keys();
+    /// If the message uses a durable nonce, return the pubkey of the nonce account.
+    /// Callers must check `is_writable()` on the fully resolved transaction before
+    /// using the nonce, as this function does not and cannot check write-lock demotion.
+    /// When `disallow_nonce_as_program_id` is enabled, using a nonce account as a
+    /// program ID becomes a discardable nonce validation failure.
+    fn get_durable_nonce(&self, disallow_nonce_as_program_id: bool) -> Option<&Pubkey> {
+        let account_keys = self.static_account_keys();
         self.instructions_iter()
             .nth(usize::from(NONCED_TX_MARKER_IX_INDEX))
             .filter(
@@ -170,7 +166,9 @@ pub trait SVMMessage: SVMStaticMessage {
             .and_then(|ix| {
                 ix.accounts.first().and_then(|idx| {
                     let index = usize::from(*idx);
-                    if index >= self.static_account_keys().len() || !self.is_writable(index) {
+                    if !self.is_requested_writable(index)
+                        || (disallow_nonce_as_program_id && self.is_invoked(index))
+                    {
                         None
                     } else {
                         account_keys.get(index)
@@ -178,6 +176,14 @@ pub trait SVMMessage: SVMStaticMessage {
                 })
             })
     }
+}
+
+pub trait SVMMessage: SVMStaticMessage {
+    /// Return the account keys.
+    fn account_keys(&self) -> AccountKeys<'_>;
+
+    /// Returns `true` if the account at `index` is writable.
+    fn is_writable(&self, index: usize) -> bool;
 }
 
 fn default_precompile_signature_count<'a>(
