@@ -58,6 +58,11 @@ pub enum VoteInstruction {
     ///   1. `[]` Rent sysvar
     ///   2. `[]` Clock sysvar
     ///   3. `[SIGNER]` New validator identity (node_pubkey)
+    ///
+    /// This instruction MUST be included within the same Transaction as the
+    /// system program's `CreateAccount` instruction that creates the account
+    /// being initialized. Otherwise another party can acquire ownership of the
+    /// uninitialized account.
     InitializeAccount(VoteInit),
 
     /// Authorize a key to send votes or issue a withdrawal
@@ -230,6 +235,11 @@ pub enum VoteInstruction {
     ///   1. `[SIGNER]` New validator identity (node_pubkey)
     ///   2. `[WRITE]` Inflation rewards collector
     ///   3. `[WRITE]` Block revenue collector
+    ///
+    /// This instruction MUST be included within the same Transaction as the
+    /// system program's `CreateAccount` instruction that creates the account
+    /// being initialized. Otherwise another party can acquire ownership of the
+    /// uninitialized account.
     InitializeAccountV2(VoteInitV2),
 
     /// Update the commission collector for the vote account
