@@ -154,8 +154,9 @@ impl Address {
             }
 
             // If the derived address is on-curve, decrement the bump and
-            // try again until all possible bump values are tested.
-            if bump == 0 {
+            // try again until the bump reaches `1` to keep the implementation
+            // consistent with the `try_find_program_address` syscall.
+            if bump == 1 {
                 return None;
             }
 
