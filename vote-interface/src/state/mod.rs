@@ -23,7 +23,7 @@ pub mod vote_state_v4;
 pub use vote_state_v4::VoteStateV4;
 mod vote_instruction_data;
 pub use vote_instruction_data::*;
-#[cfg(any(target_os = "solana", feature = "bincode"))]
+#[cfg(any(target_os = "solana", feature = "bincode", feature = "wincode"))]
 pub(crate) mod vote_state_deserialize;
 
 /// Size of a BLS public key in a compressed point representation

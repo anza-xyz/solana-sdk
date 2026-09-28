@@ -21,6 +21,8 @@ bincode = [
     "dep:solana-serialize-utils",
     "dep:solana-system-interface",
     "serde",
+    "solana-instruction/bincode",
+    "solana-system-interface/bincode",
 ]
 dev-context-only-utils = [
     "bincode",
@@ -57,12 +59,16 @@ serde = [
     "solana-short-vec/serde",
 ]
 wincode = [
+    "dep:solana-serialize-utils",
     "dep:solana-short-vec",
+    "dep:solana-system-interface",
     "dep:solana-wincode-varint",
     "dep:wincode",
     "solana-hash/wincode",
+    "solana-instruction/wincode",
     "solana-pubkey/wincode",
     "solana-short-vec/wincode",
+    "solana-system-interface/wincode",
     "wincode/alloc",
 ]
 
@@ -87,7 +93,7 @@ solana-sdk-ids = { workspace = true }
 solana-serde-varint = { workspace = true, optional = true }
 solana-serialize-utils = { workspace = true, optional = true, features = ["std"] }
 solana-short-vec = { workspace = true, optional = true }
-solana-system-interface = { workspace = true, features = ["bincode"], optional = true }
+solana-system-interface = { workspace = true, optional = true }
 solana-wincode-varint = { workspace = true, optional = true }
 wincode = { workspace = true, optional = true }
 

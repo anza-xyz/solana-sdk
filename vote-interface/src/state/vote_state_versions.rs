@@ -3,7 +3,7 @@ use crate::state::{vote_state_1_14_11::VoteState1_14_11, VoteStateV3, VoteStateV
 use arbitrary::{Arbitrary, Unstructured};
 #[cfg(feature = "stable-abi")]
 use solana_frozen_abi_macro::{frozen_abi, StableAbi, StableAbiSample};
-#[cfg(any(target_os = "solana", feature = "bincode"))]
+#[cfg(any(target_os = "solana", feature = "bincode", feature = "wincode"))]
 use solana_instruction_error::InstructionError;
 #[cfg(test)]
 use {
@@ -148,7 +148,7 @@ impl VoteStateVersions {
     ///
     /// V0_23_5 is not supported. All other versions (V1_14_11, V3, V4) are deserialized as-is
     /// without any version coercion.
-    #[cfg(any(target_os = "solana", feature = "bincode"))]
+    #[cfg(any(target_os = "solana", feature = "bincode", feature = "wincode"))]
     pub fn deserialize(input: &[u8]) -> Result<Self, InstructionError> {
         use {
             crate::state::vote_state_deserialize::{

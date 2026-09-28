@@ -1,4 +1,4 @@
-#[cfg(feature = "bincode")]
+#[cfg(any(feature = "bincode", feature = "wincode"))]
 use super::VoteStateVersions;
 #[cfg(test)]
 use super::{MAX_EPOCH_CREDITS_HISTORY, MAX_LOCKOUT_HISTORY};
@@ -8,7 +8,7 @@ use arbitrary::Arbitrary;
 use serde_derive::{Deserialize, Serialize};
 #[cfg(feature = "stable-abi")]
 use solana_frozen_abi_macro::{frozen_abi, AbiExample, StableAbi, StableAbiSample};
-#[cfg(any(target_os = "solana", feature = "bincode"))]
+#[cfg(any(target_os = "solana", feature = "bincode", feature = "wincode"))]
 use solana_instruction_error::InstructionError;
 use {
     super::{BlockTimestamp, CircBuf, LandedVote, Lockout, VoteInit},
@@ -102,7 +102,7 @@ impl VoteStateV3 {
         self.authorized_voters.is_empty()
     }
 
-    #[cfg(any(target_os = "solana", feature = "bincode"))]
+    #[cfg(any(target_os = "solana", feature = "bincode", feature = "wincode"))]
     pub fn deserialize(input: &[u8]) -> Result<Self, InstructionError> {
         let mut vote_state = Self::default();
         Self::deserialize_into(input, &mut vote_state)?;
@@ -115,7 +115,7 @@ impl VoteStateV3 {
     ///
     /// On success, `vote_state` reflects the state of the input data. On failure, `vote_state` is
     /// reset to `VoteStateV3::default()`.
-    #[cfg(any(target_os = "solana", feature = "bincode"))]
+    #[cfg(any(target_os = "solana", feature = "bincode", feature = "wincode"))]
     pub fn deserialize_into(
         input: &[u8],
         vote_state: &mut VoteStateV3,
@@ -134,7 +134,7 @@ impl VoteStateV3 {
     /// [`MaybeUninit::assume_init`](https://doc.rust-lang.org/std/mem/union.MaybeUninit.html#method.assume_init).
     /// On failure, `vote_state` may still be uninitialized and must not be
     /// converted to `VoteStateV3`.
-    #[cfg(any(target_os = "solana", feature = "bincode"))]
+    #[cfg(any(target_os = "solana", feature = "bincode", feature = "wincode"))]
     pub fn deserialize_into_uninit(
         input: &[u8],
         vote_state: &mut std::mem::MaybeUninit<VoteStateV3>,
@@ -142,7 +142,7 @@ impl VoteStateV3 {
         VoteStateV3::deserialize_into_ptr(input, vote_state.as_mut_ptr())
     }
 
-    #[cfg(any(target_os = "solana", feature = "bincode"))]
+    #[cfg(any(target_os = "solana", feature = "bincode", feature = "wincode"))]
     fn deserialize_into_ptr(
         input: &[u8],
         vote_state: *mut VoteStateV3,
@@ -165,7 +165,16 @@ impl VoteStateV3 {
         Ok(())
     }
 
-    #[cfg(feature = "bincode")]
+    #[cfg(feature = "wincode")]
+    pub fn serialize(
+        versioned: &VoteStateVersions,
+        output: &mut [u8],
+    ) -> Result<(), InstructionError> {
+        // bincode reports a short `output` as an I/O error, so wincode maps it to `GenericError` too.
+        wincode::serialize_into(output, versioned).map_err(|_| InstructionError::GenericError)
+    }
+
+    #[cfg(all(feature = "bincode", not(feature = "wincode")))]
     pub fn serialize(
         versioned: &VoteStateVersions,
         output: &mut [u8],
@@ -249,8 +258,13 @@ mod tests {
             .resize(MAX_LOCKOUT_HISTORY, LandedVote::default());
         vote_state.root_slot = Some(1);
         let versioned = VoteStateVersions::new_v3(vote_state);
-        assert!(VoteStateV3::serialize(&versioned, &mut buffer[0..4]).is_err());
+        assert_eq!(
+            VoteStateV3::serialize(&versioned, &mut buffer[0..4]),
+            Err(InstructionError::GenericError)
+        );
         VoteStateV3::serialize(&versioned, &mut buffer).unwrap();
+        let expected = bincode::serialize(&versioned).unwrap();
+        assert_eq!(buffer[..expected.len()], expected);
         assert_eq!(
             VoteStateV3::deserialize(&buffer).unwrap(),
             versioned.try_convert_to_v3().unwrap()
