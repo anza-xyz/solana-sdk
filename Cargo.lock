@@ -3834,12 +3834,17 @@ dependencies = [
 name = "solana-loader-v2-interface"
 version = "3.0.0"
 dependencies = [
+ "bincode",
  "serde",
  "serde_bytes",
  "serde_derive",
+ "solana-frozen-abi",
+ "solana-frozen-abi-macro",
  "solana-instruction",
+ "solana-loader-v2-interface",
  "solana-pubkey",
  "solana-sdk-ids",
+ "wincode",
 ]
 
 [[package]]
