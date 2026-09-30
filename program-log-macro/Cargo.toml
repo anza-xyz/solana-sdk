@@ -22,3 +22,6 @@ proc-macro = true
 quote = { workspace = true }
 regex = { workspace = true }
 syn = { workspace = true, features = ["extra-traits", "full"] }
+
+[lints]
+workspace = true

@@ -23,3 +23,6 @@ solana-pubkey = { workspace = true, default-features = false }
 
 [dev-dependencies]
 solana-msg = { workspace = true, features = ["std"] }
+
+[lints]
+workspace = true

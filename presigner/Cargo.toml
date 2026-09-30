@@ -21,3 +21,6 @@ solana-signer = { workspace = true }
 
 [dev-dependencies]
 solana-keypair = { workspace = true }
+
+[lints]
+workspace = true

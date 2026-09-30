@@ -50,3 +50,6 @@ wincode = { workspace = true, features = ["alloc"], optional = true }
 solana-account = { path = ".", features = ["dev-context-only-utils"] }
 solana-pubkey = { workspace = true, features = ["std"] }
 solana-system-interface = { workspace = true }
+
+[lints]
+workspace = true

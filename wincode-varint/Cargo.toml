@@ -30,3 +30,6 @@ wincode = { workspace = true, features = ["alloc"] }
 [[bench]]
 name = "write"
 harness = false
+
+[lints]
+workspace = true

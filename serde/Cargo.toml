@@ -20,3 +20,6 @@ serde = { workspace = true }
 [dev-dependencies]
 bincode = { workspace = true }
 serde_derive = { workspace = true }
+
+[lints]
+workspace = true

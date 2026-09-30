@@ -16,3 +16,6 @@ rustdoc-args = ["--cfg=docsrs"]
 
 [target.'cfg(not(target_pointer_width = "64"))'.dependencies]
 parking_lot = { workspace = true }
+
+[lints]
+workspace = true

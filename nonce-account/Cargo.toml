@@ -32,3 +32,6 @@ solana-fee-calculator = { workspace = true }
 solana-nonce = { workspace = true, features = ["serde"] }
 solana-nonce-account = { path = ".", features = ["wincode"] }
 solana-pubkey = { workspace = true, features = ["std"] }
+
+[lints]
+workspace = true

@@ -26,3 +26,6 @@ serde_derive = { workspace = true, optional = true }
 solana-frozen-abi = { workspace = true, optional = true }
 solana-frozen-abi-macro = { workspace = true, optional = true }
 wincode = { workspace = true, optional = true }
+
+[lints]
+workspace = true

@@ -17,3 +17,6 @@ rustdoc-args = ["--cfg=docsrs"]
 [dependencies]
 solana-package-metadata-macro = { workspace = true }
 solana-pubkey = { workspace = true, features = ["std"] }
+
+[lints]
+workspace = true

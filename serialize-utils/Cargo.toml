@@ -29,3 +29,6 @@ borsh = { workspace = true }
 rand = { workspace = true }
 serde = { workspace = true }
 solana-pubkey = { workspace = true, default-features = false, features = ["borsh", "serde"] }
+
+[lints]
+workspace = true

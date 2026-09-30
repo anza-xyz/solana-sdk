@@ -31,3 +31,6 @@ wincode = { workspace = true, optional = true }
 [dev-dependencies]
 solana-clock = { path = ".", features = ["sysvar", "wincode"] }
 static_assertions = { workspace = true }
+
+[lints]
+workspace = true

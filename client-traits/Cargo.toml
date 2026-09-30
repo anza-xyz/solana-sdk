@@ -29,3 +29,6 @@ solana-signer = { workspace = true }
 solana-system-interface = { workspace = true, features = ["bincode"] }
 solana-transaction = { workspace = true, features = ["std", "wincode"] }
 solana-transaction-error = { workspace = true }
+
+[lints]
+workspace = true

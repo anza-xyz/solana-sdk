@@ -30,3 +30,6 @@ wincode = { workspace = true, optional = true }
 
 [dev-dependencies]
 solana-slot-history = { path = ".", features = ["wincode"] }
+
+[lints]
+workspace = true

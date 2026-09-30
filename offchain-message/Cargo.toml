@@ -33,3 +33,6 @@ solana-hash = { workspace = true, features = ["decode"] }
 solana-keypair = { workspace = true }
 solana-offchain-message = { path = ".", features = ["dev-context-only-utils"] }
 static_assertions = { workspace = true }
+
+[lints]
+workspace = true

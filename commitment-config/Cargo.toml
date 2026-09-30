@@ -21,3 +21,6 @@ serde = ["dep:serde", "dep:serde_derive"]
 [dependencies]
 serde = { workspace = true, optional = true }
 serde_derive = { workspace = true, optional = true }
+
+[lints]
+workspace = true

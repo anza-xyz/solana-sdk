@@ -17,3 +17,6 @@ rustdoc-args = ["--cfg=docsrs"]
 
 [dependencies]
 num-traits = { workspace = true }
+
+[lints]
+workspace = true

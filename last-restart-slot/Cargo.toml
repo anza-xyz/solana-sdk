@@ -30,3 +30,6 @@ rustdoc-args = ["--cfg=docsrs"]
 
 [dev-dependencies]
 solana-last-restart-slot = { path = ".", features = ["wincode"] }
+
+[lints]
+workspace = true
