@@ -98,6 +98,24 @@ pub fn download_file_with_headers<'a, 'b, S: AsRef<str>>(
             .expect("to_str")
     ));
 
+    struct TempFileGuard {
+        path: std::path::PathBuf,
+        committed: bool,
+    }
+
+    impl Drop for TempFileGuard {
+        fn drop(&mut self) {
+            if !self.committed {
+                let _ = std::fs::remove_file(&self.path);
+            }
+        }
+    }
+
+    let mut guard = TempFileGuard {
+        path: temp_destination_file.clone(),
+        committed: false,
+    };
+
     let progress_bar = new_spinner_progress_bar();
     if use_progress_bar {
         progress_bar.set_message(format!("{TRUCK}Downloading {url}..."));
@@ -249,5 +267,6 @@ pub fn download_file_with_headers<'a, 'b, S: AsRef<str>>(
     std::fs::rename(temp_destination_file, destination_file)
         .map_err(|err| format!("Unable to rename: {err:?}"))?;
 
+    guard.committed = true;
     Ok(())
 }
