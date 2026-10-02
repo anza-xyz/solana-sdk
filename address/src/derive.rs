@@ -1,5 +1,5 @@
 use {
-    crate::{Address, MAX_SEEDS, MAX_SEED_LEN, PDA_MARKER},
+    crate::{error::AddressError, Address, MAX_SEEDS, MAX_SEED_LEN, PDA_MARKER},
     core::{mem::MaybeUninit, slice::from_raw_parts},
     sha2_const_stable::Sha256,
     solana_sha256_hasher::hashv,
@@ -37,6 +37,23 @@ impl Address {
         bump: Option<u8>,
         program_id: &Address,
     ) -> Address {
+        Self::try_derive_address(seeds, bump, program_id)
+            .expect("seed length must be less than or equal to MAX_SEED_LEN bytes")
+    }
+
+    /// Derive a [program address][pda] from the given seeds, optional bump and
+    /// program id.
+    ///
+    /// [pda]: https://solana.com/docs/core/pda
+    ///
+    /// This function is similar to [`Address::derive_address`], but it returns a `Result`
+    /// instead of panicking when any of the seeds exceed the maximum seed length.
+    #[inline(always)]
+    pub fn try_derive_address<const N: usize>(
+        seeds: &[&[u8]; N],
+        bump: Option<u8>,
+        program_id: &Address,
+    ) -> Result<Address, AddressError> {
         const {
             assert!(N < MAX_SEEDS, "number of seeds must be less than MAX_SEEDS");
         }
@@ -49,10 +66,11 @@ impl Address {
             // so `i` will always be within bounds.
             unsafe {
                 let seed = seeds.get_unchecked(i);
-                assert!(
-                    seed.len() <= MAX_SEED_LEN,
-                    "seed length must be less than or equal to MAX_SEED_LEN bytes"
-                );
+
+                if seed.len() > MAX_SEED_LEN {
+                    return Err(AddressError::MaxSeedLengthExceeded);
+                }
+
                 data.get_unchecked_mut(i).write(seed);
             }
             i += 1;
@@ -70,7 +88,7 @@ impl Address {
         }
 
         let hash = hashv(unsafe { from_raw_parts(data.as_ptr() as *const &[u8], i + 2) });
-        Address::from(hash.to_bytes())
+        Ok(Address::from(hash.to_bytes()))
     }
 
     /// Derive a [program address][pda] from the given seeds, optional bump and
@@ -187,15 +205,22 @@ impl Address {
             i += 1;
         }
 
+        // SAFETY: `data` is guaranteed to have enough space for `MAX_SEEDS + 2`
+        // elements, and `MAX_SEEDS` is larger than `N`.
+        //
+        // The bump seed will be written in the loop below, so we don't need to
+        // write it here.
+        unsafe {
+            data.get_unchecked_mut(i + 1).write(program_id.as_ref());
+            data.get_unchecked_mut(i + 2).write(PDA_MARKER.as_ref());
+        }
+
         for bump_seed in &BUMP_SEEDS {
             let address = {
-                // SAFETY: `data` is guaranteed to have enough space for `MAX_SEEDS + 2`
-                // elements, and `MAX_SEEDS` is larger than `N`.
+                // SAFETY: `data` is allocated with enough space for `MAX_SEEDS + 2`.
                 unsafe {
                     data.get_unchecked_mut(i)
                         .write(core::slice::from_ref(bump_seed));
-                    data.get_unchecked_mut(i + 1).write(program_id.as_ref());
-                    data.get_unchecked_mut(i + 2).write(PDA_MARKER.as_ref());
                 }
 
                 let hash = hashv(unsafe { from_raw_parts(data.as_ptr() as *const &[u8], i + 3) });
