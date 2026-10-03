@@ -109,9 +109,7 @@ impl SlotHashes {
             .map(|index| &self[index].hash)
     }
     pub fn new(slot_hashes: &[SlotHash]) -> Self {
-        let mut slot_hashes = slot_hashes.to_vec();
-        slot_hashes.sort_by_key(|entry| std::cmp::Reverse(entry.slot));
-        Self(slot_hashes)
+        slot_hashes.iter().cloned().collect()
     }
     pub fn slot_hashes(&self) -> &[SlotHash] {
         &self.0
@@ -120,13 +118,15 @@ impl SlotHashes {
 
 impl FromIterator<SlotHash> for SlotHashes {
     fn from_iter<I: IntoIterator<Item = SlotHash>>(iter: I) -> Self {
-        Self(iter.into_iter().collect())
+        let mut slot_hashes: Vec<_> = iter.into_iter().collect();
+        slot_hashes.sort_by_key(|entry| std::cmp::Reverse(entry.slot));
+        Self(slot_hashes)
     }
 }
 
 impl FromIterator<(u64, Hash)> for SlotHashes {
     fn from_iter<I: IntoIterator<Item = (u64, Hash)>>(iter: I) -> Self {
-        Self(iter.into_iter().map(SlotHash::from).collect())
+        iter.into_iter().map(SlotHash::from).collect()
     }
 }
 
@@ -172,6 +172,91 @@ mod tests {
         }
 
         assert_eq!(slot_hashes.len(), MAX_ENTRIES);
+    }
+
+    #[test]
+    fn test_from_iter() {
+        let cases: &[(&[u64], &[u64])] = &[
+            (&[], &[]),
+            (&[1], &[1]),
+            (&[1, 2, 3], &[3, 2, 1]),
+            (&[3, 2, 1], &[3, 2, 1]),
+            (&[2, 0, u64::MAX, 1], &[u64::MAX, 2, 1, 0]),
+        ];
+        for &(slots, sorted_slots) in cases {
+            let entries: Vec<_> = slots.iter().copied().map(entry).collect();
+            let expected: Vec<_> = sorted_slots.iter().copied().map(entry).collect();
+            let from_entries: SlotHashes = entries.iter().cloned().collect();
+            let from_tuples: SlotHashes = entries
+                .into_iter()
+                .map(|entry| (entry.slot, entry.hash))
+                .collect();
+            for slot_hashes in [from_entries, from_tuples] {
+                for (index, entry) in expected.iter().enumerate() {
+                    assert_eq!(slot_hashes.get(&entry.slot), Some(&entry.hash));
+                    assert_eq!(slot_hashes.position(&entry.slot), Some(index));
+                }
+                assert_eq!(slot_hashes.slot_hashes(), expected);
+                assert_eq!(slot_hashes.position(&4), None);
+                assert_eq!(slot_hashes.get(&4), None);
+            }
+        }
+    }
+
+    #[test]
+    fn test_from_iter_duplicate_slots() {
+        let first = SlotHash::new(2, Hash::new_from_array([1; 32]));
+        let second = SlotHash::new(2, Hash::new_from_array([2; 32]));
+        let entries = [first.clone(), entry(1), second.clone(), entry(3)];
+        let expected = [entry(3), first, second, entry(1)];
+        let from_entries: SlotHashes = entries.iter().cloned().collect();
+        let from_tuples: SlotHashes = entries
+            .into_iter()
+            .map(|entry| (entry.slot, entry.hash))
+            .collect();
+        for slot_hashes in [from_entries, from_tuples] {
+            assert_eq!(slot_hashes.slot_hashes(), expected);
+        }
+    }
+
+    #[test]
+    fn test_from_iter_preserves_all_entries() {
+        let entries: Vec<_> = (0..=MAX_ENTRIES as u64).map(entry).collect();
+        let from_entries: SlotHashes = entries.iter().cloned().collect();
+        let from_tuples: SlotHashes = entries
+            .into_iter()
+            .map(|entry| (entry.slot, entry.hash))
+            .collect();
+        for slot_hashes in [from_entries, from_tuples] {
+            assert_eq!(slot_hashes.len(), MAX_ENTRIES + 1);
+            assert_eq!(slot_hashes.first(), Some(&entry(MAX_ENTRIES as u64)));
+            assert_eq!(slot_hashes.last(), Some(&entry(0)));
+            assert_eq!(slot_hashes.get(&0), Some(&entry(0).hash));
+        }
+    }
+
+    #[test]
+    fn test_add_after_from_iter() {
+        let entries = [entry(2), entry(0), entry(4)];
+        let from_entries: SlotHashes = entries.iter().cloned().collect();
+        let from_tuples: SlotHashes = entries
+            .into_iter()
+            .map(|entry| (entry.slot, entry.hash))
+            .collect();
+        for mut slot_hashes in [from_entries, from_tuples] {
+            slot_hashes.add(3, entry(3).hash);
+            assert_eq!(
+                slot_hashes.slot_hashes(),
+                [entry(4), entry(3), entry(2), entry(0)]
+            );
+
+            let replacement = SlotHash::new(2, Hash::new_from_array([3; 32]));
+            slot_hashes.add(replacement.slot, replacement.clone().hash);
+            assert_eq!(
+                slot_hashes.slot_hashes(),
+                [entry(4), entry(3), replacement, entry(0)]
+            );
+        }
     }
 
     /// Deployed accounts fix the layout to a length prefix followed by packed
