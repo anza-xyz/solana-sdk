@@ -163,7 +163,7 @@ jobs:
           tool: cargo-minimal-versions
 
       - name: Install toml-cli
-        uses: taiki-e/install-action@7623a79cdfecb99d681017af368ca353d9f49bb5  # v2.87.19
+        uses: taiki-e/install-action@4cef1412cce204788f482e778a0b9187f9626a29  # v2.87.21
         with:
           tool: toml-cli
 
@@ -186,7 +186,7 @@ jobs:
           cargo-cache-fallback-key: cargo-publish-semver
 
       - name: Install cargo-semver-checks
-        uses: taiki-e/install-action@7623a79cdfecb99d681017af368ca353d9f49bb5  # v2.87.19
+        uses: taiki-e/install-action@4cef1412cce204788f482e778a0b9187f9626a29  # v2.87.21
         with:
           tool: toml-cli,cargo-semver-checks,cargo-release
 
@@ -260,7 +260,7 @@ jobs:
           cargo-cache-fallback-key: cargo-stable
 
       - name: Install cargo-release
-        uses: taiki-e/install-action@7623a79cdfecb99d681017af368ca353d9f49bb5  # v2.87.19
+        uses: taiki-e/install-action@4cef1412cce204788f482e778a0b9187f9626a29  # v2.87.21
         with:
           tool: cargo-release
 
