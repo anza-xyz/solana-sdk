@@ -4,7 +4,7 @@
 use solana_frozen_abi_macro::{frozen_abi, AbiExample, StableAbi};
 use {
     crate::Transaction,
-    alloc::vec::Vec,
+    alloc::{vec, vec::Vec},
     core::cmp::Ordering,
     solana_message::{inline_nonce::is_advance_nonce_instruction_data, VersionedMessage},
     solana_sanitize::SanitizeError,
@@ -188,6 +188,84 @@ impl From<Transaction> for VersionedTransaction {
 }
 
 impl VersionedTransaction {
+    /// Creates an unsigned transaction with default signatures for each required signer.
+    pub fn new_unsigned(message: VersionedMessage) -> Self {
+        Self {
+            signatures: vec![
+                Signature::default();
+                usize::from(message.header().num_required_signatures)
+            ],
+            message,
+        }
+    }
+
+    /// Returns whether every required signature is present.
+    ///
+    /// This checks for default signatures and the signature count; it does not
+    /// verify the signatures.
+    pub fn is_signed(&self) -> bool {
+        self.signatures.len() == usize::from(self.message.header().num_required_signatures)
+            && self
+                .signatures
+                .iter()
+                .all(|signature| *signature != Signature::default())
+    }
+
+    /// Signs the transaction with a subset of its required signers.
+    ///
+    /// Signers may be supplied in any order and in multiple calls. Signing with
+    /// the same signer again replaces its signature.
+    ///
+    /// If `recent_blockhash` differs from the message's current blockhash (or
+    /// lifetime specifier for v1), the message is updated and all prior signatures
+    /// are cleared before signing.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`SignerError::InvalidInput`] if the message has fewer static
+    /// account keys than required signers or the signature count is incorrect,
+    /// [`SignerError::KeypairPubkeyMismatch`] if a supplied signer is not required,
+    /// or an error returned by a signer when retrieving its key or signing.
+    #[cfg(feature = "wincode")]
+    pub fn try_partial_sign<T: Signers + ?Sized>(
+        &mut self,
+        keypairs: &T,
+        recent_blockhash: solana_hash::Hash,
+    ) -> Result<(), SignerError> {
+        let required_signers = self
+            .message
+            .static_account_keys()
+            .get(..usize::from(self.message.header().num_required_signatures))
+            .ok_or_else(|| SignerError::InvalidInput("invalid message".to_string()))?;
+        if self.signatures.len() != required_signers.len() {
+            return Err(SignerError::InvalidInput("invalid signatures".to_string()));
+        }
+        let positions = keypairs
+            .try_pubkeys()?
+            .iter()
+            .map(|key| {
+                required_signers
+                    .iter()
+                    .position(|required| required == key)
+                    .ok_or(SignerError::KeypairPubkeyMismatch)
+            })
+            .collect::<Result<Vec<_>, _>>()?;
+
+        if recent_blockhash != *self.message.recent_blockhash() {
+            self.message.set_recent_blockhash(recent_blockhash);
+            self.signatures.fill(Signature::default());
+        }
+
+        let signatures = keypairs.try_sign_message(&self.message.serialize())?;
+        if signatures.len() != positions.len() {
+            return Err(SignerError::InvalidInput("invalid keypairs".to_string()));
+        }
+        for (position, signature) in positions.into_iter().zip(signatures) {
+            self.signatures[position] = signature;
+        }
+        Ok(())
+    }
+
     /// Signs a versioned message and if successful, returns a signed
     /// transaction.
     #[cfg(feature = "wincode")]
@@ -485,6 +563,154 @@ mod tests {
         solana_system_interface::instruction as system_instruction,
         test_case::test_case,
     };
+
+    fn signing_message(version: u8, payer: Pubkey, signer: Pubkey) -> VersionedMessage {
+        let header = MessageHeader {
+            num_required_signatures: 2,
+            ..MessageHeader::default()
+        };
+        let account_keys = vec![payer, signer];
+        match version {
+            0 => VersionedMessage::Legacy(LegacyMessage {
+                header,
+                account_keys,
+                ..LegacyMessage::default()
+            }),
+            1 => VersionedMessage::V0(MessageV0 {
+                header,
+                account_keys,
+                ..MessageV0::default()
+            }),
+            2 => VersionedMessage::V1(Message {
+                header,
+                account_keys,
+                ..Message::default()
+            }),
+            _ => unreachable!(),
+        }
+    }
+
+    #[test_case(0; "legacy")]
+    #[test_case(1; "v0")]
+    #[test_case(2; "v1")]
+    fn test_partial_sign(version: u8) {
+        let payer = Keypair::new();
+        let signer = Keypair::new();
+        let message = signing_message(version, payer.pubkey(), signer.pubkey());
+        let blockhash = Hash::new_unique();
+        let mut tx = VersionedTransaction::new_unsigned(message.clone());
+        assert_eq!(tx.message, message);
+        assert_eq!(tx.signatures, vec![Signature::default(); 2]);
+        assert!(!tx.is_signed());
+        tx.try_partial_sign(&[&signer], blockhash).unwrap();
+        assert_eq!(*tx.message.recent_blockhash(), blockhash);
+        assert_eq!(tx.signatures[0], Signature::default());
+        assert_eq!(
+            tx.signatures[1],
+            signer.sign_message(&tx.message.serialize())
+        );
+        assert!(!tx.is_signed());
+
+        let partial_tx = tx.clone();
+        tx.try_partial_sign(&[&signer, &signer], blockhash).unwrap();
+        assert_eq!(tx, partial_tx);
+        tx.try_partial_sign(&[&payer], blockhash).unwrap();
+        assert!(tx.is_signed());
+        assert!(tx.verify_and_hash_message().is_ok());
+        assert_eq!(
+            tx,
+            VersionedTransaction::try_new(tx.message.clone(), &[&signer, &payer]).unwrap()
+        );
+
+        let signed_tx = tx.clone();
+        tx.try_partial_sign(&[] as &[&dyn Signer], blockhash)
+            .unwrap();
+        assert_eq!(tx, signed_tx);
+
+        let new_blockhash = Hash::new_unique();
+        tx.try_partial_sign(&[&payer], new_blockhash).unwrap();
+        assert_eq!(*tx.message.recent_blockhash(), new_blockhash);
+        assert_eq!(tx.signatures[1], Signature::default());
+        assert!(!tx.is_signed());
+        tx.try_partial_sign(&[&signer], new_blockhash).unwrap();
+        assert!(tx.is_signed());
+        assert!(tx.verify_and_hash_message().is_ok());
+
+        tx.try_partial_sign(&[] as &[&dyn Signer], blockhash)
+            .unwrap();
+        assert_eq!(tx.signatures, vec![Signature::default(); 2]);
+    }
+
+    #[test_case(0; "legacy")]
+    #[test_case(1; "v0")]
+    #[test_case(2; "v1")]
+    fn test_partial_sign_errors(version: u8) {
+        use solana_presigner::Presigner;
+
+        let payer = Keypair::new();
+        let signer = Keypair::new();
+        let outsider = Keypair::new();
+        let message = signing_message(version, payer.pubkey(), signer.pubkey());
+        let mut tx = VersionedTransaction::new_unsigned(message);
+        let original = tx.clone();
+        assert_eq!(
+            tx.try_partial_sign(&[&outsider], Hash::new_unique()),
+            Err(SignerError::KeypairPubkeyMismatch)
+        );
+        assert_eq!(tx, original);
+
+        let presigner = Presigner::new(&payer.pubkey(), &Signature::default());
+        assert_eq!(
+            tx.try_partial_sign(&[&presigner], Hash::default()),
+            Err(SignerError::PresignerError(
+                solana_signer::PresignerError::VerificationFailure
+            ))
+        );
+        assert_eq!(tx, original);
+
+        // A placeholder signer leaves its signature absent.
+        let null_signer = solana_signer::null_signer::NullSigner::new(&payer.pubkey());
+        tx.try_partial_sign(&[&null_signer], Hash::default())
+            .unwrap();
+        assert!(!tx.is_signed());
+
+        tx.signatures.pop();
+        assert_eq!(
+            tx.try_partial_sign(&[&payer], Hash::default()),
+            Err(SignerError::InvalidInput("invalid signatures".to_string()))
+        );
+        tx.signatures = vec![Signature::default(); 3];
+        assert_eq!(
+            tx.try_partial_sign(&[&payer], Hash::default()),
+            Err(SignerError::InvalidInput("invalid signatures".to_string()))
+        );
+
+        tx.message = signing_message(version, payer.pubkey(), signer.pubkey());
+        match &mut tx.message {
+            VersionedMessage::Legacy(message) => message.account_keys.clear(),
+            VersionedMessage::V0(message) => message.account_keys.clear(),
+            VersionedMessage::V1(message) => message.account_keys.clear(),
+        }
+        assert_eq!(
+            tx.try_partial_sign(&[&payer], Hash::default()),
+            Err(SignerError::InvalidInput("invalid message".to_string()))
+        );
+    }
+
+    #[test]
+    fn test_is_signed_signature_count() {
+        let mut tx = VersionedTransaction::new_unsigned(VersionedMessage::default());
+        assert!(tx.is_signed());
+        tx.message = signing_message(0, Pubkey::new_unique(), Pubkey::new_unique());
+        assert!(!tx.is_signed());
+        let signature = Keypair::new().sign_message(&[]);
+        tx.signatures = vec![signature];
+        assert!(!tx.is_signed());
+        tx.signatures = vec![signature; 2];
+        assert!(tx.is_signed());
+        tx.signatures.push(signature);
+        assert!(!tx.is_signed());
+    }
 
     #[test]
     fn test_try_new() {
