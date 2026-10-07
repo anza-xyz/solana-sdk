@@ -126,10 +126,11 @@ impl AccountView {
     ///
     /// For ownership checks, it is recommended to use the [`Self::owned_by`]
     /// method instead.
+    #[allow(clippy::clone_on_copy)]
     #[inline(always)]
     pub fn owner(&self) -> Address {
         // SAFETY: The `raw` pointer is guaranteed to be valid.
-        unsafe { (*self.raw).owner }
+        unsafe { (*self.raw).owner.clone() }
     }
 
     /// Indicate whether the transaction was signed by this account.
