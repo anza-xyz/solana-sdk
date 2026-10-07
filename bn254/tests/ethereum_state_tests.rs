@@ -52,7 +52,16 @@ fn ethereum_state_tests_ecmul() {
         let input = hex2bytes(&case.input);
         match &case.expected {
             Some(expected) => check_g1_multiplication(&case.name, &input, &hex2bytes(expected)),
-            None => check_g1_multiplication_fails(&case.name, &input),
+            None => {
+                check_g1_multiplication_fails(&case.name, &input);
+                #[allow(deprecated)]
+                let legacy = solana_bn254::prelude::alt_bn128_multiplication_128(&input);
+                assert!(
+                    legacy.is_err(),
+                    "{}: legacy 128-byte entry point must reject the input",
+                    case.name
+                );
+            }
         }
     }
 }
