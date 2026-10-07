@@ -197,7 +197,7 @@ impl AccountView {
     /// same program.
     #[inline(always)]
     pub fn has_same_owner(&self, other: &AccountView) -> bool {
-        // SAFETY: Both raw pointers are guaranteed to be valid.
+        // SAFETY: Both `raw` pointers are guaranteed to be valid.
         unsafe { (*self.raw).owner == (*other.raw).owner }
     }
 
@@ -330,8 +330,7 @@ impl AccountView {
     /// # Important
     ///
     /// The lamports must be moved from the account prior to closing it to prevent
-    /// an unbalanced instruction error. Any existing reference to the account owner
-    /// will be invalidated after calling this method.
+    /// an unbalanced instruction error.
     #[inline]
     pub fn close(&mut self) -> ProgramResult {
         // Make sure the account is not borrowed since we are about to
