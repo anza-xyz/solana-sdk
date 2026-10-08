@@ -188,7 +188,7 @@ impl From<Transaction> for VersionedTransaction {
 }
 
 impl VersionedTransaction {
-    /// Creates an unsigned transaction with default signatures for each required signer.
+    /// Creates an unsigned transaction with [`Signature::default`] for each required signer.
     pub fn new_unsigned(message: VersionedMessage) -> Self {
         Self {
             signatures: vec![
@@ -232,10 +232,11 @@ impl VersionedTransaction {
         keypairs: &T,
         recent_blockhash: solana_hash::Hash,
     ) -> Result<(), SignerError> {
+        let num_required_signatures = usize::from(self.message.header().num_required_signatures);
         let required_signers = self
             .message
             .static_account_keys()
-            .get(..usize::from(self.message.header().num_required_signatures))
+            .get(..num_required_signatures)
             .ok_or_else(|| SignerError::InvalidInput("invalid message".to_string()))?;
         if self.signatures.len() != required_signers.len() {
             return Err(SignerError::InvalidInput("invalid signatures".to_string()));
