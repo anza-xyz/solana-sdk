@@ -1,7 +1,10 @@
 use {
     serde_json::Value,
     solana_bls_signatures::{
-        pubkey::{PopVerified, PubkeyAffineUnchecked, PubkeyCompressed, VerifySignature},
+        pubkey::{
+            PopVerified, PubkeyAffine, PubkeyAffineUnchecked, PubkeyCompressed, PubkeyProjective,
+            VerifySignature,
+        },
         signature::SignatureAffine,
         SecretKey, SignatureCompressed, SignatureProjective,
     },
@@ -289,11 +292,18 @@ fn ethereum_aggregate_screening_compatibility_vectors() {
 }
 
 #[test]
-fn ethereum_g1_deserialization_vectors() {
+fn ethereum_pubkey_deserialization_vectors() {
+    let identity = PubkeyCompressed::from(PubkeyProjective::identity());
     for path in json_files("deserialization_G1") {
         let case = load_case(&path);
-        let actual = fixed_hex_bytes(case["input"]["pubkey"].as_str().unwrap())
-            .map(PubkeyCompressed)
+        let encoded =
+            fixed_hex_bytes(case["input"]["pubkey"].as_str().unwrap()).map(PubkeyCompressed);
+        // The G1 fixtures allow identity points, but public-key decoding rejects them.
+        let expected = case["output"].as_bool().unwrap() && encoded != Some(identity);
+        let actual_checked = encoded
+            .map(|encoded| PubkeyAffine::try_from(encoded).is_ok())
+            .unwrap_or(false);
+        let actual_unchecked = encoded
             .map(|encoded| {
                 PubkeyAffineUnchecked::try_from(&encoded)
                     .and_then(|pubkey| pubkey.verify_subgroup())
@@ -302,11 +312,12 @@ fn ethereum_g1_deserialization_vectors() {
             .unwrap_or(false);
 
         assert_eq!(
-            actual,
-            case["output"].as_bool().unwrap(),
-            "fixture {}",
+            actual_checked,
+            expected,
+            "checked conversion: fixture {}",
             path.display()
         );
+        assert_eq!(actual_unchecked, expected, "fixture {}", path.display());
     }
 }
 

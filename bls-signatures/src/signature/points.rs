@@ -125,7 +125,8 @@ impl_unchecked_conversions!(
     SignatureProjective,
     SignatureCompressed,
     Signature,
-    G2Affine
+    G2Affine,
+    false
 );
 
 #[cfg(not(target_os = "solana"))]

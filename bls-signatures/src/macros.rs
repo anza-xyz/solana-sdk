@@ -1,3 +1,15 @@
+// Check the format flags independently of point coordinates. The backend can otherwise
+// interpret an uncompressed byte array as a compressed encoding.
+#[cfg(not(target_os = "solana"))]
+#[inline]
+pub(crate) fn check_uncompressed_flags(first_byte: u8) -> Result<(), crate::error::BlsError> {
+    // Compression (0x80) and sort (0x20) must be clear; infinity (0x40) is allowed.
+    if first_byte & 0xA0 != 0 {
+        return Err(crate::error::BlsError::PointConversion);
+    }
+    Ok(())
+}
+
 macro_rules! impl_from_str {
     (TYPE = $type:ident, BYTES_LEN = $bytes_len:expr, BASE64_LEN = $base64_len:expr) => {
         impl core::str::FromStr for $type {
@@ -120,6 +132,7 @@ macro_rules! impl_bls_conversions {
         impl TryFrom<&$uncompressed> for $affine {
             type Error = crate::error::BlsError;
             fn try_from(bytes: &$uncompressed) -> Result<Self, Self::Error> {
+                crate::macros::check_uncompressed_flags(bytes.0[0])?;
                 let maybe_point: Option<$blstrs_affine> =
                     <$blstrs_affine>::from_uncompressed(&bytes.0).into();
                 let point = maybe_point.ok_or(crate::error::BlsError::PointConversion)?;
@@ -484,7 +497,8 @@ macro_rules! impl_unchecked_conversions {
         $projective_type:ident,    // e.g. SignatureProjective
         $compressed_type:ident,    // e.g. SignatureCompressed
         $uncompressed_type:ident,  // e.g. Signature
-        $internal_type:ty          // e.g. G2Affine
+        $internal_type:ty,         // e.g. G2Affine
+        $reject_identity:expr     // true for public keys, false for signatures
     ) => {
         // Conversion from Compressed Bytes (Unchecked)
         #[cfg(not(target_os = "solana"))]
@@ -493,6 +507,11 @@ macro_rules! impl_unchecked_conversions {
             fn try_from(bytes: $compressed_type) -> Result<Self, Self::Error> {
                 let point = Option::from(<$internal_type>::from_compressed_unchecked(&bytes.0))
                     .ok_or(crate::error::BlsError::PointConversion)?;
+                if $reject_identity
+                    && bool::from(group::prime::PrimeCurveAffine::is_identity(&point))
+                {
+                    return Err(crate::error::BlsError::PointConversion);
+                }
                 Ok(Self(point))
             }
         }
@@ -510,8 +529,15 @@ macro_rules! impl_unchecked_conversions {
         impl TryFrom<$uncompressed_type> for $unchecked_type {
             type Error = crate::error::BlsError;
             fn try_from(bytes: $uncompressed_type) -> Result<Self, Self::Error> {
+                // Skipping the subgroup check must not skip the encoding check.
+                crate::macros::check_uncompressed_flags(bytes.0[0])?;
                 let point = Option::from(<$internal_type>::from_uncompressed_unchecked(&bytes.0))
                     .ok_or(crate::error::BlsError::PointConversion)?;
+                if $reject_identity
+                    && bool::from(group::prime::PrimeCurveAffine::is_identity(&point))
+                {
+                    return Err(crate::error::BlsError::PointConversion);
+                }
                 Ok(Self(point))
             }
         }
@@ -601,4 +627,25 @@ macro_rules! impl_pubkey_wrapper_delegations {
             }
         }
     };
+}
+
+#[cfg(all(test, not(target_os = "solana")))]
+mod tests {
+    use {super::check_uncompressed_flags, crate::error::BlsError};
+
+    #[test]
+    fn test_uncompressed_flags() {
+        // The low five bits belong to the coordinate, not the encoding flags.
+        for coordinate_bits in 0..32 {
+            for flags in [0x00, 0x40] {
+                assert_eq!(check_uncompressed_flags(flags | coordinate_bits), Ok(()));
+            }
+            for flags in [0x20, 0x60, 0x80, 0xA0, 0xC0, 0xE0] {
+                assert_eq!(
+                    check_uncompressed_flags(flags | coordinate_bits),
+                    Err(BlsError::PointConversion),
+                );
+            }
+        }
+    }
 }
