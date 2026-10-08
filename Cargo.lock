@@ -4299,6 +4299,8 @@ dependencies = [
  "serde_derive",
  "solana-account-info",
  "solana-example-mocks",
+ "solana-frozen-abi",
+ "solana-frozen-abi-macro",
  "solana-instruction",
  "solana-instructions-sysvar",
  "solana-keccak-hasher",
@@ -4307,6 +4309,7 @@ dependencies = [
  "solana-sdk-ids",
  "solana-secp256k1-program",
  "solana-signature",
+ "wincode",
 ]
 
 [[package]]

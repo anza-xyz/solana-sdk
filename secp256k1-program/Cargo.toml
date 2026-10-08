@@ -18,11 +18,22 @@ rustdoc-args = ["--cfg=docsrs"]
 bincode = ["dep:bincode", "dep:solana-instruction", "dep:solana-sdk-ids", "serde"]
 dev-context-only-utils = ["bincode"]
 serde = ["dep:serde", "dep:serde_derive"]
+stable-abi = [
+    "dep:solana-frozen-abi",
+    "dep:solana-frozen-abi-macro",
+    "serde",
+    "solana-frozen-abi-macro/stable-abi",
+    "solana-frozen-abi/stable-abi",
+]
+wincode = ["dep:solana-instruction", "dep:solana-sdk-ids", "dep:wincode"]
 
 [dependencies]
 serde = { workspace = true, optional = true }
 serde_derive = { workspace = true, optional = true }
+solana-frozen-abi = { workspace = true, optional = true }
+solana-frozen-abi-macro = { workspace = true, optional = true }
 solana-keccak-hasher = { workspace = true, features = ["sha3"] }
+wincode = { workspace = true, optional = true }
 
 [target.'cfg(not(any(target_os = "solana", target_arch = "bpf")))'.dependencies]
 bincode = { workspace = true, optional = true }
@@ -41,7 +52,7 @@ solana-instruction = { workspace = true }
 solana-instructions-sysvar = { workspace = true }
 solana-msg = { workspace = true, features = ["std"] }
 solana-program-error = { workspace = true }
-solana-secp256k1-program = { path = ".", features = ["bincode"] }
+solana-secp256k1-program = { path = ".", features = ["bincode", "wincode"] }
 
 [lints]
 workspace = true

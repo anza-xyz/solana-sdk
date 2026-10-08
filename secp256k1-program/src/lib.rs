@@ -120,7 +120,8 @@
 //!
 //! The signature offset structure is defined by [`SecpSignatureOffsets`].
 //! Host clients can serialize it to the correct format with
-//! [`bincode::serialize_into`] by enabling the `bincode` feature. Note that the
+//! [`bincode::serialize_into`] by enabling the `bincode` feature, or with
+//! [`wincode::serialize_into`] by enabling the `wincode` feature. Note that the
 //! bincode format may not be stable, and callers should ensure they use the
 //! same version of `bincode` as the Solana SDK.
 //!
@@ -130,6 +131,7 @@
 //! data bytes.
 //!
 //! [`bincode::serialize_into`]: https://docs.rs/bincode/1.3.3/bincode/fn.serialize_into.html
+//! [`wincode::serialize_into`]: https://docs.rs/wincode/latest/wincode/fn.serialize_into.html
 //!
 //! The serialized signature offset structure has the following 11-byte layout,
 //! with data types in little-endian encoding.
@@ -793,8 +795,10 @@
 
 #[cfg(feature = "serde")]
 use serde_derive::{Deserialize, Serialize};
+#[cfg(feature = "stable-abi")]
+use solana_frozen_abi_macro::{frozen_abi, StableAbi, StableAbiSample};
 #[cfg(all(
-    feature = "bincode",
+    any(feature = "bincode", feature = "wincode"),
     not(any(target_os = "solana", target_arch = "bpf"))
 ))]
 use solana_instruction::Instruction;
@@ -814,7 +818,17 @@ pub const DATA_START: usize = SIGNATURE_OFFSETS_SERIALIZED_SIZE + 1;
 /// See the [module documentation][md] for a complete description.
 ///
 /// [md]: self
+#[cfg_attr(
+    feature = "stable-abi",
+    frozen_abi(
+        abi_digest = "CXYaMYfChwXtiMNPwYUCrPH99cxq1CnS7RmCNccKmEu1",
+        abi_serializer = ["bincode", "wincode"],
+        test_roundtrip = "eq_and_wire"
+    ),
+    derive(StableAbi, StableAbiSample)
+)]
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
+#[cfg_attr(feature = "wincode", derive(wincode::SchemaRead, wincode::SchemaWrite))]
 #[derive(Default, Debug, Eq, PartialEq)]
 pub struct SecpSignatureOffsets {
     /// Offset to 64-byte signature plus 1-byte recovery ID.
@@ -849,7 +863,7 @@ pub fn sign_message(
 }
 
 #[cfg(all(
-    feature = "bincode",
+    any(feature = "bincode", feature = "wincode"),
     not(any(target_os = "solana", target_arch = "bpf"))
 ))]
 pub fn new_secp256k1_instruction_with_signature(
@@ -891,14 +905,30 @@ pub fn new_secp256k1_instruction_with_signature(
         message_data_size: message_arr.len() as u16,
         message_instruction_index: 0,
     };
-    let writer = std::io::Cursor::new(&mut instruction_data[1..DATA_START]);
-    bincode::serialize_into(writer, &offsets).unwrap();
+    write_offsets(&mut instruction_data[1..DATA_START], &offsets);
 
     Instruction {
         program_id: solana_sdk_ids::secp256k1_program::id(),
         accounts: vec![],
         data: instruction_data,
     }
+}
+
+#[cfg(all(
+    feature = "bincode",
+    not(feature = "wincode"),
+    not(any(target_os = "solana", target_arch = "bpf"))
+))]
+fn write_offsets(dst: &mut [u8], offsets: &SecpSignatureOffsets) {
+    bincode::serialize_into(std::io::Cursor::new(dst), offsets).unwrap();
+}
+
+#[cfg(all(
+    feature = "wincode",
+    not(any(target_os = "solana", target_arch = "bpf"))
+))]
+fn write_offsets(dst: &mut [u8], offsets: &SecpSignatureOffsets) {
+    wincode::serialize_into(dst, offsets).unwrap();
 }
 
 /// Creates an Ethereum address from a secp256k1 public key.
@@ -933,6 +963,29 @@ mod tests {
                 0x7e, 0x5f, 0x45, 0x52, 0x09, 0x1a, 0x69, 0x12, 0x5d, 0x5d, 0xfc, 0xb7, 0xb8, 0xc2,
                 0x65, 0x90, 0x29, 0x39, 0x5b, 0xdf,
             ]
+        );
+    }
+
+    #[cfg(all(feature = "bincode", feature = "wincode"))]
+    #[test]
+    fn test_builder_matches_bincode_encoding() {
+        let message = b"hello";
+        let ix = new_secp256k1_instruction_with_signature(message, &[7; 64], 1, &[9; 20]);
+        let expected = SecpSignatureOffsets {
+            signature_offset: (DATA_START + HASHED_PUBKEY_SERIALIZED_SIZE) as u16,
+            signature_instruction_index: 0,
+            eth_address_offset: DATA_START as u16,
+            eth_address_instruction_index: 0,
+            message_data_offset: (DATA_START
+                + HASHED_PUBKEY_SERIALIZED_SIZE
+                + SIGNATURE_SERIALIZED_SIZE
+                + 1) as u16,
+            message_data_size: message.len() as u16,
+            message_instruction_index: 0,
+        };
+        assert_eq!(
+            ix.data[1..DATA_START],
+            bincode::serialize(&expected).unwrap()
         );
     }
 }
