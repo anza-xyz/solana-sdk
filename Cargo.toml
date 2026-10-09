@@ -159,7 +159,7 @@ bitflags = { version = "2.8.0" }
 bitvec = "1.0.1"
 blake3 = { version = "1.5.5", default-features = false }
 blst = "0.3.16"
-blstrs = "0.7.1"
+blstrs = { package = "anza-blstrs", git = "https://github.com/anza-xyz/blstrs/", tag = "anza-blstrs-0.7.1" }
 borsh = { version = "1.5.5", default-features = false, features = ["derive", "unstable__schema"] }
 boxcar = "0.2.12"
 bs58 = { version = "0.5.1", default-features = false }

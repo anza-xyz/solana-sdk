@@ -69,6 +69,21 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "330a5ed07fa54e4702c9d6c4174f74427fc0ef6e214bbd677ae50a5099946470"
 
 [[package]]
+name = "anza-blstrs"
+version = "0.7.1"
+source = "git+https://github.com/anza-xyz/blstrs/?tag=anza-blstrs-0.7.1#2a5e6f375b3450b6812bfb91c50c3c16b1e7969e"
+dependencies = [
+ "blst",
+ "byte-slice-cast",
+ "ff",
+ "group",
+ "pairing",
+ "rand_core 0.6.4",
+ "serde",
+ "subtle",
+]
+
+[[package]]
 name = "arbitrary"
 version = "1.4.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3246,10 +3261,10 @@ dependencies = [
 name = "solana-bls-signatures"
 version = "4.0.0"
 dependencies = [
+ "anza-blstrs",
  "base64",
  "bincode",
  "blst",
- "blstrs",
  "bytemuck",
  "cfg_eval",
  "criterion",
