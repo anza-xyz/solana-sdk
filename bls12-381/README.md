@@ -9,15 +9,21 @@ and zero-knowledge proof (e.g. Groth16) validation.
 
 ## Features
 
-- **Zero-copy deserialization.** Types are `#[repr(transparent)]` and implement
-  `bytemuck::Pod`, so instruction data can be cast directly into curve points
-  without allocation.
-- **In-place operations.** Every group operation has an `_assign` variant that
-  writes into a caller-supplied `MaybeUninit` buffer, saving ~37 CU per call
+- **Zero-copy deserialization.** Raw point and scalar types are
+  `#[repr(transparent)]` and implement `bytemuck::Pod`, so instruction data can
+  be cast directly into curve points without allocation.
+- **In-place operations.** Raw point addition, subtraction, negation, native
+  multiplication, and decompression have `_assign` variants that
+  write into a caller-supplied `MaybeUninit` buffer, saving ~37 CU per call
   and keeping large results off the 4KB stack.
 - **Validated and unchecked APIs.** Group operations validate their operands by
   default; `_unchecked` variants skip the subgroup check for cheaper
   accumulation.
+- **Validated point types.** Owned points and immutable views retain subgroup
+  validity and byte order across operations. Their summation helpers accumulate
+  validated inputs without repeated subgroup checks or caller-managed buffers.
+- **Bounded scalar multiplication.** `mul_bounded` selects short addition
+  chains for small public scalars and falls back to native multiplication.
 - **Pairing checks.** `pairing_check` tests whether a product of pairings is the
   identity without materializing a 576-byte `Gt` element, and refuses to
   succeed on an empty batch.
@@ -35,6 +41,56 @@ The `bytemuck` feature is enabled by default and provides the `Pod` and
 `Zeroable` implementations used for zero-copy casting. On-chain builds that do
 not need them can set `default-features = false`. Off-chain builds always
 include them, since the host implementation depends on them internally.
+
+### Validated points and sums
+
+`ValidG1` and `ValidG2` own subgroup-valid points. `ValidG1Ref` and `ValidG2Ref`
+borrow existing points without copying them. The `LittleEndian` and `BigEndian`
+type parameters bind the validity guarantee to the encoding. These types do not
+implement `Pod` or `Zeroable`; raw bytes must go through validation first.
+Successful decompression and multiplication can also construct validated points.
+Infinity is valid, so protocols requiring nonidentity points must check that
+separately.
+
+Validate an untrusted slice once, then sum it without managing output buffers:
+
+```rust
+use solana_bls12_381::{
+    G1Point,
+    validated::{LittleEndian, ValidG1, ValidG1Slice},
+};
+
+fn sum_points(points: &[G1Point]) -> Option<ValidG1<LittleEndian>> {
+    ValidG1Slice::<LittleEndian>::validate(points)?.sum()
+}
+```
+
+Every point is checked before summation, including inputs whose contributions
+could cancel. An empty sum returns infinity. A validated slice can be reused
+for further operations without repeating those checks.
+
+For repeated addition, pass the whole accumulation to `sum_validated` instead
+of calling `add` on each result. For example, this computes `P + count * Q`
+after validating `P` and `Q` once:
+
+```rust
+use core::iter::{once, repeat};
+use solana_bls12_381::{
+    G1Point,
+    validated::{LittleEndian, ValidG1, ValidG1Ref},
+};
+
+fn add_repeated(p: &G1Point, q: &G1Point, count: usize) -> Option<ValidG1<LittleEndian>> {
+    let vp = ValidG1Ref::<LittleEndian>::validate(p)?;
+    let vq = ValidG1Ref::<LittleEndian>::validate(q)?;
+    ValidG1::sum_validated(once(vp).chain(repeat(vq).take(count)))
+}
+```
+
+This reuses the helper's output buffers and returns one owned result, avoiding
+the intermediate owned results of an `add` loop. The corresponding G2 types
+provide the same API. For direct control over output buffers, the raw `_assign`
+operations below remain available.
 
 ### Zero-copy point addition
 
@@ -79,7 +135,9 @@ Nothing constrains what a _failing_ syscall leaves in the buffer, hence the
 poisoning rule above rather than a guarantee that the buffer is left untouched.
 
 To reuse buffers across a loop, keep two `MaybeUninit` buffers, point a pair of
-references at them, and swap the *references* each iteration:
+references at them, and swap the *references* each iteration. The following loop
+assumes every input has already passed subgroup validation. For untrusted
+inputs, the validated slice API above performs those checks.
 
 ```rust
 use solana_bls12_381::{G1Point, Endianness};
@@ -151,8 +209,8 @@ attacker-controlled instruction data, and a zero-length batch that reported
 ### Compute unit costs
 
 The syscalls themselves are charged by the runtime, at the `bls12_381_*` rates
-in `solana-program-runtime`'s execution budget. What this crate adds on top is
-small, and depends only on how a result is returned:
+in `solana-program-runtime`'s execution budget. The following measurements cover
+the raw syscall wrappers; their overhead depends on how a result is returned:
 
 | Wrapper                                                                                   | Added CU |
 | ----------------------------------------------------------------------------------------- | -------- |
@@ -239,7 +297,15 @@ it is two register moves. Over an eight-point sum the by-value loop measures
 the accumulation.
 
 **Prefer the `_assign` forms in loops.** Each call avoids the ~37 CU the
-allocating form spends constructing its `Option<Self>`.
+allocating form spends constructing its `Option<Self>`. When using validated
+points, pass the full accumulation to `sum_validated` to avoid an owned result
+after every addition.
+
+**Use `mul_bounded` for short public scalars.** It uses an addition chain when
+that chain fits the budget of 18 group additions for G1 or 26 for G2, including
+doublings. It validates the point even for scalars zero and one. When a scalar
+falls outside the budget, classification adds overhead before native
+multiplication; use `mul` directly when general scalars are expected.
 
 **Take points uncompressed when you can afford the bytes.** Decompression
 validates, so it replaces rather than adds to a `validate` — but it costs 2,114

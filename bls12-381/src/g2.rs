@@ -537,7 +537,7 @@ impl G2Point {
             // For BLS12-381 curve IDs the runtime ignores the result pointer
             // and answers through the return value. The one-byte buffer is
             // just there to keep the call well-formed.
-            let mut dummy = [0u8; 1];
+            let mut dummy = MaybeUninit::<u8>::uninit();
             // SAFETY: `self.0` is valid for reads of `G2_UNCOMPRESSED_POINT_SIZE`
             // bytes, `dummy` for writes of 1.
             let status = unsafe {

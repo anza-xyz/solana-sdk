@@ -23,6 +23,8 @@
 //! Solana encodings. See `tests/data/README.md` for the provenance of the
 //! vector files.
 
+pub mod common;
+
 use {
     core::cmp::Ordering,
     serde_derive::Deserialize,
@@ -98,13 +100,6 @@ fn hex2bytes(hex: &str) -> Vec<u8> {
     array_bytes::hex2bytes_unchecked(hex)
 }
 
-/// The scalar field order `r`, big-endian.
-fn scalar_field_order() -> [u8; SCALAR_SIZE] {
-    hex2bytes("73eda753299d7d483339d80809a1d80553bda402fffe5bfeffffffff00000001")
-        .try_into()
-        .unwrap()
-}
-
 /// `(p - 1) / 2`, big-endian: a `y` coordinate above this has the
 /// lexicographically larger sign in the Zcash compressed encoding.
 fn fq_half() -> [u8; FQ_SIZE] {
@@ -163,7 +158,7 @@ fn scalar_from_eip(bytes: &[u8]) -> Scalar {
 
 /// Reduces a big-endian scalar modulo `r`, as EIP-2537 does implicitly.
 fn reduce_scalar(scalar: &Scalar) -> Scalar {
-    let order = scalar_field_order();
+    let order = common::scalar_field_order();
     let mut value = scalar.0;
     // Equal-length big-endian arrays compare like the integers they encode.
     while value.cmp(&order) != Ordering::Less {
