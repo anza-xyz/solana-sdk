@@ -3761,7 +3761,7 @@ dependencies = [
 
 [[package]]
 name = "solana-instruction-view"
-version = "2.1.0"
+version = "3.0.0"
 dependencies = [
  "solana-account-view",
  "solana-address",
