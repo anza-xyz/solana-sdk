@@ -2,7 +2,7 @@
 name = "solana-poseidon"
 description = "Solana Poseidon hashing"
 documentation = "https://docs.rs/solana-poseidon"
-version = "5.0.0"
+version = "5.0.1"
 authors = { workspace = true }
 repository = { workspace = true }
 homepage = { workspace = true }
