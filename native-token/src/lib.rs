@@ -20,6 +20,8 @@ pub fn sol_str_to_lamports(sol_str: &str) -> Option<u64> {
         };
         let lamports = if lamports.is_empty() {
             0
+        } else if !lamports.bytes().all(|b| b.is_ascii_digit()) {
+            return None;
         } else {
             format!("{lamports:0<9}")[..SOL_DECIMALS].parse().ok()?
         };
@@ -86,5 +88,15 @@ mod tests {
         assert_eq!(None, sol_str_to_lamports("-0.000000001"));
         // i64::MIN as string, error
         assert_eq!(None, sol_str_to_lamports("-9223372036.854775808"));
+    }
+
+    #[test]
+    fn test_sol_str_to_lamports_invalid_fraction() {
+        // Signs are not digits, error
+        assert_eq!(None, sol_str_to_lamports("1.+5"));
+        assert_eq!(None, sol_str_to_lamports("0.+"));
+        // Non-ASCII character straddling the ninth byte, error (not panic)
+        assert_eq!(None, sol_str_to_lamports("0.12345678é"));
+        assert_eq!(None, sol_str_to_lamports("0.1234567€"));
     }
 }
