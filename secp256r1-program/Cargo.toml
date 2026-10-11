@@ -16,15 +16,16 @@ all-features = true
 rustdoc-args = ["--cfg=docsrs"]
 
 [features]
-default = []
-openssl-vendored = ["openssl/vendored"]
+default = ["openssl"]
+openssl = ["dep:openssl"]
+openssl-vendored = ["openssl", "openssl/vendored"]
 
 [dependencies]
 bytemuck = { workspace = true, features = ["derive"] }
 solana-sdk-ids = { workspace = true }
 
 [target.'cfg(all(not(target_arch = "wasm32"), not(target_os = "solana")))'.dependencies]
-openssl = { workspace = true }
+openssl = { workspace = true, optional = true }
 solana-instruction = { workspace = true, features = ["std"] }
 
 [lints]

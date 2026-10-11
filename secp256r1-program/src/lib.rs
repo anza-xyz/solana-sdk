@@ -40,12 +40,9 @@ pub struct Secp256r1SignatureOffsets {
 
 #[cfg(all(not(target_arch = "wasm32"), not(target_os = "solana")))]
 mod target_arch {
-    use {
-        crate::Secp256r1SignatureOffsets,
-        bytemuck::bytes_of,
-        openssl::{bn::BigNum, ec::EcKey, ecdsa::EcdsaSig, nid::Nid, pkey::PKey, sign::Signer},
-        solana_instruction::Instruction,
-    };
+    #[cfg(feature = "openssl")]
+    use openssl::{bn::BigNum, ec::EcKey, ecdsa::EcdsaSig, nid::Nid, pkey::PKey, sign::Signer};
+    use {crate::Secp256r1SignatureOffsets, bytemuck::bytes_of, solana_instruction::Instruction};
 
     pub const COMPRESSED_PUBKEY_SERIALIZED_SIZE: usize = 33;
     pub const SIGNATURE_SERIALIZED_SIZE: usize = 64;
@@ -76,6 +73,8 @@ mod target_arch {
     // Field size in bytes
     pub const FIELD_SIZE: usize = 32;
 
+    #[cfg(feature = "openssl")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "openssl")))]
     pub fn sign_message(
         message: &[u8],
         priv_key_bytes_der: &[u8],
