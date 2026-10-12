@@ -25,7 +25,6 @@ bincode = [
     "solana-system-interface/bincode",
 ]
 dev-context-only-utils = [
-    "bincode",
     "dep:arbitrary",
     "dep:rand",
     "solana-pubkey/dev-context-only-utils",
@@ -104,7 +103,7 @@ solana-serialize-utils = { workspace = true, features = ["std"] }
 solana-epoch-schedule = { workspace = true }
 solana-pubkey = { workspace = true, features = ["dev-context-only-utils"] }
 solana-rent = { workspace = true }
-solana-vote-interface = { path = ".", features = ["dev-context-only-utils", "wincode"] }
+solana-vote-interface = { path = ".", features = ["bincode", "dev-context-only-utils", "wincode"] }
 test-case = { workspace = true }
 
 [lints]
