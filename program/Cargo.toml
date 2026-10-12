@@ -56,6 +56,23 @@ stable-abi = [
     "solana-pubkey/stable-abi",
     "solana-rent/stable-abi",
 ]
+wincode = [
+    "solana-clock/wincode",
+    "solana-epoch-rewards/wincode",
+    "solana-epoch-schedule/wincode",
+    "solana-fee-calculator/wincode",
+    "solana-hash/wincode",
+    "solana-instruction/wincode",
+    "solana-instruction-error/wincode",
+    "solana-last-restart-slot/wincode",
+    "solana-pubkey/wincode",
+    "solana-rent/wincode",
+    "solana-short-vec/wincode",
+    "solana-slot-hashes/wincode",
+    "solana-slot-history/wincode",
+    "solana-system-interface?/wincode",
+    "solana-sysvar/wincode",
+]
 
 [dependencies]
 solana-account-info = { workspace = true, features = ["bincode"] }

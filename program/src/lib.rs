@@ -243,9 +243,12 @@
 //!
 //!   The [`Instruction::new_with_bincode`] function creates an `Instruction` by
 //!   serializing a value with bincode.
+//!   With the `wincode` feature, `Instruction::new_with_wincode` produces the
+//!   same bytes from a [wincode] schema without bincode.
 //!
 //!   [Bincode]: https://docs.rs/bincode
 //!   [Serde]: https://serde.rs/
+//!   [wincode]: https://docs.rs/wincode
 //!   [`Instruction::new_with_bincode`]: instruction::Instruction::new_with_bincode
 //!
 //! - __[`Pack`]__, a Solana-specific serialization API that is used by many
