@@ -2,6 +2,8 @@
 #![cfg_attr(docsrs, feature(doc_cfg))]
 #![cfg_attr(feature = "frozen-abi", feature(min_specialization))]
 
+#[cfg(feature = "stable-abi")]
+use solana_frozen_abi_macro::{frozen_abi, StableAbi, StableAbiSample};
 use std::time::Duration;
 
 // inlined to avoid solana-clock dep
@@ -11,9 +13,19 @@ static_assertions::const_assert_eq!(DEFAULT_NS_PER_TICK, solana_clock::DEFAULT_N
 
 #[cfg_attr(feature = "frozen-abi", derive(solana_frozen_abi_macro::AbiExample))]
 #[cfg_attr(
+    feature = "stable-abi",
+    frozen_abi(
+        abi_digest = "7x1y4aHcf7iWdPG9E8pENZyV5NX5GEhBnJDeVcaGqUCv",
+        abi_serializer = ["bincode", "wincode"],
+        test_roundtrip = "eq_and_wire"
+    ),
+    derive(StableAbi, StableAbiSample)
+)]
+#[cfg_attr(
     feature = "serde",
     derive(serde_derive::Deserialize, serde_derive::Serialize)
 )]
+#[cfg_attr(feature = "wincode", derive(wincode::SchemaRead, wincode::SchemaWrite))]
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct PohConfig {
     /// The target tick rate of the cluster.
