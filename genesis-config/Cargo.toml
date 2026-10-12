@@ -26,8 +26,12 @@ frozen-abi = [
     "solana-poh-config/frozen-abi",
     "solana-pubkey/frozen-abi",
     "solana-rent/frozen-abi",
+    "solana-frozen-abi-macro/frozen-abi",
+    "solana-frozen-abi/frozen-abi",
+    "stable-abi",
 ]
 serde = [
+    "dep:bincode",
     "dep:serde",
     "dep:serde_derive",
     "solana-account/serde",
@@ -39,9 +43,36 @@ serde = [
     "solana-poh-config/serde",
     "solana-rent/serde",
 ]
+stable-abi = [
+    "dep:solana-frozen-abi",
+    "dep:solana-frozen-abi-macro",
+    "serde",
+    "solana-account/stable-abi",
+    "solana-cluster-type/stable-abi",
+    "solana-epoch-schedule/stable-abi",
+    "solana-fee-calculator/stable-abi",
+    "solana-inflation/stable-abi",
+    "solana-poh-config/stable-abi",
+    "solana-pubkey/stable-abi",
+    "solana-rent/stable-abi",
+    "solana-frozen-abi-macro/stable-abi",
+    "solana-frozen-abi/stable-abi",
+]
+wincode = [
+    "dep:wincode",
+    "solana-account/wincode",
+    "solana-cluster-type/wincode",
+    "solana-epoch-schedule/wincode",
+    "solana-fee-calculator/wincode",
+    "solana-inflation/wincode",
+    "solana-poh-config/wincode",
+    "solana-pubkey/wincode",
+    "solana-rent/wincode",
+    "wincode/alloc",
+]
 
 [dependencies]
-bincode = { workspace = true }
+bincode = { workspace = true, optional = true }
 chrono = { workspace = true, features = ["alloc"] }
 memmap2 = { workspace = true }
 serde = { workspace = true, optional = true }
@@ -51,7 +82,7 @@ solana-clock = { workspace = true }
 solana-cluster-type = { workspace = true }
 solana-epoch-schedule = { workspace = true }
 solana-fee-calculator = { workspace = true }
-solana-frozen-abi = { workspace = true, optional = true, features = ["frozen-abi"] }
+solana-frozen-abi = { workspace = true, optional = true }
 solana-frozen-abi-macro = { workspace = true, optional = true }
 solana-hash = { workspace = true }
 solana-inflation = { workspace = true }
@@ -64,9 +95,10 @@ solana-sha256-hasher = { workspace = true, features = ["sha2"] }
 solana-shred-version = { workspace = true }
 solana-signer = { workspace = true }
 solana-time-utils = { workspace = true }
+wincode = { workspace = true, optional = true }
 
 [dev-dependencies]
-solana-genesis-config = { path = ".", features = ["serde"] }
+solana-genesis-config = { path = ".", features = ["serde", "wincode"] }
 solana-pubkey = { workspace = true, features = ["rand"] }
 
 [lints]

@@ -3673,6 +3673,7 @@ dependencies = [
  "solana-shred-version",
  "solana-signer",
  "solana-time-utils",
+ "wincode",
 ]
 
 [[package]]

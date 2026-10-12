@@ -2,11 +2,10 @@
 
 #![cfg_attr(feature = "frozen-abi", feature(min_specialization))]
 #![cfg_attr(docsrs, feature(doc_cfg))]
-#[cfg(feature = "frozen-abi")]
-use solana_frozen_abi_macro::{frozen_abi, AbiExample};
-#[cfg(feature = "serde")]
+#[cfg(feature = "stable-abi")]
+use solana_frozen_abi_macro::{frozen_abi, AbiExample, StableAbi, StableAbiSample};
+#[cfg(any(feature = "serde", feature = "wincode"))]
 use {
-    bincode::{deserialize, serialize},
     chrono::{TimeZone, Utc},
     memmap2::Mmap,
     solana_hash::Hash,
@@ -47,14 +46,19 @@ pub const DEFAULT_GENESIS_DOWNLOAD_PATH: &str = "/genesis.tar.bz2";
 pub const UNUSED_DEFAULT: u64 = 1024;
 
 #[cfg_attr(
-    feature = "frozen-abi",
-    derive(AbiExample),
-    frozen_abi(digest = "5QrfiDhg9p5a9YRN8LrSUxEFj3M4PpBWRLruhefaQr2c")
+    feature = "stable-abi",
+    derive(AbiExample, StableAbi, StableAbiSample),
+    frozen_abi(
+        api_digest = "5QrfiDhg9p5a9YRN8LrSUxEFj3M4PpBWRLruhefaQr2c",
+        abi_digest = "EcXGWTxTghTy5ibHLCyKVyiArjet3AMYxUMXJR9NFXUc",
+        abi_serializer = ["bincode", "wincode"]
+    )
 )]
 #[cfg_attr(
     feature = "serde",
     derive(serde_derive::Deserialize, serde_derive::Serialize)
 )]
+#[cfg_attr(feature = "wincode", derive(wincode::SchemaRead, wincode::SchemaWrite))]
 #[derive(Clone, Debug, PartialEq)]
 pub struct GenesisConfig {
     /// when the network (bootstrap validator) was started relative to the UNIX Epoch
@@ -82,6 +86,26 @@ pub struct GenesisConfig {
     pub epoch_schedule: EpochSchedule,
     /// network runlevel
     pub cluster_type: ClusterType,
+}
+
+#[cfg(all(feature = "serde", not(feature = "wincode")))]
+fn serialize(genesis_config: &GenesisConfig) -> bincode::Result<Vec<u8>> {
+    bincode::serialize(genesis_config)
+}
+
+#[cfg(all(feature = "serde", not(feature = "wincode")))]
+fn deserialize(bytes: &[u8]) -> bincode::Result<GenesisConfig> {
+    bincode::deserialize(bytes)
+}
+
+#[cfg(feature = "wincode")]
+fn serialize(genesis_config: &GenesisConfig) -> wincode::WriteResult<Vec<u8>> {
+    wincode::config::serialize(genesis_config, solana_account::WINCODE_CONFIG)
+}
+
+#[cfg(feature = "wincode")]
+fn deserialize(bytes: &[u8]) -> wincode::ReadResult<GenesisConfig> {
+    wincode::config::deserialize(bytes, solana_account::WINCODE_CONFIG)
 }
 
 // useful for basic tests
@@ -138,18 +162,18 @@ impl GenesisConfig {
         }
     }
 
-    #[cfg(feature = "serde")]
+    #[cfg(any(feature = "serde", feature = "wincode"))]
     pub fn hash(&self) -> Hash {
-        let serialized = serialize(&self).unwrap();
+        let serialized = serialize(self).unwrap();
         hash(&serialized)
     }
 
-    #[cfg(feature = "serde")]
+    #[cfg(any(feature = "serde", feature = "wincode"))]
     fn genesis_filename(ledger_path: &Path) -> PathBuf {
         Path::new(ledger_path).join(DEFAULT_GENESIS_FILE)
     }
 
-    #[cfg(feature = "serde")]
+    #[cfg(any(feature = "serde", feature = "wincode"))]
     pub fn load(ledger_path: &Path) -> Result<Self, std::io::Error> {
         let filename = Self::genesis_filename(ledger_path);
         let file = OpenOptions::new()
@@ -163,15 +187,15 @@ impl GenesisConfig {
         let mem = unsafe { Mmap::map(&file) }
             .map_err(|err| std::io::Error::other(format!("Unable to map {filename:?}: {err:?}")))?;
 
-        let genesis_config = deserialize(&mem).map_err(|err| {
+        let genesis_config = deserialize(&mem[..]).map_err(|err| {
             std::io::Error::other(format!("Unable to deserialize {filename:?}: {err:?}"))
         })?;
         Ok(genesis_config)
     }
 
-    #[cfg(feature = "serde")]
+    #[cfg(any(feature = "serde", feature = "wincode"))]
     pub fn write(&self, ledger_path: &Path) -> Result<(), std::io::Error> {
-        let serialized = serialize(&self)
+        let serialized = serialize(self)
             .map_err(|err| std::io::Error::other(format!("Unable to serialize: {err:?}")))?;
 
         std::fs::create_dir_all(ledger_path)?;
@@ -212,7 +236,7 @@ impl GenesisConfig {
     }
 }
 
-#[cfg(feature = "serde")]
+#[cfg(any(feature = "serde", feature = "wincode"))]
 impl fmt::Display for GenesisConfig {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
@@ -309,6 +333,18 @@ mod tests {
                 genesis_config.hash(),
                 "{cluster} genesis hash mismatch",
             );
+        }
+    }
+
+    #[cfg(feature = "wincode")]
+    #[test]
+    fn test_wincode_matches_bincode() {
+        for cluster in ["devnet", "testnet", "mainnet-beta"] {
+            let bytes =
+                std::fs::read(format!("tests/fixtures/{cluster}/{DEFAULT_GENESIS_FILE}")).unwrap();
+            let genesis_config: GenesisConfig = bincode::deserialize(&bytes).unwrap();
+            assert_eq!(deserialize(&bytes).unwrap(), genesis_config);
+            assert_eq!(serialize(&genesis_config).unwrap(), bytes);
         }
     }
 
