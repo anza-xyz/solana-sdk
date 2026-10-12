@@ -2,9 +2,11 @@
 #![cfg_attr(docsrs, feature(doc_cfg))]
 #![no_std]
 
+#[cfg(feature = "stable-abi")]
+use solana_frozen_abi_macro::{frozen_abi, StableAbi, StableAbiSample};
 #[cfg(feature = "frozen-abi")]
 use solana_frozen_abi_macro::{AbiEnumVisitor, AbiExample};
-#[cfg(feature = "frozen-abi")]
+#[cfg(feature = "stable-abi")]
 extern crate std;
 
 use {core::str::FromStr, solana_hash::Hash};
@@ -12,9 +14,19 @@ use {core::str::FromStr, solana_hash::Hash};
 // The order can't align with release lifecycle only to remain ABI-compatible...
 #[cfg_attr(feature = "frozen-abi", derive(AbiExample, AbiEnumVisitor))]
 #[cfg_attr(
+    feature = "stable-abi",
+    frozen_abi(
+        abi_digest = "6Mqz7t1A92unKc6Ngs1p2GhiRUdWwVSNLSifDDh4KcXv",
+        abi_serializer = ["bincode", "wincode"],
+        test_roundtrip = "eq_and_wire"
+    ),
+    derive(StableAbi, StableAbiSample)
+)]
+#[cfg_attr(
     feature = "serde",
     derive(serde_derive::Deserialize, serde_derive::Serialize)
 )]
+#[cfg_attr(feature = "wincode", derive(wincode::SchemaRead, wincode::SchemaWrite))]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ClusterType {
     Testnet,

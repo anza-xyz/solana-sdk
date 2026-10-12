@@ -3382,9 +3382,11 @@ version = "3.2.0"
 dependencies = [
  "serde",
  "serde_derive",
+ "solana-cluster-type",
  "solana-frozen-abi",
  "solana-frozen-abi-macro",
  "solana-hash",
+ "wincode",
 ]
 
 [[package]]
