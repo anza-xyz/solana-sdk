@@ -26,15 +26,6 @@ pub const V1_PREFIX: u8 = MESSAGE_VERSION_PREFIX | 1;
 /// Maximum transaction size for V1 format in bytes.
 pub const MAX_TRANSACTION_SIZE: usize = 4096;
 
-/// Maximum number of account addresses in a V1 message.
-pub const MAX_ADDRESSES: u8 = 64;
-
-/// Maximum number of instructions in a V1 message.
-pub const MAX_INSTRUCTIONS: u8 = 64;
-
-/// Maximum number of signatures in a V1 transaction.
-pub const MAX_SIGNATURES: u8 = 12;
-
 /// Default heap size in bytes when not specified.
 ///
 /// This is the same as the minimum heap size.
