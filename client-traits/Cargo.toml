@@ -2,7 +2,7 @@
 name = "solana-client-traits"
 description = "Traits for Solana clients"
 documentation = "https://docs.rs/solana-client-traits"
-version = "4.0.0"
+version = "5.0.0"
 rust-version = { workspace = true }
 authors = { workspace = true }
 repository = { workspace = true }
@@ -29,3 +29,6 @@ solana-signer = { workspace = true }
 solana-system-interface = { workspace = true, features = ["bincode"] }
 solana-transaction = { workspace = true, features = ["std", "wincode"] }
 solana-transaction-error = { workspace = true }
+
+[lints]
+workspace = true

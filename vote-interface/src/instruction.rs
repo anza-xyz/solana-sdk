@@ -1,6 +1,6 @@
 //! Vote program instructions
 
-#[cfg(feature = "frozen-abi")]
+#[cfg(feature = "stable-abi")]
 use solana_frozen_abi_macro::{frozen_abi, StableAbi, StableAbiSample};
 use {
     super::state::TowerSync,
@@ -12,11 +12,11 @@ use {
     solana_hash::Hash,
     solana_pubkey::Pubkey,
 };
-#[cfg(feature = "bincode")]
+#[cfg(any(feature = "bincode", feature = "wincode"))]
 use {
     crate::program::id,
     solana_instruction::{AccountMeta, Instruction},
-    solana_sdk_ids::sysvar,
+    solana_sdk_ids::{system_program, sysvar},
 };
 #[cfg(feature = "wincode")]
 use {
@@ -30,7 +30,7 @@ use {
 };
 
 #[repr(u8)]
-#[cfg_attr(feature = "frozen-abi", derive(StableAbi, StableAbiSample))]
+#[cfg_attr(feature = "stable-abi", derive(StableAbi, StableAbiSample))]
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[cfg_attr(feature = "wincode", derive(SchemaWrite, SchemaRead))]
 #[derive(Debug, PartialEq, Eq, Clone)]
@@ -40,7 +40,7 @@ pub enum CommissionKind {
 }
 
 #[cfg_attr(
-    feature = "frozen-abi",
+    feature = "stable-abi",
     frozen_abi(
         abi_digest = "9bqZ5L1KnMFnjQPMoRtfhdgUok3G5W2KKRGuw8uwbkuY",
         abi_serializer = ["bincode", "wincode"]
@@ -58,6 +58,11 @@ pub enum VoteInstruction {
     ///   1. `[]` Rent sysvar
     ///   2. `[]` Clock sysvar
     ///   3. `[SIGNER]` New validator identity (node_pubkey)
+    ///
+    /// This instruction MUST be included within the same Transaction as the
+    /// system program's `CreateAccount` instruction that creates the account
+    /// being initialized. Otherwise another party can acquire ownership of the
+    /// uninitialized account.
     InitializeAccount(VoteInit),
 
     /// Authorize a key to send votes or issue a withdrawal
@@ -230,6 +235,11 @@ pub enum VoteInstruction {
     ///   1. `[SIGNER]` New validator identity (node_pubkey)
     ///   2. `[WRITE]` Inflation rewards collector
     ///   3. `[WRITE]` Block revenue collector
+    ///
+    /// This instruction MUST be included within the same Transaction as the
+    /// system program's `CreateAccount` instruction that creates the account
+    /// being initialized. Otherwise another party can acquire ownership of the
+    /// uninitialized account.
     InitializeAccountV2(VoteInitV2),
 
     /// Update the commission collector for the vote account
@@ -258,6 +268,7 @@ pub enum VoteInstruction {
     /// # Account references
     ///   0. `[WRITE]` Vote account to be updated with the deposit
     ///   1. `[SIGNER, WRITE]` Source account for deposit funds
+    ///   2. `[]` System program, used to transfer the deposit
     DepositDelegatorRewards { deposit: u64 },
 }
 
@@ -339,7 +350,27 @@ impl VoteInstruction {
     }
 }
 
-#[cfg(feature = "bincode")]
+#[cfg(all(feature = "bincode", not(feature = "wincode")))]
+#[inline(always)]
+fn create_instruction(
+    program_id: Pubkey,
+    data: &VoteInstruction,
+    accounts: Vec<AccountMeta>,
+) -> Instruction {
+    Instruction::new_with_bincode(program_id, data, accounts)
+}
+
+#[cfg(feature = "wincode")]
+#[inline(always)]
+fn create_instruction(
+    program_id: Pubkey,
+    data: &VoteInstruction,
+    accounts: Vec<AccountMeta>,
+) -> Instruction {
+    Instruction::new_with_wincode(program_id, data, accounts)
+}
+
+#[cfg(any(feature = "bincode", feature = "wincode"))]
 fn initialize_account(vote_pubkey: &Pubkey, vote_init: &VoteInit) -> Instruction {
     let account_metas = vec![
         AccountMeta::new(*vote_pubkey, false),
@@ -348,14 +379,14 @@ fn initialize_account(vote_pubkey: &Pubkey, vote_init: &VoteInit) -> Instruction
         AccountMeta::new_readonly(vote_init.node_pubkey, true),
     ];
 
-    Instruction::new_with_bincode(
+    create_instruction(
         id(),
         &VoteInstruction::InitializeAccount(*vote_init),
         account_metas,
     )
 }
 
-#[cfg(feature = "bincode")]
+#[cfg(any(feature = "bincode", feature = "wincode"))]
 fn initialize_account_v2(
     vote_pubkey: &Pubkey,
     vote_init: &VoteInitV2,
@@ -369,7 +400,7 @@ fn initialize_account_v2(
         AccountMeta::new(*block_revenue_collector, false),
     ];
 
-    Instruction::new_with_bincode(
+    create_instruction(
         id(),
         &VoteInstruction::InitializeAccountV2(*vote_init),
         account_metas,
@@ -391,7 +422,7 @@ impl Default for CreateVoteAccountConfig<'_> {
     }
 }
 
-#[cfg(feature = "bincode")]
+#[cfg(any(feature = "bincode", feature = "wincode"))]
 pub fn create_account_with_config(
     from_pubkey: &Pubkey,
     vote_pubkey: &Pubkey,
@@ -422,7 +453,7 @@ pub fn create_account_with_config(
     vec![create_ix, init_ix]
 }
 
-#[cfg(feature = "bincode")]
+#[cfg(any(feature = "bincode", feature = "wincode"))]
 pub fn create_account_with_config_v2(
     from_pubkey: &Pubkey,
     vote_pubkey: &Pubkey,
@@ -460,7 +491,7 @@ pub fn create_account_with_config_v2(
     vec![create_ix, init_ix]
 }
 
-#[cfg(feature = "bincode")]
+#[cfg(any(feature = "bincode", feature = "wincode"))]
 pub fn authorize(
     vote_pubkey: &Pubkey,
     authorized_pubkey: &Pubkey, // currently authorized
@@ -473,14 +504,14 @@ pub fn authorize(
         AccountMeta::new_readonly(*authorized_pubkey, true),
     ];
 
-    Instruction::new_with_bincode(
+    create_instruction(
         id(),
         &VoteInstruction::Authorize(*new_authorized_pubkey, vote_authorize),
         account_metas,
     )
 }
 
-#[cfg(feature = "bincode")]
+#[cfg(any(feature = "bincode", feature = "wincode"))]
 pub fn authorize_checked(
     vote_pubkey: &Pubkey,
     authorized_pubkey: &Pubkey, // currently authorized
@@ -494,14 +525,14 @@ pub fn authorize_checked(
         AccountMeta::new_readonly(*new_authorized_pubkey, true),
     ];
 
-    Instruction::new_with_bincode(
+    create_instruction(
         id(),
         &VoteInstruction::AuthorizeChecked(vote_authorize),
         account_metas,
     )
 }
 
-#[cfg(feature = "bincode")]
+#[cfg(any(feature = "bincode", feature = "wincode"))]
 pub fn authorize_with_seed(
     vote_pubkey: &Pubkey,
     current_authority_base_key: &Pubkey,
@@ -516,7 +547,7 @@ pub fn authorize_with_seed(
         AccountMeta::new_readonly(*current_authority_base_key, true),
     ];
 
-    Instruction::new_with_bincode(
+    create_instruction(
         id(),
         &VoteInstruction::AuthorizeWithSeed(VoteAuthorizeWithSeedArgs {
             authorization_type,
@@ -528,7 +559,7 @@ pub fn authorize_with_seed(
     )
 }
 
-#[cfg(feature = "bincode")]
+#[cfg(any(feature = "bincode", feature = "wincode"))]
 pub fn authorize_checked_with_seed(
     vote_pubkey: &Pubkey,
     current_authority_base_key: &Pubkey,
@@ -544,7 +575,7 @@ pub fn authorize_checked_with_seed(
         AccountMeta::new_readonly(*new_authority, true),
     ];
 
-    Instruction::new_with_bincode(
+    create_instruction(
         id(),
         &VoteInstruction::AuthorizeCheckedWithSeed(VoteAuthorizeCheckedWithSeedArgs {
             authorization_type,
@@ -555,7 +586,7 @@ pub fn authorize_checked_with_seed(
     )
 }
 
-#[cfg(feature = "bincode")]
+#[cfg(any(feature = "bincode", feature = "wincode"))]
 pub fn update_validator_identity(
     vote_pubkey: &Pubkey,
     authorized_withdrawer_pubkey: &Pubkey,
@@ -567,14 +598,14 @@ pub fn update_validator_identity(
         AccountMeta::new_readonly(*authorized_withdrawer_pubkey, true),
     ];
 
-    Instruction::new_with_bincode(
+    create_instruction(
         id(),
         &VoteInstruction::UpdateValidatorIdentity,
         account_metas,
     )
 }
 
-#[cfg(feature = "bincode")]
+#[cfg(any(feature = "bincode", feature = "wincode"))]
 pub fn update_commission(
     vote_pubkey: &Pubkey,
     authorized_withdrawer_pubkey: &Pubkey,
@@ -585,14 +616,14 @@ pub fn update_commission(
         AccountMeta::new_readonly(*authorized_withdrawer_pubkey, true),
     ];
 
-    Instruction::new_with_bincode(
+    create_instruction(
         id(),
         &VoteInstruction::UpdateCommission(commission),
         account_metas,
     )
 }
 
-#[cfg(feature = "bincode")]
+#[cfg(any(feature = "bincode", feature = "wincode"))]
 pub fn update_commission_collector(
     vote_pubkey: &Pubkey,
     authorized_withdrawer_pubkey: &Pubkey,
@@ -605,14 +636,14 @@ pub fn update_commission_collector(
         AccountMeta::new_readonly(*authorized_withdrawer_pubkey, true),
     ];
 
-    Instruction::new_with_bincode(
+    create_instruction(
         id(),
         &VoteInstruction::UpdateCommissionCollector(kind),
         account_metas,
     )
 }
 
-#[cfg(feature = "bincode")]
+#[cfg(any(feature = "bincode", feature = "wincode"))]
 pub fn update_commission_bps(
     vote_pubkey: &Pubkey,
     authorized_withdrawer_pubkey: &Pubkey,
@@ -624,7 +655,7 @@ pub fn update_commission_bps(
         AccountMeta::new_readonly(*authorized_withdrawer_pubkey, true),
     ];
 
-    Instruction::new_with_bincode(
+    create_instruction(
         id(),
         &VoteInstruction::UpdateCommissionBps {
             kind,
@@ -634,7 +665,7 @@ pub fn update_commission_bps(
     )
 }
 
-#[cfg(feature = "bincode")]
+#[cfg(any(feature = "bincode", feature = "wincode"))]
 pub fn deposit_delegator_rewards(
     vote_pubkey: &Pubkey,
     source_pubkey: &Pubkey,
@@ -643,16 +674,17 @@ pub fn deposit_delegator_rewards(
     let account_metas = vec![
         AccountMeta::new(*vote_pubkey, false),
         AccountMeta::new(*source_pubkey, true),
+        AccountMeta::new_readonly(system_program::id(), false),
     ];
 
-    Instruction::new_with_bincode(
+    create_instruction(
         id(),
         &VoteInstruction::DepositDelegatorRewards { deposit },
         account_metas,
     )
 }
 
-#[cfg(feature = "bincode")]
+#[cfg(any(feature = "bincode", feature = "wincode"))]
 pub fn vote(vote_pubkey: &Pubkey, authorized_voter_pubkey: &Pubkey, vote: Vote) -> Instruction {
     let account_metas = vec![
         AccountMeta::new(*vote_pubkey, false),
@@ -661,10 +693,10 @@ pub fn vote(vote_pubkey: &Pubkey, authorized_voter_pubkey: &Pubkey, vote: Vote) 
         AccountMeta::new_readonly(*authorized_voter_pubkey, true),
     ];
 
-    Instruction::new_with_bincode(id(), &VoteInstruction::Vote(vote), account_metas)
+    create_instruction(id(), &VoteInstruction::Vote(vote), account_metas)
 }
 
-#[cfg(feature = "bincode")]
+#[cfg(any(feature = "bincode", feature = "wincode"))]
 pub fn vote_switch(
     vote_pubkey: &Pubkey,
     authorized_voter_pubkey: &Pubkey,
@@ -678,14 +710,14 @@ pub fn vote_switch(
         AccountMeta::new_readonly(*authorized_voter_pubkey, true),
     ];
 
-    Instruction::new_with_bincode(
+    create_instruction(
         id(),
         &VoteInstruction::VoteSwitch(vote, proof_hash),
         account_metas,
     )
 }
 
-#[cfg(feature = "bincode")]
+#[cfg(any(feature = "bincode", feature = "wincode"))]
 pub fn update_vote_state(
     vote_pubkey: &Pubkey,
     authorized_voter_pubkey: &Pubkey,
@@ -696,14 +728,14 @@ pub fn update_vote_state(
         AccountMeta::new_readonly(*authorized_voter_pubkey, true),
     ];
 
-    Instruction::new_with_bincode(
+    create_instruction(
         id(),
         &VoteInstruction::UpdateVoteState(vote_state_update),
         account_metas,
     )
 }
 
-#[cfg(feature = "bincode")]
+#[cfg(any(feature = "bincode", feature = "wincode"))]
 pub fn update_vote_state_switch(
     vote_pubkey: &Pubkey,
     authorized_voter_pubkey: &Pubkey,
@@ -715,14 +747,14 @@ pub fn update_vote_state_switch(
         AccountMeta::new_readonly(*authorized_voter_pubkey, true),
     ];
 
-    Instruction::new_with_bincode(
+    create_instruction(
         id(),
         &VoteInstruction::UpdateVoteStateSwitch(vote_state_update, proof_hash),
         account_metas,
     )
 }
 
-#[cfg(feature = "bincode")]
+#[cfg(any(feature = "bincode", feature = "wincode"))]
 pub fn compact_update_vote_state(
     vote_pubkey: &Pubkey,
     authorized_voter_pubkey: &Pubkey,
@@ -733,14 +765,14 @@ pub fn compact_update_vote_state(
         AccountMeta::new_readonly(*authorized_voter_pubkey, true),
     ];
 
-    Instruction::new_with_bincode(
+    create_instruction(
         id(),
         &VoteInstruction::CompactUpdateVoteState(vote_state_update),
         account_metas,
     )
 }
 
-#[cfg(feature = "bincode")]
+#[cfg(any(feature = "bincode", feature = "wincode"))]
 pub fn compact_update_vote_state_switch(
     vote_pubkey: &Pubkey,
     authorized_voter_pubkey: &Pubkey,
@@ -752,14 +784,14 @@ pub fn compact_update_vote_state_switch(
         AccountMeta::new_readonly(*authorized_voter_pubkey, true),
     ];
 
-    Instruction::new_with_bincode(
+    create_instruction(
         id(),
         &VoteInstruction::CompactUpdateVoteStateSwitch(vote_state_update, proof_hash),
         account_metas,
     )
 }
 
-#[cfg(feature = "bincode")]
+#[cfg(any(feature = "bincode", feature = "wincode"))]
 pub fn tower_sync(
     vote_pubkey: &Pubkey,
     authorized_voter_pubkey: &Pubkey,
@@ -770,10 +802,10 @@ pub fn tower_sync(
         AccountMeta::new_readonly(*authorized_voter_pubkey, true),
     ];
 
-    Instruction::new_with_bincode(id(), &VoteInstruction::TowerSync(tower_sync), account_metas)
+    create_instruction(id(), &VoteInstruction::TowerSync(tower_sync), account_metas)
 }
 
-#[cfg(feature = "bincode")]
+#[cfg(any(feature = "bincode", feature = "wincode"))]
 pub fn tower_sync_switch(
     vote_pubkey: &Pubkey,
     authorized_voter_pubkey: &Pubkey,
@@ -785,14 +817,14 @@ pub fn tower_sync_switch(
         AccountMeta::new_readonly(*authorized_voter_pubkey, true),
     ];
 
-    Instruction::new_with_bincode(
+    create_instruction(
         id(),
         &VoteInstruction::TowerSyncSwitch(tower_sync, proof_hash),
         account_metas,
     )
 }
 
-#[cfg(feature = "bincode")]
+#[cfg(any(feature = "bincode", feature = "wincode"))]
 pub fn withdraw(
     vote_pubkey: &Pubkey,
     authorized_withdrawer_pubkey: &Pubkey,
@@ -805,7 +837,7 @@ pub fn withdraw(
         AccountMeta::new_readonly(*authorized_withdrawer_pubkey, true),
     ];
 
-    Instruction::new_with_bincode(id(), &VoteInstruction::Withdraw(lamports), account_metas)
+    create_instruction(id(), &VoteInstruction::Withdraw(lamports), account_metas)
 }
 
 #[cfg(all(test, feature = "bincode"))]
@@ -832,6 +864,95 @@ mod tests {
             );
             #[cfg(feature = "wincode")]
             assert!(wincode::serialize(&ix).is_err());
+        }
+    }
+
+    #[test]
+    fn test_deposit_delegator_rewards_includes_system_program() {
+        let vote_pubkey = Pubkey::new_unique();
+        let source_pubkey = Pubkey::new_unique();
+
+        let instruction = deposit_delegator_rewards(&vote_pubkey, &source_pubkey, 100_000);
+
+        assert_eq!(instruction.program_id, id());
+        assert_eq!(instruction.accounts.len(), 3);
+
+        let vote_meta = &instruction.accounts[0];
+        assert_eq!(vote_meta.pubkey, vote_pubkey);
+        assert!(!vote_meta.is_signer);
+        assert!(vote_meta.is_writable);
+
+        let source_meta = &instruction.accounts[1];
+        assert_eq!(source_meta.pubkey, source_pubkey);
+        assert!(source_meta.is_signer);
+        assert!(source_meta.is_writable);
+
+        // The vote program transfers the deposit by invoking the System program,
+        // which the runtime only resolves if it is one of the instruction's accounts.
+        let system_program_meta = &instruction.accounts[2];
+        assert_eq!(system_program_meta.pubkey, system_program::id());
+        assert!(!system_program_meta.is_signer);
+        assert!(!system_program_meta.is_writable);
+    }
+
+    #[test]
+    fn test_builders_match_bincode_encoding() {
+        let vote_pubkey = Pubkey::new_unique();
+        let voter_pubkey = Pubkey::new_unique();
+        let lockouts = VecDeque::from([Lockout::new_with_confirmation_count(1, 2)]);
+        let tower_sync = TowerSync::new(
+            lockouts,
+            Some(0),
+            Hash::new_from_array([1; 32]),
+            Hash::new_from_array([2; 32]),
+        );
+        let vote_init = VoteInit {
+            node_pubkey: Pubkey::new_unique(),
+            authorized_voter: voter_pubkey,
+            authorized_withdrawer: Pubkey::new_unique(),
+            commission: 7,
+        };
+
+        for (ix, expected) in [
+            (
+                tower_sync_switch(
+                    &vote_pubkey,
+                    &voter_pubkey,
+                    tower_sync.clone(),
+                    Hash::default(),
+                ),
+                VoteInstruction::TowerSyncSwitch(tower_sync, Hash::default()),
+            ),
+            (
+                authorize_with_seed(
+                    &vote_pubkey,
+                    &voter_pubkey,
+                    &vote_pubkey,
+                    "seed",
+                    &voter_pubkey,
+                    VoteAuthorize::Withdrawer,
+                ),
+                VoteInstruction::AuthorizeWithSeed(VoteAuthorizeWithSeedArgs {
+                    authorization_type: VoteAuthorize::Withdrawer,
+                    current_authority_derived_key_owner: vote_pubkey,
+                    current_authority_derived_key_seed: "seed".to_string(),
+                    new_authority: voter_pubkey,
+                }),
+            ),
+            (
+                create_account_with_config(
+                    &voter_pubkey,
+                    &vote_pubkey,
+                    &vote_init,
+                    42,
+                    CreateVoteAccountConfig::default(),
+                )
+                .pop()
+                .unwrap(),
+                VoteInstruction::InitializeAccount(vote_init),
+            ),
+        ] {
+            assert_eq!(ix.data, bincode::serialize(&expected).unwrap());
         }
     }
 }

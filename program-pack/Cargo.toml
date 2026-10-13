@@ -16,3 +16,6 @@ rustdoc-args = ["--cfg=docsrs"]
 
 [dependencies]
 solana-program-error = { workspace = true }
+
+[lints]
+workspace = true

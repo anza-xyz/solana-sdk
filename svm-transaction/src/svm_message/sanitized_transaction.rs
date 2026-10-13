@@ -23,6 +23,14 @@ impl SVMStaticMessage for SanitizedTransaction {
         SVMStaticMessage::num_write_locks(SanitizedTransaction::message(self))
     }
 
+    fn num_readonly_signed_static_accounts(&self) -> u8 {
+        SVMStaticMessage::num_readonly_signed_static_accounts(SanitizedTransaction::message(self))
+    }
+
+    fn num_readonly_unsigned_static_accounts(&self) -> u8 {
+        SVMStaticMessage::num_readonly_unsigned_static_accounts(SanitizedTransaction::message(self))
+    }
+
     fn recent_blockhash(&self) -> &Hash {
         SVMStaticMessage::recent_blockhash(SanitizedTransaction::message(self))
     }
@@ -58,6 +66,14 @@ impl SVMStaticMessage for SanitizedTransaction {
     ) -> impl Iterator<Item = SVMMessageAddressTableLookup<'_>> {
         SVMStaticMessage::message_address_table_lookups(SanitizedTransaction::message(self))
     }
+
+    fn is_signer(&self, index: usize) -> bool {
+        SVMStaticMessage::is_signer(SanitizedTransaction::message(self), index)
+    }
+
+    fn is_invoked(&self, key_index: usize) -> bool {
+        SVMStaticMessage::is_invoked(SanitizedTransaction::message(self), key_index)
+    }
 }
 
 impl SVMMessage for SanitizedTransaction {
@@ -67,13 +83,5 @@ impl SVMMessage for SanitizedTransaction {
 
     fn is_writable(&self, index: usize) -> bool {
         SVMMessage::is_writable(SanitizedTransaction::message(self), index)
-    }
-
-    fn is_signer(&self, index: usize) -> bool {
-        SVMMessage::is_signer(SanitizedTransaction::message(self), index)
-    }
-
-    fn is_invoked(&self, key_index: usize) -> bool {
-        SVMMessage::is_invoked(SanitizedTransaction::message(self), key_index)
     }
 }

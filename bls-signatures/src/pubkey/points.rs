@@ -9,7 +9,7 @@ use {
     },
     blstrs::{G1Affine, G1Projective},
     core::ops::Deref,
-    group::Group,
+    group::{prime::PrimeCurveAffine, Group},
 };
 
 /// A trait for types that can be converted into a `PubkeyProjective`.
@@ -98,6 +98,7 @@ impl_add_to_accumulator!(
 /// This type allows for efficient "unchecked" deserialization. It is designed
 /// to be used with aggregation functions where the expensive subgroup check
 /// can be performed on the aggregate instead of each individual public key.
+/// Byte conversions still reject identity public keys.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 #[repr(transparent)]
 pub struct PubkeyAffineUnchecked(pub(crate) G1Affine);
@@ -105,10 +106,10 @@ pub struct PubkeyAffineUnchecked(pub(crate) G1Affine);
 impl PubkeyAffineUnchecked {
     /// Performs the subgroup check (coset check) on this point.
     ///
-    /// This verifies that the point is on the curve and in the correct q-order
-    /// subgroup G1. Returns a validated `PubkeyAffine` on success.
+    /// This verifies that the point is on the curve, in the correct q-order
+    /// subgroup G1, and not the identity. Returns a validated `PubkeyAffine` on success.
     pub fn verify_subgroup(&self) -> Result<PubkeyAffine, BlsError> {
-        if bool::from(self.0.is_torsion_free()) {
+        if !bool::from(self.0.is_identity()) && bool::from(self.0.is_torsion_free()) {
             Ok(PubkeyAffine(self.0))
         } else {
             Err(BlsError::VerificationFailed)
@@ -122,7 +123,8 @@ impl_unchecked_conversions!(
     PubkeyProjective,
     PubkeyCompressed,
     Pubkey,
-    G1Affine
+    G1Affine,
+    true
 );
 
 impl_add_to_accumulator!(

@@ -56,7 +56,7 @@
 //! #     active: true,
 //! #     ..EpochRewards::default()
 //! # };
-//! # let mut d: Vec<u8> = bincode::serialize(&epoch_rewards).unwrap();
+//! # let mut d: Vec<u8> = wincode::serialize(&epoch_rewards).unwrap();
 //! # let a = AccountInfo::new(&p, false, false, l, &mut d, &p, false);
 //! # let accounts = &[a.clone(), a];
 //! # process_instruction(
@@ -75,7 +75,6 @@
 //! # use solana_msg::msg;
 //! # use solana_program_error::{ProgramError, ProgramResult};
 //! # use solana_pubkey::Pubkey;
-//! # use solana_sysvar::{Sysvar, SysvarSerialize};
 //! # use solana_sdk_ids::sysvar::epoch_rewards;
 //! #
 //! fn process_instruction(
@@ -88,7 +87,9 @@
 //!
 //!     assert!(epoch_rewards::check_id(epoch_rewards_account_info.key));
 //!
-//!     let epoch_rewards = EpochRewards::from_account_info(epoch_rewards_account_info)?;
+//!     let epoch_rewards: EpochRewards =
+//!         wincode::deserialize(&epoch_rewards_account_info.data.borrow())
+//!             .map_err(|_| ProgramError::InvalidArgument)?;
 //!     msg!("epoch_rewards: {:#?}", epoch_rewards);
 //!
 //!     Ok(())
@@ -104,7 +105,7 @@
 //! #     active: true,
 //! #     ..EpochRewards::default()
 //! # };
-//! # let mut d: Vec<u8> = bincode::serialize(&epoch_rewards).unwrap();
+//! # let mut d: Vec<u8> = wincode::serialize(&epoch_rewards).unwrap();
 //! # let a = AccountInfo::new(&p, false, false, l, &mut d, &p, false);
 //! # let accounts = &[a.clone(), a];
 //! # process_instruction(
@@ -134,7 +135,7 @@
 //! #       active: true,
 //! #       ..EpochRewards::default()
 //! #   };
-//! #   let data: Vec<u8> = bincode::serialize(&epoch_rewards)?;
+//! #   let data: Vec<u8> = wincode::serialize(&epoch_rewards)?;
 //! #   client.set_get_account_response(epoch_rewards::ID, Account {
 //! #       lamports: 1120560,
 //! #       data,
@@ -143,7 +144,7 @@
 //! # });
 //! #
 //!     let epoch_rewards = client.get_account(&epoch_rewards::ID)?;
-//!     let data: EpochRewards = bincode::deserialize(&epoch_rewards.data)?;
+//!     let data: EpochRewards = wincode::deserialize(&epoch_rewards.data)?;
 //!
 //!     Ok(())
 //! }
@@ -154,12 +155,7 @@
 //! # Ok::<(), anyhow::Error>(())
 //! ```
 
-#[cfg(feature = "bincode")]
-use crate::SysvarSerialize;
 pub use {
     solana_epoch_rewards::{EpochRewards, SIZE},
     solana_sdk_ids::sysvar::epoch_rewards::{check_id, id, ID},
 };
-
-#[cfg(feature = "bincode")]
-impl SysvarSerialize for EpochRewards {}

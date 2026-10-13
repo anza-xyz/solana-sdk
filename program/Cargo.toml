@@ -3,7 +3,7 @@ name = "solana-program"
 description = "Solana Program"
 documentation = "https://docs.rs/solana-program"
 readme = "README.md"
-version = "4.0.0"
+version = "5.1.0"
 authors = { workspace = true }
 repository = { workspace = true }
 homepage = { workspace = true }
@@ -35,20 +35,29 @@ dev-context-only-utils = [
     "solana-system-interface/bincode",
 ]
 frozen-abi = [
-    "dep:solana-frozen-abi",
-    "dep:solana-frozen-abi-macro",
     "solana-epoch-rewards/frozen-abi",
     "solana-epoch-schedule/frozen-abi",
     "solana-fee-calculator/frozen-abi",
+    "solana-frozen-abi-macro/frozen-abi",
+    "solana-frozen-abi/frozen-abi",
     "solana-hash/frozen-abi",
     "solana-pubkey/frozen-abi",
     "solana-rent/frozen-abi",
     "solana-short-vec/frozen-abi",
     "solana-sysvar/frozen-abi",
+    "stable-abi",
+]
+stable-abi = [
+    "solana-epoch-schedule/stable-abi",
+    "solana-fee-calculator/stable-abi",
+    "solana-frozen-abi-macro/stable-abi",
+    "solana-frozen-abi/stable-abi",
+    "solana-hash/stable-abi",
+    "solana-pubkey/stable-abi",
+    "solana-rent/stable-abi",
 ]
 
 [dependencies]
-memoffset = { workspace = true }
 solana-account-info = { workspace = true, features = ["bincode"] }
 solana-big-mod-exp = { workspace = true }
 solana-blake3-hasher = { workspace = true, features = ["blake3"] }
@@ -59,8 +68,8 @@ solana-epoch-rewards = { workspace = true, features = ["serde", "sysvar"] }
 solana-epoch-schedule = { workspace = true, features = ["serde", "sysvar"] }
 solana-epoch-stake = { workspace = true }
 solana-fee-calculator = { workspace = true, features = ["serde"] }
-solana-frozen-abi = { workspace = true, optional = true, features = ["frozen-abi"] }
-solana-frozen-abi-macro = { workspace = true, optional = true, features = ["frozen-abi"] }
+solana-frozen-abi = { workspace = true, optional = true }
+solana-frozen-abi-macro = { workspace = true, optional = true }
 solana-hash = { workspace = true, features = ["bytemuck", "serde", "std"] }
 solana-instruction = { workspace = true, default-features = false, features = ["bincode", "serde", "std", "syscalls"] }
 solana-instruction-error = { workspace = true, features = ["num-traits"] }
@@ -86,7 +95,7 @@ solana-slot-hashes = { workspace = true, features = ["serde", "sysvar"] }
 solana-slot-history = { workspace = true, features = ["serde", "sysvar"] }
 solana-stable-layout = { workspace = true }
 solana-system-interface = { optional = true, workspace = true, features = ["bincode"] }
-solana-sysvar = { workspace = true, features = ["bincode", "bytemuck"] }
+solana-sysvar = { workspace = true, features = ["bytemuck"] }
 solana-sysvar-id = { workspace = true }
 
 [target.'cfg(not(target_os = "solana"))'.dependencies]

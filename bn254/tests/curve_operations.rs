@@ -1,37 +1,36 @@
+mod common;
+
 use {
+    common::*,
     serde_derive::Deserialize,
     solana_bn254::{compression::prelude::*, prelude::*},
 };
 
+/// A known-answer test in the format of go-ethereum's
+/// `core/vm/testdata/precompiles/*.json` files.
+#[derive(Deserialize)]
+#[serde(rename_all = "PascalCase")]
+struct GethTestCase {
+    input: String,
+    expected: String,
+    name: String,
+}
+
+fn load_geth_vectors(json: &str) -> Vec<GethTestCase> {
+    let cases: Vec<GethTestCase> = serde_json::from_str(json).unwrap();
+    assert!(!cases.is_empty());
+    cases
+}
+
 #[test]
 fn alt_bn128_g1_addition_test() {
-    let test_data = include_str!("data/addition_cases.json");
-
-    #[derive(Deserialize)]
-    #[serde(rename_all = "PascalCase")]
-    struct TestCase {
-        input: String,
-        expected: String,
+    for test in load_geth_vectors(include_str!("data/addition_cases.json")) {
+        check_g1_addition(
+            &test.name,
+            &hex2bytes(&test.input),
+            &hex2bytes(&test.expected),
+        );
     }
-
-    let test_cases: Vec<TestCase> = serde_json::from_str(test_data).unwrap();
-
-    test_cases.iter().for_each(|test| {
-        let mut input = array_bytes::hex2bytes_unchecked(&test.input);
-        let result = alt_bn128_g1_addition_be(&input);
-        assert!(result.is_ok());
-        let expected = array_bytes::hex2bytes_unchecked(&test.expected);
-        assert_eq!(result.unwrap(), expected);
-
-        // le test
-        input.resize(ALT_BN128_G1_ADDITION_INPUT_SIZE, 0);
-        let input_le =
-            convert_endianness::<32, ALT_BN128_G1_ADDITION_INPUT_SIZE>(&input.try_into().unwrap());
-        let result = alt_bn128_g1_addition_le(&input_le);
-        assert!(result.is_ok());
-        let expected_le = convert_endianness::<32, 64>(&expected.try_into().unwrap());
-        assert_eq!(result.unwrap(), expected_le);
-    });
 }
 
 #[test]
@@ -67,37 +66,13 @@ fn alt_bn128_g2_addition_test() {
 
 #[test]
 fn alt_bn128_g1_multiplication_test() {
-    let test_data = include_str!("data/multiplication_cases.json");
-    #[derive(Deserialize)]
-    #[serde(rename_all = "PascalCase")]
-    struct TestCase {
-        input: String,
-        expected: String,
+    for test in load_geth_vectors(include_str!("data/multiplication_cases.json")) {
+        check_g1_multiplication(
+            &test.name,
+            &hex2bytes(&test.input),
+            &hex2bytes(&test.expected),
+        );
     }
-
-    let test_cases: Vec<TestCase> = serde_json::from_str(test_data).unwrap();
-
-    test_cases.iter().for_each(|test| {
-        let mut input = array_bytes::hex2bytes_unchecked(&test.input);
-        let result = alt_bn128_g1_multiplication_be(&input);
-        assert!(result.is_ok());
-        let expected = array_bytes::hex2bytes_unchecked(&test.expected);
-        assert_eq!(result.unwrap(), expected);
-
-        // le test
-        input.resize(ALT_BN128_G1_MULTIPLICATION_INPUT_SIZE, 0);
-        let p_le = convert_endianness::<32, ALT_BN128_G1_POINT_SIZE>(
-            &input[..ALT_BN128_G1_POINT_SIZE].try_into().unwrap(),
-        );
-        let scalar_le = convert_endianness::<32, ALT_BN128_FIELD_SIZE>(
-            &input[ALT_BN128_G1_POINT_SIZE..].try_into().unwrap(),
-        );
-        let input_le = [&p_le[..], &scalar_le[..]].concat().try_into().unwrap();
-        let result = alt_bn128_g1_multiplication_le(&input_le);
-        assert!(result.is_ok());
-        let expected_le = convert_endianness::<32, 64>(&expected.try_into().unwrap());
-        assert_eq!(result.unwrap(), expected_le);
-    });
 }
 
 #[test]
@@ -138,43 +113,13 @@ fn alt_bn128_g2_multiplication_test() {
 
 #[test]
 fn alt_bn128_pairing_test() {
-    let test_data = include_str!("data/pairing_cases.json");
-
-    #[derive(Deserialize)]
-    #[serde(rename_all = "PascalCase")]
-    struct TestCase {
-        input: String,
-        expected: String,
+    for test in load_geth_vectors(include_str!("data/pairing_cases.json")) {
+        check_pairing(
+            &test.name,
+            &hex2bytes(&test.input),
+            &hex2bytes(&test.expected),
+        );
     }
-
-    let test_cases: Vec<TestCase> = serde_json::from_str(test_data).unwrap();
-
-    test_cases.iter().for_each(|test| {
-        let input = array_bytes::hex2bytes_unchecked(&test.input);
-        let result = alt_bn128_pairing_be(&input);
-        assert!(result.is_ok());
-        let expected = array_bytes::hex2bytes_unchecked(&test.expected);
-        assert_eq!(result.unwrap(), expected);
-
-        // le test
-        let input_le: Vec<u8> = (0..input.len().saturating_div(ALT_BN128_PAIRING_ELEMENT_SIZE))
-            .flat_map(|i| {
-                let g1_start = i * ALT_BN128_PAIRING_ELEMENT_SIZE;
-                let g1_end = g1_start + ALT_BN128_G1_POINT_SIZE;
-                let g2_end = g1_start + ALT_BN128_PAIRING_ELEMENT_SIZE;
-
-                let g1 = convert_endianness::<32, 64>(&input[g1_start..g1_end].try_into().unwrap());
-                let g2 = convert_endianness::<64, 128>(&input[g1_end..g2_end].try_into().unwrap());
-
-                g1.into_iter().chain(g2)
-            })
-            .collect();
-
-        let result = alt_bn128_pairing_le(&input_le);
-        assert!(result.is_ok());
-        let expected_le = convert_endianness::<32, 32>(&expected.try_into().unwrap());
-        assert_eq!(result.unwrap(), expected_le);
-    });
 }
 
 // This test validates the compression and decompression roundtrip logic.

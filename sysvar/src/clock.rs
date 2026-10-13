@@ -57,7 +57,6 @@
 //! # use solana_msg::msg;
 //! # use solana_program_error::{ProgramError, ProgramResult};
 //! # use solana_pubkey::Pubkey;
-//! # use solana_sysvar::{Sysvar, SysvarSerialize};
 //! # use solana_sdk_ids::sysvar::clock;
 //! #
 //! fn process_instruction(
@@ -70,7 +69,8 @@
 //!
 //!     assert!(clock::check_id(clock_account_info.key));
 //!
-//!     let clock = Clock::from_account_info(clock_account_info)?;
+//!     let clock: Clock = wincode::deserialize(&clock_account_info.data.borrow())
+//!         .map_err(|_| ProgramError::InvalidArgument)?;
 //!     msg!("clock: {:#?}", clock);
 //!
 //!     Ok(())
@@ -110,7 +110,7 @@
 //! #   });
 //! #
 //!     let clock = client.get_account(&clock::ID)?;
-//!     let data: Clock = bincode::deserialize(&clock.data)?;
+//!     let data: Clock = wincode::deserialize(&clock.data)?;
 //!
 //!     Ok(())
 //! }
@@ -121,30 +121,25 @@
 //! # Ok::<(), anyhow::Error>(())
 //! ```
 
-#[cfg(feature = "bincode")]
-use crate::SysvarSerialize;
 pub use {
     solana_clock::{Clock, SIZE},
     solana_sdk_ids::sysvar::clock::{check_id, id, ID},
 };
-
-#[cfg(feature = "bincode")]
-impl SysvarSerialize for Clock {}
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
-    #[cfg(feature = "bincode")]
-    fn test_clock_size_matches_bincode() {
-        // Prove that Clock's in-memory layout matches its bincode serialization.
+    #[cfg(feature = "wincode")]
+    fn test_clock_size_matches_wincode() {
+        // Prove that Clock's in-memory layout matches its wincode serialization.
         let clock = Clock::default();
-        let bincode_size = bincode::serialized_size(&clock).unwrap() as usize;
+        let wincode_size = wincode::serialized_size(&clock).unwrap() as usize;
 
         assert_eq!(
-            SIZE, bincode_size,
-            "Clock SIZE ({SIZE}) must match bincode size ({bincode_size})",
+            SIZE, wincode_size,
+            "Clock SIZE ({SIZE}) must match wincode size ({wincode_size})",
         );
     }
 }

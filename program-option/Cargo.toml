@@ -22,3 +22,6 @@ solana-nullable = { workspace = true, optional = true }
 
 [dev-dependencies]
 solana-program-option = { path = ".", features = ["nullable"] }
+
+[lints]
+workspace = true

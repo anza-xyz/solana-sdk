@@ -5,7 +5,7 @@ use proc_macro::TokenStream;
 
 // Define dummy macro_attribute and macro_derive for stable rustc
 
-#[cfg(not(feature = "frozen-abi"))]
+#[cfg(not(feature = "stable-abi"))]
 #[proc_macro_attribute]
 pub fn frozen_abi(_attrs: TokenStream, item: TokenStream) -> TokenStream {
     item
@@ -23,13 +23,13 @@ pub fn derive_abi_enum_visitor(_item: TokenStream) -> TokenStream {
     "".parse().unwrap()
 }
 
-#[cfg(not(feature = "frozen-abi"))]
+#[cfg(not(feature = "stable-abi"))]
 #[proc_macro_derive(StableAbi)]
 pub fn derive_stable_abi(_item: TokenStream) -> TokenStream {
     "".parse().unwrap()
 }
 
-#[cfg(feature = "frozen-abi")]
+#[cfg(feature = "stable-abi")]
 #[proc_macro_derive(StableAbi)]
 pub fn derive_stable_abi(item: TokenStream) -> TokenStream {
     let item = parse_macro_input!(item as Item);
@@ -63,13 +63,13 @@ pub fn derive_stable_abi(item: TokenStream) -> TokenStream {
     expanded.into()
 }
 
-#[cfg(not(feature = "frozen-abi"))]
+#[cfg(not(feature = "stable-abi"))]
 #[proc_macro_derive(StableAbiSample, attributes(stable_abi_sample))]
 pub fn derive_stable_abi_sample(_item: TokenStream) -> TokenStream {
     "".parse().unwrap()
 }
 
-#[cfg(feature = "frozen-abi")]
+#[cfg(feature = "stable-abi")]
 #[proc_macro_derive(StableAbiSample, attributes(stable_abi_sample))]
 pub fn derive_stable_abi_sample(item: TokenStream) -> TokenStream {
     let item = parse_macro_input!(item as Item);
@@ -84,24 +84,28 @@ pub fn derive_stable_abi_sample(item: TokenStream) -> TokenStream {
     expanded.unwrap_or_else(|err| err.to_compile_error()).into()
 }
 
-#[cfg(feature = "frozen-abi")]
-use proc_macro2::{Span, TokenStream as TokenStream2, TokenTree};
-#[cfg(feature = "frozen-abi")]
-use quote::{quote, ToTokens};
-#[cfg(feature = "frozen-abi")]
+#[cfg(feature = "stable-abi")]
+use proc_macro2::{Span, TokenStream as TokenStream2};
+#[cfg(feature = "stable-abi")]
+use quote::quote;
+#[cfg(any(feature = "frozen-abi", all(test, feature = "stable-abi")))]
+use quote::ToTokens;
+#[cfg(feature = "stable-abi")]
 use syn::{
-    parse_macro_input, Attribute, Error, Expr, ExprLit, Fields, Ident, Item, ItemEnum, ItemStruct,
-    ItemType, Lit, LitStr, Variant,
+    parse_macro_input, Error, Expr, ExprLit, Fields, Ident, Item, ItemEnum, ItemStruct, ItemType,
+    Lit, LitStr, Variant,
 };
-
 #[cfg(feature = "frozen-abi")]
+use {proc_macro2::TokenTree, syn::Attribute};
+
+#[cfg(feature = "stable-abi")]
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum AbiSerializer {
     Bincode,
     Wincode,
 }
 
-#[cfg(feature = "frozen-abi")]
+#[cfg(feature = "stable-abi")]
 impl AbiSerializer {
     fn from_lit_str(lit: &LitStr) -> Result<Self, Error> {
         match lit.value().as_str() {
@@ -134,7 +138,7 @@ impl AbiSerializer {
 /// Parse the `abi_serializer` attribute value, which may be either a single
 /// string literal (e.g. `"wincode"`) or a list of string literals
 /// (e.g. `["bincode", "wincode"]`).
-#[cfg(feature = "frozen-abi")]
+#[cfg(feature = "stable-abi")]
 fn parse_abi_serializers(expr: &Expr) -> Result<Vec<AbiSerializer>, Error> {
     fn lit_str(expr: &Expr) -> Result<&LitStr, Error> {
         match expr {
@@ -169,14 +173,14 @@ fn parse_abi_serializers(expr: &Expr) -> Result<Vec<AbiSerializer>, Error> {
     }
 }
 
-#[cfg(feature = "frozen-abi")]
+#[cfg(feature = "stable-abi")]
 enum RoundtripTest {
     No,
     WireOnly,
     EqAndWire,
 }
 
-#[cfg(feature = "frozen-abi")]
+#[cfg(feature = "stable-abi")]
 fn parse_roundtrip_test(value: Option<&LitStr>) -> Result<RoundtripTest, Error> {
     match value {
         None => Ok(RoundtripTest::WireOnly),
@@ -232,14 +236,14 @@ fn filter_allow_attrs(attrs: &mut Vec<Attribute>) {
     });
 }
 
-#[cfg(feature = "frozen-abi")]
+#[cfg(feature = "stable-abi")]
 struct StableAbiSampleOptions {
     with_expr: Option<TokenStream2>,
     ctx_expr: Option<TokenStream2>,
     skip: bool,
 }
 
-#[cfg(feature = "frozen-abi")]
+#[cfg(feature = "stable-abi")]
 fn parse_stable_abi_sample_options(field: &syn::Field) -> Result<StableAbiSampleOptions, Error> {
     let mut with_expr: Option<TokenStream2> = None;
     let mut ctx_expr: Option<TokenStream2> = None;
@@ -295,7 +299,7 @@ fn parse_stable_abi_sample_options(field: &syn::Field) -> Result<StableAbiSample
     })
 }
 
-#[cfg(feature = "frozen-abi")]
+#[cfg(feature = "stable-abi")]
 fn stable_abi_sample_field_expr(field: &syn::Field) -> Result<TokenStream2, Error> {
     let options = parse_stable_abi_sample_options(field)?;
     let ty = &field.ty;
@@ -325,7 +329,7 @@ fn stable_abi_sample_field_expr(field: &syn::Field) -> Result<TokenStream2, Erro
     }
 }
 
-#[cfg(feature = "frozen-abi")]
+#[cfg(feature = "stable-abi")]
 fn add_stable_abi_type_param_bounds(mut generics: syn::Generics) -> syn::Generics {
     generics.type_params_mut().for_each(|type_param| {
         type_param.bounds.push(syn::parse_quote!(
@@ -335,7 +339,7 @@ fn add_stable_abi_type_param_bounds(mut generics: syn::Generics) -> syn::Generic
     generics
 }
 
-#[cfg(feature = "frozen-abi")]
+#[cfg(feature = "stable-abi")]
 fn derive_stable_abi_sample_struct_type(input: ItemStruct) -> Result<TokenStream2, Error> {
     let type_name = &input.ident;
     let generics = add_stable_abi_type_param_bounds(input.generics);
@@ -381,7 +385,7 @@ fn derive_stable_abi_sample_struct_type(input: ItemStruct) -> Result<TokenStream
     })
 }
 
-#[cfg(feature = "frozen-abi")]
+#[cfg(feature = "stable-abi")]
 fn stable_abi_sample_enum_variant_expr(
     type_name: &Ident,
     ty_generics: &syn::TypeGenerics,
@@ -414,7 +418,7 @@ fn stable_abi_sample_enum_variant_expr(
     }
 }
 
-#[cfg(feature = "frozen-abi")]
+#[cfg(feature = "stable-abi")]
 fn derive_stable_abi_sample_enum_type(input: ItemEnum) -> Result<TokenStream2, Error> {
     let type_name = &input.ident;
     let variants = &input.variants;
@@ -452,7 +456,7 @@ fn derive_stable_abi_sample_enum_type(input: ItemEnum) -> Result<TokenStream2, E
 }
 
 #[cfg(feature = "frozen-abi")]
-fn derive_abi_sample_enum_type(input: ItemEnum) -> TokenStream {
+fn derive_abi_sample_enum_type(input: ItemEnum) -> syn::Result<TokenStream2> {
     let type_name = &input.ident;
 
     let mut sample_variant = quote! {};
@@ -469,7 +473,10 @@ fn derive_abi_sample_enum_type(input: ItemEnum) -> TokenStream {
             let mut fields = quote! {};
             for field in &variant_fields.unnamed {
                 if !(field.ident.is_none() && field.colon_token.is_none()) {
-                    unimplemented!("tuple enum: {:?}", field);
+                    return Err(Error::new_spanned(
+                        field,
+                        "AbiExample: tuple variant fields cannot have idents or colons",
+                    ));
                 }
                 let field_type = &field.ty;
                 fields.extend(quote! {
@@ -483,7 +490,10 @@ fn derive_abi_sample_enum_type(input: ItemEnum) -> TokenStream {
             let mut fields = quote! {};
             for field in &variant_fields.named {
                 if field.ident.is_none() || field.colon_token.is_none() {
-                    unimplemented!("tuple enum: {:?}", field);
+                    return Err(Error::new_spanned(
+                        field,
+                        "AbiExample: named variant fields must have idents and colons",
+                    ));
                 }
                 let field_type = &field.ty;
                 let field_name = &field.ident;
@@ -495,7 +505,10 @@ fn derive_abi_sample_enum_type(input: ItemEnum) -> TokenStream {
                 #type_name::#variant_name{#fields}
             });
         } else {
-            unimplemented!("{:?}", variant);
+            return Err(Error::new_spanned(
+                variant,
+                "AbiExample: unsupported variant shape",
+            ));
         }
 
         if !sample_variant_found {
@@ -505,7 +518,10 @@ fn derive_abi_sample_enum_type(input: ItemEnum) -> TokenStream {
     }
 
     if !sample_variant_found {
-        unimplemented!("empty enum");
+        return Err(Error::new_spanned(
+            &input.ident,
+            "AbiExample cannot be derived for empty enums",
+        ));
     }
 
     let mut attrs = input.attrs.clone();
@@ -525,11 +541,11 @@ fn derive_abi_sample_enum_type(input: ItemEnum) -> TokenStream {
             }
         }
     };
-    result.into()
+    Ok(result)
 }
 
 #[cfg(feature = "frozen-abi")]
-fn derive_abi_sample_struct_type(input: ItemStruct) -> TokenStream {
+fn derive_abi_sample_struct_type(input: ItemStruct) -> syn::Result<TokenStream2> {
     let type_name = &input.ident;
     let fields = &input.fields;
     let mut sample_fields = quote! {};
@@ -552,7 +568,12 @@ fn derive_abi_sample_struct_type(input: ItemStruct) -> TokenStream {
             }
             sample_fields = quote! {( #sample_fields )};
         }
-        _ => unimplemented!("fields: {:?}", fields),
+        _ => {
+            return Err(Error::new_spanned(
+                &input.ident,
+                "AbiExample cannot be derived for unit structs or unsupported field layouts",
+            ))
+        }
     }
 
     let mut attrs = input.attrs.clone();
@@ -576,7 +597,7 @@ fn derive_abi_sample_struct_type(input: ItemStruct) -> TokenStream {
         }
     };
 
-    result.into()
+    Ok(result)
 }
 
 #[cfg(feature = "frozen-abi")]
@@ -584,17 +605,19 @@ fn derive_abi_sample_struct_type(input: ItemStruct) -> TokenStream {
 pub fn derive_abi_sample(item: TokenStream) -> TokenStream {
     let item = parse_macro_input!(item as Item);
 
-    match item {
+    let expanded = match item {
         Item::Struct(input) => derive_abi_sample_struct_type(input),
         Item::Enum(input) => derive_abi_sample_enum_type(input),
-        _ => Error::new_spanned(item, "AbiSample isn't applicable; only for struct and enum")
-            .to_compile_error()
-            .into(),
-    }
+        _ => Err(Error::new_spanned(
+            item,
+            "AbiSample isn't applicable; only for struct and enum",
+        )),
+    };
+    expanded.unwrap_or_else(|err| err.to_compile_error()).into()
 }
 
 #[cfg(feature = "frozen-abi")]
-fn do_derive_abi_enum_visitor(input: ItemEnum) -> TokenStream {
+fn do_derive_abi_enum_visitor(input: ItemEnum) -> syn::Result<TokenStream2> {
     let type_name = &input.ident;
     let mut serialized_variants = quote! {};
     let mut variant_count: u64 = 0;
@@ -604,7 +627,7 @@ fn do_derive_abi_enum_visitor(input: ItemEnum) -> TokenStream {
         if filter_serde_attrs(&variant.attrs) {
             continue;
         };
-        let sample_variant = quote_sample_variant(type_name, &ty_generics, variant);
+        let sample_variant = quote_sample_variant(type_name, &ty_generics, variant)?;
         variant_count = if let Some(variant_count) = variant_count.checked_add(1) {
             variant_count
         } else {
@@ -617,7 +640,7 @@ fn do_derive_abi_enum_visitor(input: ItemEnum) -> TokenStream {
     }
 
     let type_str = format!("{type_name}");
-    (quote! {
+    Ok(quote! {
         impl #impl_generics ::solana_frozen_abi::abi_example::AbiEnumVisitor for #type_name #ty_generics #where_clause {
             fn visit_for_abi(&self, digester: &mut ::solana_frozen_abi::abi_digester::AbiDigester) -> ::solana_frozen_abi::abi_digester::DigestResult {
                 let enum_name = #type_str;
@@ -628,7 +651,7 @@ fn do_derive_abi_enum_visitor(input: ItemEnum) -> TokenStream {
                 digester.create_child()
             }
         }
-    }).into()
+    })
 }
 
 #[cfg(feature = "frozen-abi")]
@@ -636,15 +659,17 @@ fn do_derive_abi_enum_visitor(input: ItemEnum) -> TokenStream {
 pub fn derive_abi_enum_visitor(item: TokenStream) -> TokenStream {
     let item = parse_macro_input!(item as Item);
 
-    match item {
+    let expanded = match item {
         Item::Enum(input) => do_derive_abi_enum_visitor(input),
-        _ => Error::new_spanned(item, "AbiEnumVisitor not applicable; only for enum")
-            .to_compile_error()
-            .into(),
-    }
+        _ => Err(Error::new_spanned(
+            item,
+            "AbiEnumVisitor not applicable; only for enum",
+        )),
+    };
+    expanded.unwrap_or_else(|err| err.to_compile_error()).into()
 }
 
-#[cfg(feature = "frozen-abi")]
+#[cfg(feature = "stable-abi")]
 fn quote_for_test(
     test_mod_ident: &Ident,
     type_name: &Ident,
@@ -653,6 +678,9 @@ fn quote_for_test(
     abi_serializers: &[AbiSerializer],
     roundtrip_test: RoundtripTest,
 ) -> TokenStream2 {
+    // `api_digest` belongs to `frozen-abi`, not to `stable-abi`
+    let expected_api_digest = expected_api_digest.filter(|_| cfg!(feature = "frozen-abi"));
+
     let test_api = if let Some(expected_api_digest) = expected_api_digest {
         quote! {
                 #[test]
@@ -774,12 +802,12 @@ fn quote_for_test(
     }
 }
 
-#[cfg(feature = "frozen-abi")]
+#[cfg(feature = "stable-abi")]
 fn test_mod_name(type_name: &Ident) -> Ident {
     Ident::new(&format!("{type_name}_frozen_abi"), Span::call_site())
 }
 
-#[cfg(feature = "frozen-abi")]
+#[cfg(feature = "stable-abi")]
 fn frozen_abi_type_alias(
     input: ItemType,
     expected_api_digest: Option<&Expr>,
@@ -803,7 +831,7 @@ fn frozen_abi_type_alias(
     result.into()
 }
 
-#[cfg(feature = "frozen-abi")]
+#[cfg(feature = "stable-abi")]
 fn frozen_abi_struct_type(
     input: ItemStruct,
     expected_api_digest: Option<&Expr>,
@@ -832,32 +860,38 @@ fn quote_sample_variant(
     type_name: &Ident,
     ty_generics: &syn::TypeGenerics,
     variant: &Variant,
-) -> TokenStream2 {
+) -> syn::Result<TokenStream2> {
     let variant_name = &variant.ident;
     let variant = &variant.fields;
     if *variant == Fields::Unit {
-        quote! {
+        Ok(quote! {
             let sample_variant: #type_name #ty_generics = #type_name::#variant_name;
-        }
+        })
     } else if let Fields::Unnamed(variant_fields) = variant {
         let mut fields = quote! {};
         for field in &variant_fields.unnamed {
             if !(field.ident.is_none() && field.colon_token.is_none()) {
-                unimplemented!();
+                return Err(Error::new_spanned(
+                    field,
+                    "AbiEnumVisitor: tuple variant fields cannot have idents or colons",
+                ));
             }
             let ty = &field.ty;
             fields.extend(quote! {
                 <#ty>::example(),
             });
         }
-        quote! {
+        Ok(quote! {
             let sample_variant: #type_name #ty_generics = #type_name::#variant_name(#fields);
-        }
+        })
     } else if let Fields::Named(variant_fields) = variant {
         let mut fields = quote! {};
         for field in &variant_fields.named {
             if field.ident.is_none() || field.colon_token.is_none() {
-                unimplemented!();
+                return Err(Error::new_spanned(
+                    field,
+                    "AbiEnumVisitor: named variant fields must have idents and colons",
+                ));
             }
             let field_type_name = &field.ty;
             let field_name = &field.ident;
@@ -865,15 +899,18 @@ fn quote_sample_variant(
                 #field_name: <#field_type_name>::example(),
             });
         }
-        quote! {
+        Ok(quote! {
             let sample_variant: #type_name #ty_generics = #type_name::#variant_name{#fields};
-        }
+        })
     } else {
-        unimplemented!("variant: {:?}", variant)
+        Err(Error::new_spanned(
+            variant,
+            "AbiEnumVisitor: unsupported variant shape",
+        ))
     }
 }
 
-#[cfg(feature = "frozen-abi")]
+#[cfg(feature = "stable-abi")]
 fn frozen_abi_enum_type(
     input: ItemEnum,
     expected_api_digest: Option<&Expr>,
@@ -897,7 +934,7 @@ fn frozen_abi_enum_type(
     result.into()
 }
 
-#[cfg(feature = "frozen-abi")]
+#[cfg(feature = "stable-abi")]
 #[proc_macro_attribute]
 pub fn frozen_abi(attrs: TokenStream, item: TokenStream) -> TokenStream {
     let mut api_expected_digest: Option<Expr> = None;
@@ -928,6 +965,18 @@ pub fn frozen_abi(attrs: TokenStream, item: TokenStream) -> TokenStream {
         return Error::new_spanned(
             TokenStream2::from(item),
             "missing required attribute: #[frozen_abi(api_digest = \"...\" or abi_digest = \"...\")]",
+        )
+        .to_compile_error()
+        .into();
+    }
+
+    // `api_digest` is dropped without `frozen-abi`, so such a type would end up with no test
+    // at all. Reject it instead of digesting nothing.
+    if !cfg!(feature = "frozen-abi") && abi_expected_digest.is_none() {
+        return Error::new_spanned(
+            TokenStream2::from(item),
+            "`api_digest` needs the `frozen-abi` feature. Gate this type on `frozen-abi`, or add \
+             an `abi_digest`.",
         )
         .to_compile_error()
         .into();
@@ -970,7 +1019,7 @@ pub fn frozen_abi(attrs: TokenStream, item: TokenStream) -> TokenStream {
     }
 }
 
-#[cfg(all(test, feature = "frozen-abi"))]
+#[cfg(all(test, feature = "stable-abi"))]
 mod parse_abi_serializers_tests {
     use {
         super::*,
@@ -1036,5 +1085,30 @@ mod parse_abi_serializers_tests {
         let grouped: Expr = syn::parse2(group.to_token_stream()).unwrap();
         assert!(matches!(grouped, Expr::Group(_)), "expected a grouped expr");
         assert_eq!(parse_abi_serializers(&grouped).unwrap(), vec![Wincode]);
+    }
+}
+
+#[cfg(all(test, feature = "frozen-abi"))]
+mod abi_sample_tests {
+    use {super::*, syn::parse_quote};
+
+    #[test]
+    fn test_abi_sample_empty_enum() {
+        let input = parse_quote! {
+            enum Empty {}
+        };
+        let result = derive_abi_sample_enum_type(input);
+        assert!(result.is_err(), "Expected error on empty enum");
+        assert!(result.unwrap_err().to_string().contains("empty enums"));
+    }
+
+    #[test]
+    fn test_abi_sample_unit_struct() {
+        let input = parse_quote! {
+            struct Unit;
+        };
+        let result = derive_abi_sample_struct_type(input);
+        assert!(result.is_err(), "Expected error on unit struct");
+        assert!(result.unwrap_err().to_string().contains("unit structs"));
     }
 }

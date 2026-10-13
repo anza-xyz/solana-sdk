@@ -6,6 +6,22 @@
 #
 # On success an ordered list of Cargo.toml files is written to stdout
 #
+# With |--levels| each line is prefixed with the publishing "level" the crate
+# belongs to (|<level>\t<path>|). Crates sharing a level are independent of each
+# other and depend only on earlier levels, so a whole level can be published in
+# parallel once all earlier levels are published.
+#
+# Filtering to a subset of crates is left to standard tools. For example, to
+# group only the crates whose Cargo.toml mentions "wincode" into levels (the
+# leading tab pins the match to the path field so e.g. "sysvar" doesn't also
+# match "get-sysvar"):
+#
+#   ./scripts/order-crates-for-publishing.py --levels \
+#     | grep -Ff <(grep -l wincode $(./scripts/order-crates-for-publishing.py) | sed 's/^/\t/')
+#
+# Level numbers stay workspace-global (so a filtered view has gaps); to act per
+# level, group the output by its first column.
+#
 
 import os
 import json
@@ -64,6 +80,21 @@ def is_self_dev_dep_with_dev_context_only_utils(package, dependency, wrong_self_
     return is_special_cased
 
 
+# When using the semver trick to make version X compatible with version X + 1,
+# we add a self-dependency on a different major version.
+# This is totally fine from a publishing perspective.
+def is_self_dep_with_different_major(package, dependency):
+    no_explicit_version = '*'
+
+    is_special_cased = False
+    if (dependency['name'] == package['name'] and
+        dependency['req'] != no_explicit_version and
+        dependency['req'].lstrip('^~>=<')[0] != package['version'][0]):
+        is_special_cased = True
+
+    return is_special_cased
+
+
 # `cargo publish` is fine with circular dev-dependencies if
 # they are path deps.
 # However, cargo still fails if deps are path deps with versions
@@ -86,10 +117,12 @@ def should_add(package, dependency, wrong_self_dev_dependencies):
     self_dev_dep_with_dev_context_only_utils = is_self_dev_dep_with_dev_context_only_utils(
         package, dependency, wrong_self_dev_dependencies
     )
+    self_dep_with_different_major = is_self_dep_with_different_major(package, dependency)
     return (
         related_to_solana
         and not self_dev_dep_with_dev_context_only_utils
         and not is_path_dev_dep(dependency)
+        and not self_dep_with_different_major
     )
 
 def get_packages():
@@ -125,8 +158,14 @@ def get_packages():
     if len(circular_dependencies) != 0 or len(wrong_self_dev_dependencies) != 0:
         sys.exit(1)
 
-    # Order dependencies
+    # Order dependencies.
+    #
+    # Each pass of the loop below removes every package whose dependencies have
+    # all already been removed. Such a batch forms a publishing "level": its
+    # members are mutually independent, so they can be published in parallel,
+    # and every level depends only on packages published in earlier levels.
     sorted_dependency_graph = []
+    level = 0
     max_iterations = pow(len(dependency_graph),2)
     while dependency_graph:
         deleted_packages = []
@@ -144,12 +183,23 @@ def get_packages():
                     break
             else:
                 deleted_packages.append(package)
-                sorted_dependency_graph.append((package, manifest_path[package]))
+                sorted_dependency_graph.append((package, manifest_path[package], level))
 
         dependency_graph = {p: d for p, d in dependency_graph.items() if not p in deleted_packages }
+        level += 1
 
 
     return sorted_dependency_graph
 
-for package, manifest in get_packages():
-    print(os.path.relpath(manifest))
+def main():
+    # `--levels` prefixes each line with the publishing level the crate belongs
+    # to (`<level>\t<path>`). Crates sharing a level are independent of each
+    # other and can be published in parallel once all earlier levels are
+    # published.
+    show_levels = '--levels' in sys.argv[1:]
+    for package, manifest, level in get_packages():
+        path = os.path.relpath(manifest)
+        print('{}\t{}'.format(level, path) if show_levels else path)
+
+if __name__ == '__main__':
+    main()

@@ -27,6 +27,7 @@ pub mod null_signer;
 pub mod signers;
 
 #[derive(Debug, PartialEq, Eq)]
+#[non_exhaustive]
 pub enum PresignerError {
     VerificationFailure,
 }
@@ -42,6 +43,7 @@ impl fmt::Display for PresignerError {
 }
 
 #[derive(Debug, PartialEq, Eq)]
+#[non_exhaustive]
 pub enum SignerError {
     KeypairPubkeyMismatch,
     NotEnoughSigners,

@@ -57,12 +57,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Git Checkout
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
           fetch-depth: 0 # full history to check for whitespace / conflict markers
 
       - name: Summarise workflow inputs
-        uses: solana-program/actions/workflow-inputs@v1
+        uses: solana-program/actions/workflow-inputs@35ada2e9a5e7d83c1321903810b2f73c2787abb2  # v1
 
       - name: Setup Environment
         uses: ./.github/actions/setup
@@ -83,7 +83,7 @@ jobs:
     needs: [sanity]
     steps:
       - name: Git Checkout
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
 
       - name: Setup Environment
         uses: ./.github/actions/setup
@@ -101,7 +101,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Git Checkout
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
 
       - name: Setup Environment
         uses: ./.github/actions/setup
@@ -119,21 +119,23 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Git Checkout
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
 
       - name: Install 'nightly' toolchain
-        uses: actions-rust-lang/setup-rust-toolchain@166cdcfd11aee3cb47222f9ddb555ce30ddb9659  # v1.17.0
+        uses: actions-rust-lang/setup-rust-toolchain@ecabd13d1c56bd1345c230e542e9144811ad706f  # v2.0.0
         with:
           toolchain: nightly
           cache: false
           rustflags: ""
 
       - name: Run docs.rs build
+        env:
+          PACKAGE_PATH: ${{ inputs.package_path }}
         run: |
           # Mimic docs.rs build environment
           export DOCS_RS="1"
           export RUSTDOCFLAGS="--cfg docsrs"
-          cargo +nightly doc --no-deps --all-features --manifest-path "${{ inputs.package_path }}/Cargo.toml"
+          cargo +nightly doc --no-deps --all-features --manifest-path "$PACKAGE_PATH/Cargo.toml"
 
   detached-minimal-versions:
     name: Check minimal-versions on detached crate
@@ -141,7 +143,7 @@ jobs:
     needs: [sanity]
     steps:
       - name: Git Checkout
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
 
       - name: Setup Environment
         uses: ./.github/actions/setup
@@ -151,29 +153,31 @@ jobs:
           cargo-cache-fallback-key: cargo-nightly
 
       - name: Install cargo-hack
-        uses: taiki-e/cache-cargo-install-action@417450f3c33ee20393705369577571770643d4c7  # v3.0.7
+        uses: taiki-e/cache-cargo-install-action@9ee83daaa7b96a6fab930949ecf1122bba04a389  # v3.0.8
         with:
           tool: cargo-hack
 
       - name: Install cargo-minimal-versions
-        uses: taiki-e/cache-cargo-install-action@417450f3c33ee20393705369577571770643d4c7  # v3.0.7
+        uses: taiki-e/cache-cargo-install-action@9ee83daaa7b96a6fab930949ecf1122bba04a389  # v3.0.8
         with:
           tool: cargo-minimal-versions
 
       - name: Install toml-cli
-        uses: taiki-e/install-action@9bcaee1dcae34154180f412e2fa69355a7cda9f6  # v2.82.6
+        uses: taiki-e/install-action@83ac0ad63c0167e6f06796fab0fce28db1bf3db0  # v2.87.22
         with:
           tool: toml-cli
 
       - name: Run minimal-versions check
-        run: ./scripts/check-detached-minimal-versions.sh "${{ inputs.package_path }}"
+        env:
+          PACKAGE_PATH: ${{ inputs.package_path }}
+        run: ./scripts/check-detached-minimal-versions.sh "$PACKAGE_PATH"
 
   semver:
     name: Check Semver
     runs-on: ubuntu-latest
     steps:
       - name: Git checkout
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
 
       - name: Setup Environment
         uses: ./.github/actions/setup
@@ -182,16 +186,18 @@ jobs:
           cargo-cache-fallback-key: cargo-publish-semver
 
       - name: Install cargo-semver-checks
-        uses: taiki-e/install-action@9bcaee1dcae34154180f412e2fa69355a7cda9f6  # v2.82.6
+        uses: taiki-e/install-action@83ac0ad63c0167e6f06796fab0fce28db1bf3db0  # v2.87.22
         with:
           tool: toml-cli,cargo-semver-checks,cargo-release
 
       - name: Check if crate is a procedural macro
         id: is_proc_macro
         shell: bash
+        env:
+          PACKAGE_PATH: ${{ inputs.package_path }}
         run: |
           set +e # toml crashes the whole shell if it fails to find the key
-          result=$(toml get "${{ inputs.package_path }}/Cargo.toml" lib.proc-macro)
+          result=$(toml get "$PACKAGE_PATH/Cargo.toml" lib.proc-macro)
           if [[ "$result" == *"true"* ]]; then
             echo "is_proc_macro=true" >> "$GITHUB_OUTPUT"
           else
@@ -206,17 +212,23 @@ jobs:
 
       - name: Set Version
         if: ${{ steps.is_proc_macro.outputs.is_proc_macro == 'false' }}
+        env:
+          PACKAGE_PATH: ${{ inputs.package_path }}
+          LEVEL: ${{ inputs.level }}
+          VERSION: ${{ inputs.version }}
         run: |
-          if [ "${{ inputs.level }}" == "version" ]; then
-            LEVEL=${{ inputs.version }}
+          if [ "$LEVEL" == "version" ]; then
+            RELEASE_LEVEL="$VERSION"
           else
-            LEVEL=${{ inputs.level }}
+            RELEASE_LEVEL="$LEVEL"
           fi
-          cargo release $LEVEL --manifest-path "${{ inputs.package_path }}/Cargo.toml" --no-tag --no-publish --no-push --no-confirm --execute
+          cargo release "$RELEASE_LEVEL" --manifest-path "$PACKAGE_PATH/Cargo.toml" --no-tag --no-publish --no-push --no-confirm --execute
 
       - name: Check semver
         if: ${{ steps.is_proc_macro.outputs.is_proc_macro == 'false' && github.event.inputs.run_semver == 'true'}}
-        run: cargo semver-checks --manifest-path "${{ inputs.package_path }}/Cargo.toml"
+        env:
+          PACKAGE_PATH: ${{ inputs.package_path }}
+        run: cargo semver-checks --manifest-path "$PACKAGE_PATH/Cargo.toml"
 
   publish-crate:
     name: Publish crate
@@ -225,9 +237,6 @@ jobs:
     environment: ${{ inputs.dry_run && 'dry-run' || 'prod' }}
     permissions:
       contents: write
-      id-token: write
-      attestations: write
-      artifact-metadata: write
     steps:
       - name: Generate app token
         if: github.event.inputs.dry_run != 'true'
@@ -238,7 +247,7 @@ jobs:
           private-key: ${{ secrets.PRIVATE_KEY }}
 
       - name: Git Checkout
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
           token: ${{ inputs.dry_run && github.token || steps.app-token.outputs.token }}
           fetch-depth: 0 # get the whole history for git-cliff
@@ -251,9 +260,18 @@ jobs:
           cargo-cache-fallback-key: cargo-stable
 
       - name: Install cargo-release
-        uses: taiki-e/install-action@9bcaee1dcae34154180f412e2fa69355a7cda9f6  # v2.82.6
+        uses: taiki-e/install-action@83ac0ad63c0167e6f06796fab0fce28db1bf3db0  # v2.87.22
         with:
           tool: cargo-release
+
+      - name: Ensure CARGO_REGISTRY_TOKEN variable is set
+        env:
+          token: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+        if: ${{ env.token == '' }}
+        run: |
+          echo "The CARGO_REGISTRY_TOKEN secret variable is not set"
+          echo "Go to \"Settings\" -> \"Secrets and variables\" -> \"Actions\" -> \"New repository secret\"."
+          exit 1
 
       - name: Set Git Author
         if: github.event.inputs.dry_run != 'true'
@@ -267,18 +285,19 @@ jobs:
       - name: Rebase (in case any changes landed after)
         run: git pull --rebase origin
 
-      - uses: rust-lang/crates-io-auth-action@c6f97d42243bad5fab37ca0427f495c86d5b1a18  # v1.0.5
-        id: auth
-
       - name: Publish Crate
         id: publish
         env:
-          CARGO_REGISTRY_TOKEN: ${{ steps.auth.outputs.token }}
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+          PACKAGE_PATH: ${{ inputs.package_path }}
+          LEVEL: ${{ inputs.level }}
+          VERSION: ${{ inputs.version }}
+          DEPENDENT_VERSION: ${{ inputs.dependent_version }}
         run: |
-          if [ "${{ inputs.level }}" == "version" ]; then
-            LEVEL=${{ inputs.version }}
+          if [ "$LEVEL" == "version" ]; then
+            RELEASE_LEVEL="$VERSION"
           else
-            LEVEL=${{ inputs.level }}
+            RELEASE_LEVEL="$LEVEL"
           fi
 
           if [ "${{ inputs.dry_run }}" == "true" ]; then
@@ -287,23 +306,18 @@ jobs:
             OPTIONS=""
           fi
 
-          ./scripts/publish-rust.sh "${{ inputs.package_path }}" $LEVEL "${{ inputs.dependent_version }}" $OPTIONS
-
-      - name: Generate SLSA provenance
-        if: github.event.inputs.dry_run != 'true'
-        uses: actions/attest-build-provenance@0f67c3f4856b2e3261c31976d6725780e5e4c373  # v4.1.1
-        with:
-          subject-path: target/package/*.crate
+          ./scripts/publish-rust.sh "$PACKAGE_PATH" "$RELEASE_LEVEL" "$DEPENDENT_VERSION" $OPTIONS
 
       - name: Generate a changelog
         if: github.event.inputs.create_release == 'true'
-        uses: orhun/git-cliff-action@f50e11560dce63f7c33227798f90b924471a88b5  # v4.8.0
+        uses: orhun/git-cliff-action@a9a95522b26fe6403f7bb24031f21fb573d0f5ff  # v4.9.1
         with:
           config: "scripts/cliff.toml"
-          args: ${{ steps.publish.outputs.old_git_tag }}..HEAD --include-path "${{ inputs.package_path }}/**" --github-repo ${{ github.repository }}
+          args: ${{ steps.publish.outputs.old_git_tag }}..HEAD --include-path "${{ env.PACKAGE_PATH }}/**" --github-repo ${{ github.repository }}
         env:
           OUTPUT: TEMP_CHANGELOG.md
           GITHUB_REPO: ${{ github.repository }}
+          PACKAGE_PATH: ${{ inputs.package_path }}
 
       - name: Create GitHub release
         if: github.event.inputs.create_release == 'true' && github.event.inputs.dry_run != 'true'

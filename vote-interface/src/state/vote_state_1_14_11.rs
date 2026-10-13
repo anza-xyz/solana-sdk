@@ -1,14 +1,14 @@
 use super::*;
 #[cfg(feature = "dev-context-only-utils")]
 use arbitrary::Arbitrary;
-#[cfg(feature = "frozen-abi")]
+#[cfg(feature = "stable-abi")]
 use solana_frozen_abi_macro::{frozen_abi, AbiExample, StableAbi, StableAbiSample};
 
 // Offset used for VoteState version 1_14_11
 const DEFAULT_PRIOR_VOTERS_OFFSET: usize = 82;
 
 #[cfg_attr(
-    feature = "frozen-abi",
+    feature = "stable-abi",
     frozen_abi(
         api_digest = "2rjXSWaNeAdoUNJDC5otC7NPR1qXHvLMuAs5faE4DPEt",
         abi_digest = "3zLH9BFk2HeY4UTTWY82p6z4v9gNyyGkH3qZYWeGP2Fw",
@@ -53,14 +53,6 @@ pub struct VoteState1_14_11 {
 }
 
 impl VoteState1_14_11 {
-    #[deprecated(
-        since = "5.1.0",
-        note = "Use `rent.minimum_balance(VoteState1_14_11::size_of())` directly"
-    )]
-    pub fn get_rent_exempt_reserve(rent: &Rent) -> u64 {
-        rent.minimum_balance(Self::size_of())
-    }
-
     /// Upper limit on the size of the Vote State
     /// when votes.len() is MAX_LOCKOUT_HISTORY.
     pub fn size_of() -> usize {

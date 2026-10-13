@@ -3,7 +3,7 @@
 #![cfg_attr(feature = "frozen-abi", feature(min_specialization))]
 #[cfg(feature = "num-traits")]
 use num_traits::ToPrimitive;
-#[cfg(feature = "frozen-abi")]
+#[cfg(feature = "stable-abi")]
 extern crate std;
 use {core::fmt, solana_program_error::ProgramError};
 pub use {
@@ -23,7 +23,7 @@ pub use {
 
 #[allow(deprecated)]
 mod instruction_error_module {
-    #[cfg(feature = "frozen-abi")]
+    #[cfg(feature = "stable-abi")]
     use solana_frozen_abi_macro::{
         frozen_abi, AbiEnumVisitor, AbiExample, StableAbi, StableAbiSample,
     };
@@ -36,10 +36,10 @@ mod instruction_error_module {
     /// dangerous to include error strings from 3rd party crates because they could
     /// change at any time and changes to them are difficult to detect.
     #[cfg_attr(
-        feature = "frozen-abi",
+        feature = "stable-abi",
         derive(AbiExample, AbiEnumVisitor, StableAbi, StableAbiSample),
         frozen_abi(
-            abi_digest = "99sLbFrZmSAM4i28P5vPDJFtB6xDgvyT92iEJpKiMPpF",
+            abi_digest = "FeTxh6dMDyYG1EdnenTpe8vpH37xDRvfksy83XKBN671",
             abi_serializer = ["bincode", "wincode"],
             test_roundtrip = "eq_and_wire"
         )
@@ -49,7 +49,9 @@ mod instruction_error_module {
         derive(serde_derive::Serialize, serde_derive::Deserialize)
     )]
     #[cfg_attr(feature = "wincode", derive(wincode::SchemaWrite, wincode::SchemaRead))]
+    #[cfg_attr(test, derive(strum_macros::EnumIter))]
     #[derive(Debug, PartialEq, Eq, Clone)]
+    #[non_exhaustive]
     pub enum InstructionError {
         /// Deprecated! Use CustomError instead!
         /// The program instruction returned an error
@@ -220,8 +222,80 @@ mod instruction_error_module {
 
         /// Builtin programs must consume compute units
         BuiltinProgramsMustConsumeComputeUnits,
+
+        /// Block production bailed out.
+        /// This discards transactions to protect the leader and does not propagate to followers.
+        /// Meaning this explicitly excludes transactions from consensus.
+        BailOut,
         // Note: For any new error added here an equivalent ProgramError and its
         // conversions must also be added
+    }
+}
+
+impl InstructionError {
+    #[allow(deprecated)]
+    pub const VARIANTS: [Self; 55] = [
+        Self::GenericError,
+        Self::InvalidArgument,
+        Self::InvalidInstructionData,
+        Self::InvalidAccountData,
+        Self::AccountDataTooSmall,
+        Self::InsufficientFunds,
+        Self::IncorrectProgramId,
+        Self::MissingRequiredSignature,
+        Self::AccountAlreadyInitialized,
+        Self::UninitializedAccount,
+        Self::UnbalancedInstruction,
+        Self::ModifiedProgramId,
+        Self::ExternalAccountLamportSpend,
+        Self::ExternalAccountDataModified,
+        Self::ReadonlyLamportChange,
+        Self::ReadonlyDataModified,
+        Self::DuplicateAccountIndex,
+        Self::ExecutableModified,
+        Self::RentEpochModified,
+        Self::NotEnoughAccountKeys,
+        Self::AccountDataSizeChanged,
+        Self::AccountNotExecutable,
+        Self::AccountBorrowFailed,
+        Self::AccountBorrowOutstanding,
+        Self::DuplicateAccountOutOfSync,
+        Self::Custom(0),
+        Self::InvalidError,
+        Self::ExecutableDataModified,
+        Self::ExecutableLamportChange,
+        Self::ExecutableAccountNotRentExempt,
+        Self::UnsupportedProgramId,
+        Self::CallDepth,
+        Self::MissingAccount,
+        Self::ReentrancyNotAllowed,
+        Self::MaxSeedLengthExceeded,
+        Self::InvalidSeeds,
+        Self::InvalidRealloc,
+        Self::ComputationalBudgetExceeded,
+        Self::PrivilegeEscalation,
+        Self::ProgramEnvironmentSetupFailure,
+        Self::ProgramFailedToComplete,
+        Self::ProgramFailedToCompile,
+        Self::Immutable,
+        Self::IncorrectAuthority,
+        Self::BorshIoError,
+        Self::AccountNotRentExempt,
+        Self::InvalidAccountOwner,
+        Self::ArithmeticOverflow,
+        Self::UnsupportedSysvar,
+        Self::IllegalOwner,
+        Self::MaxAccountsDataAllocationsExceeded,
+        Self::MaxAccountsExceeded,
+        Self::MaxInstructionTraceLengthExceeded,
+        Self::BuiltinProgramsMustConsumeComputeUnits,
+        Self::BailOut,
+    ];
+}
+
+impl core::default::Default for InstructionError {
+    fn default() -> Self {
+        Self::Custom(0)
     }
 }
 
@@ -363,6 +437,7 @@ impl fmt::Display for InstructionError {
             InstructionError::BuiltinProgramsMustConsumeComputeUnits => {
                 f.write_str("Builtin programs must consume compute units")
             }
+            InstructionError::BailOut => f.write_str("Block production bailed out"),
         }
     }
 }
@@ -417,11 +492,17 @@ where
 }
 
 #[derive(Debug)]
+#[cfg_attr(test, derive(strum_macros::EnumIter, PartialEq))]
+#[non_exhaustive]
 pub enum LamportsError {
     /// arithmetic underflowed
     ArithmeticUnderflow,
     /// arithmetic overflowed
     ArithmeticOverflow,
+}
+
+impl LamportsError {
+    pub const VARIANTS: [Self; 2] = [Self::ArithmeticUnderflow, Self::ArithmeticOverflow];
 }
 
 impl core::error::Error for LamportsError {}
@@ -484,6 +565,28 @@ impl TryFrom<InstructionError> for ProgramError {
             Self::Error::Immutable => Ok(Self::Immutable),
             Self::Error::IncorrectAuthority => Ok(Self::IncorrectAuthority),
             _ => Err(error),
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use {
+        super::{InstructionError, LamportsError},
+        strum::IntoEnumIterator,
+    };
+
+    #[test]
+    fn test_lamports_error_variants_exhaustive() {
+        for variant in LamportsError::iter() {
+            assert!(LamportsError::VARIANTS.contains(&variant));
+        }
+    }
+
+    #[test]
+    fn test_instruction_error_variants_exhaustive() {
+        for variant in InstructionError::iter() {
+            assert!(InstructionError::VARIANTS.contains(&variant));
         }
     }
 }

@@ -2,8 +2,8 @@
 
 use {
     crate::{keypair_from_seed, keypair_from_seed_phrase_and_passphrase, Keypair},
-    ed25519_dalek_bip32::Error as Bip32Error,
     solana_derivation_path::DerivationPath,
+    solana_ed25519::ed_sigs::{Bip32DerivationError, ExtendedSigningKey},
     solana_seed_derivable::SeedDerivable,
     std::error,
 };
@@ -42,8 +42,10 @@ pub fn keypair_from_seed_and_derivation_path(
 fn bip32_derived_keypair(
     seed: &[u8],
     derivation_path: DerivationPath,
-) -> Result<Keypair, Bip32Error> {
-    let extended = ed25519_dalek_bip32::ExtendedSigningKey::from_seed(seed)
-        .and_then(|extended| extended.derive(&derivation_path))?;
-    Ok(Keypair(extended.signing_key))
+) -> Result<Keypair, Bip32DerivationError> {
+    // Ed25519 BIP32 derivation only supports hardened child indexes; each
+    // `ChildIndex` is encoded to its BIP32 `u32` (with the hardened bit set).
+    let extended = ExtendedSigningKey::from_seed(seed)
+        .derive_path(derivation_path.into_iter().map(|child| child.to_bits()))?;
+    Ok(Keypair(extended.into_signing_key()))
 }

@@ -33,14 +33,53 @@ pub fn set_entries_for_tests_only(entries: usize) {
     NUM_ENTRIES.store(entries, Ordering::Relaxed);
 }
 
-pub type SlotHash = (u64, Hash);
-
 const LEN_PREFIX: usize = size_of::<u64>();
 const SLOT_HASH_SERIALIZED_SIZE: usize = size_of::<u64>() + size_of::<Hash>();
 
 /// Serialized size of the `SlotHashes` sysvar account.
 pub const SIZE: usize = LEN_PREFIX + MAX_ENTRIES * SLOT_HASH_SERIALIZED_SIZE;
 const _: () = assert!(SIZE == 20_488);
+
+/// A single entry of the [`SlotHashes`] sysvar.
+///
+/// `#[repr(C)]` and padding-free so wincode decodes the whole sysvar in one copy.
+#[repr(C)]
+#[cfg_attr(
+    feature = "serde",
+    derive(serde_derive::Deserialize, serde_derive::Serialize)
+)]
+#[cfg_attr(feature = "wincode", derive(wincode::SchemaWrite, wincode::SchemaRead))]
+// Big-endian targets encode integers byte-swapped, so they never qualify as zero-copy.
+#[cfg_attr(
+    all(feature = "wincode", target_endian = "little"),
+    wincode(assert_zero_copy)
+)]
+#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
+pub struct SlotHash {
+    pub slot: u64,
+    pub hash: Hash,
+}
+
+// Unlike `assert_zero_copy`, this also holds on big-endian targets.
+const _: () = assert!(size_of::<SlotHash>() == SLOT_HASH_SERIALIZED_SIZE);
+
+impl SlotHash {
+    pub const fn new(slot: u64, hash: Hash) -> Self {
+        Self { slot, hash }
+    }
+}
+
+impl From<(u64, Hash)> for SlotHash {
+    fn from((slot, hash): (u64, Hash)) -> Self {
+        Self { slot, hash }
+    }
+}
+
+impl From<SlotHash> for (u64, Hash) {
+    fn from(SlotHash { slot, hash }: SlotHash) -> Self {
+        (slot, hash)
+    }
+}
 
 #[repr(C)]
 #[cfg_attr(
@@ -53,24 +92,25 @@ pub struct SlotHashes(Vec<SlotHash>);
 
 impl SlotHashes {
     pub fn add(&mut self, slot: u64, hash: Hash) {
-        match self.binary_search_by(|(probe, _)| slot.cmp(probe)) {
-            Ok(index) => (self.0)[index] = (slot, hash),
-            Err(index) => (self.0).insert(index, (slot, hash)),
+        let entry = SlotHash { slot, hash };
+        match self.binary_search_by(|probe| slot.cmp(&probe.slot)) {
+            Ok(index) => (self.0)[index] = entry,
+            Err(index) => (self.0).insert(index, entry),
         }
         (self.0).truncate(get_entries());
     }
     pub fn position(&self, slot: &u64) -> Option<usize> {
-        self.binary_search_by(|(probe, _)| slot.cmp(probe)).ok()
+        self.binary_search_by(|probe| slot.cmp(&probe.slot)).ok()
     }
     #[allow(clippy::trivially_copy_pass_by_ref)]
     pub fn get(&self, slot: &u64) -> Option<&Hash> {
-        self.binary_search_by(|(probe, _)| slot.cmp(probe))
+        self.binary_search_by(|probe| slot.cmp(&probe.slot))
             .ok()
-            .map(|index| &self[index].1)
+            .map(|index| &self[index].hash)
     }
     pub fn new(slot_hashes: &[SlotHash]) -> Self {
         let mut slot_hashes = slot_hashes.to_vec();
-        slot_hashes.sort_by(|(a, _), (b, _)| b.cmp(a));
+        slot_hashes.sort_by_key(|entry| std::cmp::Reverse(entry.slot));
         Self(slot_hashes)
     }
     pub fn slot_hashes(&self) -> &[SlotHash] {
@@ -78,9 +118,15 @@ impl SlotHashes {
     }
 }
 
+impl FromIterator<SlotHash> for SlotHashes {
+    fn from_iter<I: IntoIterator<Item = SlotHash>>(iter: I) -> Self {
+        Self(iter.into_iter().collect())
+    }
+}
+
 impl FromIterator<(u64, Hash)> for SlotHashes {
     fn from_iter<I: IntoIterator<Item = (u64, Hash)>>(iter: I) -> Self {
-        Self(iter.into_iter().collect())
+        Self(iter.into_iter().map(SlotHash::from).collect())
     }
 }
 
@@ -95,9 +141,13 @@ impl Deref for SlotHashes {
 mod tests {
     use {super::*, solana_sha256_hasher::hash};
 
+    fn entry(slot: u64) -> SlotHash {
+        SlotHash::new(slot, hash(&slot.to_le_bytes()))
+    }
+
     #[test]
     fn test_size_of() {
-        let slot_hashes = SlotHashes(vec![(0, Hash::default()); MAX_ENTRIES]);
+        let slot_hashes = SlotHashes(vec![SlotHash::default(); MAX_ENTRIES]);
         assert_eq!(
             wincode::serialized_size(&slot_hashes).unwrap() as usize,
             SIZE,
@@ -106,16 +156,9 @@ mod tests {
 
     #[test]
     fn test() {
-        let mut slot_hashes = SlotHashes::new(&[(1, Hash::default()), (3, Hash::default())]);
-        slot_hashes.add(2, Hash::default());
-        assert_eq!(
-            slot_hashes,
-            SlotHashes(vec![
-                (3, Hash::default()),
-                (2, Hash::default()),
-                (1, Hash::default()),
-            ])
-        );
+        let mut slot_hashes = SlotHashes::new(&[entry(1), entry(3)]);
+        slot_hashes.add(2, hash(&2u64.to_le_bytes()));
+        assert_eq!(slot_hashes, SlotHashes(vec![entry(3), entry(2), entry(1)]));
 
         let mut slot_hashes = SlotHashes::new(&[]);
         for i in 0..MAX_ENTRIES + 1 {
@@ -125,9 +168,26 @@ mod tests {
             );
         }
         for i in 0..MAX_ENTRIES {
-            assert_eq!(slot_hashes[i].0, (MAX_ENTRIES - i) as u64);
+            assert_eq!(slot_hashes[i].slot, (MAX_ENTRIES - i) as u64);
         }
 
         assert_eq!(slot_hashes.len(), MAX_ENTRIES);
+    }
+
+    /// Deployed accounts fix the layout to a length prefix followed by packed
+    /// slot/hash pairs. Checked against the equivalent tuple encoding.
+    #[test]
+    fn test_wire_compat() {
+        let entries: Vec<SlotHash> = (0..MAX_ENTRIES as u64).rev().map(entry).collect();
+        let tuples: Vec<(u64, Hash)> = entries.iter().cloned().map(Into::into).collect();
+        let slot_hashes = SlotHashes::new(&entries);
+
+        let expected = wincode::serialize(&tuples).unwrap();
+        assert_eq!(expected.len(), SIZE);
+        assert_eq!(wincode::serialize(&slot_hashes).unwrap(), expected);
+        assert_eq!(
+            wincode::deserialize::<SlotHashes>(&expected).unwrap(),
+            slot_hashes
+        );
     }
 }

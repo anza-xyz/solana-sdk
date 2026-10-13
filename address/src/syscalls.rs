@@ -295,7 +295,6 @@ impl Address {
     // will use syscalls which bring no dependencies; otherwise, this should
     // be opt-in so users don't need the curve25519 dependency.
     #[cfg(any(target_os = "solana", target_arch = "bpf", feature = "curve25519"))]
-    #[allow(clippy::same_item_push)]
     #[inline(always)]
     pub fn try_find_program_address(
         seeds: &[&[u8]],
@@ -305,19 +304,36 @@ impl Address {
         // not supported
         #[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
         {
-            let mut bump_seed = [u8::MAX];
-            for _ in 0..u8::MAX {
-                {
-                    let mut seeds_with_bump = seeds.to_vec();
-                    seeds_with_bump.push(&bump_seed);
-                    match Self::create_program_address(&seeds_with_bump, program_id) {
-                        Ok(address) => return Some((address, bump_seed[0])),
-                        Err(AddressError::InvalidSeeds) => (),
-                        _ => break,
-                    }
+            // Pre-calculate the bump seeds in reverse order, so that the first bump
+            // seed tried is the largest.
+            const BUMP_SEEDS: [u8; u8::MAX as usize] = {
+                let mut seeds = [0; u8::MAX as usize];
+                let mut i = 0;
+                while i < seeds.len() {
+                    seeds[i] = u8::MAX - i as u8;
+                    i += 1;
                 }
-                bump_seed[0] -= 1;
+                seeds
+            };
+
+            if seeds.len() >= crate::MAX_SEEDS {
+                return None;
             }
+
+            let mut seeds_with_bump: [&[u8]; crate::MAX_SEEDS] = [&[]; crate::MAX_SEEDS];
+            seeds_with_bump[..seeds.len()].copy_from_slice(seeds);
+            let seeds_with_bump = &mut seeds_with_bump[..=seeds.len()];
+
+            for bump_seed in &BUMP_SEEDS {
+                seeds_with_bump[seeds.len()] = core::slice::from_ref(bump_seed);
+                match Self::create_program_address(seeds_with_bump, program_id) {
+                    Ok(address) => return Some((address, *bump_seed)),
+                    // Try the next bump seed if the seeds are invalid.
+                    Err(AddressError::InvalidSeeds) => (),
+                    _ => break,
+                }
+            }
+
             None
         }
         // Call via a system call to perform the calculation

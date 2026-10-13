@@ -1,0 +1,42 @@
+[package]
+name = "solana-bls12-381"
+description = "Solana BLS12-381"
+documentation = "https://docs.rs/solana-bls12-381"
+version = "0.1.0"
+authors = { workspace = true }
+repository = { workspace = true }
+homepage = { workspace = true }
+license = { workspace = true }
+edition = { workspace = true }
+include = ["src/**/*"]
+
+[package.metadata.docs.rs]
+targets = ["x86_64-unknown-linux-gnu"]
+all-features = true
+rustdoc-args = ["--cfg=docsrs"]
+
+[features]
+default = ["bytemuck"]
+bytemuck = ["dep:bytemuck", "dep:bytemuck_derive"]
+
+[dependencies]
+bytemuck = { workspace = true, features = ["min_const_generics"], optional = true }
+bytemuck_derive = { workspace = true, optional = true }
+
+[target.'cfg(any(target_os = "solana", target_arch = "bpf"))'.dependencies]
+solana-define-syscall = { workspace = true }
+
+[target.'cfg(not(any(target_os = "solana", target_arch = "bpf")))'.dependencies]
+bytemuck = { workspace = true, features = ["min_const_generics"] }
+bytemuck_derive = { workspace = true }
+solana-bls12-381-syscall = { workspace = true }
+
+[dev-dependencies]
+array-bytes = { workspace = true }
+bytemuck = { workspace = true, features = ["min_const_generics"] }
+serde = { workspace = true }
+serde_derive = { workspace = true }
+serde_json = { workspace = true }
+
+[lints]
+workspace = true

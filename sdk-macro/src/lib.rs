@@ -230,11 +230,10 @@ pub fn pubkeys(input: TokenStream) -> TokenStream {
     TokenStream::from(quote! {#pubkeys})
 }
 
-// Sets padding in structures to zero explicitly.
-// Otherwise padding could be inconsistent across the network and lead to divergence / consensus failures.
-#[proc_macro_derive(CloneZeroed)]
-pub fn derive_clone_zeroed(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
-    match parse_macro_input!(input as syn::Item) {
+fn derive_clone_zeroed_inner(
+    input: proc_macro2::TokenStream,
+) -> syn::Result<proc_macro2::TokenStream> {
+    match syn::parse2::<syn::Item>(input)? {
         syn::Item::Struct(item_struct) => {
             let clone_statements = match item_struct.fields {
                 syn::Fields::Named(ref fields) => fields.named.iter().map(|f| {
@@ -243,10 +242,15 @@ pub fn derive_clone_zeroed(input: proc_macro::TokenStream) -> proc_macro::TokenS
                         core::ptr::addr_of_mut!((*ptr).#name).write(self.#name.clone());
                     }
                 }),
-                _ => unimplemented!(),
+                _ => {
+                    return Err(syn::Error::new_spanned(
+                        &item_struct.ident,
+                        "CloneZeroed can only be derived for structs with named fields",
+                    ))
+                }
             };
             let name = &item_struct.ident;
-            quote! {
+            Ok(quote! {
                 impl Clone for #name {
                     // Clippy lint `incorrect_clone_impl_on_copy_type` requires that clone
                     // implementations on `Copy` types are simply wrappers of `Copy`.
@@ -262,9 +266,48 @@ pub fn derive_clone_zeroed(input: proc_macro::TokenStream) -> proc_macro::TokenS
                         }
                     }
                 }
-            }
+            })
         }
-        _ => unimplemented!(),
+        item => Err(syn::Error::new_spanned(
+            item,
+            "CloneZeroed cannot be derived for non-struct items",
+        )),
     }
-    .into()
+}
+
+// Sets padding in structures to zero explicitly.
+// Otherwise padding could be inconsistent across the network and lead to divergence / consensus failures.
+#[proc_macro_derive(CloneZeroed)]
+pub fn derive_clone_zeroed(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+    derive_clone_zeroed_inner(input.into())
+        .unwrap_or_else(|err| err.to_compile_error())
+        .into()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_clone_zeroed_tuple_struct() {
+        let input = quote::quote! {
+            struct Tuple(u8);
+        };
+        let result = derive_clone_zeroed_inner(input);
+        assert!(result.is_err(), "Expected error on tuple struct");
+        assert!(result
+            .unwrap_err()
+            .to_string()
+            .contains("structs with named fields"));
+    }
+
+    #[test]
+    fn test_clone_zeroed_enum() {
+        let input = quote::quote! {
+            enum E { A }
+        };
+        let result = derive_clone_zeroed_inner(input);
+        assert!(result.is_err(), "Expected error on non-struct item");
+        assert!(result.unwrap_err().to_string().contains("non-struct items"));
+    }
 }

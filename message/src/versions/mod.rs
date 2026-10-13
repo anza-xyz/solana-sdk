@@ -1,13 +1,11 @@
 #[cfg(any(feature = "wincode", feature = "serde"))]
 use alloc::vec::Vec;
-#[cfg(feature = "frozen-abi")]
+#[cfg(feature = "stable-abi")]
 use solana_frozen_abi_macro::{frozen_abi, AbiEnumVisitor, AbiExample, StableAbi, StableAbiSample};
-#[cfg(feature = "std")]
-use std::collections::HashSet;
 use {
     crate::{
         compiled_instruction::CompiledInstruction, legacy::Message as LegacyMessage,
-        v0::MessageAddressTableLookup, MessageHeader,
+        v0::MessageAddressTableLookup, AddressSet, MessageHeader,
     },
     solana_address::Address,
     solana_hash::Hash,
@@ -50,7 +48,7 @@ pub const MESSAGE_VERSION_PREFIX: u8 = 0x80;
 /// is bit is not set, all bytes are used to encode the legacy `Message`
 /// format.
 #[cfg_attr(
-    feature = "frozen-abi",
+    feature = "stable-abi",
     derive(AbiEnumVisitor, AbiExample, StableAbi, StableAbiSample),
     frozen_abi(
         digest = "9xQQLkQntX2QKgwxbbpeuNrs5V2WopsBa11su46WWCro",
@@ -106,19 +104,27 @@ impl VersionedMessage {
     }
 
     /// Returns true if the account at the specified index is writable by the
-    /// instructions in this message. Since dynamically loaded addresses can't
-    /// have write locks demoted without loading addresses, this shouldn't be
-    /// used in the runtime.
-    #[cfg(feature = "std")]
-    pub fn is_maybe_writable(
+    /// instructions in this message.
+    ///
+    /// # Important
+    ///
+    /// Since dynamically loaded addresses can't have write locks demoted without
+    /// loading addresses, this shouldn't be used in the runtime.
+    pub fn is_maybe_writable_with_reserved_addresses(
         &self,
         index: usize,
-        reserved_account_keys: Option<&HashSet<Address>>,
+        reserved_addresses: Option<&impl AddressSet>,
     ) -> bool {
         match self {
-            Self::Legacy(message) => message.is_maybe_writable(index, reserved_account_keys),
-            Self::V0(message) => message.is_maybe_writable(index, reserved_account_keys),
-            Self::V1(message) => message.is_maybe_writable(index, reserved_account_keys),
+            Self::Legacy(message) => {
+                message.is_maybe_writable_with_reserved_addresses(index, reserved_addresses)
+            }
+            Self::V0(message) => {
+                message.is_maybe_writable_with_reserved_addresses(index, reserved_addresses)
+            }
+            Self::V1(message) => {
+                message.is_maybe_writable_with_reserved_addresses(index, reserved_addresses)
+            }
         }
     }
 

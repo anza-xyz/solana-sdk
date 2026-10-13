@@ -17,6 +17,8 @@ pub use crate::{
     pubkey::{
         AsPubkeyProjective, PubkeyAffineUnchecked, PubkeyProjective, VerifyPop, VerifySignature,
     },
+    scalar::Scalar,
+    secret_bytes::{SecretBytes, SecretString},
     secret_key::{SecretKey, BLS_SECRET_KEY_SIZE},
     signature::{
         AsSignatureProjective, SignatureAffineUnchecked, SignatureProjective, VerifiableSignature,
@@ -42,8 +44,14 @@ pub mod keypair;
 pub(crate) mod macros;
 #[cfg(not(target_os = "solana"))]
 pub mod hash;
+#[cfg(not(target_os = "solana"))]
+mod prepared_g2;
 pub mod proof_of_possession;
 pub mod pubkey;
+#[cfg(not(target_os = "solana"))]
+pub mod scalar;
+#[cfg(not(target_os = "solana"))]
+pub mod secret_bytes;
 #[cfg(not(target_os = "solana"))]
 pub mod secret_key;
 pub mod signature;

@@ -2,7 +2,7 @@
 #![cfg_attr(feature = "frozen-abi", feature(min_specialization))]
 #![cfg_attr(docsrs, feature(doc_cfg))]
 
-#[cfg(feature = "frozen-abi")]
+#[cfg(feature = "stable-abi")]
 use solana_frozen_abi_macro::{frozen_abi, AbiExample, StableAbi, StableAbiSample};
 #[cfg(feature = "bincode")]
 use {
@@ -16,6 +16,15 @@ use {
         fmt,
         net::{IpAddr, Ipv4Addr, SocketAddr},
         slice::SliceIndex,
+    },
+};
+#[cfg(feature = "wincode")]
+use {
+    core::mem::MaybeUninit,
+    wincode::{
+        config::ConfigCore,
+        io::{Reader, Writer},
+        ReadResult, SchemaRead, SchemaWrite, TypeMeta, WriteResult,
     },
 };
 #[cfg(feature = "serde")]
@@ -64,7 +73,8 @@ bitflags! {
     }
 }
 
-#[cfg_attr(feature = "frozen-abi", derive(AbiExample, StableAbi, StableAbiSample))]
+#[cfg_attr(feature = "stable-abi", derive(AbiExample, StableAbi, StableAbiSample))]
+#[cfg_attr(feature = "wincode", derive(SchemaWrite, SchemaRead))]
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[derive(Clone, Debug, PartialEq, Eq)]
 #[repr(C)]
@@ -72,6 +82,7 @@ pub struct Meta {
     pub size: usize,
     pub addr: IpAddr,
     pub port: u16,
+    #[cfg_attr(feature = "wincode", wincode(with = "PodPacketFlags"))]
     pub flags: PacketFlags,
     remote_pubkey: Pubkey,
 }
@@ -91,7 +102,7 @@ impl ::solana_frozen_abi::abi_example::EvenAsOpaque for PacketFlags {
     const TYPE_NAME_MATCHER: &'static str = "::_::InternalBitFlags";
 }
 
-#[cfg(feature = "frozen-abi")]
+#[cfg(feature = "stable-abi")]
 impl ::solana_frozen_abi::stable_abi::StableAbi for PacketFlags {
     fn random_with_context(
         rng: &mut (impl ::solana_frozen_abi::rand::RngCore + ?Sized),
@@ -99,6 +110,61 @@ impl ::solana_frozen_abi::stable_abi::StableAbi for PacketFlags {
     ) -> Self {
         // All bits are defined, but truncate making it future-proof.
         Self::from_bits_truncate(::solana_frozen_abi::rand::Rng::random(rng))
+    }
+}
+
+// Every bit is a defined flag, so any byte is a valid `PacketFlags`; it is a
+// single `u8` in memory and can be serialized as raw bytes.
+#[cfg(feature = "wincode")]
+wincode::pod_wrapper! {
+    unsafe struct PodPacketFlags(PacketFlags);
+}
+
+/// Wincode schema adapter for a fixed `[u8; N]` written as bincode serializes it
+/// through `serde`'s `serialize_bytes`: a `u64` length prefix followed by the raw
+/// bytes (a bare `[u8; N]` is otherwise written without a length).
+#[cfg(feature = "wincode")]
+struct LenPrefixedByteArray<const N: usize>;
+
+#[cfg(feature = "wincode")]
+unsafe impl<const N: usize, C: ConfigCore> SchemaWrite<C> for LenPrefixedByteArray<N> {
+    type Src = [u8; N];
+
+    const TYPE_META: TypeMeta = TypeMeta::join_types([
+        <u64 as SchemaWrite<C>>::TYPE_META,
+        <[u8; N] as SchemaWrite<C>>::TYPE_META,
+    ])
+    .keep_zero_copy(false);
+
+    fn size_of(src: &Self::Src) -> WriteResult<usize> {
+        Ok(<u64 as SchemaWrite<C>>::size_of(&(N as u64))?
+            .saturating_add(<[u8; N] as SchemaWrite<C>>::size_of(src)?))
+    }
+
+    fn write(mut writer: impl Writer, src: &Self::Src) -> WriteResult<()> {
+        <u64 as SchemaWrite<C>>::write(writer.by_ref(), &(N as u64))?;
+        <[u8; N] as SchemaWrite<C>>::write(writer, src)
+    }
+}
+
+#[cfg(feature = "wincode")]
+unsafe impl<'de, const N: usize, C: ConfigCore> SchemaRead<'de, C> for LenPrefixedByteArray<N> {
+    type Dst = [u8; N];
+
+    const TYPE_META: TypeMeta = TypeMeta::join_types([
+        <u64 as SchemaRead<'de, C>>::TYPE_META,
+        <[u8; N] as SchemaRead<'de, C>>::TYPE_META,
+    ])
+    .keep_zero_copy(false);
+
+    fn read(mut reader: impl Reader<'de>, dst: &mut MaybeUninit<Self::Dst>) -> ReadResult<()> {
+        let len = <u64 as SchemaRead<'de, C>>::get(reader.by_ref())?;
+        if len != N as u64 {
+            return Err(wincode::error::invalid_value(
+                "unexpected packet buffer length",
+            ));
+        }
+        <[u8; N] as SchemaRead<'de, C>>::read(reader, dst)
     }
 }
 
@@ -132,14 +198,15 @@ impl ::solana_frozen_abi::stable_abi::StableAbi for PacketFlags {
 // https://docs.rs/serde_with/latest/serde_with/guide/serde_as/index.html#gating-serde_as-on-features
 #[cfg_attr(feature = "serde", cfg_eval::cfg_eval, serde_as)]
 #[cfg_attr(
-    feature = "frozen-abi",
+    feature = "stable-abi",
     derive(AbiExample, StableAbi, StableAbiSample),
     frozen_abi(
         abi_digest = "5MtHLJ3g6mJfsz9KfxnUgjksRUXSETinR9jZZiYuE7fh",
-        abi_serializer = "bincode",
+        abi_serializer = ["bincode", "wincode"],
         test_roundtrip = "eq_and_wire"
     )
 )]
+#[cfg_attr(feature = "wincode", derive(SchemaWrite, SchemaRead))]
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[derive(Clone, Eq)]
 #[repr(C)]
@@ -147,6 +214,10 @@ pub struct Packet {
     // Bytes past Packet.meta.size are not valid to read from.
     // Use Packet.data(index) to read from the buffer.
     #[cfg_attr(feature = "serde", serde_as(as = "Bytes"))]
+    #[cfg_attr(
+        feature = "wincode",
+        wincode(with = "LenPrefixedByteArray<PACKET_DATA_SIZE>")
+    )]
     buffer: [u8; PACKET_DATA_SIZE],
     meta: Meta,
 }
@@ -244,12 +315,10 @@ impl fmt::Debug for Packet {
     }
 }
 
-#[allow(clippy::uninit_assumed_init)]
 impl Default for Packet {
     fn default() -> Self {
-        let buffer = std::mem::MaybeUninit::<[u8; PACKET_DATA_SIZE]>::uninit();
         Self {
-            buffer: unsafe { buffer.assume_init() },
+            buffer: [0; PACKET_DATA_SIZE],
             meta: Meta::default(),
         }
     }

@@ -1,4 +1,4 @@
-#[cfg(feature = "bincode")]
+#[cfg(any(feature = "bincode", feature = "wincode"))]
 use super::VoteStateVersions;
 #[cfg(feature = "dev-context-only-utils")]
 use arbitrary::Arbitrary;
@@ -6,10 +6,10 @@ use arbitrary::Arbitrary;
 use serde_derive::{Deserialize, Serialize};
 #[cfg(feature = "serde")]
 use serde_with::serde_as;
-#[cfg(feature = "frozen-abi")]
+#[cfg(feature = "stable-abi")]
 use solana_frozen_abi_macro::{frozen_abi, AbiExample, StableAbi, StableAbiSample};
-#[cfg(any(target_os = "solana", feature = "bincode"))]
-use solana_instruction::error::InstructionError;
+#[cfg(any(target_os = "solana", feature = "bincode", feature = "wincode"))]
+use solana_instruction_error::InstructionError;
 use {
     super::{BlockTimestamp, LandedVote, VoteInit, VoteInitV2, BLS_PUBLIC_KEY_COMPRESSED_SIZE},
     crate::authorized_voters::AuthorizedVoters,
@@ -19,7 +19,7 @@ use {
 };
 
 #[cfg_attr(
-    feature = "frozen-abi",
+    feature = "stable-abi",
     frozen_abi(
         api_digest = "ALZS4x22Ga8M6KkLVgdEJu3ZQUUSBkFHAkErmSvFLzUM",
         abi_digest = "DqcDSgyayprZqMjBEHzUuB6afr3rGckVqHHBWdvVZefU",
@@ -118,7 +118,7 @@ impl VoteStateV4 {
         }
     }
 
-    #[cfg(any(target_os = "solana", feature = "bincode"))]
+    #[cfg(any(target_os = "solana", feature = "bincode", feature = "wincode"))]
     pub fn deserialize(input: &[u8], vote_pubkey: &Pubkey) -> Result<Self, InstructionError> {
         let mut vote_state = Self::default();
         Self::deserialize_into(input, &mut vote_state, vote_pubkey)?;
@@ -131,7 +131,7 @@ impl VoteStateV4 {
     ///
     /// On success, `vote_state` reflects the state of the input data. On failure, `vote_state` is
     /// reset to `VoteStateV4::default()`.
-    #[cfg(any(target_os = "solana", feature = "bincode"))]
+    #[cfg(any(target_os = "solana", feature = "bincode", feature = "wincode"))]
     pub fn deserialize_into(
         input: &[u8],
         vote_state: &mut VoteStateV4,
@@ -153,7 +153,7 @@ impl VoteStateV4 {
     /// [`MaybeUninit::assume_init`](https://doc.rust-lang.org/std/mem/union.MaybeUninit.html#method.assume_init).
     /// On failure, `vote_state` may still be uninitialized and must not be
     /// converted to `VoteStateV4`.
-    #[cfg(any(target_os = "solana", feature = "bincode"))]
+    #[cfg(any(target_os = "solana", feature = "bincode", feature = "wincode"))]
     pub fn deserialize_into_uninit(
         input: &[u8],
         vote_state: &mut std::mem::MaybeUninit<VoteStateV4>,
@@ -162,7 +162,7 @@ impl VoteStateV4 {
         Self::deserialize_into_ptr(input, vote_state.as_mut_ptr(), vote_pubkey)
     }
 
-    #[cfg(any(target_os = "solana", feature = "bincode"))]
+    #[cfg(any(target_os = "solana", feature = "bincode", feature = "wincode"))]
     fn deserialize_into_ptr(
         input: &[u8],
         vote_state: *mut VoteStateV4,
@@ -196,7 +196,16 @@ impl VoteStateV4 {
         Ok(())
     }
 
-    #[cfg(feature = "bincode")]
+    #[cfg(feature = "wincode")]
+    pub fn serialize(
+        versioned: &VoteStateVersions,
+        output: &mut [u8],
+    ) -> Result<(), InstructionError> {
+        // bincode reports a short `output` as an I/O error, so wincode maps it to `GenericError` too.
+        wincode::serialize_into(output, versioned).map_err(|_| InstructionError::GenericError)
+    }
+
+    #[cfg(all(feature = "bincode", not(feature = "wincode")))]
     pub fn serialize(
         versioned: &VoteStateVersions,
         output: &mut [u8],
@@ -272,7 +281,6 @@ mod tests {
         bincode::serialized_size,
         core::mem::MaybeUninit,
         rand::Rng,
-        solana_instruction::error::InstructionError,
         test_case::test_matrix,
     };
 
@@ -332,8 +340,13 @@ mod tests {
             .resize(MAX_LOCKOUT_HISTORY, LandedVote::default());
         vote_state.root_slot = Some(1);
         let versioned = VoteStateVersions::new_v4(vote_state);
-        assert!(VoteStateV4::serialize(&versioned, &mut buffer[0..4]).is_err());
+        assert_eq!(
+            VoteStateV4::serialize(&versioned, &mut buffer[0..4]),
+            Err(InstructionError::GenericError)
+        );
         VoteStateV4::serialize(&versioned, &mut buffer).unwrap();
+        let expected = bincode::serialize(&versioned).unwrap();
+        assert_eq!(buffer[..expected.len()], expected);
         assert_eq!(
             VoteStateV4::deserialize(&buffer, &vote_pubkey_for_deserialize).unwrap(),
             versioned

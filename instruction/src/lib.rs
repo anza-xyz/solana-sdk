@@ -20,7 +20,7 @@ pub mod account_meta;
 #[cfg(any(feature = "syscalls", target_os = "solana"))]
 pub mod syscalls;
 
-pub use {account_meta::AccountMeta, solana_instruction_error as error};
+pub use account_meta::AccountMeta;
 use {alloc::vec::Vec, solana_pubkey::Pubkey};
 
 /// A directive for a single invocation of a Solana program.

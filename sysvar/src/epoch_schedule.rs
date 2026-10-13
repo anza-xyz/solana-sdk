@@ -58,7 +58,6 @@
 //! # use solana_program_error::{ProgramError, ProgramResult};
 //! # use solana_pubkey::Pubkey;
 //! # use solana_sdk_ids::sysvar::epoch_schedule;
-//! # use solana_sysvar::{Sysvar, SysvarSerialize};
 //! fn process_instruction(
 //!     program_id: &Pubkey,
 //!     accounts: &[AccountInfo],
@@ -69,7 +68,9 @@
 //!
 //!     assert!(epoch_schedule::check_id(epoch_schedule_account_info.key));
 //!
-//!     let epoch_schedule = EpochSchedule::from_account_info(epoch_schedule_account_info)?;
+//!     let epoch_schedule: EpochSchedule =
+//!         wincode::deserialize(&epoch_schedule_account_info.data.borrow())
+//!             .map_err(|_| ProgramError::InvalidArgument)?;
 //!     msg!("epoch_schedule: {:#?}", epoch_schedule);
 //!
 //!     Ok(())
@@ -109,7 +110,7 @@
 //! # });
 //! #
 //!     let epoch_schedule = client.get_account(&epoch_schedule::ID)?;
-//!     let data: EpochSchedule = bincode::deserialize(&epoch_schedule.data)?;
+//!     let data: EpochSchedule = wincode::deserialize(&epoch_schedule.data)?;
 //!
 //!     Ok(())
 //! }
@@ -119,12 +120,7 @@
 //! #
 //! # Ok::<(), anyhow::Error>(())
 //! ```
-#[cfg(feature = "bincode")]
-use crate::SysvarSerialize;
 pub use {
     solana_epoch_schedule::{sysvar::PodEpochSchedule, EpochSchedule, SIZE},
     solana_sdk_ids::sysvar::epoch_schedule::{check_id, id, ID},
 };
-
-#[cfg(feature = "bincode")]
-impl SysvarSerialize for EpochSchedule {}

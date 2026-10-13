@@ -1,18 +1,28 @@
 //! Functions related to nonce accounts.
 #![cfg_attr(docsrs, feature(doc_cfg))]
 
+// Imported anonymously: either name would be wrong under the other feature, and both in
+// scope at once makes `state` ambiguous.
+#[cfg(all(feature = "bincode", not(feature = "wincode")))]
+use solana_account::state_traits::StateMut as _;
+#[cfg(feature = "wincode")]
+use solana_account::state_traits::StateMutWincode as _;
 use {
-    solana_account::{state_traits::StateMut, AccountSharedData, ReadableAccount},
-    solana_hash::Hash,
-    solana_nonce::{
-        state::{Data, State},
-        versions::Versions,
-    },
+    solana_account::{AccountSharedData, ReadableAccount},
+    solana_nonce::state::State,
     solana_sdk_ids::system_program,
+};
+#[cfg(any(feature = "bincode", feature = "wincode"))]
+use {
+    solana_hash::Hash,
+    solana_nonce::{state::Data, versions::Versions},
     std::cell::RefCell,
 };
 
+#[cfg(any(feature = "bincode", feature = "wincode"))]
 pub fn create_account(lamports: u64) -> RefCell<AccountSharedData> {
+    // bincode's `new_data_with_space` is inherent while wincode's is a trait method, so this
+    // shadows to bincode whenever that codec is compiled in. The encodings agree.
     RefCell::new(
         AccountSharedData::new_data_with_space(
             lamports,
@@ -26,26 +36,23 @@ pub fn create_account(lamports: u64) -> RefCell<AccountSharedData> {
 
 /// Checks if the recent_blockhash field in Transaction verifies, and returns
 /// nonce account data if so.
+#[cfg(any(feature = "bincode", feature = "wincode"))]
 pub fn verify_nonce_account(
     account: &AccountSharedData,
     recent_blockhash: &Hash, // Transaction.message.recent_blockhash
 ) -> Option<Data> {
     (account.owner() == &system_program::id())
         .then(|| {
-            #[cfg(feature = "wincode")]
-            let versions = wincode::deserialize::<Versions>(account.data());
-            #[cfg(not(feature = "wincode"))]
-            let versions = StateMut::<Versions>::state(account);
-            versions
-                .ok()?
-                .verify_recent_blockhash(recent_blockhash)
-                .cloned()
+            let versions: Versions = account.state().ok()?;
+            versions.verify_recent_blockhash(recent_blockhash).cloned()
         })
         .flatten()
 }
 
+#[cfg(any(feature = "bincode", feature = "wincode"))]
 pub fn lamports_per_signature_of(account: &AccountSharedData) -> Option<u64> {
-    match StateMut::<Versions>::state(account).ok()?.state() {
+    let versions: Versions = account.state().ok()?;
+    match versions.state() {
         State::Initialized(data) => Some(data.fee_calculator.lamports_per_signature),
         State::Uninitialized => None,
     }
@@ -58,17 +65,26 @@ pub enum SystemAccountKind {
 }
 
 pub fn get_system_account_kind(account: &AccountSharedData) -> Option<SystemAccountKind> {
-    if system_program::check_id(account.owner()) {
-        if account.data().is_empty() {
-            Some(SystemAccountKind::System)
-        } else if account.data().len() == State::size() {
-            let nonce_versions: Versions = account.state().ok()?;
-            match nonce_versions.state() {
-                State::Uninitialized => None,
-                State::Initialized(_) => Some(SystemAccountKind::Nonce),
-            }
-        } else {
-            None
+    if !system_program::check_id(account.owner()) {
+        return None;
+    }
+
+    let data = account.data();
+
+    if data.is_empty() {
+        Some(SystemAccountKind::System)
+    } else if data.len() == State::size() {
+        const NONCE_VERSIONS_LEGACY: u32 = 0;
+        const NONCE_VERSIONS_CURRENT: u32 = 1;
+        const NONCE_STATE_INITIALIZED: u32 = 1;
+
+        let versions_tag = u32::from_le_bytes(data.get(..4)?.try_into().ok()?);
+        let state_tag = u32::from_le_bytes(data.get(4..8)?.try_into().ok()?);
+
+        match (versions_tag, state_tag) {
+            (NONCE_VERSIONS_LEGACY, NONCE_STATE_INITIALIZED) => Some(SystemAccountKind::Nonce),
+            (NONCE_VERSIONS_CURRENT, NONCE_STATE_INITIALIZED) => Some(SystemAccountKind::Nonce),
+            _ => None,
         }
     } else {
         None
@@ -79,11 +95,26 @@ pub fn get_system_account_kind(account: &AccountSharedData) -> Option<SystemAcco
 mod tests {
     use {
         super::*,
-        solana_fee_calculator::FeeCalculator,
-        solana_nonce::state::{Data, DurableNonce},
+        solana_nonce::{state::Data, versions::Versions},
         solana_pubkey::Pubkey,
     };
+    #[cfg(any(feature = "bincode", feature = "wincode"))]
+    use {solana_fee_calculator::FeeCalculator, solana_nonce::state::DurableNonce};
 
+    // Written by bincode, always compiled in for tests; read back through the active codec.
+    #[cfg(any(feature = "bincode", feature = "wincode"))]
+    #[test]
+    fn test_create_account() {
+        let account = create_account(42);
+        let account = account.borrow();
+        assert_eq!(account.lamports(), 42);
+        assert_eq!(account.owner(), &system_program::id());
+        assert_eq!(account.data().len(), State::size());
+        let versions: Versions = account.state().unwrap();
+        assert_eq!(versions.state(), &State::Uninitialized);
+    }
+
+    #[cfg(any(feature = "bincode", feature = "wincode"))]
     #[test]
     fn test_verify_bad_account_owner_fails() {
         let program_id = Pubkey::new_unique();
@@ -98,6 +129,7 @@ mod tests {
         assert_eq!(verify_nonce_account(&account, &Hash::default()), None);
     }
 
+    #[cfg(any(feature = "bincode", feature = "wincode"))]
     fn new_nonce_account(versions: Versions) -> AccountSharedData {
         AccountSharedData::new_data(
             1_000_000,             // lamports
@@ -107,6 +139,7 @@ mod tests {
         .unwrap()
     }
 
+    #[cfg(any(feature = "bincode", feature = "wincode"))]
     #[test]
     fn test_verify_nonce_account() {
         let blockhash = Hash::from([171; 32]);
@@ -156,51 +189,94 @@ mod tests {
     }
 
     #[test]
-    fn test_get_system_account_kind_system_ok() {
-        let system_account = AccountSharedData::default();
-        assert_eq!(
-            get_system_account_kind(&system_account),
-            Some(SystemAccountKind::System)
-        );
-    }
+    fn test_get_system_account_kind() {
+        // protect `get_system_account_kind()` against the addition of new nonce variants.
+        // if anyone even attempts to add a new nonce variant however they should be punished
+        fn _assert_nonce_versions(v: Versions, s: State) {
+            match v {
+                Versions::Legacy(..) => {}
+                Versions::Current(..) => {}
+            }
+            match s {
+                State::Uninitialized => {}
+                State::Initialized(..) => {}
+            }
+        }
 
-    #[test]
-    fn test_get_system_account_kind_nonce_ok() {
-        let nonce_account = AccountSharedData::new_data(
-            42,
-            &Versions::new(State::Initialized(Data::default())),
-            &system_program::id(),
-        )
+        // assert our function produces the expected result
+        let assert_correct = |bytes: &[u8], kind: Option<SystemAccountKind>| {
+            let mut account = AccountSharedData::new(0, 0, &system_program::id());
+            account.set_data_from_slice(bytes);
+            assert_eq!(get_system_account_kind(&account), kind);
+        };
+
+        // the three (unfortunately rather than two) valid fee-payer types
+        let system_bytes = vec![];
+        let legacy_nonce_bytes = bincode::serialize(&Versions::Legacy(Box::new(
+            State::Initialized(Data::default()),
+        )))
         .unwrap();
-        assert_eq!(
-            get_system_account_kind(&nonce_account),
-            Some(SystemAccountKind::Nonce)
-        );
-    }
-
-    #[test]
-    fn test_get_system_account_kind_uninitialized_nonce_account_fail() {
-        assert_eq!(
-            get_system_account_kind(&crate::create_account(42).borrow()),
-            None
-        );
-    }
-
-    #[test]
-    fn test_get_system_account_kind_system_owner_nonzero_nonnonce_data_fail() {
-        let other_data_account =
-            AccountSharedData::new_data(42, b"other", &Pubkey::default()).unwrap();
-        assert_eq!(get_system_account_kind(&other_data_account), None);
-    }
-
-    #[test]
-    fn test_get_system_account_kind_nonsystem_owner_with_nonce_data_fail() {
-        let nonce_account = AccountSharedData::new_data(
-            42,
-            &Versions::new(State::Initialized(Data::default())),
-            &Pubkey::new_unique(),
-        )
+        let current_nonce_bytes = bincode::serialize(&Versions::Current(Box::new(
+            State::Initialized(Data::default()),
+        )))
         .unwrap();
-        assert_eq!(get_system_account_kind(&nonce_account), None);
+
+        // success
+        assert_correct(&system_bytes, Some(SystemAccountKind::System));
+        assert_correct(&legacy_nonce_bytes, Some(SystemAccountKind::Nonce));
+        assert_correct(&current_nonce_bytes, Some(SystemAccountKind::Nonce));
+
+        // non-system fails
+        for bytes in [&system_bytes, &legacy_nonce_bytes, &current_nonce_bytes] {
+            let mut non_system = AccountSharedData::new(0, 0, &Pubkey::new_unique());
+            non_system.set_data_from_slice(bytes);
+            assert_eq!(get_system_account_kind(&non_system), None);
+        }
+
+        // uninitialized nonce fails
+        for nonce in &[Versions::Legacy, Versions::Current] {
+            let mut bytes = bincode::serialize(&nonce(Box::new(State::Uninitialized))).unwrap();
+            bytes.resize(State::size(), 0);
+            assert_correct(&bytes, None);
+        }
+
+        for bytes in [&legacy_nonce_bytes, &current_nonce_bytes] {
+            // length too short fails
+            for len in 1..bytes.len() {
+                assert_correct(&bytes[..len], None);
+            }
+
+            // length too long fails
+            let mut extended = bytes.clone();
+            extended.push(0);
+            assert_correct(&extended, None);
+
+            // union tag variations fail
+            for byte in 0..=255 {
+                for i in 0..=7 {
+                    // bytes would not change
+                    if bytes[i] == byte {
+                        continue;
+                    }
+
+                    let mut corrupted = bytes.clone();
+                    corrupted[i] = byte;
+
+                    // legacy was changed to current or vice versa
+                    if corrupted == legacy_nonce_bytes || corrupted == current_nonce_bytes {
+                        continue;
+                    }
+
+                    assert_correct(&corrupted, None);
+                }
+            }
+
+            // data variation is ok
+            for i in 8..bytes.len() {
+                let mut with_data = bytes.clone();
+                with_data[i] = 255;
+                assert_correct(&with_data, Some(SystemAccountKind::Nonce));
+            }
+        }
     }
 }

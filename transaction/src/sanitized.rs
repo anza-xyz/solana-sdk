@@ -261,12 +261,6 @@ impl SanitizedTransaction {
         }
     }
 
-    /// If the transaction uses a durable nonce, return the pubkey of the nonce account
-    #[cfg(feature = "wincode")]
-    pub fn get_durable_nonce(&self) -> Option<&Address> {
-        self.message.get_durable_nonce()
-    }
-
     #[cfg(feature = "verify")]
     /// Return the serialized message data to sign.
     fn message_data(&self) -> Vec<u8> {
@@ -281,17 +275,11 @@ impl SanitizedTransaction {
     /// Verify the transaction signatures
     pub fn verify(&self) -> TransactionResult<()> {
         let message_bytes = self.message_data();
-        if self
-            .signatures
-            .iter()
-            .zip(self.message.account_keys().iter())
-            .map(|(signature, pubkey)| signature.verify(pubkey.as_ref(), &message_bytes))
-            .any(|verified| !verified)
-        {
-            Err(TransactionError::SignatureFailure)
-        } else {
-            Ok(())
-        }
+        crate::verify_signatures(
+            &self.signatures,
+            self.message.static_account_keys(),
+            &message_bytes,
+        )
     }
 
     /// Validate a transaction message against locked accounts
@@ -466,8 +454,13 @@ mod tests {
             &[1, 2, 3],
             vec![AccountMeta::new(payer.pubkey(), true)],
         );
-        let message =
-            v1::Message::try_compile(&payer.pubkey(), &[instruction], Hash::new_unique()).unwrap();
+        let message = v1::Message::try_compile_with_config(
+            &payer.pubkey(),
+            &[instruction],
+            Hash::new_unique(),
+            v1::TransactionConfig::empty(),
+        )
+        .unwrap();
         let versioned_tx =
             VersionedTransaction::try_new(VersionedMessage::V1(message), &[&payer]).unwrap();
 

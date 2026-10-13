@@ -128,10 +128,9 @@ pub fn get_return_data() -> Option<(Pubkey, Vec<u8>)> {
 #[doc(hidden)]
 #[allow(clippy::arithmetic_side_effects)]
 pub fn check_type_assumptions() {
-    extern crate memoffset;
     use {
         crate::instruction::AccountMeta,
-        memoffset::offset_of,
+        core::mem::offset_of,
         std::{
             mem::{align_of, size_of},
             str::FromStr,

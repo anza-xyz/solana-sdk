@@ -180,7 +180,12 @@ pub enum SystemInstruction {
     /// instruction on the account
     ///
     /// No signatures are required to execute this instruction, enabling derived
-    /// nonce account addresses
+    /// nonce account addresses.
+    ///
+    /// This instruction MUST be included within the same Transaction as the
+    /// system program's `CreateAccount` instruction that creates the account
+    /// being initialized. Otherwise another party can acquire ownership of the
+    /// uninitialized account.
     InitializeNonceAccount(Address),
 
     /// Change the entity authorized to execute nonce instructions on the account

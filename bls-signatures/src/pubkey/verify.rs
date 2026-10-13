@@ -1,17 +1,17 @@
-#[cfg(feature = "std")]
-use std::sync::LazyLock;
 use {
     crate::{
         error::BlsError,
         hash::{HashedMessage, HashedPoPPayload, PreparedHashedMessage},
+        prepared_g2::PreparedG2,
         proof_of_possession::{AsProofOfPossessionAffine, ProofOfPossessionAffine},
         pubkey::points::{AsPubkeyAffine, PopVerified, PubkeyAffine},
         signature::{AsSignatureAffine, SignatureAffine},
     },
-    blstrs::{Bls12, G1Affine, G1Projective, G2Prepared, Gt},
-    group::{prime::PrimeCurveAffine, Group},
-    pairing::{MillerLoopResult, MultiMillerLoop},
+    blstrs::G1Affine,
+    group::prime::PrimeCurveAffine,
 };
+#[cfg(feature = "std")]
+use {blstrs::G1Projective, group::Group, std::sync::LazyLock};
 
 #[cfg(feature = "std")]
 pub(crate) static NEG_G1_GENERATOR_AFFINE: LazyLock<G1Affine> =
@@ -111,38 +111,41 @@ impl PubkeyAffine {
         signature: &SignatureAffine,
         hashed_message: &HashedMessage,
     ) -> bool {
-        let hashed_message_prepared = G2Prepared::from(hashed_message.0);
-        self._verify_signature_prepared(signature, &hashed_message_prepared)
+        if bool::from(self.0.is_identity()) {
+            return false;
+        }
+
+        // Check e(pubkey, H(m)) = e(g1, signature) without preparing
+        // either G2 point.
+        let generator = G1Affine::generator();
+        let message_pairing =
+            blst::blst_fp12::miller_loop(hashed_message.0.as_ref(), self.0.as_ref());
+        let signature_pairing =
+            blst::blst_fp12::miller_loop(signature.0.as_ref(), generator.as_ref());
+
+        // Compare the pairings using one final exponentiation.
+        blst::blst_fp12::finalverify(&message_pairing, &signature_pairing)
     }
 
     pub(crate) fn _verify_signature_prepared(
         &self,
         signature: &SignatureAffine,
-        hashed_message_prepared: &G2Prepared,
+        hashed_message_prepared: &PreparedG2,
     ) -> bool {
         if bool::from(self.0.is_identity()) {
             return false;
         }
 
-        // The verification equation is e(pubkey, H(m)) = e(g1, signature).
-        // This can be rewritten as e(pubkey, H(m)) * e(-g1, signature) = 1, which
-        // allows for a more efficient verification using a multi-miller loop.
-        let signature_prepared = G2Prepared::from(signature.0);
+        // Reuse the message's prepared table.
+        let message_pairing = hashed_message_prepared.miller_loop(&self.0);
 
-        // use the static valud if `std` is available, otherwise compute it
-        #[cfg(feature = "std")]
-        let neg_g1_generator = &*NEG_G1_GENERATOR_AFFINE;
-        #[cfg(not(feature = "std"))]
-        #[allow(clippy::arithmetic_side_effects)]
-        let neg_g1_generator_val: G1Affine = (-G1Projective::generator()).into();
-        #[cfg(not(feature = "std"))]
-        let neg_g1_generator = &neg_g1_generator_val;
+        // Compute the signature term directly, without a preparation table.
+        let generator = G1Affine::generator();
+        let signature_pairing =
+            blst::blst_fp12::miller_loop(signature.0.as_ref(), generator.as_ref());
 
-        let miller_loop_result = Bls12::multi_miller_loop(&[
-            (&self.0, hashed_message_prepared),
-            (neg_g1_generator, &signature_prepared),
-        ]);
-        miller_loop_result.final_exponentiation() == Gt::identity()
+        // Check e(pubkey, H(m)) = e(g1, signature) with one final exponentiation.
+        blst::blst_fp12::finalverify(&message_pairing, &signature_pairing)
     }
 
     /// Verify a proof of possession against a public key
@@ -155,27 +158,14 @@ impl PubkeyAffine {
             return false;
         }
 
-        // The verification equation is e(pubkey, H(pubkey)) == e(g1, proof).
-        // This is rewritten to e(pubkey, H(pubkey)) * e(-g1, proof) = 1 for batching.
-        let hashed_pubkey = hashed_payload.0;
-        let hashed_pubkey_prepared = G2Prepared::from(hashed_pubkey);
-        let proof_prepared = G2Prepared::from(proof.0);
+        // Check e(pubkey, H(payload || pubkey_bytes)) = e(g1, proof)
+        // without preparing either G2 point.
+        let generator = G1Affine::generator();
+        let payload_pairing =
+            blst::blst_fp12::miller_loop(hashed_payload.0.as_ref(), self.0.as_ref());
+        let proof_pairing = blst::blst_fp12::miller_loop(proof.0.as_ref(), generator.as_ref());
 
-        // Use the static value if std is available, otherwise compute it
-        #[cfg(feature = "std")]
-        let neg_g1_generator = &*NEG_G1_GENERATOR_AFFINE;
-        #[cfg(not(feature = "std"))]
-        #[allow(clippy::arithmetic_side_effects)]
-        let neg_g1_generator_val: G1Affine = (-G1Projective::generator()).into();
-        #[cfg(not(feature = "std"))]
-        let neg_g1_generator = &neg_g1_generator_val;
-
-        let miller_loop_result = Bls12::multi_miller_loop(&[
-            (&self.0, &hashed_pubkey_prepared),
-            // Reuse the same pre-computed static value here for efficiency
-            (neg_g1_generator, &proof_prepared),
-        ]);
-
-        miller_loop_result.final_exponentiation() == Gt::identity()
+        // Compare the pairings using one final exponentiation.
+        blst::blst_fp12::finalverify(&payload_pairing, &proof_pairing)
     }
 }

@@ -23,7 +23,8 @@
 //! │                                                        │
 //! │ * ConfigValues ([[u8; 4] * variable based on mask])    │
 //! │                                                        │
-//! │ * InstructionHeaders [(u8, u8, u16) x NumInstructions] │
+//! │ * WireInstructionHeaders [WireInstructionHeader        │
+//! │                            x NumInstructions]          │
 //! │                                                        │
 //! │ * InstructionPayloads (variable based on headers)      │
 //! │    └─ Per NumInstructions:                             │
@@ -37,13 +38,11 @@
 pub use self::tests::MessageBuilder;
 #[cfg(feature = "serde")]
 use serde_derive::{Deserialize, Serialize};
-#[cfg(feature = "frozen-abi")]
+#[cfg(feature = "stable-abi")]
 use solana_frozen_abi_macro::{AbiExample, StableAbi, StableAbiSample};
-#[cfg(feature = "std")]
-use std::collections::HashSet;
 #[cfg(feature = "wincode")]
 use {
-    crate::v1::{InstructionHeader, FIXED_HEADER_SIZE},
+    crate::v1::{WireInstructionHeader, FIXED_HEADER_SIZE},
     core::{mem::MaybeUninit, slice::from_raw_parts},
     wincode::{
         config::{Config, ConfigCore},
@@ -61,7 +60,7 @@ use {
             MessageError, TransactionConfig, TransactionConfigMask, MAX_ADDRESSES, MAX_HEAP_SIZE,
             MAX_INSTRUCTIONS, MAX_SIGNATURES, MIN_HEAP_SIZE,
         },
-        AccountKeys, CompileError, MessageHeader,
+        AccountKeys, AddressSet, CompileError, MessageHeader,
     },
     alloc::{collections::BTreeSet, vec::Vec},
     core::mem::size_of,
@@ -77,7 +76,7 @@ use {
 ///
 /// This message format does not support bincode binary serialization. Use the provided
 /// `serialize` and `deserialize` functions for binary encoding/decoding.
-#[cfg_attr(feature = "frozen-abi", derive(AbiExample, StableAbi, StableAbiSample))]
+#[cfg_attr(feature = "stable-abi", derive(AbiExample, StableAbi, StableAbiSample))]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
@@ -134,94 +133,6 @@ impl Message {
             account_keys,
             instructions,
         }
-    }
-
-    /// Create a signable transaction message from a `payer` public key,
-    /// `recent_blockhash`, list of `instructions` and a transaction `config`.
-    ///
-    /// # Examples
-    ///
-    /// This example uses the [`solana_rpc_client`], [`solana_account`], and [`anyhow`] crates.
-    ///
-    /// [`solana_rpc_client`]: https://docs.rs/solana-rpc-client
-    /// [`solana_account`]: https://docs.rs/solana-account
-    /// [`anyhow`]: https://docs.rs/anyhow
-    ///
-    /// ```
-    /// # use solana_example_mocks::{
-    /// #     solana_rpc_client,
-    /// #     solana_account,
-    /// #     solana_signer,
-    /// #     solana_keypair,
-    /// # };
-    /// # extern crate alloc;
-    /// # use alloc::borrow::Cow;
-    /// # use solana_account::Account;
-    /// use anyhow::Result;
-    /// use solana_instruction::{AccountMeta, Instruction};
-    /// use solana_keypair::Keypair;
-    /// use solana_message::{VersionedMessage, v1};
-    /// use solana_address::Address;
-    /// use solana_rpc_client::rpc_client::RpcClient;
-    /// use solana_signer::Signer;
-    /// # mod solana_transaction {
-    /// #     pub mod versioned {
-    /// #         use solana_example_mocks::{solana_keypair::Keypair, solana_signer::SignerError};
-    /// #         use solana_message::VersionedMessage;
-    /// #         pub struct VersionedTransaction {
-    /// #             pub message: solana_message::VersionedMessage,
-    /// #         }
-    /// #         impl VersionedTransaction {
-    /// #             pub fn try_new(
-    /// #                 message: VersionedMessage,
-    /// #                 _keypairs: &[&Keypair],
-    /// #             ) -> core::result::Result<Self, solana_example_mocks::solana_signer::SignerError> {
-    /// #                 Ok(VersionedTransaction {
-    /// #                     message,
-    /// #                 })
-    /// #             }
-    /// #         }
-    /// #     }
-    /// # }
-    /// use solana_transaction::versioned::VersionedTransaction;
-    ///
-    /// fn create_v1_tx(
-    ///     client: &RpcClient,
-    ///     instruction: Instruction,
-    ///     payer: &Keypair,
-    /// ) -> Result<VersionedTransaction> {
-    ///     let blockhash = client.get_latest_blockhash()?;
-    ///     let tx = VersionedTransaction::try_new(
-    ///         VersionedMessage::V1(v1::Message::try_compile(
-    ///             &payer.pubkey(),
-    ///             &[instruction],
-    ///             blockhash,
-    ///         )?),
-    ///         &[payer],
-    ///     )?;
-    ///
-    ///     Ok(tx)
-    /// }
-    /// #
-    /// # let client = RpcClient::new(String::new());
-    /// # let payer = Keypair::new();
-    /// # let instruction = Instruction::new_with_bincode(Address::new_unique(), &(), vec![
-    /// #   AccountMeta::new(Address::new_unique(), false),
-    /// # ]);
-    /// # create_v1_tx(&client, instruction, &payer)?;
-    /// # Ok::<(), anyhow::Error>(())
-    /// ```
-    pub fn try_compile(
-        payer: &Address,
-        instructions: &[Instruction],
-        recent_blockhash: Hash,
-    ) -> Result<Self, CompileError> {
-        Self::try_compile_with_config(
-            payer,
-            instructions,
-            recent_blockhash,
-            TransactionConfig::empty(),
-        )
     }
 
     /// Create a signable transaction message from a `payer` public key,
@@ -371,25 +282,24 @@ impl Message {
     /// # Important
     ///
     /// Before loading addresses, we can't demote write locks properly so this should
-    /// not be used by the runtime. The `reserved_account_keys` parameter is optional
-    /// to allow clients to approximate writability without requiring fetching the latest
-    /// set of reserved account keys.
+    /// not be used by the runtime. The `reserved_addresses` parameter is optional to
+    /// allow clients to approximate writability without requiring fetching the latest
+    /// set of protocol-reserved addresses.
     ///
     /// Program accounts are demoted from writable to readonly, unless the upgradeable
     /// loader is present in which case they are left as writable since upgradeable
     /// programs need to be writable for upgrades.
-    #[cfg(feature = "std")]
-    pub fn is_maybe_writable(
+    pub fn is_maybe_writable_with_reserved_addresses(
         &self,
         key_index: usize,
-        reserved_account_keys: Option<&HashSet<Address>>,
+        reserved_addresses: Option<&impl AddressSet>,
     ) -> bool {
         crate::is_maybe_writable(
             key_index,
             self.header,
             &self.account_keys,
             &self.instructions,
-            reserved_account_keys,
+            reserved_addresses,
         )
     }
 
@@ -588,14 +498,6 @@ unsafe impl<C: ConfigCore> SchemaWrite<C> for Message {
     }
 }
 
-/// Serialize the message.
-#[cfg(feature = "wincode")]
-#[inline]
-#[deprecated(since = "4.1.2", note = "use `Message::serialize` instead")]
-pub fn serialize(message: &Message) -> Vec<u8> {
-    wincode::serialize(message).unwrap()
-}
-
 #[cfg(feature = "wincode")]
 unsafe impl<'de, C: Config> SchemaRead<'de, C> for Message {
     type Dst = Message;
@@ -655,25 +557,25 @@ unsafe impl<'de, C: Config> SchemaRead<'de, C> for Message {
         }
 
         // SAFETY:
-        // - `take_borrowed(num_instructions * size_of::<InstructionHeader>())` returns
+        // - `take_borrowed(num_instructions * size_of::<WireInstructionHeader>())` returns
         //   exactly the requested number of bytes, or errors.
         // - `take_borrowed` returns a stable borrow from the backing buffer, so the
         //   resulting slice remains valid across subsequent reader operations.
-        // - `InstructionHeader` has alignment 1 and is encoded exactly as
-        //   4 bytes `(u8, u8, [u8; 2])`.
+        // - The `const` block above pins `WireInstructionHeader`'s layout to a packed
+        //   4 bytes with fields in wire order, so the reinterpretation is exact.
         let instruction_headers = unsafe {
             from_raw_parts(
                 reader
-                    .take_borrowed(num_instructions * size_of::<InstructionHeader>())?
-                    .as_ptr() as *const InstructionHeader,
+                    .take_borrowed(num_instructions * size_of::<WireInstructionHeader>())?
+                    .as_ptr() as *const WireInstructionHeader,
                 num_instructions,
             )
         };
         let mut instructions = Vec::with_capacity(num_instructions);
         for header in instruction_headers {
-            let program_id_index = header.0;
-            let num_accounts = header.1 as usize;
-            let data_len = u16::from_le_bytes(header.2) as usize;
+            let program_id_index = header.program_id_index;
+            let num_accounts = header.num_accounts as usize;
+            let data_len = u16::from_le_bytes(header.data_len) as usize;
 
             <C::LengthEncoding as SeqLen<C>>::prealloc_check::<u8>(num_accounts)?;
             let accounts = <Vec<u8> as SchemaReadContext<C, context::Len>>::get_with_context(
@@ -720,7 +622,7 @@ mod tests {
     /// Builder for constructing V1 messages.
     ///
     /// This is used in tests to simplify message construction and validation. For
-    /// client code, users should construct messages using `try_compile` or
+    /// client code, users should construct messages using
     /// `try_compile_with_config`.
     #[derive(Debug, Clone, Default)]
     pub struct MessageBuilder {
@@ -986,49 +888,6 @@ mod tests {
         assert!(!message.is_writable_index(1)); // readonly signer
         assert!(!message.is_writable_index(2)); // readonly unsigned
         assert!(!message.is_writable_index(999)); // out of bounds
-    }
-
-    #[test]
-    fn is_maybe_writable_returns_false_for_readonly_index() {
-        let message = create_test_message();
-        // Index 2 is readonly unsigned
-        assert!(!message.is_writable_index(2));
-        assert!(!message.is_maybe_writable(2, None));
-        // Even with empty reserved set
-        assert!(!message.is_maybe_writable(2, Some(&HashSet::new())));
-    }
-
-    #[test]
-    fn is_maybe_writable_demotes_reserved_accounts() {
-        let message = create_test_message();
-        let reserved = HashSet::from([message.account_keys[0]]);
-        // Fee payer is writable by index, but reserved → demoted
-        assert!(message.is_writable_index(0));
-        assert!(!message.is_maybe_writable(0, Some(&reserved)));
-    }
-
-    #[test]
-    fn is_maybe_writable_demotes_programs_without_upgradeable_loader() {
-        let message = create_test_message();
-        // Index 1 is writable unsigned, called as program, no upgradeable loader
-        assert!(message.is_writable_index(1));
-        assert!(message.is_key_called_as_program(1));
-        assert!(!message.is_upgradeable_loader_present());
-        assert!(!message.is_maybe_writable(1, None));
-    }
-
-    #[test]
-    fn is_maybe_writable_preserves_programs_with_upgradeable_loader() {
-        let mut message = create_test_message();
-        // Add upgradeable loader to account keys
-        message.account_keys.push(bpf_loader_upgradeable::id());
-
-        assert!(message.sanitize().is_ok());
-        assert!(message.is_writable_index(1));
-        assert!(message.is_key_called_as_program(1));
-        assert!(message.is_upgradeable_loader_present());
-        // Program not demoted because upgradeable loader is present
-        assert!(message.is_maybe_writable(1, None));
     }
 
     #[test]

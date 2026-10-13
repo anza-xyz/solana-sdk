@@ -2,7 +2,7 @@
 name = "solana-instruction"
 description = "Types for directing the execution of Solana programs."
 documentation = "https://docs.rs/solana-instruction"
-version = "3.4.0"
+version = "4.0.0"
 authors = { workspace = true }
 repository = { workspace = true }
 homepage = { workspace = true }
@@ -31,7 +31,6 @@ bincode = { workspace = true, optional = true }
 borsh = { workspace = true, optional = true }
 serde = { workspace = true, optional = true }
 serde_derive = { workspace = true, optional = true }
-solana-instruction-error = { workspace = true, features = ["num-traits"] }
 solana-pubkey = { workspace = true, default-features = false }
 wincode = { workspace = true, features = ["alloc"], optional = true }
 

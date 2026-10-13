@@ -31,7 +31,7 @@ pub mod tests {
         assert_eq!(
             serialized.len(),
             4,
-            "`SanitizedMessage::get_durable_nonce()` may need a change"
+            "`SVMMessage::get_durable_nonce()` may need a change"
         );
 
         assert_eq!(

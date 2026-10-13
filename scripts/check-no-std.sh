@@ -26,6 +26,7 @@ no_std_crates=(
   -p solana-keccak-hasher
   -p solana-msg
   -p solana-nullable
+  -p solana-poseidon
   -p solana-program-error
   -p solana-program-log
   -p solana-program-log-macro
@@ -49,6 +50,7 @@ no_std_crates=(
 # These are only checked in the alloc+core pass, not the core-only pass.
 no_std_alloc_crates=(
   -p solana-account-info
+  -p solana-bls12-381
   -p solana-borsh
   -p solana-curve25519
   -p solana-instruction
@@ -68,7 +70,7 @@ target="bpfel-unknown-none"
 # These features require alloc
 exclude_features_no_alloc="alloc,borsh,curve25519,serde,slice-cpi"
 # These features never work on upstream BPF
-exclude_features="atomic,batch-verify,bincode,default,dev-context-only-utils,frozen-abi,parallel,rand,std,verify"
+exclude_features="atomic,batch-verify,bincode,default,dev-context-only-utils,frozen-abi,parallel,rand,stable-abi,std,verify"
 
 ./cargo nightly hack check \
   -Zbuild-std=core \

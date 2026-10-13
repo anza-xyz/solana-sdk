@@ -2,7 +2,7 @@
 use arbitrary::Arbitrary;
 #[cfg(feature = "serde")]
 use serde_derive::{Deserialize, Serialize};
-#[cfg(feature = "frozen-abi")]
+#[cfg(feature = "stable-abi")]
 use solana_frozen_abi_macro::{AbiExample, StableAbi, StableAbiSample};
 use {solana_clock::Epoch, solana_pubkey::Pubkey, std::collections::BTreeMap};
 
@@ -12,7 +12,7 @@ use {solana_clock::Epoch, solana_pubkey::Pubkey, std::collections::BTreeMap};
 /// subsequent epochs until explicitly overridden by a new entry ("carry-
 /// forward" semantics). The map must never be empty — an empty map is the
 /// sentinel for an uninitialized vote state.
-#[cfg_attr(feature = "frozen-abi", derive(AbiExample, StableAbi, StableAbiSample))]
+#[cfg_attr(feature = "stable-abi", derive(AbiExample, StableAbi, StableAbiSample))]
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[cfg_attr(feature = "wincode", derive(wincode::SchemaWrite, wincode::SchemaRead))]
 #[derive(Debug, Default, PartialEq, Eq, Clone)]

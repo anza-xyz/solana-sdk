@@ -20,8 +20,6 @@
 
 #![allow(deprecated)]
 
-#[cfg(feature = "bincode")]
-use crate::SysvarSerialize;
 #[cfg(feature = "serde")]
 use serde_derive::{Deserialize, Serialize};
 pub use solana_sdk_ids::sysvar::fees::{check_id, id, ID};
@@ -83,9 +81,6 @@ impl GetSysvar for Fees {
         }
     }
 }
-
-#[cfg(feature = "bincode")]
-impl SysvarSerialize for Fees {}
 
 #[cfg(test)]
 mod tests {

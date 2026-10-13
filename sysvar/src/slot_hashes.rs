@@ -2,12 +2,11 @@
 //!
 //! The _slot hashes sysvar_ provides access to the [`SlotHashes`] type.
 //!
-//! The [`SysvarSerialize::from_account_info`] and [`crate::Sysvar::get`] methods always return
+//! The [`crate::Sysvar::get`] method always returns
 //! [`solana_program_error::ProgramError::UnsupportedSysvar`] because this sysvar account is too large
 //! to process on-chain. Thus this sysvar cannot be accessed on chain, though
-//! one can still use the [`SysvarId::id`], [`SysvarId::check_id`] and
-//! [`SysvarSerialize::size_of`] methods in an on-chain program, and it can be accessed
-//! off-chain through RPC.
+//! one can still use the [`SysvarId::id`], [`SysvarId::check_id`] and [`SIZE`]
+//! in an on-chain program, and it can be accessed off-chain through RPC.
 //!
 //! [`SysvarId::id`]: https://docs.rs/solana-sysvar-id/latest/solana_sysvar_id/trait.SysvarId.html#tymethod.id
 //! [`SysvarId::check_id`]: https://docs.rs/solana-sysvar-id/latest/solana_sysvar_id/trait.SysvarId.html#tymethod.check_id
@@ -34,7 +33,7 @@
 //! # });
 //! #
 //!     let slot_hashes = client.get_account(&slot_hashes::ID)?;
-//!     let data: SlotHashes = bincode::deserialize(&slot_hashes.data)?;
+//!     let data: SlotHashes = wincode::deserialize(&slot_hashes.data)?;
 //!
 //!     Ok(())
 //! }
@@ -46,8 +45,6 @@
 //! ```
 #[cfg(feature = "bytemuck")]
 use bytemuck_derive::{Pod, Zeroable};
-#[cfg(feature = "bincode")]
-use {crate::SysvarSerialize, solana_account_info::AccountInfo};
 use {solana_clock::Slot, solana_hash::Hash};
 
 #[cfg(feature = "bytemuck")]
@@ -58,21 +55,6 @@ pub use {
     solana_slot_hashes::{SlotHashes, SIZE},
     solana_sysvar_id::SysvarId,
 };
-
-#[cfg(feature = "bincode")]
-impl SysvarSerialize for SlotHashes {
-    // override
-    fn size_of() -> usize {
-        // hard-coded so that we don't have to construct an empty
-        SIZE
-    }
-    fn from_account_info(
-        _account_info: &AccountInfo,
-    ) -> Result<Self, solana_program_error::ProgramError> {
-        // This sysvar is too large to bincode::deserialize in-program
-        Err(solana_program_error::ProgramError::UnsupportedSysvar)
-    }
-}
 
 /// A bytemuck-compatible (plain old data) version of `SlotHash`.
 #[cfg_attr(feature = "bytemuck", derive(Pod, Zeroable))]
@@ -180,22 +162,11 @@ impl PodSlotHashes {
 #[cfg(test)]
 mod tests {
     use {
-        super::*, solana_hash::Hash, solana_sha256_hasher::hash, solana_slot_hashes::MAX_ENTRIES,
+        super::*,
+        solana_sha256_hasher::hash,
+        solana_slot_hashes::{SlotHash, MAX_ENTRIES},
         test_case::test_case,
     };
-
-    #[test]
-    fn test_size_of() {
-        assert_eq!(
-            SlotHashes::size_of(),
-            bincode::serialized_size(
-                &(0..MAX_ENTRIES)
-                    .map(|slot| (slot as Slot, Hash::default()))
-                    .collect::<SlotHashes>()
-            )
-            .unwrap() as usize
-        );
-    }
 
     #[test_case(0)]
     #[test_case(1)]
@@ -211,7 +182,7 @@ mod tests {
     fn test_pod_slot_hashes(num_entries: usize) {
         let mut slot_hashes = vec![];
         for i in 0..num_entries {
-            slot_hashes.push((
+            slot_hashes.push(SlotHash::new(
                 i as u64,
                 hash(&[(i >> 24) as u8, (i >> 16) as u8, (i >> 8) as u8, i as u8]),
             ));
@@ -219,7 +190,7 @@ mod tests {
 
         let check_slot_hashes = SlotHashes::new(&slot_hashes);
         let pod_slot_hashes =
-            PodSlotHashes::from_bytes(bincode::serialize(&check_slot_hashes).unwrap()).unwrap();
+            PodSlotHashes::from_bytes(wincode::serialize(&check_slot_hashes).unwrap()).unwrap();
 
         // Assert the slice of `PodSlotHash` has the same length as
         // `SlotHashes`.
@@ -228,7 +199,7 @@ mod tests {
 
         // Assert `PodSlotHashes` and `SlotHashes` contain the same slot hashes
         // in the same order.
-        for slot in slot_hashes.iter().map(|(slot, _hash)| slot) {
+        for slot in slot_hashes.iter().map(|entry| &entry.slot) {
             // `get`:
             assert_eq!(
                 pod_slot_hashes.get(slot).unwrap().as_ref(),

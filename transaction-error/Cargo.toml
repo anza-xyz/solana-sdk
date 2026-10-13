@@ -2,7 +2,7 @@
 name = "solana-transaction-error"
 description = "Solana TransactionError type"
 documentation = "https://docs.rs/solana-transaction-error"
-version = "3.3.1"
+version = "4.1.0"
 rust-version = { workspace = true }
 authors = { workspace = true }
 repository = { workspace = true }
@@ -17,10 +17,16 @@ rustdoc-args = ["--cfg=docsrs"]
 
 [features]
 frozen-abi = [
-    "dep:solana-frozen-abi",
-    "dep:solana-frozen-abi-macro",
-    "serde",
+    "solana-frozen-abi-macro/frozen-abi",
+    "solana-frozen-abi/frozen-abi",
     "solana-instruction-error/frozen-abi",
+    "stable-abi",
+]
+stable-abi = [
+    "serde",
+    "solana-frozen-abi-macro/stable-abi",
+    "solana-frozen-abi/stable-abi",
+    "solana-instruction-error/stable-abi",
 ]
 serde = ["dep:serde", "dep:serde_derive", "solana-instruction-error/serde"]
 wincode = ["dep:wincode", "solana-instruction-error/wincode"]
@@ -28,7 +34,7 @@ wincode = ["dep:wincode", "solana-instruction-error/wincode"]
 [dependencies]
 serde = { workspace = true, optional = true }
 serde_derive = { workspace = true, optional = true }
-solana-frozen-abi = { workspace = true, optional = true, features = ["frozen-abi"] }
+solana-frozen-abi = { workspace = true, optional = true }
 solana-frozen-abi-macro = { workspace = true, optional = true }
 solana-instruction-error = { workspace = true }
 solana-sanitize = { workspace = true }
@@ -38,6 +44,8 @@ wincode = { workspace = true, optional = true }
 # Self-dependency enabling `wincode` so the `frozen_abi` wincode digest test can
 # serialize `TransactionError` during unit tests.
 solana-transaction-error = { path = ".", features = ["wincode"] }
+strum = { workspace = true }
+strum_macros = { workspace = true }
 
 [lints]
 workspace = true

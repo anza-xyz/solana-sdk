@@ -2,7 +2,7 @@
 name = "solana-secp256k1-program"
 description = "Instructions for the Solana Secp256k1 native program."
 documentation = "https://docs.rs/solana-secp256k1-program"
-version = "3.0.1"
+version = "3.1.0"
 authors = { workspace = true }
 repository = { workspace = true }
 homepage = { workspace = true }
@@ -18,11 +18,22 @@ rustdoc-args = ["--cfg=docsrs"]
 bincode = ["dep:bincode", "dep:solana-instruction", "dep:solana-sdk-ids", "serde"]
 dev-context-only-utils = ["bincode"]
 serde = ["dep:serde", "dep:serde_derive"]
+stable-abi = [
+    "dep:solana-frozen-abi",
+    "dep:solana-frozen-abi-macro",
+    "serde",
+    "solana-frozen-abi-macro/stable-abi",
+    "solana-frozen-abi/stable-abi",
+]
+wincode = ["dep:solana-instruction", "dep:solana-sdk-ids", "dep:wincode"]
 
 [dependencies]
 serde = { workspace = true, optional = true }
 serde_derive = { workspace = true, optional = true }
+solana-frozen-abi = { workspace = true, optional = true }
+solana-frozen-abi-macro = { workspace = true, optional = true }
 solana-keccak-hasher = { workspace = true, features = ["sha3"] }
+wincode = { workspace = true, optional = true }
 
 [target.'cfg(not(any(target_os = "solana", target_arch = "bpf")))'.dependencies]
 bincode = { workspace = true, optional = true }
@@ -34,14 +45,14 @@ solana-signature = { workspace = true, features = ["std"] }
 [dev-dependencies]
 anyhow = { workspace = true }
 hex = { workspace = true }
-rand = "0.8" # k256 still uses rand_core v0.6
+rand = "0.8"  # k256 still uses rand_core v0.6
 solana-account-info = { workspace = true }
 solana-example-mocks = { path = "../example-mocks" }
 solana-instruction = { workspace = true }
 solana-instructions-sysvar = { workspace = true }
 solana-msg = { workspace = true, features = ["std"] }
 solana-program-error = { workspace = true }
-solana-secp256k1-program = { path = ".", features = ["bincode"] }
+solana-secp256k1-program = { path = ".", features = ["bincode", "wincode"] }
 
 [lints]
 workspace = true

@@ -8,5 +8,5 @@ use {
 impl_sysvar_id!(LastRestartSlot);
 
 impl GetSysvar for LastRestartSlot {
-    impl_get_sysvar!(id());
+    impl_get_sysvar!(ID);
 }

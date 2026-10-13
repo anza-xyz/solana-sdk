@@ -2,7 +2,7 @@
 name = "solana-loader-v3-interface"
 description = "Solana loader V3 interface."
 documentation = "https://docs.rs/solana-loader-v3-interface"
-version = "8.0.1"
+version = "9.0.0"
 authors = { workspace = true }
 repository = { workspace = true }
 homepage = { workspace = true }
@@ -34,6 +34,7 @@ serde_derive = { workspace = true, optional = true }
 solana-frozen-abi = { workspace = true, features = ["frozen-abi"], optional = true }
 solana-frozen-abi-macro = { workspace = true, features = ["frozen-abi"], optional = true }
 solana-instruction = { workspace = true, features = ["std"] }
+solana-instruction-error = { workspace = true }
 solana-pubkey = { workspace = true, features = ["curve25519"] }
 solana-sdk-ids = { workspace = true }
 solana-system-interface = { workspace = true, optional = true }

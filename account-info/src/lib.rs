@@ -187,6 +187,13 @@ impl<'a> AccountInfo<'a> {
         Ok(())
     }
 
+    /// Changes the owner of the account.
+    ///
+    /// # Important
+    ///
+    /// The caller must ensure that there are no active references to the `owner` when
+    /// calling this method. This is because the `owner` is a shared read-only reference,
+    /// and changing it while there are active references can lead to undefined behavior.
     #[allow(invalid_reference_casting)]
     pub fn assign(&self, new_owner: &Address) {
         // Set the non-mut owner field

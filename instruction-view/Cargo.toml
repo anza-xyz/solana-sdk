@@ -2,7 +2,7 @@
 name = "solana-instruction-view"
 description = "Lightweight instruction representation"
 documentation = "https://docs.rs/solana-instruction-view"
-version = "2.1.0"
+version = "3.0.0"
 rust-version = { workspace = true }
 authors = { workspace = true }
 repository = { workspace = true }

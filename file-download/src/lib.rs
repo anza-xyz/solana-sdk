@@ -239,14 +239,11 @@ pub fn download_file_with_headers<'a, 'b, S: AsRef<str>>(
 
     source.progress_bar.finish_and_clear();
     info!(
-        "  {}{}",
+        "  {}Downloaded {} ({} bytes) in {:?}",
         SPARKLE,
-        format!(
-            "Downloaded {} ({} bytes) in {:?}",
-            url,
-            download_size,
-            Instant::now().duration_since(download_start),
-        )
+        url,
+        download_size,
+        Instant::now().duration_since(download_start),
     );
 
     std::fs::rename(temp_destination_file, destination_file)

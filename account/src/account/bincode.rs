@@ -1,13 +1,9 @@
 //! bincode-based serialization helpers for [`Account`] and [`AccountSharedData`].
 
 use {
-    crate::{
-        Account, AccountSharedData, InheritableAccountFields, ReadableAccount, WritableAccount,
-        DUMMY_INHERITABLE_ACCOUNT_FIELDS,
-    },
+    crate::{Account, AccountSharedData, ReadableAccount, WritableAccount},
     solana_clock::Epoch,
     solana_pubkey::Pubkey,
-    solana_sysvar::SysvarSerialize,
     std::{cell::RefCell, sync::Arc},
 };
 
@@ -121,47 +117,4 @@ impl AccountSharedData {
     pub fn serialize_data<T: serde::Serialize>(&mut self, state: &T) -> Result<(), bincode::Error> {
         shared_serialize_data(self, state)
     }
-}
-
-pub fn create_account_with_fields<S: SysvarSerialize>(
-    sysvar: &S,
-    (lamports, rent_epoch): InheritableAccountFields,
-) -> Account {
-    let data_len = S::size_of().max(bincode::serialized_size(sysvar).unwrap() as usize);
-    let mut account = Account::new(lamports, data_len, &solana_sdk_ids::sysvar::id());
-    to_account::<S, Account>(sysvar, &mut account).unwrap();
-    account.rent_epoch = rent_epoch;
-    account
-}
-
-pub fn create_account_for_test<S: SysvarSerialize>(sysvar: &S) -> Account {
-    create_account_with_fields(sysvar, DUMMY_INHERITABLE_ACCOUNT_FIELDS)
-}
-
-/// Create an `Account` from a `Sysvar`.
-pub fn create_account_shared_data_with_fields<S: SysvarSerialize>(
-    sysvar: &S,
-    fields: InheritableAccountFields,
-) -> AccountSharedData {
-    AccountSharedData::from(create_account_with_fields(sysvar, fields))
-}
-
-pub fn create_account_shared_data_for_test<S: SysvarSerialize>(sysvar: &S) -> AccountSharedData {
-    AccountSharedData::from(create_account_with_fields(
-        sysvar,
-        DUMMY_INHERITABLE_ACCOUNT_FIELDS,
-    ))
-}
-
-/// Create a `Sysvar` from an `Account`'s data.
-pub fn from_account<S: SysvarSerialize, T: ReadableAccount>(account: &T) -> Option<S> {
-    bincode::deserialize(account.data()).ok()
-}
-
-/// Serialize a `Sysvar` into an `Account`'s data.
-pub fn to_account<S: SysvarSerialize, T: WritableAccount>(
-    sysvar: &S,
-    account: &mut T,
-) -> Option<()> {
-    bincode::serialize_into(account.data_as_mut_slice(), sysvar).ok()
 }

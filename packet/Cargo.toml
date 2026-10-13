@@ -2,7 +2,7 @@
 name = "solana-packet"
 description = "The definition of a Solana network packet."
 documentation = "https://docs.rs/solana-packet"
-version = "4.1.0"
+version = "4.4.0"
 authors = { workspace = true }
 repository = { workspace = true }
 homepage = { workspace = true }
@@ -26,11 +26,19 @@ serde = [
     "solana-pubkey/serde",
 ]
 frozen-abi = [
-    "dep:solana-frozen-abi",
-    "dep:solana-frozen-abi-macro",
-    "serde",
+    "solana-frozen-abi-macro/frozen-abi",
+    "solana-frozen-abi/frozen-abi",
     "solana-pubkey/frozen-abi",
+    "stable-abi",
 ]
+stable-abi = [
+    "serde",
+    "solana-frozen-abi-macro/stable-abi",
+    "solana-frozen-abi/stable-abi",
+    "solana-pubkey/stable-abi",
+    "wincode",
+]
+wincode = ["dep:wincode", "solana-pubkey/wincode"]
 
 [dependencies]
 bincode = { workspace = true, optional = true }
@@ -39,9 +47,10 @@ cfg_eval = { workspace = true, optional = true }
 serde = { workspace = true, optional = true }
 serde_derive = { workspace = true, optional = true }
 serde_with = { workspace = true, optional = true, features = ["macros"] }
-solana-frozen-abi = { workspace = true, optional = true, features = ["frozen-abi"] }
-solana-frozen-abi-macro = { workspace = true, optional = true, features = ["frozen-abi"] }
+solana-frozen-abi = { workspace = true, optional = true }
+solana-frozen-abi-macro = { workspace = true, optional = true }
 solana-pubkey = { workspace = true }
+wincode = { workspace = true, optional = true }
 
 [dev-dependencies]
 solana-packet = { path = ".", features = ["dev-context-only-utils"] }

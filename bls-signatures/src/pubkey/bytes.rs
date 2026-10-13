@@ -75,7 +75,7 @@ impl_from_str!(
     BASE64_LEN = BLS_PUBLIC_KEY_AFFINE_BASE64_SIZE
 );
 
-// Byte arrays are both `Pod` and `Zeraoble`, but the traits `bytemuck::Pod` and
+// Byte arrays are both `Pod` and `Zeroable`, but the traits `bytemuck::Pod` and
 // `bytemuck::Zeroable` can only be derived for power-of-two length byte arrays.
 // Directly implement these traits for types that are simple wrappers around
 // byte arrays.

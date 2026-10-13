@@ -188,7 +188,10 @@ mod tests {
             stake_history.add(i, unique_entry_for_epoch(i));
         }
         assert_eq!(stake_history.len(), MAX_ENTRIES);
-        assert_eq!(stake_history.iter().map(|entry| entry.0).min().unwrap(), 2);
+        assert_eq!(
+            stake_history.iter().map(|item| item.epoch).min().unwrap(),
+            2
+        );
 
         let stake_history_sysvar = StakeHistorySysvar(current_epoch);
         let serialized_stake_history = bincode::serialize(&stake_history).unwrap();

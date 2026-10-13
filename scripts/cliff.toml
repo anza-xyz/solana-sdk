@@ -16,7 +16,8 @@ body = """
 trim = true
 footer = """
 """
-postprocessors = [ ]
+postprocessors = []
+
 [git]
 # parse the commits based on https://www.conventionalcommits.org
 conventional_commits = true

@@ -2,12 +2,13 @@
 name = "solana-stable-layout"
 description = "Solana types with stable memory layouts. Internal use only."
 documentation = "https://docs.rs/solana-stable-layout"
-version = "3.0.1"
+version = "4.0.0"
 authors = { workspace = true }
 repository = { workspace = true }
 homepage = { workspace = true }
 license = { workspace = true }
 edition = { workspace = true }
+rust-version = { workspace = true }
 
 [package.metadata.docs.rs]
 targets = ["x86_64-unknown-linux-gnu"]
@@ -19,5 +20,7 @@ solana-instruction = { workspace = true, default-features = false, features = ["
 solana-pubkey = { workspace = true, default-features = false }
 
 [dev-dependencies]
-memoffset = { workspace = true }
 solana-pubkey = { workspace = true, features = ["std"], default-features = false }
+
+[lints]
+workspace = true

@@ -2,7 +2,7 @@
 name = "solana-offchain-message"
 description = "Solana offchain message signing"
 documentation = "https://docs.rs/solana-offchain-message"
-version = "3.0.0"
+version = "4.0.0"
 authors = { workspace = true }
 repository = { workspace = true }
 homepage = { workspace = true }
@@ -33,3 +33,6 @@ solana-hash = { workspace = true, features = ["decode"] }
 solana-keypair = { workspace = true }
 solana-offchain-message = { path = ".", features = ["dev-context-only-utils"] }
 static_assertions = { workspace = true }
+
+[lints]
+workspace = true

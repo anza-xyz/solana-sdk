@@ -1,9 +1,9 @@
 use crate::state::{vote_state_1_14_11::VoteState1_14_11, VoteStateV3, VoteStateV4};
 #[cfg(test)]
 use arbitrary::{Arbitrary, Unstructured};
-#[cfg(feature = "frozen-abi")]
+#[cfg(feature = "stable-abi")]
 use solana_frozen_abi_macro::{frozen_abi, StableAbi, StableAbiSample};
-#[cfg(any(target_os = "solana", feature = "bincode"))]
+#[cfg(any(target_os = "solana", feature = "bincode", feature = "wincode"))]
 use solana_instruction_error::InstructionError;
 #[cfg(test)]
 use {
@@ -13,7 +13,7 @@ use {
 };
 
 #[cfg_attr(
-    feature = "frozen-abi",
+    feature = "stable-abi",
     frozen_abi(
         abi_digest = "292pqhdmS6k7yrk5pUSQBpiQq1MLHb15pu6oM5WnWcug",
         abi_serializer = ["bincode", "wincode"]
@@ -148,7 +148,7 @@ impl VoteStateVersions {
     ///
     /// V0_23_5 is not supported. All other versions (V1_14_11, V3, V4) are deserialized as-is
     /// without any version coercion.
-    #[cfg(any(target_os = "solana", feature = "bincode"))]
+    #[cfg(any(target_os = "solana", feature = "bincode", feature = "wincode"))]
     pub fn deserialize(input: &[u8]) -> Result<Self, InstructionError> {
         use {
             crate::state::vote_state_deserialize::{
@@ -217,7 +217,6 @@ mod tests {
         crate::state::{VoteInit, BLS_PUBLIC_KEY_COMPRESSED_SIZE, DEFAULT_PRIOR_VOTERS_OFFSET},
         rand::Rng,
         solana_clock::Clock,
-        solana_instruction::error::InstructionError,
     };
 
     #[test]

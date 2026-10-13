@@ -24,3 +24,6 @@ console = { workspace = true }
 indicatif = { workspace = true }
 log = { workspace = true }
 reqwest = { workspace = true, features = ["blocking", "brotli", "deflate", "gzip", "json"] }
+
+[lints]
+workspace = true

@@ -2,7 +2,7 @@
 name = "solana-vote-interface"
 description = "Solana vote interface."
 documentation = "https://docs.rs/solana-vote-interface"
-version = "6.0.3"
+version = "7.2.0"
 rust-version = { workspace = true }
 authors = { workspace = true }
 repository = { workspace = true }
@@ -21,21 +21,29 @@ bincode = [
     "dep:solana-serialize-utils",
     "dep:solana-system-interface",
     "serde",
+    "solana-instruction/bincode",
+    "solana-system-interface/bincode",
 ]
 dev-context-only-utils = [
-    "bincode",
     "dep:arbitrary",
     "dep:rand",
     "solana-pubkey/dev-context-only-utils",
 ]
 frozen-abi = [
-    "dep:rand",
-    "dep:solana-frozen-abi",
-    "dep:solana-frozen-abi-macro",
-    "serde",
+    "solana-frozen-abi-macro/frozen-abi",
+    "solana-frozen-abi/frozen-abi",
     "solana-hash/frozen-abi",
     "solana-pubkey/frozen-abi",
     "solana-short-vec/frozen-abi",
+    "stable-abi",
+]
+stable-abi = [
+    "dep:rand",
+    "serde",
+    "solana-frozen-abi-macro/stable-abi",
+    "solana-frozen-abi/stable-abi",
+    "solana-hash/stable-abi",
+    "solana-pubkey/stable-abi",
 ]
 serde = [
     "dep:cfg_eval",
@@ -50,12 +58,16 @@ serde = [
     "solana-short-vec/serde",
 ]
 wincode = [
+    "dep:solana-serialize-utils",
     "dep:solana-short-vec",
+    "dep:solana-system-interface",
     "dep:solana-wincode-varint",
     "dep:wincode",
     "solana-hash/wincode",
+    "solana-instruction/wincode",
     "solana-pubkey/wincode",
     "solana-short-vec/wincode",
+    "solana-system-interface/wincode",
     "wincode/alloc",
 ]
 
@@ -70,18 +82,17 @@ serde = { workspace = true, optional = true }
 serde_derive = { workspace = true, optional = true }
 serde_with = { workspace = true, features = ["macros"], optional = true }
 solana-clock = { workspace = true }
-solana-frozen-abi = { workspace = true, features = ["frozen-abi"], optional = true }
-solana-frozen-abi-macro = { workspace = true, features = ["frozen-abi"], optional = true }
+solana-frozen-abi = { workspace = true, optional = true }
+solana-frozen-abi-macro = { workspace = true, optional = true }
 solana-hash = { workspace = true, features = ["decode"] }
 solana-instruction = { workspace = true, features = ["std"] }
 solana-instruction-error = { workspace = true, features = ["num-traits"] }
 solana-pubkey = { workspace = true }
-solana-rent = { workspace = true }
 solana-sdk-ids = { workspace = true }
 solana-serde-varint = { workspace = true, optional = true }
 solana-serialize-utils = { workspace = true, optional = true, features = ["std"] }
 solana-short-vec = { workspace = true, optional = true }
-solana-system-interface = { workspace = true, features = ["bincode"], optional = true }
+solana-system-interface = { workspace = true, optional = true }
 solana-wincode-varint = { workspace = true, optional = true }
 wincode = { workspace = true, optional = true }
 
@@ -91,7 +102,8 @@ solana-serialize-utils = { workspace = true, features = ["std"] }
 [dev-dependencies]
 solana-epoch-schedule = { workspace = true }
 solana-pubkey = { workspace = true, features = ["dev-context-only-utils"] }
-solana-vote-interface = { path = ".", features = ["dev-context-only-utils", "wincode"] }
+solana-rent = { workspace = true }
+solana-vote-interface = { path = ".", features = ["bincode", "dev-context-only-utils", "wincode"] }
 test-case = { workspace = true }
 
 [lints]

@@ -28,9 +28,9 @@ use std::{
 /// ```
 #[repr(C)]
 pub struct StableVec<T> {
-    pub addr: u64,
-    pub cap: u64,
-    pub len: u64,
+    addr: u64,
+    cap: u64,
+    len: u64,
     _marker: PhantomData<T>,
 }
 
@@ -168,8 +168,7 @@ impl<T> Drop for StableVec<T> {
 mod tests {
     use {
         super::*,
-        memoffset::offset_of,
-        std::mem::{align_of, size_of},
+        std::mem::{align_of, offset_of, size_of},
     };
 
     #[test]

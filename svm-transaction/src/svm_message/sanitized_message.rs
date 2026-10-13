@@ -27,6 +27,14 @@ impl SVMStaticMessage for SanitizedMessage {
         SanitizedMessage::num_write_locks(self)
     }
 
+    fn num_readonly_signed_static_accounts(&self) -> u8 {
+        self.header().num_readonly_signed_accounts
+    }
+
+    fn num_readonly_unsigned_static_accounts(&self) -> u8 {
+        self.header().num_readonly_unsigned_accounts
+    }
+
     fn recent_blockhash(&self) -> &Hash {
         SanitizedMessage::recent_blockhash(self)
     }
@@ -67,6 +75,14 @@ impl SVMStaticMessage for SanitizedMessage {
             .iter()
             .map(SVMMessageAddressTableLookup::from)
     }
+
+    fn is_signer(&self, index: usize) -> bool {
+        SanitizedMessage::is_signer(self, index)
+    }
+
+    fn is_invoked(&self, key_index: usize) -> bool {
+        SanitizedMessage::is_invoked(self, key_index)
+    }
 }
 
 // Implement for the "reference" `SanitizedMessage` type.
@@ -77,13 +93,5 @@ impl SVMMessage for SanitizedMessage {
 
     fn is_writable(&self, index: usize) -> bool {
         SanitizedMessage::is_writable(self, index)
-    }
-
-    fn is_signer(&self, index: usize) -> bool {
-        SanitizedMessage::is_signer(self, index)
-    }
-
-    fn is_invoked(&self, key_index: usize) -> bool {
-        SanitizedMessage::is_invoked(self, key_index)
     }
 }

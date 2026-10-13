@@ -2,7 +2,7 @@
 name = "solana-clock"
 description = "Solana Clock and Time Definitions"
 documentation = "https://docs.rs/solana-clock"
-version = "3.1.1"
+version = "4.0.0"
 authors = { workspace = true }
 repository = { workspace = true }
 homepage = { workspace = true }
@@ -31,3 +31,6 @@ wincode = { workspace = true, optional = true }
 [dev-dependencies]
 solana-clock = { path = ".", features = ["sysvar", "wincode"] }
 static_assertions = { workspace = true }
+
+[lints]
+workspace = true

@@ -12,22 +12,21 @@
 pub use loaded::*;
 #[cfg(feature = "serde")]
 use serde_derive::{Deserialize, Serialize};
-#[cfg(feature = "frozen-abi")]
+#[cfg(feature = "stable-abi")]
 use solana_frozen_abi_macro::{frozen_abi, AbiExample, StableAbi, StableAbiSample};
 use {
     crate::{
         compiled_instruction::CompiledInstruction,
         compiled_keys::{CompileError, CompiledKeys},
-        AccountKeys, AddressLookupTableAccount, MessageHeader,
+        AccountKeys, AddressLookupTableAccount, AddressSet, MessageHeader,
     },
     alloc::vec::Vec,
     solana_address::Address,
     solana_hash::Hash,
     solana_instruction::Instruction,
     solana_sanitize::SanitizeError,
+    solana_sdk_ids::bpf_loader_upgradeable,
 };
-#[cfg(feature = "std")]
-use {solana_sdk_ids::bpf_loader_upgradeable, std::collections::HashSet};
 #[cfg(feature = "wincode")]
 use {
     solana_short_vec::ShortU16,
@@ -39,7 +38,7 @@ mod loaded;
 /// Address table lookups describe an on-chain address lookup table to use
 /// for loading more readonly and writable accounts in a single tx.
 #[cfg_attr(
-    feature = "frozen-abi",
+    feature = "stable-abi",
     derive(AbiExample, StableAbi, StableAbiSample),
     frozen_abi(
         abi_digest = "BgfDMK6KNGWbvzMmSAcwMsMoL25jmE7x7CCzCeYtMnqa",
@@ -74,7 +73,7 @@ pub struct MessageAddressTableLookup {
 ///
 /// See the crate documentation for further description.
 ///
-#[cfg_attr(feature = "frozen-abi", derive(AbiExample, StableAbi, StableAbiSample))]
+#[cfg_attr(feature = "stable-abi", derive(AbiExample, StableAbi, StableAbiSample))]
 #[cfg_attr(
     feature = "serde",
     derive(Deserialize, Serialize),
@@ -355,7 +354,6 @@ impl Message {
 
     /// Returns true if the account at the specified index was requested to be
     /// writable.  This method should not be used directly.
-    #[cfg(feature = "std")]
     fn is_writable_index(&self, key_index: usize) -> bool {
         let header = &self.header;
         let num_account_keys = self.account_keys.len();
@@ -382,7 +380,6 @@ impl Message {
     }
 
     /// Returns true if any static account key is the bpf upgradeable loader
-    #[cfg(feature = "std")]
     fn is_upgradeable_loader_in_static_keys(&self) -> bool {
         self.account_keys
             .iter()
@@ -390,41 +387,26 @@ impl Message {
     }
 
     /// Returns true if the account at the specified index was requested as
-    /// writable. Before loading addresses, we can't demote write locks properly
-    /// so this should not be used by the runtime. The `reserved_account_keys`
-    /// param is optional to allow clients to approximate writability without
-    /// requiring fetching the latest set of reserved account keys.
-    #[cfg(feature = "std")]
-    pub fn is_maybe_writable(
+    /// writable.
+    ///
+    /// # Important
+    ///
+    /// Before loading addresses, we can't demote write locks properly so this should
+    /// not be used by the runtime. The `reserved_addresses` param is optional to
+    /// allow clients to approximate writability without requiring fetching the latest
+    /// set of protocol-reserved addresses.
+    pub fn is_maybe_writable_with_reserved_addresses(
         &self,
         key_index: usize,
-        reserved_account_keys: Option<&HashSet<Address>>,
+        reserved_addresses: Option<&impl AddressSet>,
     ) -> bool {
         self.is_writable_index(key_index)
-            && !self.is_account_maybe_reserved(key_index, reserved_account_keys)
+            && !crate::is_account_maybe_reserved(key_index, &self.account_keys, reserved_addresses)
             && !{
                 // demote program ids
                 self.is_key_called_as_program(key_index)
                     && !self.is_upgradeable_loader_in_static_keys()
             }
-    }
-
-    /// Returns true if the account at the specified index is in the reserved
-    /// account keys set. Before loading addresses, we can't detect reserved
-    /// account keys properly so this shouldn't be used by the runtime.
-    #[cfg(feature = "std")]
-    fn is_account_maybe_reserved(
-        &self,
-        key_index: usize,
-        reserved_account_keys: Option<&HashSet<Address>>,
-    ) -> bool {
-        let mut is_maybe_reserved = false;
-        if let Some(reserved_account_keys) = reserved_account_keys {
-            if let Some(key) = self.account_keys.get(key_index) {
-                is_maybe_reserved = reserved_account_keys.contains(key);
-            }
-        }
-        is_maybe_reserved
     }
 }
 
@@ -755,72 +737,5 @@ mod tests {
                 }],
             })
         );
-    }
-
-    #[test]
-    fn test_is_maybe_writable() {
-        let key0 = Address::new_unique();
-        let key1 = Address::new_unique();
-        let key2 = Address::new_unique();
-        let key3 = Address::new_unique();
-        let key4 = Address::new_unique();
-        let key5 = Address::new_unique();
-
-        let message = Message {
-            header: MessageHeader {
-                num_required_signatures: 3,
-                num_readonly_signed_accounts: 2,
-                num_readonly_unsigned_accounts: 1,
-            },
-            account_keys: vec![key0, key1, key2, key3, key4, key5],
-            address_table_lookups: vec![MessageAddressTableLookup {
-                account_key: Address::new_unique(),
-                writable_indexes: vec![0],
-                readonly_indexes: vec![1],
-            }],
-            ..Message::default()
-        };
-
-        let reserved_account_keys = HashSet::from([key3]);
-
-        assert!(message.is_maybe_writable(0, Some(&reserved_account_keys)));
-        assert!(!message.is_maybe_writable(1, Some(&reserved_account_keys)));
-        assert!(!message.is_maybe_writable(2, Some(&reserved_account_keys)));
-        assert!(!message.is_maybe_writable(3, Some(&reserved_account_keys)));
-        assert!(message.is_maybe_writable(3, None));
-        assert!(message.is_maybe_writable(4, Some(&reserved_account_keys)));
-        assert!(!message.is_maybe_writable(5, Some(&reserved_account_keys)));
-        assert!(message.is_maybe_writable(6, Some(&reserved_account_keys)));
-        assert!(!message.is_maybe_writable(7, Some(&reserved_account_keys)));
-        assert!(!message.is_maybe_writable(8, Some(&reserved_account_keys)));
-    }
-
-    #[test]
-    fn test_is_account_maybe_reserved() {
-        let key0 = Address::new_unique();
-        let key1 = Address::new_unique();
-
-        let message = Message {
-            account_keys: vec![key0, key1],
-            address_table_lookups: vec![MessageAddressTableLookup {
-                account_key: Address::new_unique(),
-                writable_indexes: vec![0],
-                readonly_indexes: vec![1],
-            }],
-            ..Message::default()
-        };
-
-        let reserved_account_keys = HashSet::from([key1]);
-
-        assert!(!message.is_account_maybe_reserved(0, Some(&reserved_account_keys)));
-        assert!(message.is_account_maybe_reserved(1, Some(&reserved_account_keys)));
-        assert!(!message.is_account_maybe_reserved(2, Some(&reserved_account_keys)));
-        assert!(!message.is_account_maybe_reserved(3, Some(&reserved_account_keys)));
-        assert!(!message.is_account_maybe_reserved(4, Some(&reserved_account_keys)));
-        assert!(!message.is_account_maybe_reserved(0, None));
-        assert!(!message.is_account_maybe_reserved(1, None));
-        assert!(!message.is_account_maybe_reserved(2, None));
-        assert!(!message.is_account_maybe_reserved(3, None));
-        assert!(!message.is_account_maybe_reserved(4, None));
     }
 }

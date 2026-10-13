@@ -1,5 +1,9 @@
 use {
-    crate::{compiled_instruction::CompiledInstruction, v0::LoadedAddresses, CompileError},
+    crate::{
+        compiled_instruction::CompiledInstruction,
+        v0::{LoadedAddresses, LoadedAddressesView},
+        CompileError,
+    },
     alloc::{collections::BTreeMap, vec::Vec},
     core::ops::Index,
     solana_address::Address,
@@ -11,7 +15,7 @@ use {
 #[derive(Clone, Default, Debug, Eq)]
 pub struct AccountKeys<'a> {
     static_keys: &'a [Address],
-    dynamic_keys: Option<&'a LoadedAddresses>,
+    dynamic_keys: Option<LoadedAddressesView<'a>>,
 }
 
 impl Index<usize> for AccountKeys<'_> {
@@ -24,6 +28,18 @@ impl Index<usize> for AccountKeys<'_> {
 
 impl<'a> AccountKeys<'a> {
     pub fn new(static_keys: &'a [Address], dynamic_keys: Option<&'a LoadedAddresses>) -> Self {
+        Self::new_with_loaded_addresses_view(
+            static_keys,
+            dynamic_keys.map(LoadedAddressesView::from),
+        )
+    }
+
+    /// Creates account keys from static keys and an optional borrowed view of
+    /// dynamically loaded addresses.
+    pub fn new_with_loaded_addresses_view(
+        static_keys: &'a [Address],
+        dynamic_keys: Option<LoadedAddressesView<'a>>,
+    ) -> Self {
         Self {
             static_keys,
             dynamic_keys,
@@ -38,8 +54,8 @@ impl<'a> AccountKeys<'a> {
         if let Some(dynamic_keys) = self.dynamic_keys {
             [
                 self.static_keys,
-                &dynamic_keys.writable,
-                &dynamic_keys.readonly,
+                dynamic_keys.writable,
+                dynamic_keys.readonly,
             ]
             .into_iter()
         } else {
@@ -185,6 +201,31 @@ mod tests {
     }
 
     #[test]
+    fn test_key_segment_iter_with_loaded_addresses_view() {
+        let keys = test_account_keys();
+
+        let static_keys = [keys[0], keys[1], keys[2]];
+        let writable_dynamic_keys = [keys[3], keys[4]];
+        let readonly_dynamic_keys = [keys[5]];
+        let dynamic_keys = LoadedAddressesView {
+            writable: &writable_dynamic_keys,
+            readonly: &readonly_dynamic_keys,
+        };
+        let account_keys =
+            AccountKeys::new_with_loaded_addresses_view(&static_keys, Some(dynamic_keys));
+
+        let expected_segments = [
+            &static_keys[..],
+            &writable_dynamic_keys[..],
+            &readonly_dynamic_keys[..],
+        ];
+
+        assert!(account_keys
+            .key_segment_iter()
+            .eq(expected_segments.into_iter()));
+    }
+
+    #[test]
     fn test_len() {
         let keys = test_account_keys();
 
@@ -303,6 +344,66 @@ mod tests {
         assert_eq!(account_keys.get(3), Some(&keys[3]));
         assert_eq!(account_keys.get(4), Some(&keys[4]));
         assert_eq!(account_keys.get(5), Some(&keys[5]));
+    }
+
+    #[test]
+    fn test_owned_and_view_dynamic_keys_behave_the_same() {
+        let keys = test_account_keys();
+
+        let static_keys = [keys[0], keys[1]];
+        let dynamic_keys = LoadedAddresses {
+            writable: vec![keys[2], keys[3]],
+            readonly: vec![keys[4], keys[5]],
+        };
+        let dynamic_keys_view = LoadedAddressesView::from(&dynamic_keys);
+        let owned_backed_account_keys = AccountKeys::new(&static_keys, Some(&dynamic_keys));
+        let view_backed_account_keys =
+            AccountKeys::new_with_loaded_addresses_view(&static_keys, Some(dynamic_keys_view));
+
+        assert_eq!(
+            dynamic_keys_view,
+            LoadedAddressesView {
+                writable: &dynamic_keys.writable,
+                readonly: &dynamic_keys.readonly,
+            },
+        );
+        assert_eq!(
+            owned_backed_account_keys.len(),
+            view_backed_account_keys.len()
+        );
+        for index in 0..=keys.len() {
+            assert_eq!(
+                owned_backed_account_keys.get(index),
+                view_backed_account_keys.get(index),
+            );
+        }
+        assert!(owned_backed_account_keys
+            .iter()
+            .eq(view_backed_account_keys.iter()));
+        assert_eq!(owned_backed_account_keys, view_backed_account_keys);
+    }
+
+    #[test]
+    fn test_loaded_addresses_view_from_borrowed_slices() {
+        let keys = test_account_keys();
+
+        let static_keys = [keys[0], keys[1]];
+        let writable_dynamic_keys = [keys[2], keys[3]];
+        let readonly_dynamic_keys = [keys[4], keys[5]];
+        let account_keys = AccountKeys::new_with_loaded_addresses_view(
+            &static_keys,
+            Some(LoadedAddressesView {
+                writable: &writable_dynamic_keys,
+                readonly: &readonly_dynamic_keys,
+            }),
+        );
+
+        assert_eq!(account_keys.len(), keys.len());
+        for (index, expected_key) in keys.iter().enumerate() {
+            assert_eq!(account_keys.get(index), Some(expected_key));
+        }
+        assert_eq!(account_keys.get(keys.len()), None);
+        assert!(account_keys.iter().eq(keys.iter()));
     }
 
     #[test]

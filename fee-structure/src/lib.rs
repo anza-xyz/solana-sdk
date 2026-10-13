@@ -39,6 +39,8 @@ pub struct FeeStructure {
 pub struct FeeDetails {
     transaction_fee: u64,
     prioritization_fee: u64,
+    /// Introduced with SIMD-0553.
+    resource_fee: u64,
 }
 
 impl FeeDetails {
@@ -46,11 +48,26 @@ impl FeeDetails {
         Self {
             transaction_fee,
             prioritization_fee,
+            resource_fee: 0,
+        }
+    }
+
+    pub fn new_with_resource_fee(
+        transaction_fee: u64,
+        prioritization_fee: u64,
+        resource_fee: u64,
+    ) -> Self {
+        Self {
+            transaction_fee,
+            prioritization_fee,
+            resource_fee,
         }
     }
 
     pub fn total_fee(&self) -> u64 {
-        self.transaction_fee.saturating_add(self.prioritization_fee)
+        self.transaction_fee
+            .saturating_add(self.prioritization_fee)
+            .saturating_add(self.resource_fee)
     }
 
     pub fn accumulate(&mut self, fee_details: &FeeDetails) {
@@ -59,7 +76,8 @@ impl FeeDetails {
             .saturating_add(fee_details.transaction_fee);
         self.prioritization_fee = self
             .prioritization_fee
-            .saturating_add(fee_details.prioritization_fee)
+            .saturating_add(fee_details.prioritization_fee);
+        self.resource_fee = self.resource_fee.saturating_add(fee_details.resource_fee);
     }
 
     pub fn transaction_fee(&self) -> u64 {
@@ -68,6 +86,10 @@ impl FeeDetails {
 
     pub fn prioritization_fee(&self) -> u64 {
         self.prioritization_fee
+    }
+
+    pub fn resource_fee(&self) -> u64 {
+        self.resource_fee
     }
 }
 

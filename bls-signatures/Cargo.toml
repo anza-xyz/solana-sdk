@@ -2,7 +2,7 @@
 name = "solana-bls-signatures"
 description = "Solana BLS Signatures"
 documentation = "https://docs.rs/solana-bls-signatures"
-version = "3.3.0"
+version = "4.0.0"
 rust-version = { workspace = true }
 authors = { workspace = true }
 repository = { workspace = true }
@@ -47,7 +47,7 @@ blst = { workspace = true }
 blstrs = { workspace = true }
 ff = { workspace = true }
 group = { workspace = true }
-rand = "0.8" # blstrs is still on rand_core v0.6, so pin this for now
+rand = "0.8"  # blstrs is still on rand_core v0.6, so pin this for now
 rayon = { workspace = true, optional = true }
 solana-signature = { workspace = true, optional = true }
 solana-signer = { workspace = true, optional = true }
@@ -56,7 +56,6 @@ subtle = { workspace = true, optional = true }
 [dev-dependencies]
 bincode = { workspace = true }
 criterion = { workspace = true }
-ff = { workspace = true }
 hex = { workspace = true }
 solana-bls-signatures = { path = ".", features = ["std"] }
 solana-keypair = { workspace = true }
@@ -65,6 +64,15 @@ tempfile = { workspace = true }
 [lints]
 workspace = true
 
+[[test]]
+name = "allocation_regression"
+path = "tests/allocation_regression.rs"
+harness = false
+
 [[bench]]
 name = "bls_signatures"
+harness = false
+
+[[bench]]
+name = "verification_paths"
 harness = false

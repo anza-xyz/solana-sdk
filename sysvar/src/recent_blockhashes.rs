@@ -18,8 +18,6 @@
 
 #![allow(deprecated)]
 #![allow(clippy::arithmetic_side_effects)]
-#[cfg(feature = "bincode")]
-use crate::SysvarSerialize;
 #[cfg(feature = "serde")]
 use serde_derive::{Deserialize, Serialize};
 pub use solana_sdk_ids::sysvar::recent_blockhashes::{check_id, id, ID};
@@ -162,13 +160,6 @@ impl<T: Ord> Iterator for IntoIterSorted<T> {
 
 impl Sysvar for RecentBlockhashes {}
 
-#[cfg(feature = "bincode")]
-impl SysvarSerialize for RecentBlockhashes {
-    fn size_of() -> usize {
-        SIZE
-    }
-}
-
 impl Deref for RecentBlockhashes {
     type Target = Vec<Entry>;
     fn deref(&self) -> &Self::Target {
@@ -185,15 +176,5 @@ mod tests {
     fn test_sysvar_can_hold_all_active_blockhashes() {
         // Ensure we can still hold all of the active entries in `BlockhashQueue`
         assert!(MAX_PROCESSING_AGE <= MAX_ENTRIES);
-    }
-
-    #[test]
-    fn test_size_of() {
-        let entry = Entry::new(&Hash::default(), 0);
-        assert_eq!(
-            bincode::serialized_size(&RecentBlockhashes(vec![entry; MAX_ENTRIES])).unwrap()
-                as usize,
-            RecentBlockhashes::size_of()
-        );
     }
 }

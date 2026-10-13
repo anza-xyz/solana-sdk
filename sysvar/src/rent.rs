@@ -55,7 +55,6 @@
 //! ```
 //! # use solana_account_info::{AccountInfo, next_account_info};
 //! # use solana_msg::msg;
-//! # use solana_sysvar::{Sysvar, SysvarSerialize};
 //! # use solana_program_error::{ProgramError, ProgramResult};
 //! # use solana_pubkey::Pubkey;
 //! # use solana_rent::Rent;
@@ -71,7 +70,8 @@
 //!
 //!     assert!(rent::check_id(rent_account_info.key));
 //!
-//!     let rent = Rent::from_account_info(rent_account_info)?;
+//!     let rent: Rent = wincode::deserialize(&rent_account_info.data.borrow())
+//!         .map_err(|_| ProgramError::InvalidArgument)?;
 //!     msg!("rent: {:#?}", rent);
 //!
 //!     Ok(())
@@ -111,7 +111,7 @@
 //! # });
 //! #
 //!     let rent = client.get_account(&rent::ID)?;
-//!     let data: Rent = bincode::deserialize(&rent.data)?;
+//!     let data: Rent = wincode::deserialize(&rent.data)?;
 //!
 //!     Ok(())
 //! }
@@ -121,12 +121,7 @@
 //! #
 //! # Ok::<(), anyhow::Error>(())
 //! ```
-#[cfg(feature = "bincode")]
-use crate::SysvarSerialize;
 pub use {
     solana_rent::{Rent, SIZE},
     solana_sdk_ids::sysvar::rent::{check_id, id, ID},
 };
-
-#[cfg(feature = "bincode")]
-impl SysvarSerialize for Rent {}

@@ -197,6 +197,17 @@
 //!    or with overrides, as any change to these will result in different hash
 //! 3. For collection types with non deterministic ordering (e.g., `HashMap`), it is recommended
 //!    to insert only one item to avoid false positives caused by iteration order differences
+//!
+//! ## Building on stable Rust
+//!
+//! The `stable-abi` feature carries `StableAbi`. It needs no unstable Rust features.
+//!
+//! The `frozen-abi` feature enables `stable-abi`. It adds the `AbiExample`/`AbiEnumVisitor`
+//! api digester (`api_digest`) on top. That digester specializes blanket impls, so it needs
+//! nightly Rust.
+//!
+//! Enable `stable-abi` alone to digest types on stable Rust. That configuration needs no
+//! `#![feature(min_specialization)]` in dependent crates.
 
 #![allow(incomplete_features)]
 #![cfg_attr(docsrs, feature(doc_cfg))]
@@ -216,15 +227,16 @@ extern crate self as solana_frozen_abi;
 pub mod abi_digester;
 #[cfg(feature = "frozen-abi")]
 pub mod abi_example;
-#[cfg(feature = "frozen-abi")]
+#[cfg(feature = "stable-abi")]
 pub mod hash;
 
-#[cfg(all(feature = "frozen-abi", not(target_os = "solana")))]
+#[cfg(all(feature = "stable-abi", not(target_os = "solana")))]
 pub mod stable_abi;
 
+// `crate::hash::Hash` derives `AbiExample` unqualified
 #[cfg(feature = "frozen-abi")]
 #[macro_use]
 extern crate solana_frozen_abi_macro;
 
-#[cfg(all(feature = "frozen-abi", not(target_os = "solana")))]
+#[cfg(all(feature = "stable-abi", not(target_os = "solana")))]
 pub use {bincode, rand, rand_chacha, wincode};

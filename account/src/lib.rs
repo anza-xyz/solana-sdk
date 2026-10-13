@@ -2,7 +2,7 @@
 #![cfg_attr(docsrs, feature(doc_cfg))]
 //! The Solana [`Account`] type.
 
-#[cfg(feature = "frozen-abi")]
+#[cfg(feature = "stable-abi")]
 use solana_frozen_abi_macro::{frozen_abi, AbiExample, StableAbi, StableAbiSample};
 use {solana_clock::Epoch, solana_pubkey::Pubkey, std::sync::Arc};
 
@@ -12,8 +12,34 @@ pub use account::*;
 #[cfg(feature = "serde")]
 mod serde;
 
-#[cfg(feature = "bincode")]
+#[cfg(any(feature = "bincode", feature = "wincode"))]
 pub mod state_traits;
+
+// Mirrors `solana_system_interface::MAX_PERMITTED_DATA_LENGTH` (kept in sync by the
+// assertion below) so `solana-system-interface` stays a dev-only dependency.
+#[cfg(feature = "wincode")]
+const WINCODE_PREALLOC_LIMIT: usize = 10 * 1024 * 1024;
+#[cfg(all(test, feature = "wincode"))]
+const _: () =
+    assert!(WINCODE_PREALLOC_LIMIT as u64 == solana_system_interface::MAX_PERMITTED_DATA_LENGTH);
+
+/// Wincode configuration used to en/decode account state, see [`WINCODE_CONFIG`].
+///
+/// Exported so downstream generic helpers can spell out the `wincode::Schema*` bounds
+/// account state must satisfy, e.g.
+/// `T: SchemaWrite<WincodeConfig, Src = T> + for<'de> SchemaRead<'de, WincodeConfig, Dst = T>`.
+#[cfg(feature = "wincode")]
+pub type WincodeConfig = wincode::config::Configuration<true, WINCODE_PREALLOC_LIMIT>;
+
+/// The configuration used by [`state_traits::StateMutWincode`].
+///
+/// The wire format matches bincode byte-for-byte; the only deliberate difference is
+/// raising the preallocation guard to the max account data length so valid accounts are
+/// never rejected. This gates only the prealloc check, not the encoded bytes.
+#[cfg(feature = "wincode")]
+pub const WINCODE_CONFIG: WincodeConfig = wincode::config::Configuration::default()
+    .with_preallocation_size_limit::<WINCODE_PREALLOC_LIMIT>(
+);
 
 // NOTE: `Account` and `AccountSharedData` are defined here, in the crate root, on
 // purpose. The frozen-abi digest of any downstream struct that has an
@@ -25,7 +51,7 @@ pub mod state_traits;
 /// An Account with data that is stored on chain
 #[repr(C)]
 #[cfg_attr(
-    feature = "frozen-abi",
+    feature = "stable-abi",
     derive(AbiExample, StableAbi, StableAbiSample),
     frozen_abi(
         api_digest = "62EqVoynUFvuui7DVfqWCvZP7bxKGJGioeSBnWrdjRME",
@@ -45,7 +71,7 @@ pub struct Account {
     /// data held in this account
     #[cfg_attr(feature = "serde", serde(with = "serde_bytes"))]
     #[cfg_attr(
-        feature = "frozen-abi",
+        feature = "stable-abi",
         stable_abi_sample(
             with = "(0..rng.random_range(0..=1000)).map(|_| rng.random()).collect()"
         )
@@ -62,7 +88,7 @@ pub struct Account {
 /// An Account with data that is stored on chain
 /// This will be the in-memory representation of the 'Account' struct data.
 /// The existing 'Account' structure cannot easily change due to downstream projects.
-#[cfg_attr(feature = "frozen-abi", derive(AbiExample, StableAbi, StableAbiSample))]
+#[cfg_attr(feature = "stable-abi", derive(AbiExample, StableAbi, StableAbiSample))]
 #[cfg_attr(
     feature = "serde",
     derive(serde_derive::Deserialize),

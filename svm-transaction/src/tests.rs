@@ -1,6 +1,6 @@
 #![cfg(test)]
 use {
-    crate::svm_message::SVMMessage,
+    crate::svm_message::SVMStaticMessage,
     solana_hash::Hash,
     solana_message::{
         compiled_instruction::CompiledInstruction,
@@ -13,10 +13,12 @@ use {
     solana_sdk_ids::system_program,
     solana_system_interface::instruction::SystemInstruction,
     std::collections::HashSet,
+    test_case::test_case,
 };
 
-#[test]
-fn test_get_durable_nonce() {
+#[test_case(false; "legacy")]
+#[test_case(true; "SIMD-0602")]
+fn test_get_durable_nonce(disallow_nonce_as_program_id: bool) {
     fn create_message_for_test(
         num_signers: u8,
         num_writable: u8,
@@ -72,8 +74,9 @@ fn test_get_durable_nonce() {
     // No instructions - no nonce
     {
         let message = create_message_for_test(1, 1, vec![Pubkey::new_unique()], vec![], None);
-        assert!(SanitizedMessage::get_durable_nonce(&message).is_none());
-        assert!(SVMMessage::get_durable_nonce(&message).is_none());
+        assert!(
+            SVMStaticMessage::get_durable_nonce(&message, disallow_nonce_as_program_id).is_none()
+        );
     }
 
     // system program id instruction - invalid
@@ -85,8 +88,9 @@ fn test_get_durable_nonce() {
             vec![CompiledInstruction::new_from_raw_parts(1, vec![], vec![])],
             None,
         );
-        assert!(SanitizedMessage::get_durable_nonce(&message).is_none());
-        assert!(SVMMessage::get_durable_nonce(&message).is_none());
+        assert!(
+            SVMStaticMessage::get_durable_nonce(&message, disallow_nonce_as_program_id).is_none()
+        );
     }
 
     // system program id instruction - not nonce
@@ -102,8 +106,9 @@ fn test_get_durable_nonce() {
             )],
             None,
         );
-        assert!(SanitizedMessage::get_durable_nonce(&message).is_none());
-        assert!(SVMMessage::get_durable_nonce(&message).is_none());
+        assert!(
+            SVMStaticMessage::get_durable_nonce(&message, disallow_nonce_as_program_id).is_none()
+        );
     }
 
     // system program id - nonce instruction (no accounts)
@@ -119,8 +124,9 @@ fn test_get_durable_nonce() {
             )],
             None,
         );
-        assert!(SanitizedMessage::get_durable_nonce(&message).is_none());
-        assert!(SVMMessage::get_durable_nonce(&message).is_none());
+        assert!(
+            SVMStaticMessage::get_durable_nonce(&message, disallow_nonce_as_program_id).is_none()
+        );
     }
 
     // system program id - nonce instruction (non-fee-payer, non-writable)
@@ -138,8 +144,9 @@ fn test_get_durable_nonce() {
             )],
             None,
         );
-        assert!(SanitizedMessage::get_durable_nonce(&message).is_none());
-        assert!(SVMMessage::get_durable_nonce(&message).is_none());
+        assert!(
+            SVMStaticMessage::get_durable_nonce(&message, disallow_nonce_as_program_id).is_none()
+        );
     }
 
     // system program id - nonce instruction fee-payer
@@ -157,10 +164,9 @@ fn test_get_durable_nonce() {
             None,
         );
         assert_eq!(
-            SanitizedMessage::get_durable_nonce(&message),
+            SVMStaticMessage::get_durable_nonce(&message, disallow_nonce_as_program_id),
             Some(&payer_nonce)
         );
-        assert_eq!(SVMMessage::get_durable_nonce(&message), Some(&payer_nonce));
     }
 
     // system program id - nonce instruction w/ trailing bytes fee-payer
@@ -180,10 +186,9 @@ fn test_get_durable_nonce() {
             None,
         );
         assert_eq!(
-            SanitizedMessage::get_durable_nonce(&message),
+            SVMStaticMessage::get_durable_nonce(&message, disallow_nonce_as_program_id),
             Some(&payer_nonce)
         );
-        assert_eq!(SVMMessage::get_durable_nonce(&message), Some(&payer_nonce));
     }
 
     // system program id - nonce instruction (non-fee-payer)
@@ -201,8 +206,10 @@ fn test_get_durable_nonce() {
             )],
             None,
         );
-        assert_eq!(SanitizedMessage::get_durable_nonce(&message), Some(&nonce));
-        assert_eq!(SVMMessage::get_durable_nonce(&message), Some(&nonce));
+        assert_eq!(
+            SVMStaticMessage::get_durable_nonce(&message, disallow_nonce_as_program_id),
+            Some(&nonce)
+        );
     }
 
     // system program id - nonce instruction (non-fee-payer, multiple accounts)
@@ -221,8 +228,10 @@ fn test_get_durable_nonce() {
             )],
             None,
         );
-        assert_eq!(SanitizedMessage::get_durable_nonce(&message), Some(&nonce));
-        assert_eq!(SVMMessage::get_durable_nonce(&message), Some(&nonce));
+        assert_eq!(
+            SVMStaticMessage::get_durable_nonce(&message, disallow_nonce_as_program_id),
+            Some(&nonce)
+        );
     }
 
     // system program id - nonce instruction (non-fee-payer, loaded account)
@@ -243,8 +252,30 @@ fn test_get_durable_nonce() {
                 readonly: vec![],
             }),
         );
-        assert_eq!(SanitizedMessage::get_durable_nonce(&message), Some(&nonce));
-        assert_eq!(SVMMessage::get_durable_nonce(&message), None);
+        assert_eq!(
+            SVMStaticMessage::get_durable_nonce(&message, disallow_nonce_as_program_id),
+            None
+        );
+    }
+
+    // system program id - nonce instruction (nonce is program id)
+    {
+        let payer = Pubkey::new_unique();
+        let nonce = Pubkey::new_unique();
+        let message = create_message_for_test(
+            1,
+            2,
+            vec![payer, nonce, system_program::id()],
+            vec![
+                CompiledInstruction::new(2, &SystemInstruction::AdvanceNonceAccount, vec![1]),
+                CompiledInstruction::new_from_raw_parts(1, vec![], vec![]),
+            ],
+            None,
+        );
+        assert_eq!(
+            SVMStaticMessage::get_durable_nonce(&message, disallow_nonce_as_program_id),
+            (!disallow_nonce_as_program_id).then_some(&nonce)
+        );
     }
 }
 
@@ -274,19 +305,59 @@ fn test_get_ix_signers() {
     .unwrap();
 
     assert_eq!(
-        SVMMessage::get_ix_signers(&message, 0).collect::<HashSet<_>>(),
+        SVMStaticMessage::get_ix_signers(&message, 0).collect::<HashSet<_>>(),
         HashSet::from_iter([&signer0])
     );
     assert_eq!(
-        SVMMessage::get_ix_signers(&message, 1).collect::<HashSet<_>>(),
+        SVMStaticMessage::get_ix_signers(&message, 1).collect::<HashSet<_>>(),
         HashSet::from_iter([&signer0, &signer1])
     );
     assert_eq!(
-        SVMMessage::get_ix_signers(&message, 2).collect::<HashSet<_>>(),
+        SVMStaticMessage::get_ix_signers(&message, 2).collect::<HashSet<_>>(),
         HashSet::from_iter([&signer0])
     );
     assert_eq!(
-        SVMMessage::get_ix_signers(&message, 3).collect::<HashSet<_>>(),
+        SVMStaticMessage::get_ix_signers(&message, 3).collect::<HashSet<_>>(),
         HashSet::default()
     );
+}
+
+#[test]
+fn test_is_requested_writable() {
+    // 6 static keys: 3 signers, of which 1 readonly; 3 unsigned, of which 2
+    // readonly. Plus 2 loaded addresses: 1 writable, 1 readonly.
+    let message = SanitizedMessage::try_new(
+        SanitizedVersionedMessage::try_new(VersionedMessage::V0(v0::Message {
+            header: MessageHeader {
+                num_required_signatures: 3,
+                num_readonly_signed_accounts: 1,
+                num_readonly_unsigned_accounts: 2,
+            },
+            account_keys: (0..6).map(|_| Pubkey::new_unique()).collect(),
+            recent_blockhash: Hash::default(),
+            instructions: vec![CompiledInstruction::new_from_raw_parts(1, vec![], vec![])],
+            address_table_lookups: vec![MessageAddressTableLookup {
+                account_key: Pubkey::new_unique(),
+                writable_indexes: vec![0],
+                readonly_indexes: vec![1],
+            }],
+        }))
+        .unwrap(),
+        SimpleAddressLoader::Enabled(LoadedAddresses {
+            writable: vec![Pubkey::new_unique()],
+            readonly: vec![Pubkey::new_unique()],
+        }),
+        &HashSet::new(),
+    )
+    .unwrap();
+
+    assert!(SVMStaticMessage::is_requested_writable(&message, 0)); // writable signer
+    assert!(SVMStaticMessage::is_requested_writable(&message, 1)); // writable signer
+    assert!(!SVMStaticMessage::is_requested_writable(&message, 2)); // readonly signer
+    assert!(SVMStaticMessage::is_requested_writable(&message, 3)); // writable unsigned
+    assert!(!SVMStaticMessage::is_requested_writable(&message, 4)); // readonly unsigned
+    assert!(!SVMStaticMessage::is_requested_writable(&message, 5)); // readonly unsigned
+    assert!(SVMStaticMessage::is_requested_writable(&message, 6)); // writable loaded
+    assert!(!SVMStaticMessage::is_requested_writable(&message, 7)); // readonly loaded
+    assert!(!SVMStaticMessage::is_requested_writable(&message, 8)); // out of bounds
 }

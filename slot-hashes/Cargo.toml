@@ -2,7 +2,7 @@
 name = "solana-slot-hashes"
 description = "Types and utilities for the Solana SlotHashes sysvar."
 documentation = "https://docs.rs/solana-slot-hashes"
-version = "3.1.0"
+version = "4.0.0"
 authors = { workspace = true }
 repository = { workspace = true }
 homepage = { workspace = true }
@@ -31,3 +31,6 @@ wincode = { workspace = true, optional = true }
 [dev-dependencies]
 solana-sha256-hasher = { workspace = true, features = ["sha2"] }
 solana-slot-hashes = { path = ".", features = ["wincode"] }
+
+[lints]
+workspace = true
