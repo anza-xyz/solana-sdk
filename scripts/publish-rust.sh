@@ -48,17 +48,13 @@ new_version=$(readCargoVariable version "Cargo.toml")
 new_git_tag="${tag_name}@v${new_version}"
 old_git_tag="${tag_name}@v${old_version}"
 
-# Verify the crate builds before we tag and publish it.
+# Verify the crate builds. The workflow attests the resulting .crate.
 cargo package
 
 # Push the tag first; a concurrent-release race is rejected non-fast-forward and
 # stops us here, before publishing.
 branch=$(git rev-parse --abbrev-ref HEAD)
 git push --atomic origin "HEAD:${branch}" "refs/tags/${new_git_tag}"
-
-# Publish last, now that the tag is on master. cargo package already verified
-# this tree, so skip the redundant verify build.
-cargo publish --no-verify
 
 # Expose the new version to CI if needed.
 if [[ -n $CI ]]; then
