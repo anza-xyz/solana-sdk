@@ -11,6 +11,7 @@ use {
         net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr, SocketAddrV4, SocketAddrV6},
         rc::Rc,
         sync::Arc,
+        time::Duration,
     },
 };
 
@@ -319,6 +320,13 @@ where
         } else {
             Err(E::random(rng))
         }
+    }
+}
+
+impl StableAbi for Duration {
+    fn random_with_context(rng: &mut (impl RngCore + ?Sized), _ctx: ()) -> Self {
+        // Nanos below one second keep `Duration::new` from carrying into, and overflowing, secs.
+        Duration::new(rng.random(), rng.random_range(0..1_000_000_000))
     }
 }
 
@@ -836,6 +844,29 @@ mod tests {
         d: std::net::SocketAddrV4,
         e: std::net::SocketAddrV6,
         f: std::net::SocketAddr,
+    }
+    #[derive(
+        PartialEq,
+        serde_derive::Deserialize,
+        serde_derive::Serialize,
+        wincode::SchemaRead,
+        wincode::SchemaWrite,
+    )]
+    #[cfg_attr(
+        feature = "stable-abi",
+        derive(
+            solana_frozen_abi_macro::StableAbi,
+            solana_frozen_abi_macro::StableAbiSample
+        ),
+        solana_frozen_abi_macro::frozen_abi(
+            abi_digest = "39wPotXV6ALbMegQdikJSkX4gjRpvLvcpQqHhdoR3tGs",
+            abi_serializer = ["bincode", "wincode"],
+            test_roundtrip = "eq_and_wire",
+        )
+    )]
+    struct TestDuration {
+        a: std::time::Duration,
+        b: Option<std::time::Duration>,
     }
     macro_rules! mk_stable_abi_sample_with_from_macro_rules {
         ({ $($body:tt)* }) => {
