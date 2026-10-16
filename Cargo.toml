@@ -333,3 +333,8 @@ opt-level = 1
 # Enable optimizations for procmacros for faster recompile
 [profile.dev.build-override]
 opt-level = 1
+
+# solana-ed25519 master provides verify_simd0376 and drops verify_zebra; use it
+# until it is released to crates.io.
+[patch.crates-io]
+solana-ed25519 = { git = "https://github.com/anza-xyz/cryptography", rev = "3efe73c" }

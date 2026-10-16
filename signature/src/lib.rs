@@ -25,6 +25,8 @@ use {
     serde_derive::{Deserialize, Serialize},
 };
 
+#[cfg(feature = "dual-verify")]
+pub mod dual_verify;
 pub mod error;
 
 /// Number of bytes in a signature
@@ -91,10 +93,15 @@ impl Signature {
         pubkey_bytes: &[u8],
         message_bytes: &[u8],
     ) -> Result<(), solana_ed25519::ed_sigs::Error> {
-        let publickey = solana_ed25519::ed_sigs::VerificationKey::try_from(pubkey_bytes)?;
-        let signature = solana_ed25519::ed_sigs::Signature::from_slice(self.as_ref())
-            .map_err(|_| solana_ed25519::ed_sigs::Error::InvalidSignature)?;
-        publickey.verify_dalek(&signature, message_bytes)
+        #[cfg(feature = "dual-verify")]
+        return dual_verify::verify(self, pubkey_bytes, message_bytes);
+        #[cfg(not(feature = "dual-verify"))]
+        {
+            let publickey = solana_ed25519::ed_sigs::VerificationKey::try_from(pubkey_bytes)?;
+            let signature = solana_ed25519::ed_sigs::Signature::from_slice(self.as_ref())
+                .map_err(|_| solana_ed25519::ed_sigs::Error::InvalidSignature)?;
+            publickey.verify_dalek(&signature, message_bytes)
+        }
     }
 
     // To be removed as part of the SIMD-0376 cleanup.
@@ -107,7 +114,7 @@ impl Signature {
         let publickey = solana_ed25519::ed_sigs::VerificationKey::try_from(pubkey_bytes)?;
         let signature = solana_ed25519::ed_sigs::Signature::from_slice(self.as_ref())
             .map_err(|_| solana_ed25519::ed_sigs::Error::InvalidSignature)?;
-        publickey.verify_zebra(&signature, message_bytes)
+        publickey.verify_simd0376(&signature, message_bytes)
     }
 
     /// Verifies this signature against `message_bytes` using `pubkey_bytes`.
@@ -116,13 +123,14 @@ impl Signature {
     /// is the exact message that was signed. Returns `false` if verification
     /// fails or the public key cannot be parsed.
     ///
-    /// Will switch to the zebra (ZIP-215) path as part of the SIMD-0376
-    /// cleanup, tracked in <https://github.com/anza-xyz/solana-sdk/issues/819>.
+    /// Will switch to the SIMD-0376 path as part of the SIMD-0376 cleanup,
+    /// tracked in <https://github.com/anza-xyz/solana-sdk/issues/819>.
     pub fn verify(&self, pubkey_bytes: &[u8], message_bytes: &[u8]) -> bool {
         self.verify_verbose(pubkey_bytes, message_bytes).is_ok()
     }
 
-    /// Verifies this signature using ZIP-215-compatible Ed25519 rules.
+    /// Verifies this signature using SIMD-0376 Ed25519 rules: the cofactored
+    /// equation, rejecting non-canonical encodings and small-order `A` and `R`.
     ///
     /// `pubkey_bytes` is the signer's Ed25519 public key, and `message_bytes`
     /// is the exact message that was signed.
@@ -145,7 +153,7 @@ impl Signature {
     /// `pubkey_bytes` is the signer's public key, and `message_bytes` is the
     /// exact message that was signed. The iterator must know its exact length.
     ///
-    /// Uses ZIP-215-compatible Ed25519 rules, matching
+    /// Uses SIMD-0376 Ed25519 rules, matching
     /// [`Self::verify_non_strict`] rather than the current strict
     /// [`Self::verify`] path.
     ///
@@ -497,7 +505,9 @@ mod tests {
     }
 
     #[test]
-    fn test_batch_verify_accepts_zip215_valid_signatures() {
+    fn test_small_order_rejected_by_all_rules() {
+        // Identity `R` and identity `A`: accepted under ZIP-215, rejected under
+        // both the strict rule and SIMD-0376, which forbid small-order points.
         let mut signature = [0; SIGNATURE_BYTES];
         signature[0] = 1;
         let signatures = [Signature::from(signature); 9];
@@ -507,8 +517,8 @@ mod tests {
         let messages: [Vec<u8>; 9] = core::array::from_fn(|_| b"message".to_vec());
 
         assert!(!signatures[0].verify(&pubkeys[0], &messages[0]));
-        assert!(signatures[0].verify_non_strict(&pubkeys[0], &messages[0]));
-        assert!(Signature::batch_verify(batch_verify_items(
+        assert!(!signatures[0].verify_non_strict(&pubkeys[0], &messages[0]));
+        assert!(!Signature::batch_verify(batch_verify_items(
             &signatures,
             &pubkeys,
             &messages,
