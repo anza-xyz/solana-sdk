@@ -21,6 +21,8 @@ pub enum RewardType {
     /// The burn associated with the validator admission ticket
     /// The accompanying RewardInfo will have a negative lamports value
     VATDebit,
+    /// Block rewards shared by validator to stakers
+    BlockRevenueSharing,
 }
 
 impl fmt::Display for RewardType {
@@ -35,6 +37,7 @@ impl fmt::Display for RewardType {
                 RewardType::Voting => "voting",
                 RewardType::DeactivatedStake => "deactivated-stake",
                 RewardType::VATDebit => "validator-admission-ticket-debit",
+                RewardType::BlockRevenueSharing => "block-revenue-sharing",
             }
         )
     }
