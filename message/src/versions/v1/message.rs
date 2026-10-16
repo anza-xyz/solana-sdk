@@ -15,9 +15,9 @@
 //! │                                                        │
 //! │ * LifetimeSpecifier [u8; 32] (blockhash)               │
 //! │                                                        │
-//! │ * NumInstructions (u8, max 64)                         │
+//! │ * NumInstructions (u8)                                 │
 //! │                                                        │
-//! │ * NumAddresses (u8, max 64)                            │
+//! │ * NumAddresses (u8)                                    │
 //! │                                                        │
 //! │ * Addresses [[u8; 32] x NumAddresses]                  │
 //! │                                                        │
@@ -56,13 +56,10 @@ use {
     crate::{
         compiled_instruction::CompiledInstruction,
         compiled_keys::CompiledKeys,
-        v1::{
-            MessageError, TransactionConfig, TransactionConfigMask, MAX_ADDRESSES, MAX_HEAP_SIZE,
-            MAX_INSTRUCTIONS, MAX_SIGNATURES, MIN_HEAP_SIZE,
-        },
+        v1::{MessageError, TransactionConfig, TransactionConfigMask},
         AccountKeys, AddressSet, CompileError, MessageHeader,
     },
-    alloc::{collections::BTreeSet, vec::Vec},
+    alloc::vec::Vec,
     core::mem::size_of,
     solana_address::Address,
     solana_hash::Hash,
@@ -341,20 +338,14 @@ impl Message {
     }
 
     pub fn validate(&self) -> Result<(), MessageError> {
-        // `num_required_signatures` <= 12
-        if self.header.num_required_signatures > MAX_SIGNATURES {
-            return Err(MessageError::TooManySignatures);
-        }
-
-        // `num_instructions` <= 64
-        if self.instructions.len() > MAX_INSTRUCTIONS as usize {
+        // The instruction and address counts are encoded as u8 on the wire.
+        if self.instructions.len() > u8::MAX as usize {
             return Err(MessageError::TooManyInstructions);
         }
 
         let num_account_keys = self.account_keys.len();
 
-        // `num_addresses` <= 64
-        if num_account_keys > MAX_ADDRESSES as usize {
+        if num_account_keys > u8::MAX as usize {
             return Err(MessageError::TooManyAddresses);
         }
 
@@ -371,26 +362,9 @@ impl Message {
             return Err(MessageError::ZeroSigners);
         }
 
-        // no duplicate addresses
-        let unique_keys: BTreeSet<_> = self.account_keys.iter().collect();
-        if unique_keys.len() != num_account_keys {
-            return Err(MessageError::DuplicateAddresses);
-        }
-
         // The config mask is regenerated from the typed `TransactionConfig` on
         // serialization, so a malformed mask cannot exist here. Invalid/unknown mask
         // bits only occur in raw wire bytes and are rejected during deserialization.
-
-        // if specified, heap size must be a multiple of 1024 and within valid bounds
-        if let Some(heap_size) = self.config.heap_size {
-            if !heap_size.is_multiple_of(1024) {
-                return Err(MessageError::InvalidHeapSize);
-            }
-
-            if !(MIN_HEAP_SIZE..=MAX_HEAP_SIZE).contains(&heap_size) {
-                return Err(MessageError::InvalidHeapSize);
-            }
-        }
 
         // instruction account indices must be < `num_addresses`
         let max_account_index = num_account_keys
@@ -617,7 +591,12 @@ pub fn deserialize(input: &[u8]) -> wincode::ReadResult<Message> {
 
 #[cfg(test)]
 mod tests {
-    use {super::*, alloc::vec, solana_sdk_ids::bpf_loader_upgradeable};
+    use {
+        super::*,
+        crate::v1::{MAX_HEAP_SIZE, MIN_HEAP_SIZE},
+        alloc::vec,
+        solana_sdk_ids::bpf_loader_upgradeable,
+    };
 
     /// Builder for constructing V1 messages.
     ///
@@ -904,32 +883,49 @@ mod tests {
     }
 
     #[test]
-    fn sanitize_rejects_over_12_signatures() {
+    fn sanitize_accepts_over_12_signatures() {
         let mut message = create_test_message();
-        message.header.num_required_signatures = MAX_SIGNATURES + 1;
-        message.account_keys = (0..MAX_SIGNATURES + 1)
-            .map(|_| Address::new_unique())
-            .collect();
+        message.header.num_required_signatures = 13;
+        message.account_keys = (0..14).map(|_| Address::new_unique()).collect();
+        assert!(message.sanitize().is_ok());
+    }
+
+    #[test]
+    fn sanitize_accepts_96_addresses() {
+        let mut message = create_test_message();
+        message.account_keys = (0..96).map(|_| Address::new_unique()).collect();
+        assert!(message.sanitize().is_ok());
+        let serialized = wincode::serialize(&message).unwrap();
+        assert_eq!(
+            wincode::deserialize::<Message>(&serialized).unwrap(),
+            message
+        );
+    }
+
+    #[test]
+    fn sanitize_rejects_addresses_exceeding_wire_count() {
+        let mut message = create_test_message();
+        message.account_keys = (0..=u8::MAX).map(|_| Address::new_unique()).collect();
         assert_eq!(message.sanitize(), Err(SanitizeError::IndexOutOfBounds));
     }
 
     #[test]
-    fn sanitize_rejects_over_64_addresses() {
+    fn sanitize_accepts_over_64_instructions() {
         let mut message = create_test_message();
-        message.account_keys = (0..65).map(|_| Address::new_unique()).collect();
-        assert_eq!(message.sanitize(), Err(SanitizeError::IndexOutOfBounds));
-    }
-
-    #[test]
-    fn sanitize_rejects_over_64_instructions() {
-        let mut message = create_test_message();
-        message.instructions = (0..65) // exceeds 64 max
+        message.instructions = (0..65)
             .map(|_| CompiledInstruction {
                 program_id_index: 1,
                 accounts: vec![0],
                 data: vec![],
             })
             .collect();
+        assert!(message.sanitize().is_ok());
+    }
+
+    #[test]
+    fn sanitize_rejects_instructions_exceeding_wire_count() {
+        let mut message = create_test_message();
+        message.instructions = vec![message.instructions[0].clone(); usize::from(u8::MAX) + 1];
         assert_eq!(message.sanitize(), Err(SanitizeError::IndexOutOfBounds));
     }
 
@@ -950,32 +946,32 @@ mod tests {
     }
 
     #[test]
-    fn sanitize_rejects_duplicate_addresses() {
+    fn sanitize_accepts_duplicate_addresses() {
         let mut message = create_test_message();
         let dup = message.account_keys[0];
         message.account_keys[1] = dup;
-        assert_eq!(message.sanitize(), Err(SanitizeError::InvalidValue));
+        assert!(message.sanitize().is_ok());
     }
 
     #[test]
-    fn sanitize_rejects_unaligned_heap_size() {
+    fn sanitize_accepts_unaligned_heap_size() {
         let mut message = create_test_message();
         message.config.heap_size = Some(1025); // Not a multiple of 1024
-        assert_eq!(message.sanitize(), Err(SanitizeError::InvalidValue));
+        assert!(message.sanitize().is_ok());
     }
 
     #[test]
-    fn sanitize_rejects_heap_size_below_minimum() {
+    fn sanitize_accepts_heap_size_below_minimum() {
         let mut message = create_test_message();
         message.config.heap_size = Some(MIN_HEAP_SIZE - 1);
-        assert_eq!(message.sanitize(), Err(SanitizeError::InvalidValue));
+        assert!(message.sanitize().is_ok());
     }
 
     #[test]
-    fn sanitize_rejects_heap_size_above_maximum() {
+    fn sanitize_accepts_heap_size_above_maximum() {
         let mut message = create_test_message();
         message.config.heap_size = Some(MAX_HEAP_SIZE + 1);
-        assert_eq!(message.sanitize(), Err(SanitizeError::InvalidValue));
+        assert!(message.sanitize().is_ok());
     }
 
     #[test]
@@ -1030,7 +1026,7 @@ mod tests {
     #[test]
     fn sanitize_accepts_64_addresses() {
         let mut message = create_test_message();
-        message.account_keys = (0..MAX_ADDRESSES).map(|_| Address::new_unique()).collect();
+        message.account_keys = (0..64).map(|_| Address::new_unique()).collect();
         message.header.num_required_signatures = 1;
         message.header.num_readonly_signed_accounts = 0;
         message.header.num_readonly_unsigned_accounts = 1;
@@ -1042,7 +1038,7 @@ mod tests {
     #[test]
     fn sanitize_accepts_64_instructions() {
         let mut message = create_test_message();
-        message.instructions = (0..MAX_INSTRUCTIONS)
+        message.instructions = (0..64)
             .map(|_| CompiledInstruction {
                 program_id_index: 1,
                 accounts: vec![0, 2],

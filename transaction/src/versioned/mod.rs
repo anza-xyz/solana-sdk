@@ -881,6 +881,32 @@ mod tests {
     }
 
     #[test]
+    fn v1_sanitize_accepts_counts_above_old_policy_limits() {
+        let message = Message {
+            header: MessageHeader {
+                num_required_signatures: 13,
+                ..MessageHeader::default()
+            },
+            account_keys: (0..96).map(|_| Address::new_unique()).collect(),
+            instructions: vec![
+                CompiledInstruction {
+                    program_id_index: 13,
+                    accounts: vec![0],
+                    data: vec![],
+                };
+                65
+            ],
+            ..Message::default()
+        };
+        let tx = VersionedTransaction {
+            signatures: vec![Signature::default(); 13],
+            message: VersionedMessage::V1(message),
+        };
+
+        assert_eq!(tx.sanitize(), Ok(()));
+    }
+
+    #[test]
     fn versioned_transaction_wincode_bincode_roundtrip() {
         use {
             super::*,
