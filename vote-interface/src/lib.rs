@@ -7,6 +7,7 @@
 pub mod authorized_voters;
 pub mod error;
 pub mod instruction;
+pub mod pubkeys;
 pub mod state;
 
 pub mod program {
