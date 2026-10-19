@@ -7,7 +7,7 @@ use solana_frozen_abi_macro::{frozen_abi, StableAbi, StableAbiSample};
 use std::time::Duration;
 
 // inlined to avoid solana-clock dep
-const DEFAULT_NS_PER_TICK: u64 = 4_687_500;
+const DEFAULT_NS_PER_TICK: u64 = 3_125_000;
 #[cfg(test)]
 static_assertions::const_assert_eq!(DEFAULT_NS_PER_TICK, solana_clock::DEFAULT_NS_PER_TICK);
 

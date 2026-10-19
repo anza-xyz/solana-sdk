@@ -40,7 +40,7 @@ pub const DEFAULT_NS_PER_SLOT_250_MS: u64 = 250_000_000;
 pub const DEFAULT_NS_PER_SLOT_200_MS: u64 = 200_000_000;
 
 /// The SDK's default expected duration of a slot, in nanoseconds.
-pub const DEFAULT_NS_PER_SLOT: u64 = DEFAULT_NS_PER_SLOT_300_MS;
+pub const DEFAULT_NS_PER_SLOT: u64 = DEFAULT_NS_PER_SLOT_200_MS;
 
 pub const DEFAULT_NS_PER_TICK_400_MS: u64 = DEFAULT_NS_PER_SLOT_400_MS / DEFAULT_TICKS_PER_SLOT;
 pub const DEFAULT_NS_PER_TICK_350_MS: u64 = DEFAULT_NS_PER_SLOT_350_MS / DEFAULT_TICKS_PER_SLOT;
@@ -49,7 +49,7 @@ pub const DEFAULT_NS_PER_TICK_250_MS: u64 = DEFAULT_NS_PER_SLOT_250_MS / DEFAULT
 pub const DEFAULT_NS_PER_TICK_200_MS: u64 = DEFAULT_NS_PER_SLOT_200_MS / DEFAULT_TICKS_PER_SLOT;
 
 /// The default duration of a tick, in nanoseconds.
-pub const DEFAULT_NS_PER_TICK: u64 = DEFAULT_NS_PER_TICK_300_MS;
+pub const DEFAULT_NS_PER_TICK: u64 = DEFAULT_NS_PER_TICK_200_MS;
 
 /// Whole ticks per second at each target slot time.
 ///
@@ -61,14 +61,13 @@ pub const DEFAULT_TICKS_PER_SECOND_300_MS: u64 = 1_000_000_000 / DEFAULT_NS_PER_
 pub const DEFAULT_TICKS_PER_SECOND_250_MS: u64 = 1_000_000_000 / DEFAULT_NS_PER_TICK_250_MS;
 pub const DEFAULT_TICKS_PER_SECOND_200_MS: u64 = 1_000_000_000 / DEFAULT_NS_PER_TICK_200_MS;
 
-/// The default whole-number tick rate (213 per second).
+/// The default whole-number tick rate (320 per second).
 ///
-/// Note that the exact 300 millisecond target is 213 1/3 ticks per second and
-/// that the actual tick rate at any given time should be expected to drift.
-pub const DEFAULT_TICKS_PER_SECOND: u64 = DEFAULT_TICKS_PER_SECOND_300_MS;
+/// Note that the actual tick rate at any given time should be expected to drift.
+pub const DEFAULT_TICKS_PER_SECOND: u64 = DEFAULT_TICKS_PER_SECOND_200_MS;
 
 #[cfg(test)]
-static_assertions::const_assert_eq!(MS_PER_TICK, 4);
+static_assertions::const_assert_eq!(MS_PER_TICK, 3);
 
 pub const MS_PER_TICK_400_MS: u64 = DEFAULT_NS_PER_TICK_400_MS / 1_000_000;
 pub const MS_PER_TICK_350_MS: u64 = DEFAULT_NS_PER_TICK_350_MS / 1_000_000;
@@ -76,23 +75,23 @@ pub const MS_PER_TICK_300_MS: u64 = DEFAULT_NS_PER_TICK_300_MS / 1_000_000;
 pub const MS_PER_TICK_250_MS: u64 = DEFAULT_NS_PER_TICK_250_MS / 1_000_000;
 pub const MS_PER_TICK_200_MS: u64 = DEFAULT_NS_PER_TICK_200_MS / 1_000_000;
 
-/// The number of whole milliseconds per tick (4).
+/// The number of whole milliseconds per tick (3).
 ///
 /// This value is rounded down. Use [`DEFAULT_NS_PER_TICK`] for the exact target.
-pub const MS_PER_TICK: u64 = MS_PER_TICK_300_MS;
+pub const MS_PER_TICK: u64 = MS_PER_TICK_200_MS;
 
 pub const DEFAULT_HASHES_PER_SECOND: u64 = 10_000_000;
 
 #[cfg(test)]
-static_assertions::const_assert_eq!(DEFAULT_HASHES_PER_TICK, 46_875);
+static_assertions::const_assert_eq!(DEFAULT_HASHES_PER_TICK, 31_250);
 pub const DEFAULT_HASHES_PER_TICK_400_MS: u64 = 62_500;
 pub const DEFAULT_HASHES_PER_TICK_350_MS: u64 = 54_687;
 pub const DEFAULT_HASHES_PER_TICK_300_MS: u64 = 46_875;
 pub const DEFAULT_HASHES_PER_TICK_250_MS: u64 = 39_062;
 pub const DEFAULT_HASHES_PER_TICK_200_MS: u64 = 31_250;
-pub const DEFAULT_HASHES_PER_TICK: u64 = DEFAULT_HASHES_PER_TICK_300_MS;
+pub const DEFAULT_HASHES_PER_TICK: u64 = DEFAULT_HASHES_PER_TICK_200_MS;
 
-// 1 Dev Epoch = 300 ms * 8192 ~= 41 minutes
+// 1 Dev Epoch = 200 ms * 8192 ~= 27 minutes
 pub const DEFAULT_DEV_SLOTS_PER_EPOCH: u64 = 8192;
 
 #[cfg(test)]
@@ -100,36 +99,36 @@ static_assertions::const_assert_eq!(SECONDS_PER_DAY, 86_400);
 pub const SECONDS_PER_DAY: u64 = 24 * 60 * 60;
 
 #[cfg(test)]
-static_assertions::const_assert_eq!(TICKS_PER_DAY, 18_432_000);
+static_assertions::const_assert_eq!(TICKS_PER_DAY, 27_648_000);
 pub const TICKS_PER_DAY_400_MS: u64 = SECONDS_PER_DAY * 1_000_000_000 / DEFAULT_NS_PER_TICK_400_MS;
 pub const TICKS_PER_DAY_350_MS: u64 = SECONDS_PER_DAY * 1_000_000_000 / DEFAULT_NS_PER_TICK_350_MS;
 pub const TICKS_PER_DAY_300_MS: u64 = SECONDS_PER_DAY * 1_000_000_000 / DEFAULT_NS_PER_TICK_300_MS;
 pub const TICKS_PER_DAY_250_MS: u64 = SECONDS_PER_DAY * 1_000_000_000 / DEFAULT_NS_PER_TICK_250_MS;
 pub const TICKS_PER_DAY_200_MS: u64 = SECONDS_PER_DAY * 1_000_000_000 / DEFAULT_NS_PER_TICK_200_MS;
-pub const TICKS_PER_DAY: u64 = TICKS_PER_DAY_300_MS;
+pub const TICKS_PER_DAY: u64 = TICKS_PER_DAY_200_MS;
 
 /// The number of slots per epoch after initial network warmup.
 ///
-/// At the default 300 millisecond slot time, one epoch is approximately 36 hours.
+/// At the default 200 millisecond slot time, one epoch is approximately 24 hours.
 pub const DEFAULT_SLOTS_PER_EPOCH: u64 = 432_000;
 
 #[cfg(test)]
-static_assertions::const_assert_eq!(DEFAULT_MS_PER_SLOT, 300);
+static_assertions::const_assert_eq!(DEFAULT_MS_PER_SLOT, 200);
 pub const DEFAULT_MS_PER_SLOT_400_MS: u64 = DEFAULT_NS_PER_SLOT_400_MS / 1_000_000;
 pub const DEFAULT_MS_PER_SLOT_350_MS: u64 = DEFAULT_NS_PER_SLOT_350_MS / 1_000_000;
 pub const DEFAULT_MS_PER_SLOT_300_MS: u64 = DEFAULT_NS_PER_SLOT_300_MS / 1_000_000;
 pub const DEFAULT_MS_PER_SLOT_250_MS: u64 = DEFAULT_NS_PER_SLOT_250_MS / 1_000_000;
 pub const DEFAULT_MS_PER_SLOT_200_MS: u64 = DEFAULT_NS_PER_SLOT_200_MS / 1_000_000;
 
-/// The SDK's default expected duration of a slot (300 milliseconds).
-pub const DEFAULT_MS_PER_SLOT: u64 = DEFAULT_MS_PER_SLOT_300_MS;
+/// The SDK's default expected duration of a slot (200 milliseconds).
+pub const DEFAULT_MS_PER_SLOT: u64 = DEFAULT_MS_PER_SLOT_200_MS;
 
 pub const DEFAULT_S_PER_SLOT_400_MS: f64 = DEFAULT_MS_PER_SLOT_400_MS as f64 / 1_000.0;
 pub const DEFAULT_S_PER_SLOT_350_MS: f64 = DEFAULT_MS_PER_SLOT_350_MS as f64 / 1_000.0;
 pub const DEFAULT_S_PER_SLOT_300_MS: f64 = DEFAULT_MS_PER_SLOT_300_MS as f64 / 1_000.0;
 pub const DEFAULT_S_PER_SLOT_250_MS: f64 = DEFAULT_MS_PER_SLOT_250_MS as f64 / 1_000.0;
 pub const DEFAULT_S_PER_SLOT_200_MS: f64 = DEFAULT_MS_PER_SLOT_200_MS as f64 / 1_000.0;
-pub const DEFAULT_S_PER_SLOT: f64 = DEFAULT_S_PER_SLOT_300_MS;
+pub const DEFAULT_S_PER_SLOT: f64 = DEFAULT_S_PER_SLOT_200_MS;
 
 /// The time window of recent block hash values over which the bank will track
 /// signatures.
@@ -144,7 +143,7 @@ pub const MAX_HASH_AGE_IN_SECONDS_350_MS: usize = 105;
 pub const MAX_HASH_AGE_IN_SECONDS_300_MS: usize = 90;
 pub const MAX_HASH_AGE_IN_SECONDS_250_MS: usize = 75;
 pub const MAX_HASH_AGE_IN_SECONDS_200_MS: usize = 60;
-pub const MAX_HASH_AGE_IN_SECONDS: usize = MAX_HASH_AGE_IN_SECONDS_300_MS;
+pub const MAX_HASH_AGE_IN_SECONDS: usize = MAX_HASH_AGE_IN_SECONDS_200_MS;
 
 // Maximum number of recent blockhashes (one blockhash per non-skipped slot).
 pub const MAX_RECENT_BLOCKHASHES: usize = 300;

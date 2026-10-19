@@ -49,7 +49,8 @@ impl std::fmt::Debug for SlotHistory {
     }
 }
 
-pub const MAX_ENTRIES: u64 = 1024 * 1024; // 1 million slots is about 5 days
+// 1 million slots is about 2.4 days at 200 ms per slot.
+pub const MAX_ENTRIES: u64 = 1024 * 1024;
 
 /// Serialized size of the `SlotHistory` sysvar account.
 pub const SIZE: usize = 131_097;
