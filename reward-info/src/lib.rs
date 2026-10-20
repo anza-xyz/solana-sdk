@@ -11,7 +11,9 @@ use wincode::{SchemaRead, SchemaWrite};
 #[cfg_attr(feature = "frozen-abi", derive(AbiExample, AbiEnumVisitor))]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "wincode", derive(SchemaRead, SchemaWrite))]
+#[cfg_attr(test, derive(strum_macros::EnumIter))]
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
+#[non_exhaustive]
 pub enum RewardType {
     Fee,
     Rent,
@@ -23,6 +25,18 @@ pub enum RewardType {
     VATDebit,
     /// Block rewards shared by validator to stakers
     BlockRevenueSharing,
+}
+
+impl RewardType {
+    pub const VARIANTS: [Self; 7] = [
+        Self::Fee,
+        Self::Rent,
+        Self::Staking,
+        Self::Voting,
+        Self::DeactivatedStake,
+        Self::VATDebit,
+        Self::BlockRevenueSharing,
+    ];
 }
 
 impl fmt::Display for RewardType {
@@ -40,5 +54,17 @@ impl fmt::Display for RewardType {
                 RewardType::BlockRevenueSharing => "block-revenue-sharing",
             }
         )
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use {super::*, strum::IntoEnumIterator};
+
+    #[test]
+    fn test_variants_exhaustive() {
+        for variant in RewardType::iter() {
+            assert!(RewardType::VARIANTS.contains(&variant));
+        }
     }
 }

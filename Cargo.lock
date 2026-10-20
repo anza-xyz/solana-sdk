@@ -4210,6 +4210,8 @@ dependencies = [
  "serde_derive",
  "solana-frozen-abi",
  "solana-frozen-abi-macro",
+ "strum",
+ "strum_macros",
  "wincode",
 ]
 

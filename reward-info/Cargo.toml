@@ -26,5 +26,9 @@ solana-frozen-abi = { workspace = true, optional = true, features = ["frozen-abi
 solana-frozen-abi-macro = { workspace = true, optional = true }
 wincode = { workspace = true, optional = true }
 
+[dev-dependencies]
+strum = { workspace = true }
+strum_macros = { workspace = true }
+
 [lints]
 workspace = true
