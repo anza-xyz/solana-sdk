@@ -28,7 +28,7 @@ pub enum RewardType {
 }
 
 impl RewardType {
-    pub const VARIANTS: [Self; 7] = [
+    pub const VARIANTS: &'static [Self] = &[
         Self::Fee,
         Self::Rent,
         Self::Staking,
