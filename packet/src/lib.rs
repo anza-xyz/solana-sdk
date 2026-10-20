@@ -41,6 +41,29 @@ static_assertions::const_assert_eq!(PACKET_DATA_SIZE, 1232);
 ///   8 bytes is the size of the fragment header
 pub const PACKET_DATA_SIZE: usize = 1280 - 40 - 8;
 
+/// Wincode configuration used to decode packet-sized data, see [`PACKET_DATA_WINCODE_CONFIG`].
+///
+/// Exported so generic helpers can spell out the `wincode::SchemaRead` bound, e.g.
+/// `T: for<'de> SchemaRead<'de, PacketDataWincodeConfig, Dst = T>`.
+#[cfg(feature = "wincode")]
+pub type PacketDataWincodeConfig = wincode::config::Configuration<
+    true,
+    { wincode::config::DEFAULT_PREALLOCATION_SIZE_LIMIT },
+    wincode::len::BincodeLen,
+    wincode::int_encoding::LittleEndian,
+    wincode::int_encoding::FixInt,
+    u32,
+    PACKET_DATA_SIZE,
+>;
+
+/// The default wincode configuration with a deserialization size limit of [`PACKET_DATA_SIZE`].
+///
+/// Decoding with `wincode::config::deserialize` reads at most [`PACKET_DATA_SIZE`] bytes, fails
+/// if the value needs more, and accepts trailing bytes after the value.
+#[cfg(feature = "wincode")]
+pub const PACKET_DATA_WINCODE_CONFIG: PacketDataWincodeConfig =
+    wincode::config::Configuration::default().with_deserialization_size_limit::<PACKET_DATA_SIZE>();
+
 #[cfg(feature = "bincode")]
 pub trait Encode {
     fn encode<W: Write>(&self, writer: W) -> Result<()>;
@@ -511,5 +534,23 @@ mod tests {
         let meta = Meta::new(size, addr, port, flags, None);
         assert_eq!(meta.remote_pubkey, Pubkey::default());
         assert_eq!(meta.remote_pubkey(), None);
+    }
+
+    #[cfg(feature = "wincode")]
+    #[test]
+    fn test_packet_data_wincode_config() {
+        let data = [7u8; PACKET_DATA_SIZE + 1];
+        assert!(wincode::config::deserialize::<[u8; PACKET_DATA_SIZE], _>(
+            &data,
+            PACKET_DATA_WINCODE_CONFIG
+        )
+        .is_ok());
+        assert!(
+            wincode::config::deserialize::<[u8; PACKET_DATA_SIZE + 1], _>(
+                &data,
+                PACKET_DATA_WINCODE_CONFIG
+            )
+            .is_err()
+        );
     }
 }
