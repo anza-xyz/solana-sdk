@@ -3849,6 +3849,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "solana-leader-info"
+version = "0.1.0"
+dependencies = [
+ "bytemuck",
+ "bytemuck_derive",
+ "solana-address",
+ "solana-define-syscall",
+]
+
+[[package]]
 name = "solana-loader-v2-interface"
 version = "3.1.0"
 dependencies = [

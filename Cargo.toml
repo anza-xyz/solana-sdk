@@ -47,6 +47,7 @@ members = [
     "instructions-sysvar",
     "keccak-hasher",
     "keypair",
+    "leader-info",
     "loader-v2-interface",
     "loader-v3-interface",
     "message",
@@ -261,6 +262,7 @@ solana-instructions-sysvar = { path = "instructions-sysvar", version = "5.0.0" }
 solana-keccak-hasher = { path = "keccak-hasher", version = "3.0.0" }
 solana-keypair = { path = "keypair", version = "4.0.0" }
 solana-last-restart-slot = { path = "last-restart-slot", version = "3.2.0" }
+solana-leader-info = { path = "leader-info", version = "0.1.0" }
 solana-message = { path = "message", version = "6.0.0", default-features = false }
 solana-msg = { path = "msg", version = "3.0.0", default-features = false }
 solana-native-token = { path = "native-token", version = "3.0.0" }

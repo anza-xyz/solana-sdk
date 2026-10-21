@@ -50,6 +50,7 @@ all_crate_dirs=(
   keccak-hasher
   keypair
   last-restart-slot
+  leader-info
   loader-v2-interface
   loader-v3-interface
   message
