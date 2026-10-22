@@ -4189,8 +4189,14 @@ dependencies = [
 name = "solana-pubkey"
 version = "4.4.0"
 dependencies = [
+ "arbitrary",
  "rand 0.9.5",
+ "serde",
+ "serde_derive",
  "solana-address",
+ "solana-frozen-abi",
+ "solana-frozen-abi-macro",
+ "wincode",
 ]
 
 [[package]]

@@ -20,19 +20,40 @@ borsh = ["solana-address/borsh"]
 bytemuck = ["solana-address/bytemuck"]
 curve25519 = ["solana-address/curve25519"]
 default = ["std"]
-dev-context-only-utils = ["solana-address/dev-context-only-utils"]
-frozen-abi = ["solana-address/frozen-abi", "stable-abi"]
-stable-abi = ["solana-address/stable-abi"]
+dev-context-only-utils = [
+    "dep:arbitrary",
+    "solana-address/dev-context-only-utils",
+]
+frozen-abi = [
+    "solana-address/frozen-abi",
+    "solana-frozen-abi/frozen-abi",
+    "solana-frozen-abi-macro/frozen-abi",
+    "stable-abi",
+]
+stable-abi = [
+    "serde",
+    "std",
+    "wincode",
+    "solana-address/stable-abi",
+    "solana-frozen-abi/stable-abi",
+    "solana-frozen-abi-macro/stable-abi",
+]
 rand = ["dep:rand", "solana-address/rand"]
-serde = ["solana-address/serde"]
+serde = ["dep:serde", "dep:serde_derive", "solana-address/serde"]
 sha2 = ["solana-address/sha2"]
 std = ["solana-address/atomic", "solana-address/std"]
 alloc = ["solana-address/alloc"]
-wincode = ["solana-address/wincode"]
+wincode = ["dep:wincode", "solana-address/wincode"]
 
 [dependencies]
+arbitrary = { workspace = true, features = ["derive"], optional = true }
 rand = { workspace = true, optional = true }
+serde = { workspace = true, optional = true }
+serde_derive = { workspace = true, optional = true }
 solana-address = { workspace = true, features = ["copy", "decode", "error", "sanitize", "syscalls"] }
+solana-frozen-abi = { workspace = true, optional = true }
+solana-frozen-abi-macro = { workspace = true, optional = true }
+wincode = { workspace = true, optional = true }
 
 [lints]
 workspace = true
