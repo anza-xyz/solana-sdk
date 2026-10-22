@@ -6,7 +6,7 @@ use {
         scalar::Scalar,
         signature::points::{AddToSignatureProjective, SignatureProjective},
     },
-    blstrs::{G2Projective, Scalar as BlstrsScalar},
+    blstrs::Scalar as BlstrsScalar,
 };
 
 impl SignatureProjective {
@@ -76,20 +76,19 @@ impl SignatureProjective {
         }
 
         let mut points = alloc::vec::Vec::with_capacity(signatures.len());
-        let mut scalar_values = alloc::vec::Vec::with_capacity(scalars.len());
+        let mut scalar_bytes = alloc::vec::Vec::with_capacity(scalars.len() * 32);
 
         for (signature, scalar) in signatures.zip(scalars) {
             let mut point = SignatureProjective::identity();
             signature.add_to_accumulator(&mut point)?;
 
-            points.push(point.0);
-            scalar_values.push(scalar);
+            points.push(*point.0.as_ref());
+            scalar_bytes.extend_from_slice(&scalar.to_bytes_le());
         }
 
-        Ok(SignatureProjective(G2Projective::multi_exp(
-            &points,
-            &scalar_values,
-        )))
+        let mut aggregate = SignatureProjective::identity();
+        *aggregate.0.as_mut() = blst::p2_affines::from(points.as_slice()).mult(&scalar_bytes, 255);
+        Ok(aggregate)
     }
 
     /// Aggregate a list of signatures into an existing aggregate
@@ -145,7 +144,70 @@ impl SignatureProjective {
 
 #[cfg(test)]
 mod tests {
-    use crate::{keypair::Keypair, scalar::Scalar, signature::SignatureProjective};
+    use {super::*, crate::keypair::Keypair, blstrs::G2Projective};
+
+    #[test]
+    fn test_weighted_aggregation_matches_multi_exp() {
+        for count in [1, 2, 31, 32, 33, 64] {
+            let signatures: alloc::vec::Vec<_> = (0..count)
+                .map(|index| {
+                    Keypair::derive(&[index as u8; 32])
+                        .unwrap()
+                        .sign(b"weighted aggregation")
+                })
+                .collect();
+            let points: alloc::vec::Vec<_> =
+                signatures.iter().map(|signature| signature.0).collect();
+            for zero_weights in [false, true] {
+                let weights: alloc::vec::Vec<_> = (0..count)
+                    .map(|index| {
+                        if zero_weights {
+                            Scalar::ZERO
+                        } else {
+                            [
+                                Scalar::ZERO,
+                                Scalar::ONE,
+                                -Scalar::ONE,
+                                Scalar::from(0x1234_5678_9abc_def0),
+                            ][index % 4]
+                        }
+                    })
+                    .collect();
+                let scalars: alloc::vec::Vec<_> = weights.iter().map(|weight| weight.0).collect();
+                let expected = SignatureProjective(G2Projective::multi_exp(&points, &scalars));
+                let actual =
+                    SignatureProjective::aggregate_with_weights(signatures.iter(), weights.iter())
+                        .unwrap();
+                assert_eq!(
+                    actual, expected,
+                    "count={count}, zero_weights={zero_weights}"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn test_weighted_aggregation_rejects_invalid_lengths() {
+        let signatures = [Keypair::derive(&[1; 32])
+            .unwrap()
+            .sign(b"weighted aggregation")];
+        let weights = [Scalar::ONE];
+        assert_eq!(
+            SignatureProjective::aggregate_with_weights(
+                signatures[..0].iter(),
+                weights[..0].iter()
+            ),
+            Err(BlsError::EmptyAggregation)
+        );
+        assert_eq!(
+            SignatureProjective::aggregate_with_weights(signatures.iter(), weights[..0].iter()),
+            Err(BlsError::InputLengthMismatch)
+        );
+        assert_eq!(
+            SignatureProjective::aggregate_with_weights(signatures[..0].iter(), weights.iter()),
+            Err(BlsError::InputLengthMismatch)
+        );
+    }
 
     #[test]
     #[allow(deprecated)]
