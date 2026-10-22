@@ -42,7 +42,7 @@ const _: () = assert!(core::mem::align_of::<LeaderInfo>() == 1);
 /// Off-chain builds have no runtime to query and return
 /// [`LeaderInfo::default`].
 pub fn get_leader_info() -> LeaderInfo {
-    #[cfg(target_os = "solana")]
+    #[cfg(any(target_os = "solana", target_arch = "bpf"))]
     {
         let mut leader_info = core::mem::MaybeUninit::<LeaderInfo>::uninit();
         // SAFETY: This is sound as sol_get_leader either fills all 128 bytes or aborts the VM
@@ -52,7 +52,7 @@ pub fn get_leader_info() -> LeaderInfo {
         }
     }
 
-    #[cfg(not(target_os = "solana"))]
+    #[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
     {
         LeaderInfo::default()
     }
