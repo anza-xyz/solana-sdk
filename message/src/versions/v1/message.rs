@@ -220,13 +220,15 @@ impl Message {
         let account_keys = AccountKeys::new(&static_keys, None);
         let instructions = account_keys.try_compile_instructions(instructions)?;
 
-        Ok(Self {
+        let message = Self {
             header,
             config,
             lifetime_specifier: recent_blockhash,
             account_keys: static_keys,
             instructions,
-        })
+        };
+        message.validate().map_err(CompileError::InvalidV1Message)?;
+        Ok(message)
     }
 
     /// Returns the fee payer address (first account key).
@@ -595,8 +597,47 @@ mod tests {
         super::*,
         crate::v1::{MAX_HEAP_SIZE, MIN_HEAP_SIZE},
         alloc::vec,
+        solana_instruction::AccountMeta,
         solana_sdk_ids::bpf_loader_upgradeable,
     };
+
+    #[test]
+    fn compile_rejects_unrepresentable_instruction_lengths() {
+        let payer = Address::new_unique();
+        let program = Address::new_unique();
+        let account = Address::new_unique();
+        let mut instruction = Instruction {
+            program_id: program,
+            accounts: vec![AccountMeta::new_readonly(account, false); 256],
+            data: vec![],
+        };
+
+        assert_eq!(
+            Message::try_compile_with_config(
+                &payer,
+                &[instruction.clone()],
+                Hash::new_unique(),
+                TransactionConfig::empty(),
+            ),
+            Err(CompileError::InvalidV1Message(
+                MessageError::InstructionAccountsTooLarge
+            ))
+        );
+
+        instruction.accounts.clear();
+        instruction.data = vec![0; u16::MAX as usize + 1];
+        assert_eq!(
+            Message::try_compile_with_config(
+                &payer,
+                &[instruction],
+                Hash::new_unique(),
+                TransactionConfig::empty(),
+            ),
+            Err(CompileError::InvalidV1Message(
+                MessageError::InstructionDataTooLarge
+            ))
+        );
+    }
 
     /// Builder for constructing V1 messages.
     ///

@@ -755,19 +755,24 @@ mod tests {
         let payer = Keypair::new();
         let program = Address::new_unique();
         let account = Address::new_unique();
-        let message = VersionedMessage::V1(
+        let mut message = VersionedMessage::V1(
             Message::try_compile_with_config(
                 &payer.pubkey(),
                 &[Instruction {
                     program_id: program,
-                    accounts: vec![AccountMeta::new_readonly(account, false); num_accounts],
-                    data: vec![0; data_len],
+                    accounts: vec![AccountMeta::new_readonly(account, false)],
+                    data: vec![],
                 }],
                 Hash::new_unique(),
                 TransactionConfig::empty(),
             )
             .unwrap(),
         );
+        let VersionedMessage::V1(v1_message) = &mut message else {
+            unreachable!()
+        };
+        v1_message.instructions[0].accounts = vec![1; num_accounts];
+        v1_message.instructions[0].data = vec![0; data_len];
         let expected_error = || SignerError::InvalidInput("invalid message".to_string());
 
         assert_eq!(
