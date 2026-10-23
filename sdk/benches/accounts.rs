@@ -7,7 +7,7 @@ extern crate test;
 use {solana_sdk::account::AccountSharedData, test::Bencher};
 
 fn bench_unchanged(bencher: &mut Bencher, size: usize) {
-    let mut account = AccountSharedData::new(42, 0, &Pubkey::new_unique());
+    let mut account = AccountSharedData::empty(42, &Pubkey::new_unique());
     let new_data = vec![42; size];
     account.set_data(new_data.clone());
 
@@ -17,7 +17,7 @@ fn bench_unchanged(bencher: &mut Bencher, size: usize) {
 }
 
 fn bench_changed(bencher: &mut Bencher, size: usize) {
-    let mut account = AccountSharedData::new(42, 0, &Pubkey::new_unique());
+    let mut account = AccountSharedData::empty(42, &Pubkey::new_unique());
     let initial_data = vec![42; size];
     account.set_data(initial_data);
 
@@ -37,7 +37,7 @@ fn bench_changed(bencher: &mut Bencher, size: usize) {
 }
 
 fn bench_grow(bencher: &mut Bencher, size: usize) {
-    let mut account = AccountSharedData::new(42, 0, &Pubkey::new_unique());
+    let mut account = AccountSharedData::empty(42, &Pubkey::new_unique());
     let initial_data = vec![42; size];
     account.set_data(initial_data);
 
@@ -57,7 +57,7 @@ fn bench_grow(bencher: &mut Bencher, size: usize) {
 }
 
 fn bench_shrink(bencher: &mut Bencher, size: usize) {
-    let mut account = AccountSharedData::new(42, 0, &Pubkey::new_unique());
+    let mut account = AccountSharedData::empty(42, &Pubkey::new_unique());
     let initial_data = vec![42; size];
     account.set_data(initial_data);
 

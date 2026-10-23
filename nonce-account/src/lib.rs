@@ -205,7 +205,7 @@ mod tests {
 
         // assert our function produces the expected result
         let assert_correct = |bytes: &[u8], kind: Option<SystemAccountKind>| {
-            let mut account = AccountSharedData::new(0, 0, &system_program::id());
+            let mut account = AccountSharedData::empty(0, &system_program::id());
             account.set_data_from_slice(bytes);
             assert_eq!(get_system_account_kind(&account), kind);
         };
@@ -228,7 +228,7 @@ mod tests {
 
         // non-system fails
         for bytes in [&system_bytes, &legacy_nonce_bytes, &current_nonce_bytes] {
-            let mut non_system = AccountSharedData::new(0, 0, &Pubkey::new_unique());
+            let mut non_system = AccountSharedData::empty(0, &Pubkey::new_unique());
             non_system.set_data_from_slice(bytes);
             assert_eq!(get_system_account_kind(&non_system), None);
         }

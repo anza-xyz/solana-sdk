@@ -226,6 +226,10 @@ impl fmt::Debug for AccountSharedData {
 }
 
 impl Account {
+    #[deprecated(
+        since = "5.2.0",
+        note = "Use `empty`, `new_with_data`, or `state_traits::StateMutWincode::{new_data, new_data_with_space}` instead"
+    )]
     pub fn new(lamports: u64, space: usize, owner: &Pubkey) -> Self {
         Account {
             lamports,
@@ -247,9 +251,15 @@ impl Account {
             rent_epoch: Epoch::default(),
         }
     }
+    #[allow(deprecated, reason = "`new` and `new_ref` are deprecated together")]
+    #[deprecated(
+        since = "5.2.0",
+        note = "Use `empty`, `new_with_data`, or `state_traits::StateMutWincode::{new_data, new_data_with_space}`, then wrap in `Rc<RefCell<_>>`"
+    )]
     pub fn new_ref(lamports: u64, space: usize, owner: &Pubkey) -> Rc<RefCell<Self>> {
         Rc::new(RefCell::new(Account::new(lamports, space, owner)))
     }
+    #[deprecated(since = "5.2.0", note = "Use `new_with_data` and `set_rent_epoch`")]
     pub fn new_rent_epoch(lamports: u64, space: usize, owner: &Pubkey, rent_epoch: Epoch) -> Self {
         Account {
             lamports,
@@ -344,6 +354,10 @@ impl AccountSharedData {
         self.data_mut().spare_capacity_mut()
     }
 
+    #[deprecated(
+        since = "5.2.0",
+        note = "Use `empty`, `new_with_data`, or `state_traits::StateMutWincode::{new_data, new_data_with_space}` instead"
+    )]
     pub fn new(lamports: u64, space: usize, owner: &Pubkey) -> Self {
         AccountSharedData {
             lamports,
@@ -368,9 +382,25 @@ impl AccountSharedData {
             rent_epoch: Epoch::default(),
         }
     }
+    /// Construct an `AccountSharedData` with empty data.
+    pub fn empty(lamports: u64, owner: &Pubkey) -> Self {
+        AccountSharedData {
+            lamports,
+            data: Arc::new(Vec::new()),
+            owner: *owner,
+            executable: false,
+            rent_epoch: Epoch::default(),
+        }
+    }
+    #[allow(deprecated, reason = "`new` and `new_ref` are deprecated together")]
+    #[deprecated(
+        since = "5.2.0",
+        note = "Use `empty`, `new_with_data`, or `state_traits::StateMutWincode::{new_data, new_data_with_space}`, then wrap in `Rc<RefCell<_>>`"
+    )]
     pub fn new_ref(lamports: u64, space: usize, owner: &Pubkey) -> Rc<RefCell<Self>> {
         Rc::new(RefCell::new(AccountSharedData::new(lamports, space, owner)))
     }
+    #[deprecated(since = "5.2.0", note = "Use `new_with_data` and `set_rent_epoch`")]
     pub fn new_rent_epoch(lamports: u64, space: usize, owner: &Pubkey, rent_epoch: Epoch) -> Self {
         AccountSharedData {
             lamports,
@@ -438,10 +468,10 @@ pub mod tests {
     use super::*;
 
     fn make_two_accounts(key: &Pubkey) -> (Account, AccountSharedData) {
-        let mut account1 = Account::new(1, 2, key);
+        let mut account1 = Account::new_with_data(1, vec![3, 4], key);
         account1.executable = true;
         account1.rent_epoch = 4;
-        let mut account2 = AccountSharedData::new(1, 2, key);
+        let mut account2 = AccountSharedData::new_with_data(1, vec![3, 4], key);
         account2.executable = true;
         account2.rent_epoch = 4;
         assert!(accounts_equal(&account1, &account2));
@@ -480,7 +510,7 @@ pub mod tests {
     fn test_account_set_data_from_slice() {
         let key = Pubkey::new_unique();
         let (_, mut account) = make_two_accounts(&key);
-        assert_eq!(account.data(), &vec![0, 0]);
+        assert_eq!(account.data(), &vec![3, 4]);
         account.set_data_from_slice(&[1, 2]);
         assert_eq!(account.data(), &vec![1, 2]);
         account.set_data_from_slice(&[1, 2, 3]);
@@ -501,7 +531,7 @@ pub mod tests {
     fn test_account_data_set_data() {
         let key = Pubkey::new_unique();
         let (_, mut account) = make_two_accounts(&key);
-        assert_eq!(account.data(), &vec![0, 0]);
+        assert_eq!(account.data(), &vec![3, 4]);
         account.set_data(vec![1, 2]);
         assert_eq!(account.data(), &vec![1, 2]);
         account.set_data(vec![]);
@@ -750,23 +780,7 @@ pub mod tests {
                 let should_be_equal = pass == 1 || pass == 3;
                 test_equal(should_be_equal, &account1, &account2, &account_expected);
 
-                // test new_ref
                 if should_be_equal {
-                    assert!(accounts_equal(
-                        &Account::new_ref(
-                            account_expected.lamports(),
-                            account_expected.data().len(),
-                            account_expected.owner()
-                        )
-                        .borrow(),
-                        &AccountSharedData::new_ref(
-                            account_expected.lamports(),
-                            account_expected.data().len(),
-                            account_expected.owner()
-                        )
-                        .borrow()
-                    ));
-
                     {
                         // test new_data
                         let account1_with_data = Account::new_data(

@@ -115,7 +115,7 @@ pub fn create_genesis_config(lamports: u64) -> (GenesisConfig, Keypair) {
         GenesisConfig::new(
             &[(
                 faucet_keypair.pubkey(),
-                AccountSharedData::new(lamports, 0, &system_program::id()),
+                AccountSharedData::empty(lamports, &system_program::id()),
             )],
             &[],
         ),
@@ -354,11 +354,11 @@ mod tests {
         let mut config = GenesisConfig::default();
         config.add_account(
             faucet_keypair.pubkey(),
-            AccountSharedData::new(10_000, 0, &Pubkey::default()),
+            AccountSharedData::empty(10_000, &Pubkey::default()),
         );
         config.add_account(
             solana_pubkey::new_rand(),
-            AccountSharedData::new(1, 0, &Pubkey::default()),
+            AccountSharedData::empty(1, &Pubkey::default()),
         );
         config.add_native_instruction_processor("hi".to_string(), solana_pubkey::new_rand());
 

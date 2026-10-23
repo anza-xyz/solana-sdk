@@ -64,7 +64,7 @@ mod tests {
         let res = AccountSharedData::default().state() as Result<u64, InstructionError>;
         assert!(res.is_err());
 
-        let mut account = AccountSharedData::new(0, std::mem::size_of::<u64>(), &Pubkey::default());
+        let mut account = AccountSharedData::new_data(0, &0u64, &Pubkey::default()).unwrap();
 
         assert!(account.set_state(&state).is_ok());
         let stored_state: u64 = account.state().unwrap();

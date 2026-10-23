@@ -176,7 +176,8 @@ mod tests {
         let res = AccountSharedData::default().state() as Result<u64, InstructionError>;
         assert!(res.is_err());
 
-        let mut account = AccountSharedData::new(0, std::mem::size_of::<u64>(), &Pubkey::default());
+        let mut account =
+            <AccountSharedData as StateMut<u64>>::new_data(0, &0, &Pubkey::default()).unwrap();
         assert!(account.set_state(&state).is_ok());
         let stored_state: u64 = account.state().unwrap();
         assert_eq!(stored_state, state);
@@ -261,7 +262,7 @@ mod tests {
         assert_eq!(StateMut::<u64>::state(&account).unwrap(), state);
 
         // a value that does not fit the data fails in both paths, leaving a shared buffer intact
-        let mut account = AccountSharedData::new(0, size - 1, &Pubkey::default());
+        let mut account = AccountSharedData::empty(0, &Pubkey::default());
         assert_eq!(
             account.set_state_with_cow_capacity(&state, 100),
             Err(InstructionError::AccountDataTooSmall)

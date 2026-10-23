@@ -213,7 +213,13 @@ mod test {
         let feature = Feature {
             activated_at: Some(42),
         };
-        let mut account = AccountSharedData::new(1, Feature::size_of() + 8, &id());
+        let mut account = AccountSharedData::new_data_with_space(
+            1,
+            &Feature::default(),
+            Feature::size_of() + 8,
+            &id(),
+        )
+        .unwrap();
         assert_eq!(to_account(&feature, &mut account), Some(()));
 
         // The codec that is not compiled into the readers above agrees.
@@ -229,23 +235,31 @@ mod test {
     #[test]
     fn feature_deserialize_none() {
         assert_eq!(
-            from_account(&AccountSharedData::new(42, Feature::size_of(), &id())),
+            from_account(&create_account(&Feature::default(), 42)),
             Some(Feature { activated_at: None })
         );
         assert_eq!(
-            from_account(&AccountSharedData::new(
-                42,
-                Feature::size_of() - 1, // Too small
-                &id()
-            )),
+            from_account(
+                &AccountSharedData::new_data_with_space(
+                    42,
+                    &Feature::default(),
+                    Feature::size_of() - 1, // Too small
+                    &id(),
+                )
+                .unwrap()
+            ),
             None,
         );
         assert_eq!(
-            from_account(&AccountSharedData::new(
-                42,
-                Feature::size_of(),
-                &Pubkey::new_unique(), // Wrong owner
-            )),
+            from_account(
+                &AccountSharedData::new_data_with_space(
+                    42,
+                    &Feature::default(),
+                    Feature::size_of(),
+                    &Pubkey::new_unique(), // Wrong owner
+                )
+                .unwrap()
+            ),
             None,
         );
     }
