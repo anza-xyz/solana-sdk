@@ -232,6 +232,11 @@ impl VersionedTransaction {
         keypairs: &T,
         recent_blockhash: solana_hash::Hash,
     ) -> Result<(), SignerError> {
+        if let VersionedMessage::V1(message) = &self.message {
+            message
+                .validate()
+                .map_err(|_| SignerError::InvalidInput("invalid message".to_string()))?;
+        }
         let num_required_signatures = usize::from(self.message.header().num_required_signatures);
         let required_signers = self
             .message
@@ -274,6 +279,11 @@ impl VersionedTransaction {
         message: VersionedMessage,
         keypairs: &T,
     ) -> Result<Self, SignerError> {
+        if let VersionedMessage::V1(v1_message) = &message {
+            v1_message
+                .validate()
+                .map_err(|_| SignerError::InvalidInput("invalid message".to_string()))?;
+        }
         let static_account_keys = message.static_account_keys();
         if static_account_keys.len() < message.header().num_required_signatures as usize {
             return Err(SignerError::InvalidInput("invalid message".to_string()));
@@ -737,6 +747,45 @@ mod tests {
             Ok(tx) => assert!(tx.verify_and_hash_message().is_ok()),
             Err(err) => assert_eq!(Some(err), None),
         }
+    }
+
+    #[test_case(300, 0; "accounts")]
+    #[test_case(0, u16::MAX as usize + 1; "data")]
+    fn test_v1_signing_rejects_unrepresentable_instruction(num_accounts: usize, data_len: usize) {
+        let payer = Keypair::new();
+        let program = Address::new_unique();
+        let account = Address::new_unique();
+        let mut message = VersionedMessage::V1(
+            Message::try_compile_with_config(
+                &payer.pubkey(),
+                &[Instruction {
+                    program_id: program,
+                    accounts: vec![AccountMeta::new_readonly(account, false)],
+                    data: vec![],
+                }],
+                Hash::new_unique(),
+                TransactionConfig::empty(),
+            )
+            .unwrap(),
+        );
+        let VersionedMessage::V1(v1_message) = &mut message else {
+            unreachable!()
+        };
+        v1_message.instructions[0].accounts = vec![1; num_accounts];
+        v1_message.instructions[0].data = vec![0; data_len];
+        let expected_error = || SignerError::InvalidInput("invalid message".to_string());
+
+        assert_eq!(
+            VersionedTransaction::try_new(message.clone(), &[&payer]),
+            Err(expected_error())
+        );
+
+        let mut tx = VersionedTransaction::new_unsigned(message);
+        assert_eq!(
+            tx.try_partial_sign(&[&payer], Hash::new_unique()),
+            Err(expected_error())
+        );
+        assert_eq!(tx.signatures, vec![Signature::default()]);
     }
 
     #[test]

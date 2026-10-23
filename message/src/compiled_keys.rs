@@ -2,6 +2,7 @@ use {
     crate::{
         inline_nonce::is_advance_nonce_instruction_data,
         v0::{LoadedAddresses, MessageAddressTableLookup},
+        v1::MessageError,
         AddressLookupTableAccount, MessageHeader,
     },
     alloc::{collections::BTreeMap, vec::Vec},
@@ -24,6 +25,7 @@ pub enum CompileError {
     AccountIndexOverflow,
     AddressTableLookupIndexOverflow,
     UnknownInstructionKey(Address),
+    InvalidV1Message(MessageError),
 }
 
 impl core::error::Error for CompileError {}
@@ -40,6 +42,9 @@ impl fmt::Display for CompileError {
             CompileError::UnknownInstructionKey(key) => f.write_fmt(format_args!(
                 "encountered unknown account key `{key}` during instruction compilation",
             )),
+            CompileError::InvalidV1Message(error) => {
+                write!(f, "invalid V1 message: {error}")
+            }
         }
     }
 }
