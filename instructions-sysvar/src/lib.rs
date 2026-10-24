@@ -292,7 +292,7 @@ pub fn get_instruction_relative(
         return Err(ProgramError::UnsupportedSysvar);
     }
 
-    let instruction_sysvar = instruction_sysvar_account_info.data.borrow();
+    let instruction_sysvar = instruction_sysvar_account_info.try_borrow_data()?;
     let current_index = load_current_index(&instruction_sysvar) as i64;
     let index = current_index.saturating_add(index_relative_to_current);
     if index < 0 {
@@ -572,6 +572,13 @@ mod tests {
             Err(ProgramError::InvalidArgument),
             get_instruction_relative(3, &account_info)
         );
+        {
+            let _data = account_info.try_borrow_mut_data().unwrap();
+            assert_eq!(
+                Err(ProgramError::AccountBorrowFailed),
+                get_instruction_relative(0, &account_info)
+            );
+        }
 
         let key = Address::new_unique();
         account_info.key = &key;
