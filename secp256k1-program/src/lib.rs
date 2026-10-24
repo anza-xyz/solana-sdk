@@ -449,7 +449,7 @@
 //!     // (the secp256k1 program), this message is keccak-hashed before signing.
 //!     let msg = b"hello world";
 //!     let secp_pubkey = secp256k1_secret_key.verifying_key();
-//!     let eth_address = eth_address_from_pubkey(&secp_pubkey.to_encoded_point(false).as_bytes()[1..].try_into().unwrap());
+//!     let eth_address = eth_address_from_pubkey(&secp_pubkey.to_sec1_point(false).as_bytes()[1..].try_into().unwrap());
 //!     let (signature, recovery_id) = sign_message(&secp256k1_secret_key.to_bytes().into(), msg).unwrap();
 //!    let secp256k1_instr = new_secp256k1_instruction_with_signature(msg, &signature, recovery_id, &eth_address);
 //!
@@ -740,7 +740,8 @@
 //!     // Sign some messages.
 //!     let mut signatures = vec![];
 //!     for idx in 0..2 {
-//!         let secret_key = k256::ecdsa::SigningKey::random(&mut rand::thread_rng());
+//!         use k256::elliptic_curve::Generate;
+//!         let secret_key = k256::ecdsa::SigningKey::generate_from_rng(&mut rand::rng());
 //!         let message = format!("hello world {}", idx).into_bytes();
 //!         let message_hash = {
 //!             let mut hasher = solana_keccak_hasher::Hasher::default();
@@ -748,13 +749,13 @@
 //!             hasher.result()
 //!         };
 //!         let (signature, recovery_id) =
-//!             secret_key.sign_prehash_recoverable(message_hash.as_bytes()).unwrap();
+//!             secret_key.sign_prehash_recoverable(message_hash.as_bytes());
 //!         let signature = signature.to_bytes().into();
 //!         let recovery_id = recovery_id.to_byte();
 //!
 //!         let public_key = secret_key.verifying_key();
 //!         let eth_address =
-//!             eth_address_from_pubkey(&public_key.to_encoded_point(false).as_bytes()[1..].try_into().unwrap());
+//!             eth_address_from_pubkey(&public_key.to_sec1_point(false).as_bytes()[1..].try_into().unwrap());
 //!
 //!         signatures.push(SecpSignature {
 //!             signature,
@@ -856,9 +857,7 @@ pub fn sign_message(
     let priv_key = k256::ecdsa::SigningKey::from_slice(priv_key_bytes)
         .map_err(|e| Error::from_source(format!("{e}")))?;
     let message_hash_arr = solana_keccak_hasher::hash(message).to_bytes();
-    let (signature, recovery_id) = priv_key
-        .sign_prehash_recoverable(&message_hash_arr)
-        .map_err(|e| Error::from_source(format!("{e}")))?;
+    let (signature, recovery_id) = priv_key.sign_prehash_recoverable(&message_hash_arr);
     Ok((signature.to_bytes().into(), recovery_id.to_byte()))
 }
 
