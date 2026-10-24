@@ -6,7 +6,7 @@ use {
         pubkey::points::{AddToPubkeyProjective, AggregatePubkey, PopVerified, PubkeyProjective},
         scalar::Scalar,
     },
-    blstrs::{G1Projective, Scalar as BlstrsScalar},
+    blstrs::Scalar as BlstrsScalar,
 };
 
 impl PubkeyProjective {
@@ -79,20 +79,19 @@ impl PubkeyProjective {
         }
 
         let mut points = alloc::vec::Vec::with_capacity(pubkeys.len());
-        let mut scalar_values = alloc::vec::Vec::with_capacity(scalars.len());
+        let mut scalar_bytes = alloc::vec::Vec::with_capacity(scalars.len() * 32);
 
         for (pubkey, scalar) in pubkeys.zip(scalars) {
             let mut point = PubkeyProjective::identity();
             pubkey.0.add_to_accumulator(&mut point)?;
 
-            points.push(point.0);
-            scalar_values.push(scalar);
+            points.push(*point.0.as_ref());
+            scalar_bytes.extend_from_slice(&scalar.to_bytes_le());
         }
 
-        Ok(AggregatePubkey(PubkeyProjective(G1Projective::multi_exp(
-            &points,
-            &scalar_values,
-        ))))
+        let mut aggregate = PubkeyProjective::identity();
+        *aggregate.0.as_mut() = blst::p1_affines::from(points.as_slice()).mult(&scalar_bytes, 255);
+        Ok(AggregatePubkey(aggregate))
     }
 
     /// Aggregate a list of Proof-of-Possession verified public keys into an
@@ -149,7 +148,68 @@ impl PubkeyProjective {
 
 #[cfg(test)]
 mod tests {
-    use crate::{keypair::Keypair, pubkey::PubkeyProjective, scalar::Scalar};
+    use {super::*, crate::keypair::Keypair, blstrs::G1Projective};
+
+    #[test]
+    fn test_weighted_aggregation_matches_multi_exp() {
+        for count in [1, 2, 31, 32, 33, 64] {
+            let pubkeys: alloc::vec::Vec<_> = (0..count)
+                .map(|index| Keypair::derive(&[index as u8; 32]).unwrap().public)
+                .collect();
+            let points: alloc::vec::Vec<_> = pubkeys
+                .iter()
+                .map(|pubkey| {
+                    let mut point = PubkeyProjective::identity();
+                    pubkey.0.add_to_accumulator(&mut point).unwrap();
+                    point.0
+                })
+                .collect();
+            for zero_weights in [false, true] {
+                let weights: alloc::vec::Vec<_> = (0..count)
+                    .map(|index| {
+                        if zero_weights {
+                            Scalar::ZERO
+                        } else {
+                            [
+                                Scalar::ZERO,
+                                Scalar::ONE,
+                                -Scalar::ONE,
+                                Scalar::from(0x1234_5678_9abc_def0),
+                            ][index % 4]
+                        }
+                    })
+                    .collect();
+                let scalars: alloc::vec::Vec<_> = weights.iter().map(|weight| weight.0).collect();
+                let expected =
+                    AggregatePubkey(PubkeyProjective(G1Projective::multi_exp(&points, &scalars)));
+                let actual =
+                    PubkeyProjective::aggregate_with_weights(pubkeys.iter(), weights.iter())
+                        .unwrap();
+                assert_eq!(
+                    actual, expected,
+                    "count={count}, zero_weights={zero_weights}"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn test_weighted_aggregation_rejects_invalid_lengths() {
+        let pubkeys = [Keypair::derive(&[1; 32]).unwrap().public];
+        let weights = [Scalar::ONE];
+        assert_eq!(
+            PubkeyProjective::aggregate_with_weights(pubkeys[..0].iter(), weights[..0].iter()),
+            Err(BlsError::EmptyAggregation)
+        );
+        assert_eq!(
+            PubkeyProjective::aggregate_with_weights(pubkeys.iter(), weights[..0].iter()),
+            Err(BlsError::InputLengthMismatch)
+        );
+        assert_eq!(
+            PubkeyProjective::aggregate_with_weights(pubkeys[..0].iter(), weights.iter()),
+            Err(BlsError::InputLengthMismatch)
+        );
+    }
 
     #[test]
     #[allow(deprecated)]
