@@ -8,7 +8,7 @@ use solana_define_syscall::definitions as syscalls;
 use {
     crate::{
         consts::{ALT_BN128_FIELD_SIZE, ALT_BN128_FQ2_SIZE},
-        target_arch::{convert_endianness, Endianness, G1, G2},
+        target_arch::{convert_endianness, reject_flag_bits, Endianness, G1, G2},
         PodG1, PodG2,
     },
     ark_serialize::{CanonicalSerialize, Compress},
@@ -53,12 +53,18 @@ pub const ALT_BN128_G2_SUB_LE: u64 = ALT_BN128_G2_SUB_BE | LE_FLAG;
 #[cfg(not(target_os = "solana"))]
 pub enum VersionedG1Addition {
     V0,
+    /// Reject field elements with either of the two most significant bits
+    /// set, as EIP-196 does (<https://github.com/anza-xyz/agave/issues/3379>).
+    V1,
 }
 
 /// The version enum used to version changes to the `alt_bn128_g2_addition` syscall.
 #[cfg(not(target_os = "solana"))]
 pub enum VersionedG2Addition {
     V0,
+    /// Reject field elements with either of the two most significant bits
+    /// set (<https://github.com/anza-xyz/agave/issues/3379>).
+    V1,
 }
 
 /// The syscall implementation for the `alt_bn128_g1_addition` syscall.
@@ -75,7 +81,7 @@ pub enum VersionedG2Addition {
 /// and the new logic must be scoped to that variant.
 #[cfg(not(target_os = "solana"))]
 pub fn alt_bn128_versioned_g1_addition(
-    _version: VersionedG1Addition,
+    version: VersionedG1Addition,
     input: &[u8],
     endianness: Endianness,
 ) -> Result<Vec<u8>, AltBn128Error> {
@@ -98,23 +104,25 @@ pub fn alt_bn128_versioned_g1_addition(
         Endianness::LE => (),
     }
 
-    let p: G1 = match endianness {
-        Endianness::BE => {
-            PodG1::from_be_bytes(&input[..ALT_BN128_G1_ADDITION_INPUT_SIZE / 2])?.try_into()?
-        }
-        Endianness::LE => {
-            PodG1::from_le_bytes(&input[..ALT_BN128_G1_ADDITION_INPUT_SIZE / 2])?.try_into()?
-        }
+    let (p_bytes, q_bytes) = input.split_at(ALT_BN128_G1_ADDITION_INPUT_SIZE / 2);
+    let (p_pod, q_pod) = match endianness {
+        Endianness::BE => (
+            PodG1::from_be_bytes(p_bytes)?,
+            PodG1::from_be_bytes(q_bytes)?,
+        ),
+        Endianness::LE => (
+            PodG1::from_le_bytes(p_bytes)?,
+            PodG1::from_le_bytes(q_bytes)?,
+        ),
     };
 
-    let q: G1 = match endianness {
-        Endianness::BE => {
-            PodG1::from_be_bytes(&input[ALT_BN128_G1_ADDITION_INPUT_SIZE / 2..])?.try_into()?
-        }
-        Endianness::LE => {
-            PodG1::from_le_bytes(&input[ALT_BN128_G1_ADDITION_INPUT_SIZE / 2..])?.try_into()?
-        }
-    };
+    if matches!(version, VersionedG1Addition::V1) {
+        reject_flag_bits(&p_pod.0)?;
+        reject_flag_bits(&q_pod.0)?;
+    }
+
+    let p: G1 = p_pod.try_into()?;
+    let q: G1 = q_pod.try_into()?;
 
     #[allow(clippy::arithmetic_side_effects)]
     let result_point = p + q;
@@ -143,7 +151,7 @@ pub fn alt_bn128_versioned_g1_addition(
 pub fn alt_bn128_g1_addition_be(input: &[u8]) -> Result<Vec<u8>, AltBn128Error> {
     #[cfg(not(target_os = "solana"))]
     {
-        alt_bn128_versioned_g1_addition(VersionedG1Addition::V0, input, Endianness::BE)
+        alt_bn128_versioned_g1_addition(VersionedG1Addition::V1, input, Endianness::BE)
     }
     #[cfg(target_os = "solana")]
     {
@@ -185,7 +193,7 @@ pub fn alt_bn128_g1_addition_le(
 ) -> Result<Vec<u8>, AltBn128Error> {
     #[cfg(not(target_os = "solana"))]
     {
-        alt_bn128_versioned_g1_addition(VersionedG1Addition::V0, input, Endianness::LE)
+        alt_bn128_versioned_g1_addition(VersionedG1Addition::V1, input, Endianness::LE)
     }
     #[cfg(target_os = "solana")]
     {
@@ -227,7 +235,7 @@ pub fn alt_bn128_g1_addition_le(
 /// and the new logic must be scoped to that variant.
 #[cfg(not(target_os = "solana"))]
 pub fn alt_bn128_versioned_g2_addition(
-    _version: VersionedG2Addition,
+    version: VersionedG2Addition,
     input: &[u8],
     endianness: Endianness,
 ) -> Result<Vec<u8>, AltBn128Error> {
@@ -235,19 +243,25 @@ pub fn alt_bn128_versioned_g2_addition(
         return Err(AltBn128Error::InvalidInputData);
     }
 
-    let p: G2 = match endianness {
-        Endianness::BE => PodG2::from_be_bytes(&input[..ALT_BN128_G2_ADDITION_INPUT_SIZE / 2])?
-            .into_affine_unchecked()?,
-        Endianness::LE => PodG2::from_le_bytes(&input[..ALT_BN128_G2_ADDITION_INPUT_SIZE / 2])?
-            .into_affine_unchecked()?,
+    let (p_bytes, q_bytes) = input.split_at(ALT_BN128_G2_ADDITION_INPUT_SIZE / 2);
+    let (p_pod, q_pod) = match endianness {
+        Endianness::BE => (
+            PodG2::from_be_bytes(p_bytes)?,
+            PodG2::from_be_bytes(q_bytes)?,
+        ),
+        Endianness::LE => (
+            PodG2::from_le_bytes(p_bytes)?,
+            PodG2::from_le_bytes(q_bytes)?,
+        ),
     };
 
-    let q: G2 = match endianness {
-        Endianness::BE => PodG2::from_be_bytes(&input[ALT_BN128_G2_ADDITION_INPUT_SIZE / 2..])?
-            .into_affine_unchecked()?,
-        Endianness::LE => PodG2::from_le_bytes(&input[ALT_BN128_G2_ADDITION_INPUT_SIZE / 2..])?
-            .into_affine_unchecked()?,
-    };
+    if matches!(version, VersionedG2Addition::V1) {
+        reject_flag_bits(&p_pod.0)?;
+        reject_flag_bits(&q_pod.0)?;
+    }
+
+    let p: G2 = p_pod.into_affine_unchecked()?;
+    let q: G2 = q_pod.into_affine_unchecked()?;
 
     #[allow(clippy::arithmetic_side_effects)]
     let result_point = p + q;
@@ -278,7 +292,7 @@ pub fn alt_bn128_g2_addition_be(
 ) -> Result<Vec<u8>, AltBn128Error> {
     #[cfg(not(target_os = "solana"))]
     {
-        alt_bn128_versioned_g2_addition(VersionedG2Addition::V0, input, Endianness::BE)
+        alt_bn128_versioned_g2_addition(VersionedG2Addition::V1, input, Endianness::BE)
     }
     #[cfg(target_os = "solana")]
     {
@@ -308,7 +322,7 @@ pub fn alt_bn128_g2_addition_le(
 ) -> Result<Vec<u8>, AltBn128Error> {
     #[cfg(not(target_os = "solana"))]
     {
-        alt_bn128_versioned_g2_addition(VersionedG2Addition::V0, input, Endianness::LE)
+        alt_bn128_versioned_g2_addition(VersionedG2Addition::V1, input, Endianness::LE)
     }
     #[cfg(target_os = "solana")]
     {
@@ -328,6 +342,147 @@ pub fn alt_bn128_g2_addition_le(
                 }
                 _ => Err(AltBn128Error::UnexpectedError),
             }
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use {
+        super::*,
+        crate::target_arch::{convert_endianness, G2},
+        ark_ec::AffineRepr,
+    };
+
+    /// The G1 generator `(1, 2)` added to itself, big-endian.
+    fn g1_doubling_input_be() -> [u8; ALT_BN128_G1_ADDITION_INPUT_SIZE] {
+        let mut input = [0u8; ALT_BN128_G1_ADDITION_INPUT_SIZE];
+        input[31] = 1;
+        input[63] = 2;
+        input[95] = 1;
+        input[127] = 2;
+        input
+    }
+
+    /// The G2 generator added to itself, little-endian (the `ark-serialize`
+    /// layout).
+    fn g2_doubling_input_le() -> [u8; ALT_BN128_G2_ADDITION_INPUT_SIZE] {
+        let generator = G2::generator();
+        let mut point = [0u8; ALT_BN128_G2_POINT_SIZE];
+        generator
+            .x
+            .serialize_with_mode(&mut point[..ALT_BN128_FQ2_SIZE], Compress::No)
+            .unwrap();
+        generator
+            .y
+            .serialize_with_mode(&mut point[ALT_BN128_FQ2_SIZE..], Compress::No)
+            .unwrap();
+        let mut input = [0u8; ALT_BN128_G2_ADDITION_INPUT_SIZE];
+        input[..ALT_BN128_G2_POINT_SIZE].copy_from_slice(&point);
+        input[ALT_BN128_G2_POINT_SIZE..].copy_from_slice(&point);
+        input
+    }
+
+    #[test]
+    fn g1_addition_v1_rejects_flag_bits() {
+        let clean_be = g1_doubling_input_be();
+        let clean_le =
+            convert_endianness::<ALT_BN128_FIELD_SIZE, ALT_BN128_G1_ADDITION_INPUT_SIZE>(&clean_be);
+        let expected =
+            alt_bn128_versioned_g1_addition(VersionedG1Addition::V0, &clean_be, Endianness::BE)
+                .unwrap();
+        assert_eq!(
+            alt_bn128_versioned_g1_addition(VersionedG1Addition::V1, &clean_be, Endianness::BE),
+            Ok(expected.clone())
+        );
+
+        // (big-endian index, little-endian index, flag bit) of the first
+        // point's `y` (the coordinate `ark-serialize` reads flags from) and `x`.
+        for (be_index, le_index, bit) in [
+            (32, 63, 0x80u8),
+            (32, 63, 0x40),
+            (0, 31, 0x80),
+            (0, 31, 0x40),
+        ] {
+            let mut flagged_be = clean_be;
+            flagged_be[be_index] |= bit;
+            let mut flagged_le = clean_le;
+            flagged_le[le_index] |= bit;
+
+            if be_index == 32 {
+                // V0 strips the flag and accepts the input.
+                assert!(alt_bn128_versioned_g1_addition(
+                    VersionedG1Addition::V0,
+                    &flagged_be,
+                    Endianness::BE
+                )
+                .is_ok());
+            }
+            assert_eq!(
+                alt_bn128_versioned_g1_addition(
+                    VersionedG1Addition::V1,
+                    &flagged_be,
+                    Endianness::BE
+                ),
+                Err(AltBn128Error::InvalidInputData)
+            );
+            assert_eq!(
+                alt_bn128_versioned_g1_addition(
+                    VersionedG1Addition::V1,
+                    &flagged_le,
+                    Endianness::LE
+                ),
+                Err(AltBn128Error::InvalidInputData)
+            );
+        }
+    }
+
+    #[test]
+    fn g2_addition_v1_rejects_flag_bits() {
+        let clean_le = g2_doubling_input_le();
+        let clean_be =
+            convert_endianness::<ALT_BN128_FQ2_SIZE, ALT_BN128_G2_ADDITION_INPUT_SIZE>(&clean_le);
+        let expected =
+            alt_bn128_versioned_g2_addition(VersionedG2Addition::V0, &clean_le, Endianness::LE)
+                .unwrap();
+        assert_eq!(
+            alt_bn128_versioned_g2_addition(VersionedG2Addition::V1, &clean_le, Endianness::LE),
+            Ok(expected.clone())
+        );
+
+        // Little-endian index 127 is the most significant byte of the first
+        // point's `y_c1`, where `ark-serialize` reads the flags; in the
+        // big-endian layout `[x1, x0, y1, y0]` that byte sits at index 64.
+        for (le_index, be_index, bit) in [(127, 64, 0x80u8), (127, 64, 0x40), (31, 32, 0x80)] {
+            let mut flagged_le = clean_le;
+            flagged_le[le_index] |= bit;
+            let mut flagged_be = clean_be;
+            flagged_be[be_index] |= bit;
+
+            if le_index == 127 {
+                assert!(alt_bn128_versioned_g2_addition(
+                    VersionedG2Addition::V0,
+                    &flagged_le,
+                    Endianness::LE
+                )
+                .is_ok());
+            }
+            assert_eq!(
+                alt_bn128_versioned_g2_addition(
+                    VersionedG2Addition::V1,
+                    &flagged_le,
+                    Endianness::LE
+                ),
+                Err(AltBn128Error::InvalidInputData)
+            );
+            assert_eq!(
+                alt_bn128_versioned_g2_addition(
+                    VersionedG2Addition::V1,
+                    &flagged_be,
+                    Endianness::BE
+                ),
+                Err(AltBn128Error::InvalidInputData)
+            );
         }
     }
 }
