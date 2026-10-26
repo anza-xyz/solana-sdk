@@ -181,7 +181,13 @@ pub type BankId = u64;
 pub type Epoch = u64;
 
 pub const GENESIS_EPOCH: Epoch = 0;
-// must be sync with Account::rent_epoch::default()
+/// Legacy rent-collection constant. Rent collection no longer exists, and newly
+/// created accounts set `rent_epoch` to `u64::MAX` (the rent-exempt marker), so
+/// this is no longer the default `rent_epoch` of a new account.
+#[deprecated(
+    since = "4.1.0",
+    note = "Not in use anymore; `rent_epoch` is always `u64::MAX`"
+)]
 pub const INITIAL_RENT_EPOCH: Epoch = 0;
 
 /// An index to the slots of a epoch.

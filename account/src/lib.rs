@@ -64,7 +64,7 @@ pub const WINCODE_CONFIG: WincodeConfig = wincode::config::Configuration::defaul
     serde(rename_all = "camelCase")
 )]
 #[cfg_attr(feature = "wincode", derive(wincode::SchemaRead, wincode::SchemaWrite))]
-#[derive(PartialEq, Eq, Clone, Default)]
+#[derive(PartialEq, Eq, Clone)]
 pub struct Account {
     /// lamports in the account
     pub lamports: u64,
@@ -81,7 +81,11 @@ pub struct Account {
     pub owner: Pubkey,
     /// this account's data contains a loaded program (and is now read-only)
     pub executable: bool,
-    /// the epoch at which this account will next owe rent
+    /// Legacy rent-collection field, retained for layout and wire compatibility.
+    ///
+    /// Rent collection no longer exists: every account is rent exempt, and
+    /// `u64::MAX` is the rent-exempt marker. Every constructor that does not
+    /// take an explicit value, including `Default`, sets this to `u64::MAX`.
     pub rent_epoch: Epoch,
 }
 
@@ -95,7 +99,7 @@ pub struct Account {
     serde(from = "Account")
 )]
 #[cfg_attr(feature = "wincode", derive(wincode::SchemaRead, wincode::SchemaWrite))]
-#[derive(PartialEq, Eq, Clone, Default)]
+#[derive(PartialEq, Eq, Clone)]
 pub struct AccountSharedData {
     /// lamports in the account
     lamports: u64,
@@ -105,6 +109,10 @@ pub struct AccountSharedData {
     owner: Pubkey,
     /// this account's data contains a loaded program (and is now read-only)
     executable: bool,
-    /// the epoch at which this account will next owe rent
+    /// Legacy rent-collection field, retained for layout and wire compatibility.
+    ///
+    /// Rent collection no longer exists: every account is rent exempt, and
+    /// `u64::MAX` is the rent-exempt marker. Every constructor that does not
+    /// take an explicit value, including `Default`, sets this to `u64::MAX`.
     rent_epoch: Epoch,
 }

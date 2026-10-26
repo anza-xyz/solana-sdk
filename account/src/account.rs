@@ -5,7 +5,7 @@ use qualifier_attr::qualifiers;
 use {
     crate::{Account, AccountSharedData},
     solana_account_info::{debug_account_data::*, AccountInfo},
-    solana_clock::{Epoch, INITIAL_RENT_EPOCH},
+    solana_clock::Epoch,
     solana_instruction_error::LamportsError,
     solana_pubkey::Pubkey,
     std::{cell::RefCell, fmt, mem::MaybeUninit, ops::Deref, ptr, rc::Rc, sync::Arc},
@@ -61,6 +61,30 @@ impl From<Account> for AccountSharedData {
     }
 }
 
+impl Default for Account {
+    fn default() -> Self {
+        Self {
+            lamports: 0,
+            data: Vec::new(),
+            owner: Pubkey::default(),
+            executable: false,
+            rent_epoch: Epoch::MAX,
+        }
+    }
+}
+
+impl Default for AccountSharedData {
+    fn default() -> Self {
+        Self {
+            lamports: 0,
+            data: Arc::default(),
+            owner: Pubkey::default(),
+            executable: false,
+            rent_epoch: Epoch::MAX,
+        }
+    }
+}
+
 pub trait WritableAccount: ReadableAccount {
     fn set_lamports(&mut self, lamports: u64);
     fn checked_add_lamports(&mut self, lamports: u64) -> Result<(), LamportsError> {
@@ -89,6 +113,7 @@ pub trait WritableAccount: ReadableAccount {
     fn set_owner(&mut self, owner: Pubkey);
     fn copy_into_owner_from_slice(&mut self, source: &[u8]);
     fn set_executable(&mut self, executable: bool);
+    #[deprecated(since = "5.3.0", note = "`rent_epoch` is always `u64::MAX`")]
     fn set_rent_epoch(&mut self, epoch: Epoch);
 }
 
@@ -236,7 +261,7 @@ impl Account {
             data: vec![0; space],
             owner: *owner,
             executable: false,
-            rent_epoch: Epoch::default(),
+            rent_epoch: Epoch::MAX,
         }
     }
     /// Construct an `Account` from already-encoded `data`, taking ownership of the
@@ -248,7 +273,7 @@ impl Account {
             data,
             owner: *owner,
             executable: false,
-            rent_epoch: Epoch::default(),
+            rent_epoch: Epoch::MAX,
         }
     }
     #[allow(deprecated, reason = "`new` and `new_ref` are deprecated together")]
@@ -259,7 +284,7 @@ impl Account {
     pub fn new_ref(lamports: u64, space: usize, owner: &Pubkey) -> Rc<RefCell<Self>> {
         Rc::new(RefCell::new(Account::new(lamports, space, owner)))
     }
-    #[deprecated(since = "5.2.0", note = "Use `new_with_data` and `set_rent_epoch`")]
+    #[deprecated(since = "5.2.0", note = "Use `new_with_data` instead")]
     pub fn new_rent_epoch(lamports: u64, space: usize, owner: &Pubkey, rent_epoch: Epoch) -> Self {
         Account {
             lamports,
@@ -364,22 +389,22 @@ impl AccountSharedData {
             data: Arc::new(vec![0u8; space]),
             owner: *owner,
             executable: false,
-            rent_epoch: Epoch::default(),
+            rent_epoch: Epoch::MAX,
         }
     }
     /// Construct an `AccountSharedData` from already-encoded `data`, taking ownership of
     /// the buffer. Avoids the zero-fill allocation of [`AccountSharedData::new`] followed
     /// by a separate write when the caller already has the bytes.
     ///
-    /// To reuse an existing `Arc` buffer, or to set `executable`/`rent_epoch`, use
-    /// [`AccountSharedData::create_from_existing_shared_data`].
+    /// To reuse an existing `Arc` buffer, or to set `executable`, use
+    /// [`AccountSharedData::new_with_shared_data`].
     pub fn new_with_data(lamports: u64, data: Vec<u8>, owner: &Pubkey) -> Self {
         AccountSharedData {
             lamports,
             data: Arc::new(data),
             owner: *owner,
             executable: false,
-            rent_epoch: Epoch::default(),
+            rent_epoch: Epoch::MAX,
         }
     }
     /// Construct an `AccountSharedData` with empty data.
@@ -389,7 +414,7 @@ impl AccountSharedData {
             data: Arc::new(Vec::new()),
             owner: *owner,
             executable: false,
-            rent_epoch: Epoch::default(),
+            rent_epoch: Epoch::MAX,
         }
     }
     #[allow(deprecated, reason = "`new` and `new_ref` are deprecated together")]
@@ -400,7 +425,7 @@ impl AccountSharedData {
     pub fn new_ref(lamports: u64, space: usize, owner: &Pubkey) -> Rc<RefCell<Self>> {
         Rc::new(RefCell::new(AccountSharedData::new(lamports, space, owner)))
     }
-    #[deprecated(since = "5.2.0", note = "Use `new_with_data` and `set_rent_epoch`")]
+    #[deprecated(since = "5.2.0", note = "Use `empty` or `new_with_data` instead")]
     pub fn new_rent_epoch(lamports: u64, space: usize, owner: &Pubkey, rent_epoch: Epoch) -> Self {
         AccountSharedData {
             lamports,
@@ -410,6 +435,22 @@ impl AccountSharedData {
             rent_epoch,
         }
     }
+    /// Construct an `AccountSharedData` around an existing shared `data` buffer.
+    pub fn new_with_shared_data(
+        lamports: u64,
+        data: Arc<Vec<u8>>,
+        owner: &Pubkey,
+        executable: bool,
+    ) -> AccountSharedData {
+        AccountSharedData {
+            lamports,
+            data,
+            owner: *owner,
+            executable,
+            rent_epoch: Epoch::MAX,
+        }
+    }
+    #[deprecated(since = "5.3.0", note = "Use `new_with_shared_data` instead")]
     pub fn create_from_existing_shared_data(
         lamports: u64,
         data: Arc<Vec<u8>>,
@@ -427,8 +468,17 @@ impl AccountSharedData {
     }
 }
 
+#[deprecated(
+    since = "5.3.0",
+    note = "Not in use anymore; `rent_epoch` is always `u64::MAX`"
+)]
 pub type InheritableAccountFields = (u64, Epoch);
-pub const DUMMY_INHERITABLE_ACCOUNT_FIELDS: InheritableAccountFields = (1, INITIAL_RENT_EPOCH);
+#[deprecated(
+    since = "5.3.0",
+    note = "Not in use anymore; `rent_epoch` is always `u64::MAX`"
+)]
+#[allow(deprecated)]
+pub const DUMMY_INHERITABLE_ACCOUNT_FIELDS: InheritableAccountFields = (1, Epoch::MAX);
 
 /// Return the information required to construct an `AccountInfo`.  Used by the
 /// `AccountInfo` conversion implementations.
@@ -491,8 +541,56 @@ pub mod tests {
         assert_eq!(account.owner(), &key);
         assert_eq!(account.data(), &[1, 2, 3]);
         assert!(!account.executable());
-        assert_eq!(account.rent_epoch(), Epoch::default());
+        assert_eq!(account.rent_epoch(), Epoch::MAX);
         assert!(!account.is_shared());
+    }
+
+    #[test]
+    fn test_account_constructors_rent_epoch() {
+        let key = Pubkey::new_unique();
+
+        assert_eq!(Account::default().rent_epoch(), Epoch::MAX);
+        assert_eq!(AccountSharedData::default().rent_epoch(), Epoch::MAX);
+
+        assert_eq!(AccountSharedData::empty(1, &key).rent_epoch(), Epoch::MAX);
+
+        assert_eq!(
+            Account::new_with_data(1, vec![1], &key).rent_epoch(),
+            Epoch::MAX
+        );
+        assert_eq!(
+            AccountSharedData::new_with_data(1, vec![1], &key).rent_epoch(),
+            Epoch::MAX
+        );
+        assert_eq!(
+            AccountSharedData::new_with_shared_data(1, Arc::new(vec![1]), &key, true).rent_epoch(),
+            Epoch::MAX
+        );
+
+        assert_eq!(
+            Account::new_data(1, &1u8, &key).unwrap().rent_epoch(),
+            Epoch::MAX
+        );
+        assert_eq!(
+            AccountSharedData::new_data(1, &1u8, &key)
+                .unwrap()
+                .rent_epoch(),
+            Epoch::MAX
+        );
+    }
+
+    #[test]
+    fn test_account_shared_data_new_with_shared_data() {
+        let key = Pubkey::new_unique();
+        let data = Arc::new(vec![1, 2, 3]);
+        let account = AccountSharedData::new_with_shared_data(7, Arc::clone(&data), &key, true);
+        assert_eq!(account.lamports(), 7);
+        assert_eq!(account.owner(), &key);
+        assert_eq!(account.data(), &[1, 2, 3]);
+        assert!(account.executable());
+        assert_eq!(account.rent_epoch(), Epoch::MAX);
+        assert!(account.is_shared());
+        assert!(Arc::ptr_eq(&account.data_clone(), &data));
     }
 
     #[test]
@@ -768,8 +866,10 @@ pub mod tests {
                         account1.rent_epoch += 1;
                     } else if pass == 1 {
                         account_expected.rent_epoch += 1;
+                        #[allow(deprecated)]
                         account2.set_rent_epoch(account2.rent_epoch + 1);
                     } else if pass == 2 {
+                        #[allow(deprecated)]
                         account1.set_rent_epoch(account1.rent_epoch + 1);
                     } else if pass == 3 {
                         account_expected.rent_epoch += 1;

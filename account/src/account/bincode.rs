@@ -36,7 +36,7 @@ impl Account {
             data,
             owner: *owner,
             executable: false,
-            rent_epoch: Epoch::default(),
+            rent_epoch: Epoch::MAX,
         })
     }
     pub fn new_ref_data<T: serde::Serialize>(
@@ -83,12 +83,11 @@ impl AccountSharedData {
         owner: &Pubkey,
     ) -> Result<Self, bincode::Error> {
         let data = bincode::serialize(state)?;
-        Ok(Self::create_from_existing_shared_data(
+        Ok(Self::new_with_shared_data(
             lamports,
             Arc::new(data),
-            *owner,
+            owner,
             false,
-            Epoch::default(),
         ))
     }
     pub fn new_ref_data<T: serde::Serialize>(
@@ -140,7 +139,7 @@ mod tests {
             assert_eq!(account.lamports(), 1);
             assert_eq!(account.owner(), &owner);
             assert!(!account.executable());
-            assert_eq!(account.rent_epoch(), Epoch::default());
+            assert_eq!(account.rent_epoch(), Epoch::MAX);
             assert_eq!(account.data().len(), space);
             assert_eq!(&account.data()[..encoded.len()], encoded);
             assert!(account.data()[encoded.len()..]
