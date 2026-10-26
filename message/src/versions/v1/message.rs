@@ -625,7 +625,7 @@ mod tests {
         );
 
         instruction.accounts.clear();
-        instruction.data = vec![0; u16::MAX as usize + 1];
+        instruction.data = vec![0; 65_536];
         assert_eq!(
             Message::try_compile_with_config(
                 &payer,

@@ -750,7 +750,7 @@ mod tests {
     }
 
     #[test_case(300, 0; "accounts")]
-    #[test_case(0, u16::MAX as usize + 1; "data")]
+    #[test_case(0, 65_536; "data")]
     fn test_v1_signing_rejects_unrepresentable_instruction(num_accounts: usize, data_len: usize) {
         let payer = Keypair::new();
         let program = Address::new_unique();
