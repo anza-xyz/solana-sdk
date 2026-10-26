@@ -3545,8 +3545,7 @@ dependencies = [
 [[package]]
 name = "solana-ed25519"
 version = "0.2.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ff4c7caf3fe3d70815869a5838ee45b4d2b009eaacea1790ef3cd9b3c89edbbd"
+source = "git+https://github.com/anza-xyz/cryptography?rev=3efe73c#3efe73c7395f735f073bd25162cdc2fb4333f570"
 dependencies = [
  "cfg-if",
  "cpufeatures 0.3.0",

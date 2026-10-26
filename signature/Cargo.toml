@@ -20,6 +20,9 @@ default = ["std", "alloc"]
 alloc = ["wincode?/alloc"]
 batch-verify = ["alloc", "verify", "solana-ed25519/alloc", "solana-ed25519/rand_core"]
 bytemuck = ["dep:bytemuck", "dep:bytemuck_derive"]
+# Run verify_simd0376 alongside verify_dalek and report both to an observer.
+# See `dual_verify`.
+dual-verify = ["std", "verify"]
 frozen-abi = [
     "solana-frozen-abi-macro/frozen-abi",
     "solana-frozen-abi/frozen-abi",
