@@ -25,9 +25,9 @@ use {
     serde_derive::{Deserialize, Serialize},
 };
 
-#[cfg(feature = "dual-verify")]
-pub mod dual_verify;
 pub mod error;
+#[cfg(feature = "triple-verify")]
+pub mod triple_verify;
 
 /// Number of bytes in a signature
 pub const SIGNATURE_BYTES: usize = 64;
@@ -93,9 +93,9 @@ impl Signature {
         pubkey_bytes: &[u8],
         message_bytes: &[u8],
     ) -> Result<(), solana_ed25519::ed_sigs::Error> {
-        #[cfg(feature = "dual-verify")]
-        return dual_verify::verify(self, pubkey_bytes, message_bytes);
-        #[cfg(not(feature = "dual-verify"))]
+        #[cfg(feature = "triple-verify")]
+        return triple_verify::verify(self, pubkey_bytes, message_bytes);
+        #[cfg(not(feature = "triple-verify"))]
         {
             let publickey = solana_ed25519::ed_sigs::VerificationKey::try_from(pubkey_bytes)?;
             let signature = solana_ed25519::ed_sigs::Signature::from_slice(self.as_ref())
