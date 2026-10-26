@@ -45,6 +45,12 @@ pub const DEFAULT_GENESIS_DOWNLOAD_PATH: &str = "/genesis.tar.bz2";
 // deprecated default that is no longer used
 pub const UNUSED_DEFAULT: u64 = 1024;
 
+// The `BTreeMap` decode allocates per entry, so the account count needs no preallocation cap,
+// while `WINCODE_CONFIG` still caps each account's data.
+#[cfg(feature = "wincode")]
+type GenesisAccountsLen =
+    wincode::len::FixIntLen<u64, { wincode::config::PREALLOCATION_SIZE_LIMIT_DISABLED }>;
+
 #[cfg_attr(
     feature = "stable-abi",
     derive(AbiExample, StableAbi, StableAbiSample),
@@ -64,6 +70,10 @@ pub struct GenesisConfig {
     /// when the network (bootstrap validator) was started relative to the UNIX Epoch
     pub creation_time: UnixTimestamp,
     /// initial accounts
+    #[cfg_attr(
+        feature = "wincode",
+        wincode(with = "wincode::containers::BTreeMap<Pubkey, Account, GenesisAccountsLen>")
+    )]
     pub accounts: BTreeMap<Pubkey, Account>,
     /// built-in programs
     pub native_instruction_processors: Vec<(String, Pubkey)>,
@@ -346,6 +356,25 @@ mod tests {
             assert_eq!(deserialize(&bytes).unwrap(), genesis_config);
             assert_eq!(serialize(&genesis_config).unwrap(), bytes);
         }
+    }
+
+    #[cfg(feature = "wincode")]
+    #[test]
+    fn test_wincode_many_accounts_matches_bincode() {
+        let accounts = (0..100_000u64)
+            .map(|i| {
+                let mut key = [0; 32];
+                key[..8].copy_from_slice(&i.to_le_bytes());
+                (Pubkey::new_from_array(key), Account::default())
+            })
+            .collect();
+        let config = GenesisConfig {
+            accounts,
+            ..GenesisConfig::default()
+        };
+        let bytes = bincode::serialize(&config).unwrap();
+        assert_eq!(serialize(&config).unwrap(), bytes);
+        assert_eq!(deserialize(&bytes).unwrap(), config);
     }
 
     #[test]
