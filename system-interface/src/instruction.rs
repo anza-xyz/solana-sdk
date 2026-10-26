@@ -77,10 +77,22 @@ const NONCE_STATE_SIZE: usize = 80;
 /// An instruction to the system program.
 #[cfg_attr(
     feature = "frozen-abi",
-    solana_frozen_abi_macro::frozen_abi(digest = "CBvp4X1gf36kwDqnprAa6MpKckptiAHfXSxFRHFnNRVw"),
     derive(
         solana_frozen_abi_macro::AbiExample,
         solana_frozen_abi_macro::AbiEnumVisitor
+    )
+)]
+#[cfg_attr(
+    feature = "stable-abi",
+    solana_frozen_abi_macro::frozen_abi(
+        api_digest = "CBvp4X1gf36kwDqnprAa6MpKckptiAHfXSxFRHFnNRVw",
+        abi_digest = "9vhGJ8YY8NxiwSjMciheb1e8eBo92175uNTFMg5bXNUM",
+        abi_serializer = ["bincode", "wincode"],
+        test_roundtrip = "eq_and_wire"
+    ),
+    derive(
+        solana_frozen_abi_macro::StableAbi,
+        solana_frozen_abi_macro::StableAbiSample
     )
 )]
 #[cfg_attr(

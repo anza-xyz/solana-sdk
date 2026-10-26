@@ -28,8 +28,20 @@ frozen-abi = [
     "std",
     "solana-address/frozen-abi",
     "solana-address/std",
+    "solana-frozen-abi-macro/frozen-abi",
+    "solana-frozen-abi/frozen-abi",
+    "stable-abi",
 ]
 serde = ["dep:serde", "dep:serde_derive", "serde/alloc", "solana-address/serde"]
+stable-abi = [
+    "dep:solana-frozen-abi",
+    "dep:solana-frozen-abi-macro",
+    "alloc",
+    "serde",
+    "solana-address/stable-abi",
+    "solana-frozen-abi-macro/stable-abi",
+    "solana-frozen-abi/stable-abi",
+]
 std = []
 wincode = [
     "dep:wincode",
@@ -43,8 +55,8 @@ num-traits = { workspace = true }
 serde = { workspace = true, optional = true }
 serde_derive = { workspace = true, optional = true }
 solana-address = { workspace = true, features = ["decode"] }
-solana-frozen-abi = { workspace = true, features = ["frozen-abi"], optional = true }
-solana-frozen-abi-macro = { workspace = true, features = ["frozen-abi"], optional = true }
+solana-frozen-abi = { workspace = true, optional = true }
+solana-frozen-abi-macro = { workspace = true, optional = true }
 solana-instruction = { workspace = true, features = ["std"], optional = true }
 solana-msg = { workspace = true }
 solana-program-error = { workspace = true }
@@ -59,7 +71,7 @@ solana-example-mocks = { path = "../example-mocks" }
 solana-nonce = { workspace = true }
 solana-program-entrypoint = { workspace = true }
 solana-program-error = { workspace = true, features = ["borsh"] }
-solana-system-interface = { path = ".", features = ["bincode"] }
+solana-system-interface = { path = ".", features = ["bincode", "wincode"] }
 solana-sysvar = { workspace = true }
 solana-sysvar-id = { workspace = true }
 static_assertions = { workspace = true }

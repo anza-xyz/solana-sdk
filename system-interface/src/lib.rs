@@ -6,7 +6,7 @@
 
 #[cfg(feature = "alloc")]
 extern crate alloc;
-#[cfg(feature = "std")]
+#[cfg(any(feature = "std", feature = "stable-abi"))]
 extern crate std;
 
 pub mod error;
