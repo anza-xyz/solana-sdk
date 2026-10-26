@@ -277,7 +277,7 @@
 //! and the Solana program will introspect the secp256k1 instruction to verify
 //! that the signer matches a known authorized public key.
 //!
-//! The Solana program. Note that it uses `k256` version 0.14.0 to parse the
+//! The Solana program. Note that it uses `k256` version 0.14 to parse the
 //! secp256k1 signature to prevent malleability.
 //!
 //! ```no_run

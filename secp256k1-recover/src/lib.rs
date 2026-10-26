@@ -263,7 +263,7 @@ pub use solana_define_syscall::definitions::sol_secp256k1_recover;
 /// }
 /// ```
 ///
-/// The Solana program. Note that it uses `k256` version 0.14.0 to parse
+/// The Solana program. Note that it uses `k256` version 0.14 to parse
 /// the secp256k1 signature to prevent malleability.
 ///
 /// ```rust
@@ -443,11 +443,45 @@ pub fn secp256k1_recover(
             .map_err(|_| Secp256k1RecoverError::InvalidRecoveryId)?;
         let signature = k256::ecdsa::Signature::from_slice(signature)
             .map_err(|_| Secp256k1RecoverError::InvalidSignature)?;
+        // Unlike the syscall, this path rejects high-S signatures (see
+        // "Signature malleability" above). k256's recovery accepts them, so
+        // check explicitly.
+        if bool::from(k256::elliptic_curve::scalar::IsHigh::is_high(
+            signature.s().as_ref(),
+        )) {
+            return Err(Secp256k1RecoverError::InvalidSignature);
+        }
         let secp256k1_key =
             k256::ecdsa::VerifyingKey::recover_from_prehash(hash, &signature, recovery_id)
                 .map_err(|_| Secp256k1RecoverError::InvalidSignature)?;
         Ok(Secp256k1Pubkey::new(
             &secp256k1_key.to_sec1_point(false).as_bytes()[1..65],
         ))
+    }
+}
+
+#[cfg(all(test, not(any(target_os = "solana", target_arch = "bpf"))))]
+mod tests {
+    use {
+        super::*,
+        k256::{ecdsa::SigningKey, elliptic_curve::Generate},
+    };
+
+    #[test]
+    fn test_secp256k1_recover_rejects_high_s() {
+        let secret_key = SigningKey::generate_from_rng(&mut rand::rng());
+        let hash = [7u8; 32];
+        let (signature, recovery_id) = secret_key.sign_prehash_recoverable(&hash);
+        let expected = secret_key.verifying_key().to_sec1_point(false);
+        let recovered =
+            secp256k1_recover(&hash, recovery_id.to_byte(), &signature.to_bytes()).unwrap();
+        assert_eq!(recovered.to_bytes(), expected.as_bytes()[1..65]);
+
+        let high_s = k256::ecdsa::Signature::from_scalars(signature.r(), -signature.s()).unwrap();
+        let flipped_recovery_id = recovery_id.to_byte() ^ 1;
+        assert!(matches!(
+            secp256k1_recover(&hash, flipped_recovery_id, &high_s.to_bytes()),
+            Err(Secp256k1RecoverError::InvalidSignature)
+        ));
     }
 }
