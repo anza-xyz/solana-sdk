@@ -251,6 +251,16 @@ impl Account {
             rent_epoch: Epoch::default(),
         }
     }
+    /// Construct an `Account` with empty data.
+    pub fn empty(lamports: u64, owner: &Pubkey) -> Self {
+        Account {
+            lamports,
+            data: Vec::new(),
+            owner: *owner,
+            executable: false,
+            rent_epoch: Epoch::default(),
+        }
+    }
     #[allow(deprecated, reason = "`new` and `new_ref` are deprecated together")]
     #[deprecated(
         since = "5.2.0",
@@ -476,6 +486,14 @@ pub mod tests {
         account2.rent_epoch = 4;
         assert!(accounts_equal(&account1, &account2));
         (account1, account2)
+    }
+
+    #[test]
+    fn test_account_empty() {
+        let key = Pubkey::new_unique();
+        let account1 = Account::empty(1, &key);
+        let account2 = AccountSharedData::empty(1, &key);
+        assert!(accounts_equal(&account1, &account2));
     }
 
     #[test]
