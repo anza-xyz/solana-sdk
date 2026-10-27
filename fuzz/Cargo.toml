@@ -1,0 +1,27 @@
+[package]
+name = "solana-sdk-fuzz"
+version = "0.0.0"
+publish = false
+edition = "2021"
+
+[package.metadata]
+cargo-fuzz = true
+
+[workspace]
+members = ["."]
+
+[dependencies]
+libfuzzer-sys = "0.4"
+wincode = { version = "0.6.2", features = ["derive", "alloc", "std"] }
+
+solana-message = { path = "../message", features = ["wincode"] }
+solana-packet = { path = "../packet", features = ["wincode"] }
+solana-short-vec = { path = "../short-vec", features = ["wincode"] }
+solana-transaction = { path = "../transaction", features = ["wincode"] }
+
+[[bin]]
+name = "manual_codecs"
+path = "fuzz_targets/manual_codecs.rs"
+test = false
+doc = false
+bench = false
