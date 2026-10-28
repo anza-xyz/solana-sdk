@@ -165,8 +165,8 @@ borsh = { version = "1.5.5", default-features = false, features = ["derive", "un
 boxcar = "0.2.12"
 bs58 = { version = "0.5.1", default-features = false }
 bv = "0.11.1"
-bytemuck = "1.21.0"
-bytemuck_derive = "1.8.1"
+bytemuck = "1.25.2"
+bytemuck_derive = "1.12.1"
 bytes = "1.10.0"
 cfg_eval = "0.1.2"
 chrono = { version = "0.4.39", default-features = false }
