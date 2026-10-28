@@ -32,7 +32,7 @@ borsh = [
 dev-context-only-utils = [
     "solana-instructions-sysvar/dev-context-only-utils",
     "dep:solana-system-interface",
-    "solana-system-interface/bincode",
+    "solana-system-interface/wincode",
 ]
 frozen-abi = [
     "solana-epoch-rewards/frozen-abi",
@@ -111,7 +111,7 @@ solana-short-vec = { workspace = true }
 solana-slot-hashes = { workspace = true, features = ["serde", "sysvar"] }
 solana-slot-history = { workspace = true, features = ["serde", "sysvar"] }
 solana-stable-layout = { workspace = true }
-solana-system-interface = { optional = true, workspace = true, features = ["bincode"] }
+solana-system-interface = { optional = true, workspace = true }
 solana-sysvar = { workspace = true, features = ["bytemuck"] }
 solana-sysvar-id = { workspace = true }
 
