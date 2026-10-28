@@ -2,6 +2,12 @@
 #![cfg_attr(docsrs, feature(doc_cfg))]
 use hmac::Hmac;
 
+/// Derives a 64-byte seed from the raw UTF-8 mnemonic and passphrase.
+///
+/// This function does not apply BIP-39's Unicode NFKD normalization. When both
+/// inputs are already in NFKD form, such as an English mnemonic with an ASCII
+/// passphrase, the seed matches BIP-39. Normalizing non-NFKD inputs can change
+/// the seed, so preserve the original input bytes when recovering existing keys.
 pub fn generate_seed_from_seed_phrase_and_passphrase(
     seed_phrase: &str,
     passphrase: &str,
