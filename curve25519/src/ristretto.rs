@@ -16,7 +16,7 @@ mod target_arch {
             scalar::PodScalar,
         },
         alloc::vec::Vec,
-        curve25519_dalek::{
+        solana_ed25519::{
             ristretto::{CompressedRistretto, RistrettoPoint},
             scalar::Scalar,
             traits::VartimeMultiscalarMul,
@@ -255,7 +255,7 @@ mod tests {
     use {
         super::*,
         crate::scalar::PodScalar,
-        curve25519_dalek::{
+        solana_ed25519::{
             constants::RISTRETTO_BASEPOINT_POINT as G, ristretto::RistrettoPoint, traits::Identity,
         },
     };
