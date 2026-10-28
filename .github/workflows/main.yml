@@ -353,7 +353,7 @@ jobs:
           echo "SOLANA_VERSION=$solana_version" >> $GITHUB_ENV
 
       - name: Install Solana CLI
-        uses: solana-program/actions/install-solana@2db12a00105e5b260ac43746b69df1658a5dca24  # main
+        uses: solana-program/actions/install-solana@bf0f2a1e8517ab9e14620fd2aef2b6049a0befb9  # main
         with:
           version: ${{ env.SOLANA_VERSION }}
           cache: true
