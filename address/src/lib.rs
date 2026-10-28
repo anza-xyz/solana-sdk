@@ -191,7 +191,7 @@ pub fn bytes_are_curve_point<T: AsRef<[u8]>>(bytes: T) -> bool {
         #[cfg(feature = "curve25519")]
         {
             let Ok(compressed_edwards_y) =
-                curve25519_dalek::edwards::CompressedEdwardsY::from_slice(bytes.as_ref())
+                solana_ed25519::edwards::CompressedEdwardsY::from_slice(bytes.as_ref())
             else {
                 return false;
             };
