@@ -467,6 +467,29 @@ mod tests {
         assert_eq!(keypair.pubkey(), expected_keypair.pubkey());
     }
 
+    #[cfg(feature = "seed-derivable")]
+    #[test]
+    fn test_bip39_derivation_matches_reference() {
+        use solana_seed_derivable::SeedDerivable;
+
+        let mnemonic = Mnemonic::from_phrase(
+            "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about",
+            Language::English,
+        )
+        .unwrap();
+
+        for passphrase in ["TREZOR", "café", "Ⅳ"] {
+            let seed = Seed::new(&mnemonic, passphrase);
+            let expected = keypair_from_seed(seed.as_bytes()).unwrap();
+            let actual = Keypair::from_bip39_mnemonic(mnemonic.phrase(), passphrase).unwrap();
+            assert_eq!(
+                actual.pubkey(),
+                expected.pubkey(),
+                "passphrase {passphrase:?}"
+            );
+        }
+    }
+
     #[test]
     fn test_try_from_bytes() {
         let keypair = Keypair::new();

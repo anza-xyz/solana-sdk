@@ -4475,15 +4475,18 @@ name = "solana-seed-derivable"
 version = "3.0.0"
 dependencies = [
  "solana-derivation-path",
+ "solana-seed-phrase",
 ]
 
 [[package]]
 name = "solana-seed-phrase"
 version = "3.0.0"
 dependencies = [
+ "hex",
  "hmac 0.12.1",
  "pbkdf2 0.11.0",
  "sha2 0.10.9",
+ "unicode-normalization",
 ]
 
 [[package]]
