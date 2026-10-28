@@ -4857,6 +4857,7 @@ version = "7.3.0"
 dependencies = [
  "arbitrary",
  "bincode",
+ "bytemuck",
  "cfg_eval",
  "num-derive",
  "num-traits",
