@@ -283,7 +283,7 @@ impl Account {
             data: Vec::new(),
             owner: *owner,
             executable: false,
-            rent_epoch: Epoch::default(),
+            rent_epoch: Epoch::MAX,
         }
     }
     #[allow(deprecated, reason = "`new` and `new_ref` are deprecated together")]
