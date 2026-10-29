@@ -289,10 +289,7 @@ pub fn keypair_from_seed(seed: &[u8]) -> Result<Keypair, Box<dyn error::Error>> 
     Ok(Keypair(SigningKey::from(secret_key)))
 }
 
-/// Derives a keypair from the raw UTF-8 mnemonic and passphrase.
-///
-/// Passes the seed from [`generate_seed_from_seed_phrase_and_passphrase`] to
-/// [`keypair_from_seed`], without applying BIP-39's Unicode NFKD normalization.
+/// Derives a keypair from the raw UTF-8 mnemonic and passphrase, without applying BIP-39's Unicode NFKD normalization.
 /// When both inputs are already in NFKD form, such as an English mnemonic with
 /// an ASCII passphrase, the seed matches BIP-39. Normalizing non-NFKD inputs can
 /// change the keypair, so preserve the original input bytes when recovering
