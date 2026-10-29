@@ -12,13 +12,8 @@ pub trait SeedDerivable: Sized {
     ) -> Result<Self, Box<dyn error::Error>>;
     /// Derives a key from a seed phrase and passphrase.
     ///
-    /// Solana implementations pass the seed from
-    /// `solana_seed_phrase::generate_seed_from_seed_phrase_and_passphrase` to
-    /// [`Self::from_seed`]. This uses the raw UTF-8 inputs without BIP-39's Unicode
-    /// NFKD normalization. When both inputs are already in NFKD form, such as an
-    /// English mnemonic with an ASCII passphrase, the seed matches BIP-39.
-    /// Normalizing non-NFKD inputs can change the key, so preserve the original
-    /// input bytes when recovering existing keys.
+    /// Implementations of this function make no guarantees about NFKD normalization.
+    /// Be sure to normalize inputs prior to calling if needed.
     fn from_seed_phrase_and_passphrase(
         seed_phrase: &str,
         passphrase: &str,
