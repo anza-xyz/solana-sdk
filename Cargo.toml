@@ -174,7 +174,6 @@ console = "0.15.10"
 console_error_panic_hook = "0.1.7"
 console_log = "0.2.2"
 criterion = "0.5.1"
-curve25519-dalek = { version = "4.1.3", features = ["digest", "rand_core"] }
 dashmap = { version = ">=5.0.0, <7.0.0", features = ["serde"] }
 derivation-path = { version = "0.2.0", default-features = false }
 ff = "0.13.1"
@@ -240,7 +239,7 @@ solana-commitment-config = { path = "commitment-config", version = "3.0.0" }
 solana-cpi = { path = "cpi", version = "3.0.0" }
 solana-define-syscall = { path = "define-syscall", version = "5.3.0" }
 solana-derivation-path = { path = "derivation-path", version = "3.0.0" }
-solana-ed25519 = { version = "0.2.4", default-features = false, features = ["digest", "precomputed-tables", "rand_core", "zeroize"] }
+solana-ed25519 = { version = "0.2.4", default-features = false, features = ["digest", "precomputed-tables", "zeroize"] }
 solana-epoch-info = { path = "epoch-info", version = "3.0.0" }
 solana-epoch-rewards = { path = "epoch-rewards", version = "3.2.0" }
 solana-epoch-rewards-hasher = { path = "epoch-rewards-hasher", version = "3.0.0" }
