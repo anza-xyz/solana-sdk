@@ -3260,7 +3260,6 @@ dependencies = [
  "borsh",
  "bytemuck",
  "bytemuck_derive",
- "curve25519-dalek",
  "five8",
  "five8_const",
  "rand 0.9.5",
@@ -3272,6 +3271,7 @@ dependencies = [
  "solana-atomic-u64",
  "solana-cpi",
  "solana-define-syscall",
+ "solana-ed25519 0.2.4 (git+https://github.com/2501babe/cryptography?branch=fast-oncrv)",
  "solana-example-mocks",
  "solana-frozen-abi",
  "solana-frozen-abi-macro",
@@ -3561,6 +3561,21 @@ dependencies = [
  "sha2 0.11.0",
  "subtle",
  "zeroize",
+]
+
+[[package]]
+name = "solana-ed25519"
+version = "0.2.4"
+source = "git+https://github.com/2501babe/cryptography?branch=fast-oncrv#67001445594ba5efe8cd4de0d1cecc80f1f66b18"
+dependencies = [
+ "cfg-if",
+ "cpufeatures 0.3.0",
+ "curve25519-dalek-derive",
+ "ed25519",
+ "hashbrown 0.15.5",
+ "rustc_version",
+ "sha2 0.11.0",
+ "subtle",
 ]
 
 [[package]]
@@ -3915,7 +3930,7 @@ dependencies = [
  "serde_json",
  "solana-address",
  "solana-derivation-path",
- "solana-ed25519",
+ "solana-ed25519 0.2.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "solana-seed-derivable",
  "solana-seed-phrase",
  "solana-signature",
@@ -4582,7 +4597,7 @@ dependencies = [
  "serde-big-array",
  "serde_derive",
  "serde_json",
- "solana-ed25519",
+ "solana-ed25519 0.2.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "solana-frozen-abi",
  "solana-frozen-abi-macro",
  "solana-pubkey",
