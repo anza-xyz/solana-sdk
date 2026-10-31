@@ -880,7 +880,7 @@ impl<T: Clone> Clone for COption<T> {
     fn clone_from(&mut self, source: &Self) {
         match (self, source) {
             (COption::Some(to), COption::Some(from)) => to.clone_from(from),
-            (to, from) => to.clone_from(from),
+            (to, from) => *to = from.clone(),
         }
     }
 }
@@ -1005,6 +1005,22 @@ mod test {
         assert_eq!(c_option, COption::None);
         let expected = c_option.into();
         assert_eq!(option, expected);
+    }
+
+    #[test]
+    fn test_clone_from() {
+        let mut c_option = COption::Some(1u64);
+        c_option.clone_from(&COption::Some(2));
+        assert_eq!(c_option, COption::Some(2));
+
+        c_option.clone_from(&COption::None);
+        assert_eq!(c_option, COption::None);
+
+        c_option.clone_from(&COption::None);
+        assert_eq!(c_option, COption::None);
+
+        c_option.clone_from(&COption::Some(3));
+        assert_eq!(c_option, COption::Some(3));
     }
 
     #[cfg(feature = "nullable")]
