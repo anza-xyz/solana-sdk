@@ -72,3 +72,16 @@ define_syscalls! {
     // this cannot go through sol_get_sysvar but can be removed once no longer in use
     fn sol_get_fees_sysvar(addr: *mut u8) -> u64;
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_syscalls_list() {
+        assert!(SYSCALLS.contains(&"sol_log_"));
+        assert!(SYSCALLS.contains(&"abort"));
+        assert!(SYSCALLS.contains(&"sol_get_clock_sysvar"));
+        assert!(!SYSCALLS.contains(&"sol_not_a_syscall"));
+    }
+}
