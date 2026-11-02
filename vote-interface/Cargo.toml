@@ -32,9 +32,7 @@ dev-context-only-utils = [
 frozen-abi = [
     "solana-frozen-abi-macro/frozen-abi",
     "solana-frozen-abi/frozen-abi",
-    "solana-hash/frozen-abi",
     "solana-pubkey/frozen-abi",
-    "solana-short-vec/frozen-abi",
     "stable-abi",
 ]
 stable-abi = [
@@ -42,7 +40,6 @@ stable-abi = [
     "serde",
     "solana-frozen-abi-macro/stable-abi",
     "solana-frozen-abi/stable-abi",
-    "solana-hash/stable-abi",
     "solana-pubkey/stable-abi",
 ]
 serde = [
@@ -50,23 +47,15 @@ serde = [
     "dep:serde",
     "dep:serde_derive",
     "dep:serde_with",
-    "dep:solana-serde-varint",
-    "dep:solana-short-vec",
     "serde/alloc",
-    "solana-hash/serde",
     "solana-pubkey/serde",
-    "solana-short-vec/serde",
 ]
 wincode = [
     "dep:solana-serialize-utils",
-    "dep:solana-short-vec",
     "dep:solana-system-interface",
-    "dep:solana-wincode-varint",
     "dep:wincode",
-    "solana-hash/wincode",
     "solana-instruction/wincode",
     "solana-pubkey/wincode",
-    "solana-short-vec/wincode",
     "solana-system-interface/wincode",
     "wincode/alloc",
 ]
@@ -84,16 +73,12 @@ serde_with = { workspace = true, features = ["macros"], optional = true }
 solana-clock = { workspace = true }
 solana-frozen-abi = { workspace = true, optional = true }
 solana-frozen-abi-macro = { workspace = true, optional = true }
-solana-hash = { workspace = true, features = ["decode"] }
 solana-instruction = { workspace = true, features = ["std"] }
 solana-instruction-error = { workspace = true, features = ["num-traits"] }
 solana-pubkey = { workspace = true }
 solana-sdk-ids = { workspace = true }
-solana-serde-varint = { workspace = true, optional = true }
 solana-serialize-utils = { workspace = true, optional = true, features = ["std"] }
-solana-short-vec = { workspace = true, optional = true }
 solana-system-interface = { workspace = true, optional = true }
-solana-wincode-varint = { workspace = true, optional = true }
 wincode = { workspace = true, optional = true }
 
 [target.'cfg(target_os = "solana")'.dependencies]

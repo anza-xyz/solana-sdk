@@ -314,7 +314,6 @@ impl SanitizedTransaction {
 #[cfg(test)]
 #[allow(clippy::arithmetic_side_effects)]
 mod tests {
-    #[expect(deprecated)]
     use {
         super::*,
         alloc::vec,
@@ -322,20 +321,18 @@ mod tests {
         solana_keypair::Keypair,
         solana_message::{MessageHeader, SimpleAddressLoader},
         solana_signer::Signer,
-        solana_vote_interface::{instruction, state::Vote},
+        solana_vote_interface::instruction,
     };
 
     #[test]
-    #[expect(deprecated)]
     fn test_try_create_simple_vote_tx() {
-        let bank_hash = Hash::default();
         let block_hash = Hash::default();
         let empty_key_set = HashSet::default();
         let vote_keypair = Keypair::new();
         let node_keypair = Keypair::new();
         let auth_keypair = Keypair::new();
-        let votes = Vote::new(vec![1, 2, 3], bank_hash);
-        let vote_ix = instruction::vote(&vote_keypair.pubkey(), &auth_keypair.pubkey(), votes);
+        let vote_ix =
+            instruction::update_commission(&vote_keypair.pubkey(), &auth_keypair.pubkey(), 0);
         let mut vote_tx = Transaction::new_with_payer(&[vote_ix], Some(&node_keypair.pubkey()));
         vote_tx.partial_sign(&[&node_keypair], block_hash);
         vote_tx.partial_sign(&[&auth_keypair], block_hash);
