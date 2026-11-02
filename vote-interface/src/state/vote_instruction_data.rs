@@ -1,3 +1,7 @@
+// The serde, wincode and frozen-abi derive expansions reference the deprecated
+// tower vote types and cannot be silenced at the item level.
+#![allow(deprecated)]
+
 #[cfg(feature = "stable-abi")]
 use solana_frozen_abi_macro::{frozen_abi, AbiExample, StableAbi, StableAbiSample};
 use {
@@ -28,6 +32,10 @@ use {
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[cfg_attr(feature = "wincode", derive(wincode::SchemaWrite, wincode::SchemaRead))]
 #[derive(Default, Debug, PartialEq, Eq, Clone)]
+#[deprecated(
+    since = "7.4.0",
+    note = "Tower vote instruction data; disabled since the Alpenglow migration and will be removed in a future release."
+)]
 pub struct Vote {
     /// A stack of votes starting with the oldest vote
     pub slots: Vec<Slot>,
@@ -63,6 +71,10 @@ impl Vote {
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[cfg_attr(feature = "wincode", derive(wincode::SchemaWrite, wincode::SchemaRead))]
 #[derive(Default, Debug, PartialEq, Eq, Clone)]
+#[deprecated(
+    since = "7.4.0",
+    note = "Tower vote instruction data; disabled since the Alpenglow migration and will be removed in a future release."
+)]
 pub struct VoteStateUpdate {
     /// The proposed tower
     #[cfg_attr(
@@ -130,6 +142,10 @@ impl VoteStateUpdate {
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[cfg_attr(feature = "wincode", derive(wincode::SchemaWrite, wincode::SchemaRead))]
 #[derive(Default, Debug, PartialEq, Eq, Clone)]
+#[deprecated(
+    since = "7.4.0",
+    note = "Tower vote instruction data; disabled since the Alpenglow migration and will be removed in a future release."
+)]
 pub struct TowerSync {
     /// The proposed tower
     #[cfg_attr(
