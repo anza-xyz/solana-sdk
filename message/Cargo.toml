@@ -17,6 +17,7 @@ rustdoc-args = ["--cfg=docsrs"]
 
 [features]
 default = ["std"]
+ahash = ["dep:ahash", "std"]
 blake3 = ["dep:blake3"]
 dev-context-only-utils = ["blake3", "wincode"]
 frozen-abi = [
@@ -52,6 +53,7 @@ wincode = [
 ]
 
 [dependencies]
+ahash = { workspace = true, optional = true }
 blake3 = { workspace = true, features = ["traits-preview"], optional = true }
 serde = { workspace = true, optional = true }
 serde_derive = { workspace = true, optional = true }
