@@ -314,7 +314,7 @@ impl SanitizedTransaction {
 #[cfg(test)]
 #[allow(clippy::arithmetic_side_effects)]
 mod tests {
-    #[allow(deprecated)]
+    #[expect(deprecated)]
     use {
         super::*,
         alloc::vec,
@@ -326,7 +326,7 @@ mod tests {
     };
 
     #[test]
-    #[allow(deprecated)]
+    #[expect(deprecated)]
     fn test_try_create_simple_vote_tx() {
         let bank_hash = Hash::default();
         let block_hash = Hash::default();

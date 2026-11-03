@@ -263,7 +263,7 @@ impl<I> CircBuf<I> {
 /// [`wincode_compact`] (wincode) modules bridge the original types to these
 /// representations.
 #[cfg(any(feature = "serde", feature = "wincode"))]
-#[allow(deprecated)]
+#[expect(deprecated)]
 mod compact {
     #[cfg(feature = "serde")]
     use serde_derive::{Deserialize, Serialize};
@@ -421,7 +421,7 @@ mod compact {
     since = "7.4.0",
     note = "Tower vote instruction encoding; disabled since the Alpenglow migration and will be removed in a future release."
 )]
-#[allow(deprecated)]
+#[expect(deprecated)]
 pub mod serde_compact_vote_state_update {
     use {
         super::{compact, compact::CompactVoteStateUpdate, *},
@@ -454,7 +454,7 @@ pub mod serde_compact_vote_state_update {
     since = "7.4.0",
     note = "Tower vote instruction encoding; disabled since the Alpenglow migration and will be removed in a future release."
 )]
-#[allow(deprecated)]
+#[expect(deprecated)]
 pub mod serde_tower_sync {
     use {
         super::{compact, compact::CompactTowerSync, *},
@@ -494,7 +494,7 @@ pub mod serde_tower_sync {
     since = "7.4.0",
     note = "Tower vote instruction encoding; disabled since the Alpenglow migration and will be removed in a future release."
 )]
-#[allow(deprecated)]
+#[expect(deprecated)]
 pub mod wincode_compact {
     use {
         super::{
@@ -575,7 +575,7 @@ mod tests {
     /// Build a random `VoteStateUpdate` with strictly increasing lockout slots
     /// and an optional root below the first slot, suitable for exercising the
     /// compact (offset-encoded) wire formats.
-    #[allow(deprecated)]
+    #[expect(deprecated)]
     fn random_vote_state_update<R: Rng>(rng: &mut R) -> VoteStateUpdate {
         VoteStateUpdate {
             lockouts: sampling::sample_lockouts(rng),
@@ -593,7 +593,7 @@ mod tests {
         }
     }
 
-    #[allow(deprecated)]
+    #[expect(deprecated)]
     fn run_serde_compact_vote_state_update<R: Rng>(rng: &mut R) {
         let vote_state_update = random_vote_state_update(rng);
         #[cfg_attr(feature = "wincode", derive(wincode::SchemaWrite, wincode::SchemaRead))]

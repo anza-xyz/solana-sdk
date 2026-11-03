@@ -2,7 +2,7 @@
 
 // The wincode and frozen-abi derive expansions reference the deprecated
 // tower vote items and cannot be silenced at the item level.
-#![allow(deprecated)]
+#![expect(deprecated)]
 
 #[cfg(feature = "stable-abi")]
 use solana_frozen_abi_macro::{frozen_abi, StableAbi, StableAbiSample};

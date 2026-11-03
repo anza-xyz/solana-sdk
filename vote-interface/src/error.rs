@@ -2,7 +2,7 @@
 
 // The `FromPrimitive`/`ToPrimitive` derive expansions reference the
 // deprecated `VoteError` variants and cannot be silenced at the item level.
-#![allow(deprecated)]
+#![expect(deprecated)]
 
 use {
     core::fmt,
