@@ -207,7 +207,7 @@ fn has_duplicates_large<'a>(keys: impl Iterator<Item = &'a Address>, _len: usize
 
 #[cfg(test)]
 mod tests {
-    use {super::*, alloc::vec, solana_instruction::AccountMeta};
+    use {super::*, alloc::vec, solana_instruction::AccountMeta, test_case::test_matrix};
 
     fn test_account_keys() -> [Address; 6] {
         let key0 = Address::new_unique();
@@ -543,19 +543,18 @@ mod tests {
         split
     }
 
-    #[test]
-    fn test_has_duplicates() {
-        for len in [0, 1, 2, 31, 32, 33, 64, 256] {
-            let keys = distinct_addresses(len);
-            assert!(!split_has_duplicates(&keys), "len {len}");
-            if len < 2 {
-                continue;
-            }
-            for (src, dst) in [(0, len - 1), (len - 1, 0), (len / 2, len / 2 - 1)] {
-                let mut keys = keys.clone();
-                keys[dst] = keys[src];
-                assert!(split_has_duplicates(&keys), "len {len} {src}->{dst}");
-            }
+    #[test_matrix([0, 1, 2, 31, 32, 33, 64, 256])]
+    #[allow(clippy::arithmetic_side_effects)]
+    fn test_has_duplicates(len: usize) {
+        let keys = distinct_addresses(len);
+        assert!(!split_has_duplicates(&keys));
+        if len < 2 {
+            return;
+        }
+        for (src, dst) in [(0, len - 1), (len - 1, 0), (len / 2, len / 2 - 1)] {
+            let mut keys = keys.clone();
+            keys[dst] = keys[src];
+            assert!(split_has_duplicates(&keys), "{src}->{dst}");
         }
     }
 }
