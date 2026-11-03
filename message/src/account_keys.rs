@@ -103,23 +103,25 @@ impl<'a> AccountKeys<'a> {
 
     /// Returns true if any address occurs more than once
     pub fn has_duplicates(&self) -> bool {
-        // comparing every pair is faster than hashing for small sets
-        const QUADRATIC_MAX_LEN: usize = 32;
-        let len = self.len();
-        if len < QUADRATIC_MAX_LEN {
-            let mut segments = self.key_segment_iter();
-            while let Some(mut rest) = segments.next() {
-                while let [key, tail @ ..] = rest {
-                    if tail.contains(key) || segments.clone().any(|later| later.contains(key)) {
-                        return true;
-                    }
-                    rest = tail;
-                }
+        // comparing every pair is faster for small sets and avoids allocating on-chain
+        #[cfg(feature = "std")]
+        {
+            const QUADRATIC_MAX_LEN: usize = 32;
+            let len = self.len();
+            if len >= QUADRATIC_MAX_LEN {
+                return has_duplicates_large(self.iter(), len);
             }
-            false
-        } else {
-            has_duplicates_large(self.iter(), len)
         }
+        let mut segments = self.key_segment_iter();
+        while let Some(mut rest) = segments.next() {
+            while let [key, tail @ ..] = rest {
+                if tail.contains(key) || segments.clone().any(|later| later.contains(key)) {
+                    return true;
+                }
+                rest = tail;
+            }
+        }
+        false
     }
 
     /// Compile instructions using the order of account keys to determine
@@ -186,23 +188,20 @@ impl PartialEq for AccountKeys<'_> {
     }
 }
 
-#[cfg(feature = "std")]
+#[cfg(feature = "ahash")]
 fn has_duplicates_large<'a>(mut keys: impl Iterator<Item = &'a Address>, len: usize) -> bool {
-    #[cfg(feature = "ahash")]
-    use ahash::RandomState;
-    use std::collections::HashSet;
-    #[cfg(not(feature = "ahash"))]
-    use std::hash::RandomState;
+    use {ahash::RandomState, std::collections::HashSet};
 
     let mut seen = HashSet::with_capacity_and_hasher(len, RandomState::new());
     keys.any(|key| !seen.insert(key))
 }
 
-#[cfg(not(feature = "std"))]
-fn has_duplicates_large<'a>(keys: impl Iterator<Item = &'a Address>, _len: usize) -> bool {
-    let mut keys: Vec<_> = keys.collect();
-    keys.sort_unstable();
-    keys.windows(2).any(|pair| pair[0] == pair[1])
+#[cfg(all(feature = "std", not(feature = "ahash")))]
+fn has_duplicates_large<'a>(keys: impl Iterator<Item = &'a Address>, len: usize) -> bool {
+    let mut sorted: Vec<&Address> = Vec::with_capacity(len);
+    sorted.extend(keys);
+    sorted.sort_unstable();
+    sorted.windows(2).any(|pair| pair[0] == pair[1])
 }
 
 #[cfg(test)]
