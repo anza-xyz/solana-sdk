@@ -1,5 +1,9 @@
 //! Vote program errors
 
+// The `FromPrimitive`/`ToPrimitive` derive expansions reference the
+// deprecated `VoteError` variants and cannot be silenced at the item level.
+#![expect(deprecated)]
+
 use {
     core::fmt,
     num_derive::{FromPrimitive, ToPrimitive},
@@ -9,27 +13,99 @@ use {
 #[derive(Debug, Clone, PartialEq, Eq, FromPrimitive, ToPrimitive)]
 #[non_exhaustive]
 pub enum VoteError {
+    #[deprecated(
+        since = "7.4.0",
+        note = "Only returned by tower vote instructions, which are disabled since the Alpenglow migration; will be removed in a future release."
+    )]
     VoteTooOld,
+    #[deprecated(
+        since = "7.4.0",
+        note = "Only returned by tower vote instructions, which are disabled since the Alpenglow migration; will be removed in a future release."
+    )]
     SlotsMismatch,
+    #[deprecated(
+        since = "7.4.0",
+        note = "Only returned by tower vote instructions, which are disabled since the Alpenglow migration; will be removed in a future release."
+    )]
     SlotHashMismatch,
+    #[deprecated(
+        since = "7.4.0",
+        note = "Only returned by tower vote instructions, which are disabled since the Alpenglow migration; will be removed in a future release."
+    )]
     EmptySlots,
+    #[deprecated(
+        since = "7.4.0",
+        note = "Only returned by tower vote instructions, which are disabled since the Alpenglow migration; will be removed in a future release."
+    )]
     TimestampTooOld,
     TooSoonToReauthorize,
     // TODO: figure out how to migrate these new errors
+    #[deprecated(
+        since = "7.4.0",
+        note = "Only returned by tower vote instructions, which are disabled since the Alpenglow migration; will be removed in a future release."
+    )]
     LockoutConflict,
+    #[deprecated(
+        since = "7.4.0",
+        note = "Only returned by tower vote instructions, which are disabled since the Alpenglow migration; will be removed in a future release."
+    )]
     NewVoteStateLockoutMismatch,
+    #[deprecated(
+        since = "7.4.0",
+        note = "Only returned by tower vote instructions, which are disabled since the Alpenglow migration; will be removed in a future release."
+    )]
     SlotsNotOrdered,
+    #[deprecated(
+        since = "7.4.0",
+        note = "Only returned by tower vote instructions, which are disabled since the Alpenglow migration; will be removed in a future release."
+    )]
     ConfirmationsNotOrdered,
+    #[deprecated(
+        since = "7.4.0",
+        note = "Only returned by tower vote instructions, which are disabled since the Alpenglow migration; will be removed in a future release."
+    )]
     ZeroConfirmations,
+    #[deprecated(
+        since = "7.4.0",
+        note = "Only returned by tower vote instructions, which are disabled since the Alpenglow migration; will be removed in a future release."
+    )]
     ConfirmationTooLarge,
+    #[deprecated(
+        since = "7.4.0",
+        note = "Only returned by tower vote instructions, which are disabled since the Alpenglow migration; will be removed in a future release."
+    )]
     RootRollBack,
+    #[deprecated(
+        since = "7.4.0",
+        note = "Only returned by tower vote instructions, which are disabled since the Alpenglow migration; will be removed in a future release."
+    )]
     ConfirmationRollBack,
+    #[deprecated(
+        since = "7.4.0",
+        note = "Only returned by tower vote instructions, which are disabled since the Alpenglow migration; will be removed in a future release."
+    )]
     SlotSmallerThanRoot,
+    #[deprecated(
+        since = "7.4.0",
+        note = "Only returned by tower vote instructions, which are disabled since the Alpenglow migration; will be removed in a future release."
+    )]
     TooManyVotes,
+    #[deprecated(
+        since = "7.4.0",
+        note = "Only returned by tower vote instructions, which are disabled since the Alpenglow migration; will be removed in a future release."
+    )]
     VotesTooOldAllFiltered,
+    #[deprecated(
+        since = "7.4.0",
+        note = "Only returned by tower vote instructions, which are disabled since the Alpenglow migration; will be removed in a future release."
+    )]
     RootOnDifferentFork,
     ActiveVoteAccountClose,
     CommissionUpdateTooLate,
+    #[deprecated(
+        since = "7.4.0",
+        note = "Only returned by tower vote instructions, which are disabled since the Alpenglow migration; will be removed in a future release."
+    )]
     AssertionFailed,
 }
 

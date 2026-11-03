@@ -1,5 +1,9 @@
 //! Vote program instructions
 
+// The wincode and frozen-abi derive expansions reference the deprecated
+// tower vote items and cannot be silenced at the item level.
+#![expect(deprecated)]
+
 #[cfg(feature = "stable-abi")]
 use solana_frozen_abi_macro::{frozen_abi, StableAbi, StableAbiSample};
 use {
@@ -83,6 +87,10 @@ pub enum VoteInstruction {
     ///   1. `[]` Slot hashes sysvar
     ///   2. `[]` Clock sysvar
     ///   3. `[SIGNER]` Vote authority
+    #[deprecated(
+        since = "7.4.0",
+        note = "Tower vote instruction; disabled since the Alpenglow migration and will be removed in a future release."
+    )]
     Vote(Vote),
 
     /// Withdraw some amount of funds
@@ -115,6 +123,10 @@ pub enum VoteInstruction {
     ///   1. `[]` Slot hashes sysvar
     ///   2. `[]` Clock sysvar
     ///   3. `[SIGNER]` Vote authority
+    #[deprecated(
+        since = "7.4.0",
+        note = "Tower vote instruction; disabled since the Alpenglow migration and will be removed in a future release."
+    )]
     VoteSwitch(Vote, Hash),
 
     /// Authorize a key to send votes or issue a withdrawal
@@ -137,6 +149,10 @@ pub enum VoteInstruction {
     /// # Account references
     ///   0. `[Write]` Vote account to vote with
     ///   1. `[SIGNER]` Vote authority
+    #[deprecated(
+        since = "7.4.0",
+        note = "Tower vote instruction; disabled since the Alpenglow migration and will be removed in a future release."
+    )]
     UpdateVoteState(VoteStateUpdate),
 
     /// Update the onchain vote state for the signer along with a switching proof.
@@ -144,6 +160,10 @@ pub enum VoteInstruction {
     /// # Account references
     ///   0. `[Write]` Vote account to vote with
     ///   1. `[SIGNER]` Vote authority
+    #[deprecated(
+        since = "7.4.0",
+        note = "Tower vote instruction; disabled since the Alpenglow migration and will be removed in a future release."
+    )]
     UpdateVoteStateSwitch(VoteStateUpdate, Hash),
 
     /// Given that the current Voter or Withdrawer authority is a derived key,
@@ -183,6 +203,10 @@ pub enum VoteInstruction {
     /// # Account references
     ///   0. `[Write]` Vote account to vote with
     ///   1. `[SIGNER]` Vote authority
+    #[deprecated(
+        since = "7.4.0",
+        note = "Tower vote instruction; disabled since the Alpenglow migration and will be removed in a future release."
+    )]
     #[cfg_attr(feature = "serde", serde(with = "serde_compact_vote_state_update"))]
     CompactUpdateVoteState(
         #[cfg_attr(feature = "wincode", wincode(with = "CompactVoteStateUpdate"))] VoteStateUpdate,
@@ -193,6 +217,10 @@ pub enum VoteInstruction {
     /// # Account references
     ///   0. `[Write]` Vote account to vote with
     ///   1. `[SIGNER]` Vote authority
+    #[deprecated(
+        since = "7.4.0",
+        note = "Tower vote instruction; disabled since the Alpenglow migration and will be removed in a future release."
+    )]
     CompactUpdateVoteStateSwitch(
         #[cfg_attr(feature = "serde", serde(with = "serde_compact_vote_state_update"))]
         #[cfg_attr(feature = "wincode", wincode(with = "CompactVoteStateUpdate"))]
@@ -205,6 +233,10 @@ pub enum VoteInstruction {
     /// # Account references
     ///   0. `[Write]` Vote account to vote with
     ///   1. `[SIGNER]` Vote authority
+    #[deprecated(
+        since = "7.4.0",
+        note = "Tower vote instruction; disabled since the Alpenglow migration and will be removed in a future release."
+    )]
     #[cfg_attr(feature = "serde", serde(with = "serde_tower_sync"))]
     TowerSync(#[cfg_attr(feature = "wincode", wincode(with = "CompactTowerSync"))] TowerSync),
 
@@ -213,6 +245,10 @@ pub enum VoteInstruction {
     /// # Account references
     ///   0. `[Write]` Vote account to vote with
     ///   1. `[SIGNER]` Vote authority
+    #[deprecated(
+        since = "7.4.0",
+        note = "Tower vote instruction; disabled since the Alpenglow migration and will be removed in a future release."
+    )]
     TowerSyncSwitch(
         #[cfg_attr(feature = "serde", serde(with = "serde_tower_sync"))]
         #[cfg_attr(feature = "wincode", wincode(with = "CompactTowerSync"))]
@@ -685,6 +721,10 @@ pub fn deposit_delegator_rewards(
 }
 
 #[cfg(any(feature = "bincode", feature = "wincode"))]
+#[deprecated(
+    since = "7.4.0",
+    note = "Tower vote instruction; disabled since the Alpenglow migration and will be removed in a future release."
+)]
 pub fn vote(vote_pubkey: &Pubkey, authorized_voter_pubkey: &Pubkey, vote: Vote) -> Instruction {
     let account_metas = vec![
         AccountMeta::new(*vote_pubkey, false),
@@ -697,6 +737,10 @@ pub fn vote(vote_pubkey: &Pubkey, authorized_voter_pubkey: &Pubkey, vote: Vote) 
 }
 
 #[cfg(any(feature = "bincode", feature = "wincode"))]
+#[deprecated(
+    since = "7.4.0",
+    note = "Tower vote instruction; disabled since the Alpenglow migration and will be removed in a future release."
+)]
 pub fn vote_switch(
     vote_pubkey: &Pubkey,
     authorized_voter_pubkey: &Pubkey,
@@ -718,6 +762,10 @@ pub fn vote_switch(
 }
 
 #[cfg(any(feature = "bincode", feature = "wincode"))]
+#[deprecated(
+    since = "7.4.0",
+    note = "Tower vote instruction; disabled since the Alpenglow migration and will be removed in a future release."
+)]
 pub fn update_vote_state(
     vote_pubkey: &Pubkey,
     authorized_voter_pubkey: &Pubkey,
@@ -736,6 +784,10 @@ pub fn update_vote_state(
 }
 
 #[cfg(any(feature = "bincode", feature = "wincode"))]
+#[deprecated(
+    since = "7.4.0",
+    note = "Tower vote instruction; disabled since the Alpenglow migration and will be removed in a future release."
+)]
 pub fn update_vote_state_switch(
     vote_pubkey: &Pubkey,
     authorized_voter_pubkey: &Pubkey,
@@ -755,6 +807,10 @@ pub fn update_vote_state_switch(
 }
 
 #[cfg(any(feature = "bincode", feature = "wincode"))]
+#[deprecated(
+    since = "7.4.0",
+    note = "Tower vote instruction; disabled since the Alpenglow migration and will be removed in a future release."
+)]
 pub fn compact_update_vote_state(
     vote_pubkey: &Pubkey,
     authorized_voter_pubkey: &Pubkey,
@@ -773,6 +829,10 @@ pub fn compact_update_vote_state(
 }
 
 #[cfg(any(feature = "bincode", feature = "wincode"))]
+#[deprecated(
+    since = "7.4.0",
+    note = "Tower vote instruction; disabled since the Alpenglow migration and will be removed in a future release."
+)]
 pub fn compact_update_vote_state_switch(
     vote_pubkey: &Pubkey,
     authorized_voter_pubkey: &Pubkey,
@@ -792,6 +852,10 @@ pub fn compact_update_vote_state_switch(
 }
 
 #[cfg(any(feature = "bincode", feature = "wincode"))]
+#[deprecated(
+    since = "7.4.0",
+    note = "Tower vote instruction; disabled since the Alpenglow migration and will be removed in a future release."
+)]
 pub fn tower_sync(
     vote_pubkey: &Pubkey,
     authorized_voter_pubkey: &Pubkey,
@@ -806,6 +870,10 @@ pub fn tower_sync(
 }
 
 #[cfg(any(feature = "bincode", feature = "wincode"))]
+#[deprecated(
+    since = "7.4.0",
+    note = "Tower vote instruction; disabled since the Alpenglow migration and will be removed in a future release."
+)]
 pub fn tower_sync_switch(
     vote_pubkey: &Pubkey,
     authorized_voter_pubkey: &Pubkey,
