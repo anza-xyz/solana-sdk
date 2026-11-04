@@ -618,16 +618,7 @@ impl Message {
 
     /// Returns `true` if `account_keys` has any duplicate keys.
     pub fn has_duplicates(&self) -> bool {
-        // Note: This is an O(n^2) algorithm, but requires no heap allocations. The benchmark
-        // `bench_has_duplicates` in benches/message_processor.rs shows that this implementation is
-        // ~50 times faster than using HashSet for very short slices.
-        for i in 1..self.account_keys.len() {
-            #[allow(clippy::arithmetic_side_effects)]
-            if self.account_keys[i..].contains(&self.account_keys[i - 1]) {
-                return true;
-            }
-        }
-        false
+        crate::AccountKeys::new(&self.account_keys, None).has_duplicates()
     }
 
     /// Returns `true` if any account is the BPF upgradeable loader.

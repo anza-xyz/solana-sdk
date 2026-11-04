@@ -34,8 +34,7 @@ impl CachedMessage<'_> {
 
     /// Returns true if any account keys are duplicates
     pub fn has_duplicates(&self) -> bool {
-        let mut uniq = HashSet::with_capacity(self.account_keys().len());
-        self.account_keys().iter().any(|x| !uniq.insert(x))
+        self.account_keys().has_duplicates()
     }
 
     pub fn is_key_called_as_program(&self, key_index: usize) -> bool {

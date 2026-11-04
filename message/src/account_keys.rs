@@ -101,6 +101,29 @@ impl<'a> AccountKeys<'a> {
         self.key_segment_iter().flatten()
     }
 
+    /// Returns true if any address occurs more than once
+    pub fn has_duplicates(&self) -> bool {
+        // comparing every pair is faster for small sets and avoids allocating on-chain
+        #[cfg(feature = "std")]
+        {
+            const QUADRATIC_MAX_LEN: usize = 32;
+            let len = self.len();
+            if len >= QUADRATIC_MAX_LEN {
+                return has_duplicates_large(self.iter(), len);
+            }
+        }
+        let mut segments = self.key_segment_iter();
+        while let Some(mut rest) = segments.next() {
+            while let [key, tail @ ..] = rest {
+                if tail.contains(key) || segments.clone().any(|later| later.contains(key)) {
+                    return true;
+                }
+                rest = tail;
+            }
+        }
+        false
+    }
+
     /// Compile instructions using the order of account keys to determine
     /// compiled instruction account indexes.
     ///
@@ -165,9 +188,25 @@ impl PartialEq for AccountKeys<'_> {
     }
 }
 
+#[cfg(feature = "ahash")]
+fn has_duplicates_large<'a>(mut keys: impl Iterator<Item = &'a Address>, len: usize) -> bool {
+    use {ahash::RandomState, std::collections::HashSet};
+
+    let mut seen = HashSet::with_capacity_and_hasher(len, RandomState::new());
+    keys.any(|key| !seen.insert(key))
+}
+
+#[cfg(all(feature = "std", not(feature = "ahash")))]
+fn has_duplicates_large<'a>(keys: impl Iterator<Item = &'a Address>, len: usize) -> bool {
+    let mut sorted: Vec<&Address> = Vec::with_capacity(len);
+    sorted.extend(keys);
+    sorted.sort_unstable();
+    sorted.windows(2).any(|pair| pair[0] == pair[1])
+}
+
 #[cfg(test)]
 mod tests {
-    use {super::*, alloc::vec, solana_instruction::AccountMeta};
+    use {super::*, alloc::vec, solana_instruction::AccountMeta, test_case::test_matrix};
 
     fn test_account_keys() -> [Address; 6] {
         let key0 = Address::new_unique();
@@ -479,5 +518,42 @@ mod tests {
             account_keys.try_compile_instructions(&[]),
             Err(CompileError::AccountIndexOverflow)
         );
+    }
+
+    fn distinct_addresses(len: usize) -> Vec<Address> {
+        (0..len)
+            .map(|i| {
+                let mut bytes = [0u8; 32];
+                bytes[..8].copy_from_slice(&(i as u64).to_le_bytes());
+                Address::new_from_array(bytes)
+            })
+            .collect()
+    }
+
+    fn split_has_duplicates(keys: &[Address]) -> bool {
+        let (static_keys, dynamic) = keys.split_at(keys.len() / 2);
+        let (writable, readonly) = dynamic.split_at(dynamic.len() / 2);
+        let dynamic_keys = LoadedAddresses {
+            writable: writable.to_vec(),
+            readonly: readonly.to_vec(),
+        };
+        let split = AccountKeys::new(static_keys, Some(&dynamic_keys)).has_duplicates();
+        assert_eq!(split, AccountKeys::new(keys, None).has_duplicates());
+        split
+    }
+
+    #[test_matrix([0, 1, 2, 31, 32, 33, 64, 256])]
+    #[allow(clippy::arithmetic_side_effects)]
+    fn test_has_duplicates(len: usize) {
+        let keys = distinct_addresses(len);
+        assert!(!split_has_duplicates(&keys));
+        if len < 2 {
+            return;
+        }
+        for (src, dst) in [(0, len - 1), (len - 1, 0), (len / 2, len / 2 - 1)] {
+            let mut keys = keys.clone();
+            keys[dst] = keys[src];
+            assert!(split_has_duplicates(&keys), "{src}->{dst}");
+        }
     }
 }
