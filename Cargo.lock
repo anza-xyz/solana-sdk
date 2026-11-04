@@ -3916,6 +3916,7 @@ dependencies = [
  "solana-address",
  "solana-derivation-path",
  "solana-ed25519",
+ "solana-keypair",
  "solana-seed-derivable",
  "solana-seed-phrase",
  "solana-signature",

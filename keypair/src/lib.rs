@@ -469,7 +469,7 @@ mod tests {
 
     #[cfg(feature = "seed-derivable")]
     #[test]
-    fn test_bip39_derivation_matches_reference() {
+    fn test_unicode_normalization_matches_reference() {
         use solana_seed_derivable::SeedDerivable;
 
         let mnemonic = Mnemonic::from_phrase(
@@ -481,7 +481,11 @@ mod tests {
         for passphrase in ["TREZOR", "café", "Ⅳ"] {
             let seed = Seed::new(&mnemonic, passphrase);
             let expected = keypair_from_seed(seed.as_bytes()).unwrap();
-            let actual = Keypair::from_bip39_mnemonic(mnemonic.phrase(), passphrase).unwrap();
+            let actual = Keypair::from_seed_phrase_and_passphrase_with_unicode_normalization(
+                mnemonic.phrase(),
+                passphrase,
+            )
+            .unwrap();
             assert_eq!(
                 actual.pubkey(),
                 expected.pubkey(),

@@ -21,9 +21,9 @@ pub fn generate_seed_from_seed_phrase_and_passphrase(
     seed
 }
 
-/// Derives a 64-byte BIP-39 seed without validating the mnemonic.
+/// Derives a 64-byte seed after Unicode NFKD normalization of both inputs.
 ///
-/// Both inputs are normalized using Unicode NFKD, as required by BIP-39.
+/// This does not validate the mnemonic's words or checksum.
 /// This can produce a different seed from the legacy
 /// [`generate_seed_from_seed_phrase_and_passphrase`] for non-NFKD inputs.
 ///
@@ -31,7 +31,7 @@ pub fn generate_seed_from_seed_phrase_and_passphrase(
 /// no leading or trailing whitespace, to match other BIP-39 implementations.
 /// This function does not trim or collapse whitespace; extra whitespace changes
 /// the seed.
-pub fn generate_seed_from_bip39_mnemonic(seed_phrase: &str, passphrase: &str) -> Vec<u8> {
+pub fn generate_seed_with_unicode_normalization(seed_phrase: &str, passphrase: &str) -> Vec<u8> {
     let seed_phrase = seed_phrase.nfkd().collect::<String>();
     let passphrase = passphrase.nfkd().collect::<String>();
     generate_seed_from_seed_phrase_and_passphrase(&seed_phrase, &passphrase)

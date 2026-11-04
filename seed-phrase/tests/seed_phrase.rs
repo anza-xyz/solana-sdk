@@ -1,5 +1,5 @@
 use solana_seed_phrase::{
-    generate_seed_from_bip39_mnemonic, generate_seed_from_seed_phrase_and_passphrase,
+    generate_seed_from_seed_phrase_and_passphrase, generate_seed_with_unicode_normalization,
 };
 
 const ENGLISH_MNEMONIC: &str =
@@ -29,7 +29,7 @@ fn bip39_reference_vectors() {
     ];
 
     for (mnemonic, passphrase, expected) in vectors {
-        let seed = generate_seed_from_bip39_mnemonic(mnemonic, passphrase);
+        let seed = generate_seed_with_unicode_normalization(mnemonic, passphrase);
         assert_eq!(hex::encode(seed), expected, "mnemonic {mnemonic:?}");
     }
 }
@@ -38,8 +38,8 @@ fn bip39_reference_vectors() {
 fn passphrase_is_nfkd_normalized() {
     for (passphrase, normalized) in [("café", "cafe\u{301}"), ("Ⅳ", "IV")] {
         assert_eq!(
-            generate_seed_from_bip39_mnemonic(ENGLISH_MNEMONIC, passphrase),
-            generate_seed_from_bip39_mnemonic(ENGLISH_MNEMONIC, normalized),
+            generate_seed_with_unicode_normalization(ENGLISH_MNEMONIC, passphrase),
+            generate_seed_with_unicode_normalization(ENGLISH_MNEMONIC, normalized),
             "passphrase {passphrase:?}"
         );
     }
@@ -49,8 +49,8 @@ fn passphrase_is_nfkd_normalized() {
 fn mnemonic_is_nfkd_normalized() {
     for (mnemonic, normalized) in [("académie", "acade\u{301}mie"), ("Ⅳ", "IV")] {
         assert_eq!(
-            generate_seed_from_bip39_mnemonic(mnemonic, ""),
-            generate_seed_from_bip39_mnemonic(normalized, ""),
+            generate_seed_with_unicode_normalization(mnemonic, ""),
+            generate_seed_with_unicode_normalization(normalized, ""),
             "mnemonic {mnemonic:?}"
         );
     }
@@ -61,7 +61,7 @@ fn legacy_derivation_matches_nfkd_inputs() {
     for passphrase in ["TREZOR", "cafe\u{301}"] {
         assert_eq!(
             generate_seed_from_seed_phrase_and_passphrase(ENGLISH_MNEMONIC, passphrase),
-            generate_seed_from_bip39_mnemonic(ENGLISH_MNEMONIC, passphrase),
+            generate_seed_with_unicode_normalization(ENGLISH_MNEMONIC, passphrase),
             "passphrase {passphrase:?}"
         );
     }
@@ -69,13 +69,13 @@ fn legacy_derivation_matches_nfkd_inputs() {
 
 #[test]
 fn mnemonic_whitespace_is_preserved() {
-    let canonical_seed = generate_seed_from_bip39_mnemonic(ENGLISH_MNEMONIC, "TREZOR");
+    let canonical_seed = generate_seed_with_unicode_normalization(ENGLISH_MNEMONIC, "TREZOR");
     for mnemonic in [
         format!(" {ENGLISH_MNEMONIC}"),
         format!("{ENGLISH_MNEMONIC}\n"),
         ENGLISH_MNEMONIC.replacen(' ', "  ", 1),
     ] {
-        let seed = generate_seed_from_bip39_mnemonic(&mnemonic, "TREZOR");
+        let seed = generate_seed_with_unicode_normalization(&mnemonic, "TREZOR");
         assert_ne!(seed, canonical_seed, "mnemonic {mnemonic:?}");
         assert_eq!(
             seed,
@@ -94,6 +94,6 @@ fn legacy_derivation_preserves_raw_utf8() {
     );
     assert_ne!(
         seed,
-        generate_seed_from_bip39_mnemonic(ENGLISH_MNEMONIC, "café")
+        generate_seed_with_unicode_normalization(ENGLISH_MNEMONIC, "café")
     );
 }

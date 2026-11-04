@@ -15,8 +15,7 @@ pub trait SeedDerivable: Sized {
         passphrase: &str,
     ) -> Result<Self, Box<dyn error::Error>>;
 
-    /// Derives a key from the BIP-39 seed of `seed_phrase` and `passphrase`,
-    /// after NFKD-normalizing both inputs.
+    /// Derives a key after Unicode NFKD normalization of the seed phrase and passphrase.
     ///
     /// This does not validate the mnemonic's words or checksum.
     /// After normalization, mnemonic words must be separated by single spaces,
@@ -26,13 +25,12 @@ pub trait SeedDerivable: Sized {
     /// # Errors
     ///
     /// Returns an error if [`Self::from_seed`] rejects the derived seed.
-    fn from_bip39_mnemonic(
+    fn from_seed_phrase_and_passphrase_with_unicode_normalization(
         seed_phrase: &str,
         passphrase: &str,
     ) -> Result<Self, Box<dyn error::Error>> {
-        Self::from_seed(&solana_seed_phrase::generate_seed_from_bip39_mnemonic(
-            seed_phrase,
-            passphrase,
-        ))
+        Self::from_seed(
+            &solana_seed_phrase::generate_seed_with_unicode_normalization(seed_phrase, passphrase),
+        )
     }
 }
