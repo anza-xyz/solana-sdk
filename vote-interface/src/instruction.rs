@@ -1,36 +1,23 @@
 //! Vote program instructions
 
-// The wincode and frozen-abi derive expansions reference the deprecated
-// tower vote items and cannot be silenced at the item level.
-#![expect(deprecated)]
-
+#[cfg(feature = "serde")]
+use serde_derive::{Deserialize, Serialize};
 #[cfg(feature = "stable-abi")]
 use solana_frozen_abi_macro::{frozen_abi, StableAbi, StableAbiSample};
-use {
-    super::state::TowerSync,
-    crate::state::{
-        Vote, VoteAuthorize, VoteAuthorizeCheckedWithSeedArgs, VoteAuthorizeWithSeedArgs, VoteInit,
-        VoteInitV2, VoteStateUpdate, VoteStateV4,
-    },
-    solana_clock::{Slot, UnixTimestamp},
-    solana_hash::Hash,
-    solana_pubkey::Pubkey,
-};
+#[cfg(feature = "wincode")]
+use wincode::{SchemaRead, SchemaWrite};
 #[cfg(any(feature = "bincode", feature = "wincode"))]
 use {
     crate::program::id,
     solana_instruction::{AccountMeta, Instruction},
     solana_sdk_ids::{system_program, sysvar},
 };
-#[cfg(feature = "wincode")]
 use {
-    crate::state::wincode_compact::{CompactTowerSync, CompactVoteStateUpdate},
-    wincode::{SchemaRead, SchemaWrite},
-};
-#[cfg(feature = "serde")]
-use {
-    crate::state::{serde_compact_vote_state_update, serde_tower_sync},
-    serde_derive::{Deserialize, Serialize},
+    crate::state::{
+        VoteAuthorize, VoteAuthorizeCheckedWithSeedArgs, VoteAuthorizeWithSeedArgs, VoteInit,
+        VoteInitV2, VoteStateV4,
+    },
+    solana_pubkey::Pubkey,
 };
 
 #[repr(u8)]
@@ -46,7 +33,7 @@ pub enum CommissionKind {
 #[cfg_attr(
     feature = "stable-abi",
     frozen_abi(
-        abi_digest = "9bqZ5L1KnMFnjQPMoRtfhdgUok3G5W2KKRGuw8uwbkuY",
+        abi_digest = "Gfrj3vdfCYcrnQsTh3HawAmQREneuREg7VbYcrjQhGvT",
         abi_serializer = ["bincode", "wincode"]
     ),
     derive(StableAbi, StableAbiSample)
@@ -80,18 +67,10 @@ pub enum VoteInstruction {
     /// disallowed for any vote accounts whose BLS pubkey is set to `Some`.
     Authorize(Pubkey, VoteAuthorize),
 
-    /// A Vote instruction with recent votes
-    ///
-    /// # Account references
-    ///   0. `[WRITE]` Vote account to vote with
-    ///   1. `[]` Slot hashes sysvar
-    ///   2. `[]` Clock sysvar
-    ///   3. `[SIGNER]` Vote authority
-    #[deprecated(
-        since = "7.4.0",
-        note = "Tower vote instruction; disabled since the Alpenglow migration and will be removed in a future release."
-    )]
-    Vote(Vote),
+    /// Formerly `Vote`; removed after the Alpenglow migration.
+    /// Retained so later variants keep their wire index.
+    #[doc(hidden)]
+    RemovedVote,
 
     /// Withdraw some amount of funds
     ///
@@ -116,18 +95,10 @@ pub enum VoteInstruction {
     ///   1. `[SIGNER]` Withdraw authority
     UpdateCommission(u8),
 
-    /// A Vote instruction with recent votes
-    ///
-    /// # Account references
-    ///   0. `[WRITE]` Vote account to vote with
-    ///   1. `[]` Slot hashes sysvar
-    ///   2. `[]` Clock sysvar
-    ///   3. `[SIGNER]` Vote authority
-    #[deprecated(
-        since = "7.4.0",
-        note = "Tower vote instruction; disabled since the Alpenglow migration and will be removed in a future release."
-    )]
-    VoteSwitch(Vote, Hash),
+    /// Formerly `VoteSwitch`; removed after the Alpenglow migration.
+    /// Retained so later variants keep their wire index.
+    #[doc(hidden)]
+    RemovedVoteSwitch,
 
     /// Authorize a key to send votes or issue a withdrawal
     ///
@@ -144,27 +115,15 @@ pub enum VoteInstruction {
     /// disallowed for any vote accounts whose BLS pubkey is set to `Some`.
     AuthorizeChecked(VoteAuthorize),
 
-    /// Update the onchain vote state for the signer.
-    ///
-    /// # Account references
-    ///   0. `[Write]` Vote account to vote with
-    ///   1. `[SIGNER]` Vote authority
-    #[deprecated(
-        since = "7.4.0",
-        note = "Tower vote instruction; disabled since the Alpenglow migration and will be removed in a future release."
-    )]
-    UpdateVoteState(VoteStateUpdate),
+    /// Formerly `UpdateVoteState`; removed after the Alpenglow migration.
+    /// Retained so later variants keep their wire index.
+    #[doc(hidden)]
+    RemovedUpdateVoteState,
 
-    /// Update the onchain vote state for the signer along with a switching proof.
-    ///
-    /// # Account references
-    ///   0. `[Write]` Vote account to vote with
-    ///   1. `[SIGNER]` Vote authority
-    #[deprecated(
-        since = "7.4.0",
-        note = "Tower vote instruction; disabled since the Alpenglow migration and will be removed in a future release."
-    )]
-    UpdateVoteStateSwitch(VoteStateUpdate, Hash),
+    /// Formerly `UpdateVoteStateSwitch`; removed after the Alpenglow migration.
+    /// Retained so later variants keep their wire index.
+    #[doc(hidden)]
+    RemovedUpdateVoteStateSwitch,
 
     /// Given that the current Voter or Withdrawer authority is a derived key,
     /// this instruction allows someone who can sign for that derived key's
@@ -198,63 +157,25 @@ pub enum VoteInstruction {
     /// pubkey is set to `Some`.
     AuthorizeCheckedWithSeed(VoteAuthorizeCheckedWithSeedArgs),
 
-    /// Update the onchain vote state for the signer.
-    ///
-    /// # Account references
-    ///   0. `[Write]` Vote account to vote with
-    ///   1. `[SIGNER]` Vote authority
-    #[deprecated(
-        since = "7.4.0",
-        note = "Tower vote instruction; disabled since the Alpenglow migration and will be removed in a future release."
-    )]
-    #[cfg_attr(feature = "serde", serde(with = "serde_compact_vote_state_update"))]
-    CompactUpdateVoteState(
-        #[cfg_attr(feature = "wincode", wincode(with = "CompactVoteStateUpdate"))] VoteStateUpdate,
-    ),
+    /// Formerly `CompactUpdateVoteState`; removed after the Alpenglow migration.
+    /// Retained so later variants keep their wire index.
+    #[doc(hidden)]
+    RemovedCompactUpdateVoteState,
 
-    /// Update the onchain vote state for the signer along with a switching proof.
-    ///
-    /// # Account references
-    ///   0. `[Write]` Vote account to vote with
-    ///   1. `[SIGNER]` Vote authority
-    #[deprecated(
-        since = "7.4.0",
-        note = "Tower vote instruction; disabled since the Alpenglow migration and will be removed in a future release."
-    )]
-    CompactUpdateVoteStateSwitch(
-        #[cfg_attr(feature = "serde", serde(with = "serde_compact_vote_state_update"))]
-        #[cfg_attr(feature = "wincode", wincode(with = "CompactVoteStateUpdate"))]
-        VoteStateUpdate,
-        Hash,
-    ),
+    /// Formerly `CompactUpdateVoteStateSwitch`; removed after the Alpenglow migration.
+    /// Retained so later variants keep their wire index.
+    #[doc(hidden)]
+    RemovedCompactUpdateVoteStateSwitch,
 
-    /// Sync the onchain vote state with local tower
-    ///
-    /// # Account references
-    ///   0. `[Write]` Vote account to vote with
-    ///   1. `[SIGNER]` Vote authority
-    #[deprecated(
-        since = "7.4.0",
-        note = "Tower vote instruction; disabled since the Alpenglow migration and will be removed in a future release."
-    )]
-    #[cfg_attr(feature = "serde", serde(with = "serde_tower_sync"))]
-    TowerSync(#[cfg_attr(feature = "wincode", wincode(with = "CompactTowerSync"))] TowerSync),
+    /// Formerly `TowerSync`; removed after the Alpenglow migration.
+    /// Retained so later variants keep their wire index.
+    #[doc(hidden)]
+    RemovedTowerSync,
 
-    /// Sync the onchain vote state with local tower along with a switching proof
-    ///
-    /// # Account references
-    ///   0. `[Write]` Vote account to vote with
-    ///   1. `[SIGNER]` Vote authority
-    #[deprecated(
-        since = "7.4.0",
-        note = "Tower vote instruction; disabled since the Alpenglow migration and will be removed in a future release."
-    )]
-    TowerSyncSwitch(
-        #[cfg_attr(feature = "serde", serde(with = "serde_tower_sync"))]
-        #[cfg_attr(feature = "wincode", wincode(with = "CompactTowerSync"))]
-        TowerSync,
-        Hash,
-    ),
+    /// Formerly `TowerSyncSwitch`; removed after the Alpenglow migration.
+    /// Retained so later variants keep their wire index.
+    #[doc(hidden)]
+    RemovedTowerSyncSwitch,
 
     /// Initialize a vote account with all vote state v4 fields, including
     /// BLS public key and collector accounts.
@@ -306,84 +227,6 @@ pub enum VoteInstruction {
     ///   1. `[SIGNER, WRITE]` Source account for deposit funds
     ///   2. `[]` System program, used to transfer the deposit
     DepositDelegatorRewards { deposit: u64 },
-}
-
-impl VoteInstruction {
-    pub fn is_simple_vote(&self) -> bool {
-        matches!(
-            self,
-            Self::Vote(_)
-                | Self::VoteSwitch(_, _)
-                | Self::UpdateVoteState(_)
-                | Self::UpdateVoteStateSwitch(_, _)
-                | Self::CompactUpdateVoteState(_)
-                | Self::CompactUpdateVoteStateSwitch(_, _)
-                | Self::TowerSync(_)
-                | Self::TowerSyncSwitch(_, _),
-        )
-    }
-
-    pub fn is_single_vote_state_update(&self) -> bool {
-        matches!(
-            self,
-            Self::UpdateVoteState(_)
-                | Self::UpdateVoteStateSwitch(_, _)
-                | Self::CompactUpdateVoteState(_)
-                | Self::CompactUpdateVoteStateSwitch(_, _)
-                | Self::TowerSync(_)
-                | Self::TowerSyncSwitch(_, _),
-        )
-    }
-
-    /// Only to be used on vote instructions (guard with is_simple_vote),  panics otherwise
-    pub fn last_voted_slot(&self) -> Option<Slot> {
-        assert!(self.is_simple_vote());
-        match self {
-            Self::Vote(v) | Self::VoteSwitch(v, _) => v.last_voted_slot(),
-            Self::UpdateVoteState(vote_state_update)
-            | Self::UpdateVoteStateSwitch(vote_state_update, _)
-            | Self::CompactUpdateVoteState(vote_state_update)
-            | Self::CompactUpdateVoteStateSwitch(vote_state_update, _) => {
-                vote_state_update.last_voted_slot()
-            }
-            Self::TowerSync(tower_sync) | Self::TowerSyncSwitch(tower_sync, _) => {
-                tower_sync.last_voted_slot()
-            }
-            _ => panic!("Tried to get slot on non simple vote instruction"),
-        }
-    }
-
-    /// Only to be used on vote instructions (guard with is_simple_vote), panics otherwise
-    pub fn hash(&self) -> Hash {
-        assert!(self.is_simple_vote());
-        let hash = match self {
-            Self::Vote(v) | Self::VoteSwitch(v, _) => &v.hash,
-            Self::UpdateVoteState(vote_state_update)
-            | Self::UpdateVoteStateSwitch(vote_state_update, _)
-            | Self::CompactUpdateVoteState(vote_state_update)
-            | Self::CompactUpdateVoteStateSwitch(vote_state_update, _) => &vote_state_update.hash,
-            Self::TowerSync(tower_sync) | Self::TowerSyncSwitch(tower_sync, _) => &tower_sync.hash,
-            _ => panic!("Tried to get hash on non simple vote instruction"),
-        };
-        Hash::new_from_array(hash.to_bytes())
-    }
-    /// Only to be used on vote instructions (guard with is_simple_vote),  panics otherwise
-    pub fn timestamp(&self) -> Option<UnixTimestamp> {
-        assert!(self.is_simple_vote());
-        match self {
-            Self::Vote(v) | Self::VoteSwitch(v, _) => v.timestamp,
-            Self::UpdateVoteState(vote_state_update)
-            | Self::UpdateVoteStateSwitch(vote_state_update, _)
-            | Self::CompactUpdateVoteState(vote_state_update)
-            | Self::CompactUpdateVoteStateSwitch(vote_state_update, _) => {
-                vote_state_update.timestamp
-            }
-            Self::TowerSync(tower_sync) | Self::TowerSyncSwitch(tower_sync, _) => {
-                tower_sync.timestamp
-            }
-            _ => panic!("Tried to get timestamp on non simple vote instruction"),
-        }
-    }
 }
 
 #[cfg(all(feature = "bincode", not(feature = "wincode")))]
@@ -721,178 +564,6 @@ pub fn deposit_delegator_rewards(
 }
 
 #[cfg(any(feature = "bincode", feature = "wincode"))]
-#[deprecated(
-    since = "7.4.0",
-    note = "Tower vote instruction; disabled since the Alpenglow migration and will be removed in a future release."
-)]
-pub fn vote(vote_pubkey: &Pubkey, authorized_voter_pubkey: &Pubkey, vote: Vote) -> Instruction {
-    let account_metas = vec![
-        AccountMeta::new(*vote_pubkey, false),
-        AccountMeta::new_readonly(sysvar::slot_hashes::id(), false),
-        AccountMeta::new_readonly(sysvar::clock::id(), false),
-        AccountMeta::new_readonly(*authorized_voter_pubkey, true),
-    ];
-
-    create_instruction(id(), &VoteInstruction::Vote(vote), account_metas)
-}
-
-#[cfg(any(feature = "bincode", feature = "wincode"))]
-#[deprecated(
-    since = "7.4.0",
-    note = "Tower vote instruction; disabled since the Alpenglow migration and will be removed in a future release."
-)]
-pub fn vote_switch(
-    vote_pubkey: &Pubkey,
-    authorized_voter_pubkey: &Pubkey,
-    vote: Vote,
-    proof_hash: Hash,
-) -> Instruction {
-    let account_metas = vec![
-        AccountMeta::new(*vote_pubkey, false),
-        AccountMeta::new_readonly(sysvar::slot_hashes::id(), false),
-        AccountMeta::new_readonly(sysvar::clock::id(), false),
-        AccountMeta::new_readonly(*authorized_voter_pubkey, true),
-    ];
-
-    create_instruction(
-        id(),
-        &VoteInstruction::VoteSwitch(vote, proof_hash),
-        account_metas,
-    )
-}
-
-#[cfg(any(feature = "bincode", feature = "wincode"))]
-#[deprecated(
-    since = "7.4.0",
-    note = "Tower vote instruction; disabled since the Alpenglow migration and will be removed in a future release."
-)]
-pub fn update_vote_state(
-    vote_pubkey: &Pubkey,
-    authorized_voter_pubkey: &Pubkey,
-    vote_state_update: VoteStateUpdate,
-) -> Instruction {
-    let account_metas = vec![
-        AccountMeta::new(*vote_pubkey, false),
-        AccountMeta::new_readonly(*authorized_voter_pubkey, true),
-    ];
-
-    create_instruction(
-        id(),
-        &VoteInstruction::UpdateVoteState(vote_state_update),
-        account_metas,
-    )
-}
-
-#[cfg(any(feature = "bincode", feature = "wincode"))]
-#[deprecated(
-    since = "7.4.0",
-    note = "Tower vote instruction; disabled since the Alpenglow migration and will be removed in a future release."
-)]
-pub fn update_vote_state_switch(
-    vote_pubkey: &Pubkey,
-    authorized_voter_pubkey: &Pubkey,
-    vote_state_update: VoteStateUpdate,
-    proof_hash: Hash,
-) -> Instruction {
-    let account_metas = vec![
-        AccountMeta::new(*vote_pubkey, false),
-        AccountMeta::new_readonly(*authorized_voter_pubkey, true),
-    ];
-
-    create_instruction(
-        id(),
-        &VoteInstruction::UpdateVoteStateSwitch(vote_state_update, proof_hash),
-        account_metas,
-    )
-}
-
-#[cfg(any(feature = "bincode", feature = "wincode"))]
-#[deprecated(
-    since = "7.4.0",
-    note = "Tower vote instruction; disabled since the Alpenglow migration and will be removed in a future release."
-)]
-pub fn compact_update_vote_state(
-    vote_pubkey: &Pubkey,
-    authorized_voter_pubkey: &Pubkey,
-    vote_state_update: VoteStateUpdate,
-) -> Instruction {
-    let account_metas = vec![
-        AccountMeta::new(*vote_pubkey, false),
-        AccountMeta::new_readonly(*authorized_voter_pubkey, true),
-    ];
-
-    create_instruction(
-        id(),
-        &VoteInstruction::CompactUpdateVoteState(vote_state_update),
-        account_metas,
-    )
-}
-
-#[cfg(any(feature = "bincode", feature = "wincode"))]
-#[deprecated(
-    since = "7.4.0",
-    note = "Tower vote instruction; disabled since the Alpenglow migration and will be removed in a future release."
-)]
-pub fn compact_update_vote_state_switch(
-    vote_pubkey: &Pubkey,
-    authorized_voter_pubkey: &Pubkey,
-    vote_state_update: VoteStateUpdate,
-    proof_hash: Hash,
-) -> Instruction {
-    let account_metas = vec![
-        AccountMeta::new(*vote_pubkey, false),
-        AccountMeta::new_readonly(*authorized_voter_pubkey, true),
-    ];
-
-    create_instruction(
-        id(),
-        &VoteInstruction::CompactUpdateVoteStateSwitch(vote_state_update, proof_hash),
-        account_metas,
-    )
-}
-
-#[cfg(any(feature = "bincode", feature = "wincode"))]
-#[deprecated(
-    since = "7.4.0",
-    note = "Tower vote instruction; disabled since the Alpenglow migration and will be removed in a future release."
-)]
-pub fn tower_sync(
-    vote_pubkey: &Pubkey,
-    authorized_voter_pubkey: &Pubkey,
-    tower_sync: TowerSync,
-) -> Instruction {
-    let account_metas = vec![
-        AccountMeta::new(*vote_pubkey, false),
-        AccountMeta::new_readonly(*authorized_voter_pubkey, true),
-    ];
-
-    create_instruction(id(), &VoteInstruction::TowerSync(tower_sync), account_metas)
-}
-
-#[cfg(any(feature = "bincode", feature = "wincode"))]
-#[deprecated(
-    since = "7.4.0",
-    note = "Tower vote instruction; disabled since the Alpenglow migration and will be removed in a future release."
-)]
-pub fn tower_sync_switch(
-    vote_pubkey: &Pubkey,
-    authorized_voter_pubkey: &Pubkey,
-    tower_sync: TowerSync,
-    proof_hash: Hash,
-) -> Instruction {
-    let account_metas = vec![
-        AccountMeta::new(*vote_pubkey, false),
-        AccountMeta::new_readonly(*authorized_voter_pubkey, true),
-    ];
-
-    create_instruction(
-        id(),
-        &VoteInstruction::TowerSyncSwitch(tower_sync, proof_hash),
-        account_metas,
-    )
-}
-
-#[cfg(any(feature = "bincode", feature = "wincode"))]
 pub fn withdraw(
     vote_pubkey: &Pubkey,
     authorized_withdrawer_pubkey: &Pubkey,
@@ -910,28 +581,74 @@ pub fn withdraw(
 
 #[cfg(all(test, feature = "bincode"))]
 mod tests {
-    use {super::*, crate::state::Lockout, std::collections::VecDeque};
+    use super::*;
 
     #[test]
-    fn test_compact_serialize_rejects_confirmation_count_above_u8() {
-        // The compact wire format stores `confirmation_count` as a `u8`, so a
-        // value that does not fit (> 255) must fail to serialize rather than be
-        // silently truncated.
-        let lockouts = VecDeque::from([Lockout::new_with_confirmation_count(1, 256)]);
-        let vote_state_update = VoteStateUpdate::new(lockouts.clone(), None, Hash::default());
-        let tower_sync = TowerSync::new(lockouts, None, Hash::default(), Hash::default());
+    fn test_wire_indexes() {
+        let authorize_with_seed_args = VoteAuthorizeWithSeedArgs {
+            authorization_type: VoteAuthorize::Voter,
+            current_authority_derived_key_owner: Pubkey::default(),
+            current_authority_derived_key_seed: String::new(),
+            new_authority: Pubkey::default(),
+        };
+        let authorize_checked_with_seed_args = VoteAuthorizeCheckedWithSeedArgs {
+            authorization_type: VoteAuthorize::Voter,
+            current_authority_derived_key_owner: Pubkey::default(),
+            current_authority_derived_key_seed: String::new(),
+        };
 
-        for ix in [
-            VoteInstruction::CompactUpdateVoteState(vote_state_update),
-            VoteInstruction::TowerSync(tower_sync),
+        // Indexes 2, 6, 8, 9 and 12-15 are held by placeholders for the
+        // removed tower vote instructions.
+        for (ix, expected_index) in [
+            (VoteInstruction::InitializeAccount(VoteInit::default()), 0),
+            (
+                VoteInstruction::Authorize(Pubkey::default(), VoteAuthorize::Voter),
+                1,
+            ),
+            (VoteInstruction::RemovedVote, 2),
+            (VoteInstruction::Withdraw(0), 3),
+            (VoteInstruction::UpdateValidatorIdentity, 4),
+            (VoteInstruction::UpdateCommission(0), 5),
+            (VoteInstruction::RemovedVoteSwitch, 6),
+            (VoteInstruction::AuthorizeChecked(VoteAuthorize::Voter), 7),
+            (VoteInstruction::RemovedUpdateVoteState, 8),
+            (VoteInstruction::RemovedUpdateVoteStateSwitch, 9),
+            (
+                VoteInstruction::AuthorizeWithSeed(authorize_with_seed_args),
+                10,
+            ),
+            (
+                VoteInstruction::AuthorizeCheckedWithSeed(authorize_checked_with_seed_args),
+                11,
+            ),
+            (VoteInstruction::RemovedCompactUpdateVoteState, 12),
+            (VoteInstruction::RemovedCompactUpdateVoteStateSwitch, 13),
+            (VoteInstruction::RemovedTowerSync, 14),
+            (VoteInstruction::RemovedTowerSyncSwitch, 15),
+            (
+                VoteInstruction::InitializeAccountV2(VoteInitV2::default()),
+                16,
+            ),
+            (
+                VoteInstruction::UpdateCommissionCollector(CommissionKind::InflationRewards),
+                17,
+            ),
+            (
+                VoteInstruction::UpdateCommissionBps {
+                    commission_bps: 0,
+                    kind: CommissionKind::BlockRevenue,
+                },
+                18,
+            ),
+            (VoteInstruction::DepositDelegatorRewards { deposit: 0 }, 19),
         ] {
-            let err = bincode::serialize(&ix).unwrap_err();
-            assert!(
-                err.to_string().contains("Invalid confirmation count"),
-                "unexpected error: {err}"
+            let bytes = bincode::serialize(&ix).unwrap();
+            assert_eq!(
+                u32::from_le_bytes(bytes[..4].try_into().unwrap()),
+                expected_index
             );
             #[cfg(feature = "wincode")]
-            assert!(wincode::serialize(&ix).is_err());
+            assert_eq!(wincode::serialize(&ix).unwrap(), bytes);
         }
     }
 
@@ -967,13 +684,7 @@ mod tests {
     fn test_builders_match_bincode_encoding() {
         let vote_pubkey = Pubkey::new_unique();
         let voter_pubkey = Pubkey::new_unique();
-        let lockouts = VecDeque::from([Lockout::new_with_confirmation_count(1, 2)]);
-        let tower_sync = TowerSync::new(
-            lockouts,
-            Some(0),
-            Hash::new_from_array([1; 32]),
-            Hash::new_from_array([2; 32]),
-        );
+        let recipient_pubkey = Pubkey::new_unique();
         let vote_init = VoteInit {
             node_pubkey: Pubkey::new_unique(),
             authorized_voter: voter_pubkey,
@@ -983,13 +694,8 @@ mod tests {
 
         for (ix, expected) in [
             (
-                tower_sync_switch(
-                    &vote_pubkey,
-                    &voter_pubkey,
-                    tower_sync.clone(),
-                    Hash::default(),
-                ),
-                VoteInstruction::TowerSyncSwitch(tower_sync, Hash::default()),
+                withdraw(&vote_pubkey, &voter_pubkey, 42, &recipient_pubkey),
+                VoteInstruction::Withdraw(42),
             ),
             (
                 authorize_with_seed(
