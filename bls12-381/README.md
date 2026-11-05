@@ -217,7 +217,7 @@ the raw syscall wrappers; their overhead depends on how a result is returned:
 | `validate` — returns `bool`                                                               | 11       |
 | `_assign` forms — write into a caller's `MaybeUninit`                                     | 13–17    |
 | `pairing_map_assign`                                                                      | 16       |
-| `pairing_check` — includes the `is_identity` comparison                                   | 69       |
+| `pairing_check`, two or more pairs — includes the `is_identity` comparison                | 63       |
 | Allocating forms — `add_unchecked`, `sub_unchecked`, `neg_unchecked`, `mul`, `decompress` | 51–54    |
 
 The allocating figure is dominated by the `Option<Self>` construction rather
@@ -234,7 +234,7 @@ Purely local operations issue no syscall, so these figures are the whole cost:
 | Copy — `from_bytes`                                                   | 18 |
 | `Scalar::is_zero`                                                     | 13 |
 | `is_infinity` — G1 / G2                                               | 29 / 28 |
-| `GtElement::is_identity`                                              | 28 |
+| `GtElement::is_identity`                                              | 21 |
 
 Array equality lowers to the `sol_memcmp_` syscall, whose charge does not depend
 on the length. That is why comparing a 576-byte `Gt` element costs the same as
@@ -253,11 +253,14 @@ overhead — of the operations most likely to dominate an instruction:
 | `neg_assign_unchecked` — G1                                  | 143                                 |
 | `mul_assign` — G1                                            | 4,642                               |
 | `decompress_assign` — G1 / G2                                | 2,114 / 3,063                       |
-| `pairing_check` — 1 / 2 / 3 / 8 pairs                        | 25,514 / 38,536 / 51,559 / 116,675  |
+| `pairing_check` — 1 / 2 / 3 / 8 pairs                        | 3,633 / 38,531 / 51,554 / 116,670   |
 | Sum of 8 untrusted G1 points, validated once, in place       | 13,712                              |
 | Sum of 8 untrusted G2 points, validated once, in place       | 17,565                              |
 
-The two sums use the loop documented above, infinity seed included. Figures
+The two sums use the loop documented above, infinity seed included. A
+single-pair `pairing_check` makes no pairing syscall: for valid points, a single
+pairing is the identity exactly when either point is infinity, so it costs two
+validations and two local comparisons. Figures
 reproduce to within ~2 CU: adding or removing code elsewhere in a program
 perturbs codegen by about that much, so treat differences under ~5 CU as noise.
 
@@ -274,15 +277,16 @@ subgroup check on every input themselves, so a `validate` beforehand buys
 nothing and costs 1,576 CU per G1 point and 1,977 per G2 point. Validating a
 point before `mul_assign` measures 6,219 CU against 4,642 for the multiplication
 alone; validating two G1 and two G2 points before a two-pair `pairing_check`
-measures 45,643 against 38,536. `add_assign_unchecked` and
+measures 45,638 against 38,531. `add_assign_unchecked` and
 `sub_assign_unchecked` are the exception — those check the field and the curve
 equation but skip the subgroup check, which is exactly what `validate` adds.
 
 **Batch your pairings.** Only the first pair in a batch is charged at
 `bls12_381_one_pair_cost`; every additional pair is charged at
 `bls12_381_additional_pair_cost`, roughly half as much. A three-pair check
-issued as one batch measures 51,559 CU against 76,539 as three separate calls —
-24,980 CU saved.
+issued as one batch measures 51,554 CU. Three separate pairing syscalls would
+be charged 76,335 CU before any wrapper overhead, and there is no syscall to
+multiply their results back together.
 
 **Validate at the trust boundary, not in the loop.** The validation syscall is
 charged at roughly twelve times the addition syscall it guards. Summing eight
