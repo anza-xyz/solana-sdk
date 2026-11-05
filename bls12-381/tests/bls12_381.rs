@@ -225,10 +225,7 @@ fn test_pairing_check_identity() {
 
     // Pairing two infinity points should result in the multiplicative identity.
     // pairing_check safely evaluates this without exposing the GtElement.
-    let is_identity =
-        pairing_check(&[g1], &[g2], Endianness::Little).expect("Pairing execution failed");
-
-    assert!(is_identity);
+    assert_eq!(pairing_check(&[g1], &[g2], Endianness::Little), Ok(()));
 }
 
 /// `pairing_map` and `pairing_check` deliberately diverge on an empty batch,
@@ -244,7 +241,7 @@ fn test_empty_batch() {
         assert_eq!(gt, GtElement::identity(endianness));
 
         // `pairing_check` refuses to succeed vacuously: a zero-length batch
-        // asserts nothing, and reporting `Ok(true)` would be a verification
+        // asserts nothing, and reporting `Ok(())` would be a verification
         // bypass for any caller building its batch from instruction data. The
         // dedicated variant distinguishes this programmer error from a failed
         // verification.
@@ -385,8 +382,8 @@ fn test_g2_generator_is_canonical() {
     );
 }
 
-/// `e(G1, G2)` generates the target group, so it is not the identity. A
-/// `Ok(true)` here would mean the generators or the pairing are wrong.
+/// `e(G1, G2)` generates the target group, so it is not the identity. An
+/// `Ok(())` here would mean the generators or the pairing are wrong.
 #[test]
 fn test_generator_pairing_is_not_identity() {
     for endianness in [Endianness::Little, Endianness::Big] {
@@ -395,7 +392,7 @@ fn test_generator_pairing_is_not_identity() {
 
         assert_eq!(
             pairing_check(&[g1], &[g2], endianness),
-            Ok(false),
+            Err(Bls12381Error::VerificationFailed),
             "e(G1, G2) must not be the target group identity"
         );
     }
@@ -421,7 +418,7 @@ fn test_pairing_bilinearity() {
 
         assert_eq!(
             pairing_check(&[ap, neg_abp], &[bq, g2], endianness),
-            Ok(true),
+            Ok(()),
             "bilinearity check failed"
         );
     }

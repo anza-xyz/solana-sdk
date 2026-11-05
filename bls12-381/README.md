@@ -189,21 +189,21 @@ let g1_points: &[G1Point] = get_g1_batch();
 let g2_points: &[G2Point] = get_g2_batch();
 
 // Evaluates e(P_1, Q_1) * ... * e(P_n, Q_n) == 1
-if pairing_check(g1_points, g2_points, Endianness::Big) != Ok(true) {
-    return Err(ProgramError::InvalidArgument);
-}
+pairing_check(g1_points, g2_points, Endianness::Big)
+    .map_err(|_| ProgramError::InvalidArgument)?;
 ```
 
-`pairing_check` returns `Err` when the check could not be run at all —
-mismatched or over-long batches, an empty batch, or an invalid point. `Err` is
-not the same as "verification failed", but both must be treated as failure.
-Compare against `Ok(true)` as above; never branch on `.is_ok()`.
+`pairing_check` returns `Ok(())` only when the product is the identity. A
+product that is not the identity is `Err(Bls12381Error::VerificationFailed)`.
+The other variants mean the check could not run at all: mismatched or
+over-long batches, an empty batch, or an invalid point. Every `Err` is a failed
+verification, so `?` and `.is_ok()` both handle the result correctly.
 
 `pairing_check` rejects an empty batch, while `pairing_map` returns the identity
 for one as the syscall requires. The divergence is deliberate: `pairing_check` is
 a verification primitive whose inputs are typically built from
 attacker-controlled instruction data, and a zero-length batch that reported
-`Ok(true)` would be a verification bypass. For the empty product, call
+`Ok(())` would be a verification bypass. For the empty product, call
 `pairing_map` and compare against `GtElement::identity`.
 
 ### Compute unit costs

@@ -24,7 +24,13 @@ fn single_pair_matches_full_pairing() {
         ];
         for p in g1_points {
             for q in g2_points {
-                let expected = pairing(&p, &q, endianness).map(|gt| gt.is_identity(endianness));
+                let expected = pairing(&p, &q, endianness).and_then(|gt| {
+                    if gt.is_identity(endianness) {
+                        Ok(())
+                    } else {
+                        Err(Bls12381Error::VerificationFailed)
+                    }
+                });
                 assert_eq!(pairing_check(&[p], &[q], endianness), expected);
             }
         }

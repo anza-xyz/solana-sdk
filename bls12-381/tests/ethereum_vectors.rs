@@ -766,8 +766,8 @@ fn eip2537_pairing() {
         let (zeros, last) = expected.split_at(EIP_PAIRING_OUTPUT_SIZE - 1);
         assert!(zeros.iter().all(|&byte| byte == 0));
         let expected = match last[0] {
-            0 => false,
-            1 => true,
+            0 => Err(Bls12381Error::VerificationFailed),
+            1 => Ok(()),
             other => panic!("{}: unexpected pairing output {other}", vector.name),
         };
 
@@ -786,8 +786,7 @@ fn eip2537_pairing() {
                 );
             } else {
                 assert_eq!(
-                    result,
-                    Ok(expected),
+                    result, expected,
                     "{}: pairing_check, {endianness:?}",
                     vector.name
                 );
