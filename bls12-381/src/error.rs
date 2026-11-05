@@ -28,3 +28,5 @@ impl fmt::Display for Bls12381Error {
         f.write_str(message)
     }
 }
+
+impl core::error::Error for Bls12381Error {}
