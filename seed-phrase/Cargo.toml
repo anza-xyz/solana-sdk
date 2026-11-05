@@ -2,7 +2,7 @@
 name = "solana-seed-phrase"
 description = "Solana functions for generating keypairs from seed phrases."
 documentation = "https://docs.rs/solana-seed-phrase"
-version = "3.0.0"
+version = "3.0.1"
 authors = { workspace = true }
 repository = { workspace = true }
 homepage = { workspace = true }
