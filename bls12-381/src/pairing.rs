@@ -130,15 +130,15 @@ impl GtElement {
 /// [`Bls12381Error::TooManyPairs`] if the batch exceeds [`MAX_PAIRING_LENGTH`],
 /// and [`Bls12381Error::InvalidInput`] if the syscall rejects a point.
 ///
-/// On `Ok`, `out` is initialized and may be `assume_init`ed; on `Err` it is
-/// poisoned. See [Output buffer contract](crate#output-buffer-contract).
+/// Returns the initialized `out` on success. On `Err`, `out` is poisoned. See
+/// [Output buffer contract](crate#output-buffer-contract).
 #[inline]
-pub fn pairing_map_assign(
+pub fn pairing_map_into<'o>(
     g1_points: &[G1Point],
     g2_points: &[G2Point],
-    out: &mut MaybeUninit<GtElement>,
+    out: &'o mut MaybeUninit<GtElement>,
     endianness: Endianness,
-) -> Result<(), Bls12381Error> {
+) -> Result<&'o mut GtElement, Bls12381Error> {
     if g1_points.len() != g2_points.len() {
         return Err(Bls12381Error::LengthMismatch);
     }
@@ -147,8 +147,7 @@ pub fn pairing_map_assign(
     }
 
     if g1_points.is_empty() {
-        out.write(GtElement::identity(endianness));
-        return Ok(());
+        return Ok(out.write(GtElement::identity(endianness)));
     }
 
     #[cfg(any(target_os = "solana", target_arch = "bpf"))]
@@ -173,7 +172,8 @@ pub fn pairing_map_assign(
             )
         };
         if status == 0 {
-            Ok(())
+            // SAFETY: the syscall returned 0, so it wrote all of `out`.
+            Ok(unsafe { out.assume_init_mut() })
         } else {
             Err(Bls12381Error::InvalidInput)
         }
@@ -189,21 +189,18 @@ pub fn pairing_map_assign(
             Endianness::Big => solana_bls12_381_syscall::Endianness::BE,
         };
 
-        if let Some(res) = solana_bls12_381_syscall::bls12_381_pairing_map(
+        solana_bls12_381_syscall::bls12_381_pairing_map(
             solana_bls12_381_syscall::Version::V0,
             g1_pods,
             g2_pods,
             end,
-        ) {
-            out.write(GtElement(res.0));
-            Ok(())
-        } else {
-            Err(Bls12381Error::InvalidInput)
-        }
+        )
+        .map(|res| out.write(GtElement(res.0)))
+        .ok_or(Bls12381Error::InvalidInput)
     }
 }
 
-/// Allocating form of [`pairing_map_assign`].
+/// Allocating form of [`pairing_map_into`].
 #[inline]
 pub fn pairing_map(
     g1_points: &[G1Point],
@@ -212,28 +209,28 @@ pub fn pairing_map(
 ) -> Result<GtElement, Bls12381Error> {
     let mut out = MaybeUninit::uninit();
 
-    pairing_map_assign(g1_points, g2_points, &mut out, endianness)?;
+    pairing_map_into(g1_points, g2_points, &mut out, endianness)?;
 
-    // SAFETY: `pairing_map_assign` returned `Ok`, so `out` is initialized.
+    // SAFETY: `pairing_map_into` succeeded, so `out` is initialized.
     Ok(unsafe { out.assume_init() })
 }
 
-/// Single-pair form of [`pairing_map_assign`].
+/// Single-pair form of [`pairing_map_into`].
 ///
 /// # Errors
 ///
 /// [`Bls12381Error::InvalidInput`] if the syscall rejects either point.
 ///
-/// On `Ok`, `out` is initialized and may be `assume_init`ed; on `Err` it is
-/// poisoned. See [Output buffer contract](crate#output-buffer-contract).
+/// Returns the initialized `out` on success. On `Err`, `out` is poisoned. See
+/// [Output buffer contract](crate#output-buffer-contract).
 #[inline]
-pub fn pairing_assign(
+pub fn pairing_into<'o>(
     g1_point: &G1Point,
     g2_point: &G2Point,
-    out: &mut MaybeUninit<GtElement>,
+    out: &'o mut MaybeUninit<GtElement>,
     endianness: Endianness,
-) -> Result<(), Bls12381Error> {
-    pairing_map_assign(
+) -> Result<&'o mut GtElement, Bls12381Error> {
+    pairing_map_into(
         core::slice::from_ref(g1_point),
         core::slice::from_ref(g2_point),
         out,
@@ -241,7 +238,7 @@ pub fn pairing_assign(
     )
 }
 
-/// Allocating form of [`pairing_assign`].
+/// Allocating form of [`pairing_into`].
 #[inline]
 pub fn pairing(
     g1_point: &G1Point,
@@ -268,7 +265,7 @@ pub fn pairing(
 /// For a single pair, this validates both points and checks whether either is
 /// infinity, avoiding the pairing syscall. For valid points in the prime-order
 /// subgroups, non-degeneracy implies `e(P, Q) == 1` exactly when `P` or `Q` is
-/// infinity. Larger batches use [`pairing_map_assign`].
+/// infinity. Larger batches use [`pairing_map_into`].
 ///
 /// # Errors
 ///
@@ -297,7 +294,7 @@ pub fn pairing_check(
 ) -> Result<(), Bls12381Error> {
     // Diagnosed before the empty check so that a mismatched batch reports
     // `LengthMismatch` whichever side is the empty one. Deferring to
-    // `pairing_map_assign` would report `EmptyBatch` for `(&[], &[q])` and
+    // `pairing_map_into` would report `EmptyBatch` for `(&[], &[q])` and
     // `LengthMismatch` for `(&[p], &[])`, for the same caller bug.
     if g1_points.len() != g2_points.len() {
         return Err(Bls12381Error::LengthMismatch);
@@ -323,14 +320,11 @@ pub fn pairing_check(
         };
     }
 
+    // Borrowed rather than copied out as `pairing_map` would: moving the value
+    // is a 576-byte copy that LLVM does not elide, measured at 20 CU on every
+    // call.
     let mut out = MaybeUninit::uninit();
-    pairing_map_assign(g1_points, g2_points, &mut out, endianness)?;
-
-    // SAFETY: `pairing_map_assign` returned `Ok`, so `out` is initialized.
-    //
-    // Borrowed rather than `assume_init`ed: moving the value out is a 576-byte
-    // copy that LLVM does not elide, measured at 20 CU on every call.
-    let gt = unsafe { out.assume_init_ref() };
+    let gt = pairing_map_into(g1_points, g2_points, &mut out, endianness)?;
 
     if gt.is_identity(endianness) {
         Ok(())
