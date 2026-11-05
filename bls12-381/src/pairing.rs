@@ -52,6 +52,7 @@ impl GtElement {
     /// calls the memory comparison syscall directly to avoid an intermediate
     /// `memcmp` function call. No curve operation or point validation is needed.
     #[inline]
+    #[must_use]
     pub fn is_identity(&self, endianness: Endianness) -> bool {
         let identity = match endianness {
             Endianness::Little => &GT_IDENTITY_LE,

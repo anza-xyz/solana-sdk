@@ -140,6 +140,7 @@ impl G2Point {
     /// test tripled what the comparison itself costs — against ~20 CU total
     /// for the whole array here.
     #[inline]
+    #[must_use]
     pub fn is_infinity(&self, endianness: Endianness) -> bool {
         match endianness {
             Endianness::Big => self.0 == G2_INFINITY_BE.0,
@@ -189,6 +190,7 @@ impl G2Point {
     /// Returns the initialized `out` on success. On `None`, `out` is poisoned.
     /// See [Output buffer contract](crate#output-buffer-contract).
     #[inline]
+    #[must_use]
     pub fn neg_into_unchecked<'o>(
         &self,
         out: &'o mut MaybeUninit<Self>,
@@ -213,6 +215,7 @@ impl G2Point {
     /// Returns the initialized `out` on success. On `None`, `out` is poisoned.
     /// See [Output buffer contract](crate#output-buffer-contract).
     #[inline]
+    #[must_use]
     pub fn neg_into<'o>(
         &self,
         out: &'o mut MaybeUninit<Self>,
@@ -246,6 +249,7 @@ impl G2Point {
     /// Returns the initialized `out` on success. On `None`, `out` is poisoned.
     /// See [Output buffer contract](crate#output-buffer-contract).
     #[inline]
+    #[must_use]
     pub fn add_into_unchecked<'o>(
         &self,
         other: &Self,
@@ -319,6 +323,7 @@ impl G2Point {
     /// Returns the initialized `out` on success. On `None`, `out` is poisoned.
     /// See [Output buffer contract](crate#output-buffer-contract).
     #[inline]
+    #[must_use]
     pub fn add_into<'o>(
         &self,
         other: &Self,
@@ -350,6 +355,7 @@ impl G2Point {
     /// Returns the initialized `out` on success. On `None`, `out` is poisoned.
     /// See [Output buffer contract](crate#output-buffer-contract).
     #[inline]
+    #[must_use]
     pub fn sub_into_unchecked<'o>(
         &self,
         other: &Self,
@@ -423,6 +429,7 @@ impl G2Point {
     /// Returns the initialized `out` on success. On `None`, `out` is poisoned.
     /// See [Output buffer contract](crate#output-buffer-contract).
     #[inline]
+    #[must_use]
     pub fn sub_into<'o>(
         &self,
         other: &Self,
@@ -456,6 +463,7 @@ impl G2Point {
     /// Returns the initialized `out` on success. On `None`, `out` is poisoned.
     /// See [Output buffer contract](crate#output-buffer-contract).
     #[inline]
+    #[must_use]
     pub fn mul_into<'o>(
         &self,
         scalar: &Scalar,
@@ -530,6 +538,7 @@ impl G2Point {
     /// The subgroup check dominates the cost. See the README for when to hoist
     /// this out of a loop.
     #[inline]
+    #[must_use]
     pub fn validate(&self, endianness: Endianness) -> bool {
         #[cfg(any(target_os = "solana", target_arch = "bpf"))]
         {
@@ -589,6 +598,7 @@ impl G2Compressed {
     ///
     /// Not `const fn`; see [`G2Point::is_infinity`].
     #[inline]
+    #[must_use]
     pub fn is_infinity(&self, endianness: Endianness) -> bool {
         match endianness {
             Endianness::Big => self.0 == G2_COMPRESSED_INFINITY_BE.0,
@@ -634,6 +644,7 @@ impl G2Compressed {
     /// Callers that intend to decompress should do so and match on `None`
     /// rather than pay for both.
     #[inline]
+    #[must_use]
     pub fn validate(&self, endianness: Endianness) -> bool {
         let mut out = MaybeUninit::uninit();
         self.decompress_into(&mut out, endianness).is_some()
@@ -645,6 +656,7 @@ impl G2Compressed {
     /// Returns the initialized `out` on success. On `None`, `out` is poisoned.
     /// See [Output buffer contract](crate#output-buffer-contract).
     #[inline]
+    #[must_use]
     pub fn decompress_into<'o>(
         &self,
         out: &'o mut MaybeUninit<G2Point>,

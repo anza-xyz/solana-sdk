@@ -121,6 +121,7 @@ impl Scalar {
     /// Not `const fn`: array equality is not const-callable. The byte loop it
     /// replaces was const, but cost ~72 CU against ~13 CU here.
     #[inline]
+    #[must_use]
     pub fn is_zero(&self) -> bool {
         self.0 == [0u8; SCALAR_SIZE]
     }

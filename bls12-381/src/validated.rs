@@ -161,6 +161,7 @@ macro_rules! validated_group {
 
             /// Returns whether the point is infinity.
             #[inline]
+            #[must_use]
             pub fn is_infinity(self) -> bool {
                 self.point.is_infinity(E::ENDIANNESS)
             }
