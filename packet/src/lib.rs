@@ -1,6 +1,8 @@
 //! The definition of a Solana network packet.
 #![cfg_attr(feature = "frozen-abi", feature(min_specialization))]
 #![cfg_attr(docsrs, feature(doc_cfg))]
+// Packet, Meta, PacketFlags and Encode are deprecated but still reference each other.
+#![allow(deprecated)]
 
 #[cfg(feature = "stable-abi")]
 use solana_frozen_abi_macro::{frozen_abi, AbiExample, StableAbi, StableAbiSample};
@@ -65,6 +67,10 @@ pub const PACKET_DATA_WINCODE_CONFIG: PacketDataWincodeConfig =
     wincode::config::Configuration::default().with_deserialization_size_limit::<PACKET_DATA_SIZE>();
 
 #[cfg(feature = "bincode")]
+#[deprecated(
+    since = "4.5.0",
+    note = "Only used by the deprecated `Packet` type; serialize with bincode or wincode directly"
+)]
 pub trait Encode {
     fn encode<W: Write>(&self, writer: W) -> Result<()>;
 }
@@ -77,6 +83,10 @@ impl<T: ?Sized + serde::Serialize> Encode for T {
 }
 
 bitflags! {
+    #[deprecated(
+        since = "4.5.0",
+        note = "Moved into Agave as `solana_perf::packet::PacketFlags`; will be removed from this crate"
+    )]
     #[repr(C)]
     #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
     #[derive(Copy, Clone, Debug, PartialEq, Eq)]
@@ -101,6 +111,10 @@ bitflags! {
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[derive(Clone, Debug, PartialEq, Eq)]
 #[repr(C)]
+#[deprecated(
+    since = "4.5.0",
+    note = "Moved into Agave as `solana_perf::packet::Meta`; will be removed from this crate"
+)]
 pub struct Meta {
     pub size: usize,
     pub addr: IpAddr,
@@ -233,6 +247,10 @@ unsafe impl<'de, const N: usize, C: ConfigCore> SchemaRead<'de, C> for LenPrefix
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[derive(Clone, Eq)]
 #[repr(C)]
+#[deprecated(
+    since = "4.5.0",
+    note = "Superseded by `solana_perf::packet::BytesPacket` in Agave; will be removed from this crate"
+)]
 pub struct Packet {
     // Bytes past Packet.meta.size are not valid to read from.
     // Use Packet.data(index) to read from the buffer.
