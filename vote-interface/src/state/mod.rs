@@ -14,6 +14,7 @@ use {
 };
 
 pub mod vote_state_1_14_11;
+pub mod vote_state_v5;
 pub use vote_state_1_14_11::*;
 pub mod vote_state_versions;
 pub use vote_state_versions::*;
