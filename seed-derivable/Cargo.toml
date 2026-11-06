@@ -16,6 +16,7 @@ rustdoc-args = ["--cfg=docsrs"]
 
 [dependencies]
 solana-derivation-path = { workspace = true }
+solana-seed-phrase = { workspace = true }
 
 [lints]
 workspace = true

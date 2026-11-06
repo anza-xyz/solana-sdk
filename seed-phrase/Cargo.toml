@@ -18,6 +18,10 @@ rustdoc-args = ["--cfg=docsrs"]
 hmac = { workspace = true }
 pbkdf2 = { workspace = true }
 sha2 = { workspace = true }
+unicode-normalization = { workspace = true }
+
+[dev-dependencies]
+hex = { workspace = true }
 
 [lints]
 workspace = true

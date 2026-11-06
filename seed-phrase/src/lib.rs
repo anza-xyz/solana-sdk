@@ -1,6 +1,6 @@
 //! Functions for generating keypairs from seed phrases.
 #![cfg_attr(docsrs, feature(doc_cfg))]
-use hmac::Hmac;
+use {hmac::Hmac, unicode_normalization::UnicodeNormalization};
 
 /// Derives a 64-byte seed from the raw UTF-8 mnemonic and passphrase.
 ///
@@ -25,4 +25,20 @@ pub fn generate_seed_from_seed_phrase_and_passphrase(
         &mut seed,
     );
     seed
+}
+
+/// Derives a 64-byte seed after Unicode NFKD normalization of both inputs.
+///
+/// This does not validate the mnemonic's words or checksum.
+/// This can produce a different seed from the legacy
+/// [`generate_seed_from_seed_phrase_and_passphrase`] for non-NFKD inputs.
+///
+/// After normalization, mnemonic words must be separated by single spaces, with
+/// no leading or trailing whitespace, to match other BIP-39 implementations.
+/// This function does not trim or collapse whitespace; extra whitespace changes
+/// the seed.
+pub fn generate_seed_with_unicode_normalization(seed_phrase: &str, passphrase: &str) -> Vec<u8> {
+    let seed_phrase = seed_phrase.nfkd().collect::<String>();
+    let passphrase = passphrase.nfkd().collect::<String>();
+    generate_seed_from_seed_phrase_and_passphrase(&seed_phrase, &passphrase)
 }

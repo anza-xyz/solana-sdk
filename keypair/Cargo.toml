@@ -33,6 +33,7 @@ zeroize = { workspace = true }
 
 [dev-dependencies]
 serde_json = { workspace = true }
+solana-keypair = { path = ".", features = ["seed-derivable"] }
 static_assertions = { workspace = true }
 tiny-bip39 = { workspace = true }
 
