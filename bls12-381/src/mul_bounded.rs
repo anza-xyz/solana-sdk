@@ -94,46 +94,36 @@ macro_rules! impl_mul_bounded {
                 let mut a = MaybeUninit::<Self>::uninit();
                 let mut b = MaybeUninit::<Self>::uninit();
                 // Borrow the input for the first doubling instead of copying it.
-                if !self.add_assign_unchecked(self, &mut a, endianness) {
-                    return None;
-                }
+                self.add_into_unchecked(self, &mut a, endianness)?;
                 let (mut current, mut scratch) = (&mut a, &mut b);
                 // The first doubling is done, so continue from the highest bit
                 // of `mask`, which is the bit below the leading one of `value`.
                 let mut bit = mask ^ (mask >> 1);
                 if value & bit != 0 {
-                    // SAFETY: `add_assign_unchecked` returned `true`, so
-                    // `current` is fully initialized.
-                    if !unsafe { current.assume_init_ref() }
-                        .add_assign_unchecked(self, scratch, endianness)
-                    {
-                        return None;
-                    }
+                    // SAFETY: `add_into_unchecked` succeeded, so `current` is
+                    // fully initialized.
+                    unsafe { current.assume_init_ref() }
+                        .add_into_unchecked(self, scratch, endianness)?;
                     core::mem::swap(&mut current, &mut scratch);
                 }
                 bit >>= 1;
                 while bit != 0 {
-                    // SAFETY: `add_assign_unchecked` returned `true`, so
-                    // `current` is fully initialized.
+                    // SAFETY: `add_into_unchecked` succeeded, so `current` is
+                    // fully initialized.
                     let acc = unsafe { current.assume_init_ref() };
-                    if !acc.add_assign_unchecked(acc, scratch, endianness) {
-                        return None;
-                    }
+                    acc.add_into_unchecked(acc, scratch, endianness)?;
                     core::mem::swap(&mut current, &mut scratch);
                     if value & bit != 0 {
-                        // SAFETY: `add_assign_unchecked` returned `true`, so
-                        // `current` is fully initialized after the swap.
-                        if !unsafe { current.assume_init_ref() }
-                            .add_assign_unchecked(self, scratch, endianness)
-                        {
-                            return None;
-                        }
+                        // SAFETY: `add_into_unchecked` succeeded, so `current`
+                        // is fully initialized after the swap.
+                        unsafe { current.assume_init_ref() }
+                            .add_into_unchecked(self, scratch, endianness)?;
                         core::mem::swap(&mut current, &mut scratch);
                     }
                     bit >>= 1;
                 }
-                // SAFETY: `add_assign_unchecked` returned `true` before
-                // each swap, so `current` is fully initialized.
+                // SAFETY: `add_into_unchecked` succeeded before each swap, so
+                // `current` is fully initialized.
                 Some(unsafe { *current.assume_init_ref() })
             }
         }

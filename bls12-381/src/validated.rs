@@ -132,26 +132,11 @@ macro_rules! validated_group {
                     let Some(p) = points.next() else {
                         return Some(Self::from_valid(*acc));
                     };
-                    if !acc.add_assign_unchecked(p.as_point(), &mut a, E::ENDIANNESS) {
-                        return None;
-                    }
+                    let sum = acc.add_into_unchecked(p.as_point(), &mut a, E::ENDIANNESS)?;
                     let Some(q) = points.next() else {
-                        // SAFETY: `add_assign_unchecked` returned `true`, so
-                        // `a` is fully initialized.
-                        return Some(Self::from_valid(unsafe { a.assume_init() }));
+                        return Some(Self::from_valid(*sum));
                     };
-                    // SAFETY: `add_assign_unchecked` returned `true`, so
-                    // `a` is fully initialized.
-                    if !unsafe { a.assume_init_ref() }.add_assign_unchecked(
-                        q.as_point(),
-                        &mut b,
-                        E::ENDIANNESS,
-                    ) {
-                        return None;
-                    }
-                    // SAFETY: `add_assign_unchecked` returned `true`, so
-                    // `b` is fully initialized.
-                    acc = unsafe { b.assume_init_ref() };
+                    acc = sum.add_into_unchecked(q.as_point(), &mut b, E::ENDIANNESS)?;
                 }
             }
         }
@@ -176,6 +161,7 @@ macro_rules! validated_group {
 
             /// Returns whether the point is infinity.
             #[inline]
+            #[must_use]
             pub fn is_infinity(self) -> bool {
                 self.point.is_infinity(E::ENDIANNESS)
             }

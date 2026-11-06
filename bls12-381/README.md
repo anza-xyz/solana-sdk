@@ -13,9 +13,9 @@ and zero-knowledge proof (e.g. Groth16) validation.
   `#[repr(transparent)]` and implement `bytemuck::Pod`, so instruction data can
   be cast directly into curve points without allocation.
 - **In-place operations.** Raw point addition, subtraction, negation, native
-  multiplication, and decompression have `_assign` variants that write into a
-  caller-supplied `MaybeUninit` buffer, saving ~37 CU per call and keeping
-  large results off the 4KB stack.
+  multiplication, and decompression have `_into` variants that write into a
+  caller-supplied `MaybeUninit` buffer and return a reference to the result,
+  saving ~35 CU per call and keeping large results off the 4KB stack.
 - **Validated and unchecked APIs.** Group operations validate their operands by
   default; `_unchecked` variants skip the subgroup check for cheaper
   accumulation.
@@ -89,7 +89,7 @@ fn add_repeated(p: &G1Point, q: &G1Point, count: usize) -> Option<ValidG1<Little
 
 This reuses the helper's output buffers and returns one owned result, avoiding
 the intermediate owned results of an `add` loop. The corresponding G2 types
-provide the same API. For direct control over output buffers, the raw `_assign`
+provide the same API. For direct control over output buffers, the raw `_into`
 operations below remain available.
 
 ### Zero-copy point addition
@@ -106,25 +106,27 @@ let p2: &G1Point = bytemuck::cast_ref(raw_bytes_2);
 // to be initialized.
 let mut out = MaybeUninit::uninit();
 
-let success = p1.add_assign(p2, &mut out, Endianness::Little);
-assert!(success);
-
-// SAFETY: `add_assign` returned `true`, so `out` is fully initialized.
-let sum = unsafe { out.assume_init() };
+// On success, `sum` borrows `out`, which is now fully initialized.
+let sum: &mut G1Point = p1
+    .add_into(p2, &mut out, Endianness::Little)
+    .ok_or(ProgramError::InvalidArgument)?;
 ```
 
 ### Output buffer contract
 
-Every `_assign` method follows the same contract:
+Every `_into` method follows the same contract:
 
-- On `true`, the output buffer is fully initialized and may be `assume_init`ed.
-- On `false`, it must be treated as uninitialized and must not be read, **even
-  if it held a valid value before the call**. A failed operation may write part
+- On success, it returns a reference to the output buffer, which is now fully
+  initialized. Reading the result through that reference needs no `unsafe`.
+- On failure (`None`, or `Err` for the pairing forms), the buffer must be
+  treated as uninitialized and must not be read, **even if it held a valid
+  value before the call**. A failed operation may write part
   of the buffer before detecting the error, so any prior contents are no longer
   guaranteed to be valid.
 
-Permitting `assume_init` on `true` requires that the syscall wrote every byte of
-the buffer, since reading an uninitialized byte is undefined behavior.
+Returning an initialized reference on success requires that the syscall wrote
+every byte of the buffer, since reading an uninitialized byte is undefined
+behavior.
 SIMD-0388 does not state this. The guarantee instead follows from consensus: the
 result buffer is observable to the program — its contents can be logged,
 returned, or fed into a later syscall — so an implementation that left a byte
@@ -135,9 +137,11 @@ Nothing constrains what a _failing_ syscall leaves in the buffer, hence the
 poisoning rule above rather than a guarantee that the buffer is left untouched.
 
 To reuse buffers across a loop, keep two `MaybeUninit` buffers, point a pair of
-references at them, and swap the *references* each iteration. The following loop
-assumes every input has already passed subgroup validation. For untrusted
-inputs, the validated slice API above performs those checks.
+references at them, and swap the *references* each iteration. The reference an
+`_into` call returns borrows the buffer it wrote, so it cannot outlive the swap,
+and the loop reads the accumulator through `assume_init_ref` instead. The
+following loop assumes every input has already passed subgroup validation. For
+untrusted inputs, the validated slice API above performs those checks.
 
 ```rust
 use solana_bls12_381::{G1Point, Endianness};
@@ -157,9 +161,8 @@ for p in points {
     let lhs = unsafe { acc.assume_init_ref() };
     // The early return is load-bearing: on failure `scratch` is poisoned and
     // must not become the accumulator or be read afterwards.
-    if !lhs.add_assign_unchecked(p, &mut *scratch, e) {
-        return Err(ProgramError::InvalidArgument);
-    }
+    lhs.add_into_unchecked(p, &mut *scratch, e)
+        .ok_or(ProgramError::InvalidArgument)?;
     // Swaps two pointers, not two points.
     core::mem::swap(&mut acc, &mut scratch);
 }
@@ -175,7 +178,7 @@ iteration. Over an eight-point sum that is 1,546 CU against 1,112 for the
 version above: 434 CU, 28% of the accumulation, for a change that is otherwise
 invisible.
 
-Seeding from `points[0]` instead of infinity would save one addition (~144 CU),
+Seeding from `points[0]` instead of infinity would save one addition (~147 CU),
 but it panics on an empty slice, and a panic aborts the transaction. If the
 points come from instruction data, reject the empty case explicitly with
 `split_first` before taking that saving.
@@ -189,21 +192,21 @@ let g1_points: &[G1Point] = get_g1_batch();
 let g2_points: &[G2Point] = get_g2_batch();
 
 // Evaluates e(P_1, Q_1) * ... * e(P_n, Q_n) == 1
-if pairing_check(g1_points, g2_points, Endianness::Big) != Ok(true) {
-    return Err(ProgramError::InvalidArgument);
-}
+pairing_check(g1_points, g2_points, Endianness::Big)
+    .map_err(|_| ProgramError::InvalidArgument)?;
 ```
 
-`pairing_check` returns `Err` when the check could not be run at all —
-mismatched or over-long batches, an empty batch, or an invalid point. `Err` is
-not the same as "verification failed", but both must be treated as failure.
-Compare against `Ok(true)` as above; never branch on `.is_ok()`.
+`pairing_check` returns `Ok(())` only when the product is the identity. A
+product that is not the identity is `Err(Bls12381Error::VerificationFailed)`.
+The other variants mean the check could not run at all: mismatched or
+over-long batches, an empty batch, or an invalid point. Every `Err` is a failed
+verification, so `?` and `.is_ok()` both handle the result correctly.
 
 `pairing_check` rejects an empty batch, while `pairing_map` returns the identity
 for one as the syscall requires. The divergence is deliberate: `pairing_check` is
 a verification primitive whose inputs are typically built from
 attacker-controlled instruction data, and a zero-length batch that reported
-`Ok(true)` would be a verification bypass. For the empty product, call
+`Ok(())` would be a verification bypass. For the empty product, call
 `pairing_map` and compare against `GtElement::identity`.
 
 ### Compute unit costs
@@ -215,15 +218,15 @@ the raw syscall wrappers; their overhead depends on how a result is returned:
 | Wrapper                                                                                   | Added CU |
 | ----------------------------------------------------------------------------------------- | -------- |
 | `validate` — returns `bool`                                                               | 11       |
-| `_assign` forms — write into a caller's `MaybeUninit`                                     | 13–17    |
-| `pairing_map_assign`                                                                      | 16       |
-| `pairing_check` — includes the `is_identity` comparison                                   | 69       |
-| Allocating forms — `add_unchecked`, `sub_unchecked`, `neg_unchecked`, `mul`, `decompress` | 51–54    |
+| `_into` forms — write into a caller's `MaybeUninit`                                       | 13–20    |
+| `pairing_map_into`                                                                        | 16       |
+| `pairing_check`, two or more pairs — includes the `is_identity` comparison                | 63       |
+| Allocating forms — `add_unchecked`, `sub_unchecked`, `neg_unchecked`, `mul`, `decompress` | 50–54    |
 
 The allocating figure is dominated by the `Option<Self>` construction rather
 than the byte copy: it is roughly the same whether the output is a 96-byte G1
-point or a 576-byte `Gt` element. Choosing an `_assign` form over its
-allocating counterpart therefore saves ~37 CU per operation, whatever the type
+point or a 576-byte `Gt` element. Choosing an `_into` form over its
+allocating counterpart therefore saves ~35 CU per operation, whatever the type
 — the difference between the last two rows.
 
 Purely local operations issue no syscall, so these figures are the whole cost:
@@ -234,7 +237,7 @@ Purely local operations issue no syscall, so these figures are the whole cost:
 | Copy — `from_bytes`                                                   | 18 |
 | `Scalar::is_zero`                                                     | 13 |
 | `is_infinity` — G1 / G2                                               | 29 / 28 |
-| `GtElement::is_identity`                                              | 28 |
+| `GtElement::is_identity`                                              | 21 |
 
 Array equality lowers to the `sol_memcmp_` syscall, whose charge does not depend
 on the length. That is why comparing a 576-byte `Gt` element costs the same as
@@ -247,17 +250,20 @@ overhead — of the operations most likely to dominate an instruction:
 | Operation                                                    | CU                                  |
 | ------------------------------------------------------------ | ----------------------------------- |
 | `validate` — G1 / G2                                         | 1,576 / 1,977                       |
-| `add_assign_unchecked` — G1 / G2                             | 144 / 219                           |
-| `add_unchecked` (allocating) — G1                            | 180                                 |
-| `add_assign` (validated) — G1                                | 3,300                               |
-| `neg_assign_unchecked` — G1                                  | 143                                 |
-| `mul_assign` — G1                                            | 4,642                               |
-| `decompress_assign` — G1 / G2                                | 2,114 / 3,063                       |
-| `pairing_check` — 1 / 2 / 3 / 8 pairs                        | 25,514 / 38,536 / 51,559 / 116,675  |
+| `add_into_unchecked` — G1 / G2                               | 147 / 222                           |
+| `add_unchecked` (allocating) — G1                            | 179                                 |
+| `add_into` (validated) — G1                                  | 3,306                               |
+| `neg_into_unchecked` — G1                                    | 143                                 |
+| `mul_into` — G1                                              | 4,642                               |
+| `decompress_into` — G1 / G2                                  | 2,114 / 3,063                       |
+| `pairing_check` — 1 / 2 / 3 / 8 pairs                        | 3,631 / 38,531 / 51,554 / 116,670   |
 | Sum of 8 untrusted G1 points, validated once, in place       | 13,712                              |
 | Sum of 8 untrusted G2 points, validated once, in place       | 17,565                              |
 
-The two sums use the loop documented above, infinity seed included. Figures
+The two sums use the loop documented above, infinity seed included. A
+single-pair `pairing_check` makes no pairing syscall: for valid points, a single
+pairing is the identity exactly when either point is infinity, so it costs two
+validations and two local comparisons. Figures
 reproduce to within ~2 CU: adding or removing code elsewhere in a program
 perturbs codegen by about that much, so treat differences under ~5 CU as noise.
 
@@ -272,23 +278,24 @@ of the instruction, and even an eight-pair batch leaves ~83,000.
 multiplication and pairing syscalls run the full field, curve-equation and
 subgroup check on every input themselves, so a `validate` beforehand buys
 nothing and costs 1,576 CU per G1 point and 1,977 per G2 point. Validating a
-point before `mul_assign` measures 6,219 CU against 4,642 for the multiplication
+point before `mul_into` measures 6,219 CU against 4,642 for the multiplication
 alone; validating two G1 and two G2 points before a two-pair `pairing_check`
-measures 45,643 against 38,536. `add_assign_unchecked` and
-`sub_assign_unchecked` are the exception — those check the field and the curve
+measures 45,638 against 38,531. `add_into_unchecked` and
+`sub_into_unchecked` are the exception: those check the field and the curve
 equation but skip the subgroup check, which is exactly what `validate` adds.
 
 **Batch your pairings.** Only the first pair in a batch is charged at
 `bls12_381_one_pair_cost`; every additional pair is charged at
 `bls12_381_additional_pair_cost`, roughly half as much. A three-pair check
-issued as one batch measures 51,559 CU against 76,539 as three separate calls —
-24,980 CU saved.
+issued as one batch measures 51,554 CU. Three separate pairing syscalls would
+be charged 76,335 CU before any wrapper overhead, and there is no syscall to
+multiply their results back together.
 
 **Validate at the trust boundary, not in the loop.** The validation syscall is
 charged at roughly twelve times the addition syscall it guards. Summing eight
-points with `add_assign` re-validates the accumulator every iteration: 26,322 CU
+points with `add_into` re-validates the accumulator every iteration: 26,322 CU
 against 13,712 for validating the eight inputs once and accumulating with
-`add_assign_unchecked` — 48% of the total. The fraction grows with batch size.
+`add_into_unchecked`, a saving of 48%. The fraction grows with batch size.
 
 **Swap the references, not the buffers.** `core::mem::swap` on two
 `MaybeUninit<G1Point>`s is three `sol_memcpy_` syscalls; on two `&mut` to them
@@ -296,7 +303,7 @@ it is two register moves. Over an eight-point sum the by-value loop measures
 1,546 CU against 1,112 for the by-reference loop shown above — 434 CU, 28% of
 the accumulation.
 
-**Prefer the `_assign` forms in loops.** Each call avoids the ~37 CU the
+**Prefer the `_into` forms in loops.** Each call avoids the ~35 CU the
 allocating form spends constructing its `Option<Self>`. When using validated
 points, pass the full accumulation to `sum_validated` to avoid an owned result
 after every addition.
@@ -314,8 +321,8 @@ the same eight compressed cost 17,975. That is 4,263 CU for 384 bytes of
 instruction data.
 
 **Put the many-element side of the protocol in G1.** Every G1 operation is
-cheaper than its G2 counterpart: 1,576 against 1,977 to validate, 144 against
-219 to add, 2,114 against 3,063 to decompress. Aggregating eight points costs
+cheaper than its G2 counterpart: 1,576 against 1,977 to validate, 147 against
+222 to add, 2,114 against 3,063 to decompress. Aggregating eight points costs
 13,712 CU in G1 and 17,565 in G2.
 
 **Endianness is free.** The runtime charges the same for the `_LE` and `_BE`
@@ -340,10 +347,10 @@ More precisely, of the checks `validate` performs:
 | Operation                                | Field | Curve equation | Subgroup |
 | ---------------------------------------- | ----- | -------------- | -------- |
 | `validate`                               | yes   | yes            | yes      |
-| `add_assign_unchecked`, `sub_*_unchecked`| yes   | yes            | no       |
-| `mul_assign`                             | yes   | yes            | yes      |
-| `decompress_assign`                      | yes   | yes            | yes      |
-| `pairing_map_assign`, `pairing_check`    | yes   | yes            | yes      |
+| `add_into_unchecked`, `sub_*_unchecked`  | yes   | yes            | no       |
+| `mul_into`                               | yes   | yes            | yes      |
+| `decompress_into`                        | yes   | yes            | yes      |
+| `pairing_map_into`, `pairing_check`      | yes   | yes            | yes      |
 
 So the only thing `validate` adds over an `_unchecked` group operation is the
 subgroup check — and that is the expensive part.
@@ -351,11 +358,11 @@ subgroup check — and that is the expensive part.
 The subgroup check dominates the cost: the validation syscall is charged at
 roughly twelve times the addition syscall it guards. Since the subgroup is closed under
 addition, an accumulator built from validated points remains valid: validate at
-the trust boundary and accumulate with `add_assign_unchecked`.
+the trust boundary and accumulate with `add_into_unchecked`.
 
 ### Aliasing
 
 SIMD-0388 does not specify whether the result pointer of a syscall may alias an
-input pointer. This crate is unaffected either way: every `_assign` method takes
+input pointer. This crate is unaffected either way: every `_into` method takes
 `&self` alongside `&mut MaybeUninit<Self>`, so an aliasing call cannot be
 expressed in safe Rust.
