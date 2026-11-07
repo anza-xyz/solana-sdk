@@ -78,7 +78,7 @@ solana-keypair = { workspace = true, optional = true, features = ["seed-derivabl
 solana-message = { workspace = true, features = ["serde"] }
 solana-offchain-message = { workspace = true, optional = true, features = ["verify"] }
 solana-presigner = { workspace = true, optional = true }
-solana-program = { workspace = true }
+solana-program = { workspace = true, features = ["bincode"] }
 solana-program-memory = { workspace = true }
 solana-pubkey = { workspace = true, default-features = false, features = ["std"] }
 solana-sanitize = { workspace = true }

@@ -21,7 +21,8 @@ rustdoc-args = ["--cfg=docsrs"]
 crate-type = ["rlib"]
 
 [features]
-default = ["borsh"]
+default = ["bincode", "borsh"]
+bincode = ["solana-account-info/bincode", "solana-instruction/bincode"]
 borsh = [
     "dep:solana-borsh",
     "solana-hash/borsh",
@@ -75,7 +76,7 @@ wincode = [
 ]
 
 [dependencies]
-solana-account-info = { workspace = true, features = ["bincode"] }
+solana-account-info = { workspace = true }
 solana-big-mod-exp = { workspace = true }
 solana-blake3-hasher = { workspace = true, features = ["blake3"] }
 solana-borsh = { workspace = true, optional = true }
@@ -88,7 +89,7 @@ solana-fee-calculator = { workspace = true, features = ["serde"] }
 solana-frozen-abi = { workspace = true, optional = true }
 solana-frozen-abi-macro = { workspace = true, optional = true }
 solana-hash = { workspace = true, features = ["bytemuck", "serde", "std"] }
-solana-instruction = { workspace = true, default-features = false, features = ["bincode", "serde", "std", "syscalls"] }
+solana-instruction = { workspace = true, default-features = false, features = ["serde", "std", "syscalls"] }
 solana-instruction-error = { workspace = true, features = ["num-traits"] }
 solana-instructions-sysvar = { workspace = true }
 solana-keccak-hasher = { workspace = true, features = ["sha3"] }
