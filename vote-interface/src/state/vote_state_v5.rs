@@ -6,11 +6,11 @@ use {
     std::mem::{offset_of, size_of},
 };
 
-const VOTE_ACCOUNT_V5_DISCRIMINANT: u32 = 4;
-const VOTE_ACCOUNT_V5_SIZE: usize = 3762;
-const MAX_COMMISSION_CHANGES: usize = 4;
-const MAX_AUTHORIZED_VOTERS: usize = 4;
-const MAX_ACCUMULATED_LAMPORTS: usize = 5;
+pub const VOTE_ACCOUNT_V5_DISCRIMINANT: u32 = 4;
+pub const VOTE_ACCOUNT_V5_SIZE: usize = 3762;
+pub const MAX_COMMISSION_CHANGES: usize = 4;
+pub const MAX_AUTHORIZED_VOTERS: usize = 4;
+pub const MAX_ACCUMULATED_LAMPORTS: usize = 5;
 
 #[repr(C)]
 #[derive(Debug, Clone)]
@@ -72,7 +72,7 @@ impl VoteAccountV5 {
     }
 
     pub fn latest_vote(&self) -> Option<Slot> {
-        (self.latest_vote == u64::MAX).then_some(self.latest_vote)
+        (self.latest_vote != u64::MAX).then_some(self.latest_vote)
     }
 
     pub fn set_latest_vote(&mut self, slot: Slot) {
@@ -80,15 +80,15 @@ impl VoteAccountV5 {
     }
 
     pub fn root_slot(&self) -> Option<Slot> {
-        (self.root_slot == u64::MAX).then_some(self.root_slot)
+        (self.root_slot != u64::MAX).then_some(self.root_slot)
     }
 
     pub fn set_root_slot(&mut self, slot: Slot) {
         self.root_slot = slot;
     }
 
-    pub fn inflation_rewards_commission(&self) -> Commission<'_> {
-        Commission {
+    pub fn inflation_rewards_commission(&self) -> CommissionSchedule<'_> {
+        CommissionSchedule {
             epochs: &self.inflation_rewards_commission_bps_epochs
                 [..self.inflation_rewards_commission_bps_len as usize],
             bps: &self.inflation_rewards_commission_bps
@@ -96,8 +96,8 @@ impl VoteAccountV5 {
         }
     }
 
-    pub fn set_inflation_rewards_commission(&mut self, commission: Commission<'_>) {
-        let Commission { epochs, bps } = commission;
+    pub fn set_inflation_rewards_commission(&mut self, commission: CommissionSchedule<'_>) {
+        let CommissionSchedule { epochs, bps } = commission;
         let mut epochs_buffer = [0; MAX_COMMISSION_CHANGES];
         epochs_buffer[..epochs.len()].copy_from_slice(epochs);
         let mut bps_buffer = [0; MAX_COMMISSION_CHANGES];
@@ -107,8 +107,8 @@ impl VoteAccountV5 {
         self.inflation_rewards_commission_bps = bps_buffer;
     }
 
-    pub fn block_revenue_commission(&self) -> Commission<'_> {
-        Commission {
+    pub fn block_revenue_commission(&self) -> CommissionSchedule<'_> {
+        CommissionSchedule {
             epochs: &self.block_revenue_commission_bps_epochs
                 [..self.block_revenue_commission_bps_len as usize],
             bps: &self.block_revenue_commission_bps
@@ -116,8 +116,8 @@ impl VoteAccountV5 {
         }
     }
 
-    pub fn set_block_revenue_commission(&mut self, commission: Commission<'_>) {
-        let Commission { epochs, bps } = commission;
+    pub fn set_block_revenue_commission(&mut self, commission: CommissionSchedule<'_>) {
+        let CommissionSchedule { epochs, bps } = commission;
         let mut epochs_buffer = [0; MAX_COMMISSION_CHANGES];
         epochs_buffer[..epochs.len()].copy_from_slice(epochs);
         let mut bps_buffer = [0; MAX_COMMISSION_CHANGES];
@@ -155,7 +155,7 @@ impl VoteAccountV5 {
     fn commission_is_valid(len: u32, epochs: &[u64], bps: &[u16]) -> bool {
         let len = len as usize;
         len <= MAX_COMMISSION_CHANGES
-            && Commission::is_valid(&epochs[..len], &bps[..len])
+            && CommissionSchedule::is_valid(&epochs[..len], &bps[..len])
             && is_zero(&epochs[len..])
             && is_zero(&bps[len..])
     }
@@ -223,12 +223,12 @@ fn is_zero<T: Pod>(items: &[T]) -> bool {
     bytemuck::cast_slice::<T, u8>(items).iter().all(|&b| b == 0)
 }
 
-pub struct Commission<'a> {
+pub struct CommissionSchedule<'a> {
     epochs: &'a [Epoch],
     bps: &'a [u16],
 }
 
-impl<'a> Commission<'a> {
+impl<'a> CommissionSchedule<'a> {
     pub fn try_new(epochs: &'a [Epoch], bps: &'a [u16]) -> Option<Self> {
         Self::is_valid(epochs, bps).then_some(Self { epochs, bps })
     }
@@ -446,12 +446,12 @@ mod tests {
 
     #[test]
     fn commission_constructor_validates_slice_lengths() {
-        assert!(Commission::try_new(&[], &[]).is_none());
-        assert!(Commission::try_new(&[1], &[]).is_none());
-        assert!(Commission::try_new(&[], &[1]).is_none());
-        assert!(Commission::try_new(&[1, 2], &[3]).is_none());
-        assert!(Commission::try_new(&[1], &[2, 3]).is_none());
-        assert!(Commission::try_new(
+        assert!(CommissionSchedule::try_new(&[], &[]).is_none());
+        assert!(CommissionSchedule::try_new(&[1], &[]).is_none());
+        assert!(CommissionSchedule::try_new(&[], &[1]).is_none());
+        assert!(CommissionSchedule::try_new(&[1, 2], &[3]).is_none());
+        assert!(CommissionSchedule::try_new(&[1], &[2, 3]).is_none());
+        assert!(CommissionSchedule::try_new(
             &[1; MAX_COMMISSION_CHANGES + 1],
             &[2; MAX_COMMISSION_CHANGES + 1],
         )
@@ -459,11 +459,11 @@ mod tests {
         let epochs = [5, 12, 20, 30];
         let bps = [1, 2, 3, 4];
         for len in 1..=MAX_COMMISSION_CHANGES {
-            let commission = Commission::try_new(&epochs[..len], &bps[..len]).unwrap();
+            let commission = CommissionSchedule::try_new(&epochs[..len], &bps[..len]).unwrap();
             assert_eq!(commission.len(), len as u32);
             assert_eq!(commission.epochs(), &epochs[..len]);
             assert_eq!(commission.bps(), &bps[..len]);
-            assert!(Commission::try_new(
+            assert!(CommissionSchedule::try_new(
                 &[0; MAX_COMMISSION_CHANGES][..len],
                 &[0; MAX_COMMISSION_CHANGES][..len]
             )
@@ -484,7 +484,7 @@ mod tests {
             let previous_epochs = block_revenue.epochs().to_vec();
             let previous_bps = block_revenue.bps().to_vec();
             s.set_inflation_rewards_commission(
-                Commission::try_new(&epochs[..len], &bps[..len]).unwrap(),
+                CommissionSchedule::try_new(&epochs[..len], &bps[..len]).unwrap(),
             );
             let s = VoteAccountV5::try_new(buf).unwrap();
             let inflation = s.inflation_rewards_commission();
@@ -500,7 +500,7 @@ mod tests {
             VoteAccountV5::try_new_mut(buf)
                 .unwrap()
                 .set_block_revenue_commission(
-                    Commission::try_new(&epochs[..len], &block_bps[..len]).unwrap(),
+                    CommissionSchedule::try_new(&epochs[..len], &block_bps[..len]).unwrap(),
                 );
             let s = VoteAccountV5::try_new(buf).unwrap();
             let block_revenue = s.block_revenue_commission();
@@ -581,19 +581,21 @@ mod tests {
         let updates: &[fn(&mut VoteAccountV5)] = &[
             |s| {
                 s.set_inflation_rewards_commission(
-                    Commission::try_new(&[5, 12, 20, 30], &[1, 2, 3, 4]).unwrap(),
+                    CommissionSchedule::try_new(&[5, 12, 20, 30], &[1, 2, 3, 4]).unwrap(),
                 );
             },
             |s| {
-                s.set_inflation_rewards_commission(Commission::try_new(&[5, 12], &[1, 2]).unwrap());
+                s.set_inflation_rewards_commission(
+                    CommissionSchedule::try_new(&[5, 12], &[1, 2]).unwrap(),
+                );
             },
             |s| {
                 s.set_block_revenue_commission(
-                    Commission::try_new(&[5, 12, 20, 30], &[1, 2, 3, 4]).unwrap(),
+                    CommissionSchedule::try_new(&[5, 12, 20, 30], &[1, 2, 3, 4]).unwrap(),
                 );
             },
             |s| {
-                s.set_block_revenue_commission(Commission::try_new(&[5], &[1]).unwrap());
+                s.set_block_revenue_commission(CommissionSchedule::try_new(&[5], &[1]).unwrap());
             },
             |s| {
                 s.set_authorized_voters(AuthorizedVoters::try_new(&[]).unwrap());
@@ -639,29 +641,29 @@ mod tests {
         assert!(is_zero(&s.accumulated_lamports));
 
         s.set_inflation_rewards_commission(
-            Commission::try_new(&[5, 12, 20, 30], &[1, 2, 3, 4]).unwrap(),
+            CommissionSchedule::try_new(&[5, 12, 20, 30], &[1, 2, 3, 4]).unwrap(),
         );
         let commission = s.inflation_rewards_commission();
         let epochs = commission.epochs().to_vec();
         let mut bps = commission.bps().to_vec();
         bps[commission.len() as usize - 1] = 99;
-        s.set_inflation_rewards_commission(Commission::try_new(&epochs, &bps).unwrap());
+        s.set_inflation_rewards_commission(CommissionSchedule::try_new(&epochs, &bps).unwrap());
         assert_eq!(s.inflation_rewards_commission().bps()[3], 99);
         assert_eq!(&s.inflation_rewards_commission().bps()[..3], &[1, 2, 3]);
-        s.set_inflation_rewards_commission(Commission::try_new(&[40], &[5]).unwrap());
+        s.set_inflation_rewards_commission(CommissionSchedule::try_new(&[40], &[5]).unwrap());
         assert_eq!(s.inflation_rewards_commission().len(), 1);
         assert_eq!(s.inflation_rewards_commission().epochs(), &[40]);
         assert_eq!(s.inflation_rewards_commission().bps(), &[5]);
 
-        s.set_block_revenue_commission(Commission::try_new(&[5, 12], &[6, 7]).unwrap());
+        s.set_block_revenue_commission(CommissionSchedule::try_new(&[5, 12], &[6, 7]).unwrap());
         let commission = s.block_revenue_commission();
         let epochs = commission.epochs().to_vec();
         let mut bps = commission.bps().to_vec();
         bps[commission.len() as usize - 1] = 88;
-        s.set_block_revenue_commission(Commission::try_new(&epochs, &bps).unwrap());
+        s.set_block_revenue_commission(CommissionSchedule::try_new(&epochs, &bps).unwrap());
         assert_eq!(s.block_revenue_commission().bps()[1], 88);
         assert_eq!(s.block_revenue_commission().bps(), &[6, 88]);
-        s.set_block_revenue_commission(Commission::try_new(&[20], &[8]).unwrap());
+        s.set_block_revenue_commission(CommissionSchedule::try_new(&[20], &[8]).unwrap());
         assert_eq!(s.block_revenue_commission().len(), 1);
         assert_eq!(s.block_revenue_commission().epochs(), &[20]);
         assert_eq!(s.block_revenue_commission().bps(), &[8]);
