@@ -1,0 +1,53 @@
+[package]
+name = "solana-vote-keys"
+description = "Solana account addresses types"
+documentation = "https://docs.rs/solana-vote-keys"
+version = "4.4.0"
+rust-version = { workspace = true }
+authors = { workspace = true }
+repository = { workspace = true }
+homepage = { workspace = true }
+license = { workspace = true }
+edition = { workspace = true }
+
+[package.metadata.docs.rs]
+targets = ["x86_64-unknown-linux-gnu"]
+all-features = true
+rustdoc-args = ["--cfg=docsrs"]
+
+[features]
+atomic = ["solana-address/atomic"]
+decode = ["solana-address/decode"]
+dev-context-only-utils = [
+    "dep:arbitrary",
+    "solana-address/dev-context-only-utils",
+]
+frozen-abi = [
+    "solana-address/frozen-abi",
+    "solana-frozen-abi/frozen-abi",
+    "solana-frozen-abi-macro/frozen-abi",
+    "stable-abi",
+]
+stable-abi = [
+    "serde",
+    "std",
+    "wincode",
+    "solana-address/stable-abi",
+    "solana-frozen-abi/stable-abi",
+    "solana-frozen-abi-macro/stable-abi",
+]
+serde = ["dep:serde", "dep:serde_derive", "solana-address/serde"]
+std = ["solana-address/std"]
+wincode = ["dep:wincode", "solana-address/wincode"]
+
+[dependencies]
+arbitrary = { workspace = true, optional = true }
+serde = { workspace = true, optional = true }
+serde_derive = { workspace = true, optional = true }
+solana-address = { workspace = true, features = ["copy"] }
+solana-frozen-abi = { workspace = true, optional = true }
+solana-frozen-abi-macro = { workspace = true, optional = true }
+wincode = { workspace = true, optional = true }
+
+[lints]
+workspace = true
