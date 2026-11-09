@@ -1,9 +1,9 @@
 use {
     core::mem::MaybeUninit,
     solana_bls12_381::{
-        pairing, pairing_assign, pairing_check, pairing_map, Bls12381Error, Endianness,
-        G1Compressed, G1Point, G2Compressed, G2Point, GtElement, Scalar,
-        G1_UNCOMPRESSED_POINT_SIZE, MAX_PAIRING_LENGTH,
+        pairing, pairing_check, pairing_into, pairing_map, Bls12381Error, Endianness, G1Compressed,
+        G1Point, G2Compressed, G2Point, GtElement, Scalar, G1_UNCOMPRESSED_POINT_SIZE,
+        MAX_PAIRING_LENGTH,
     },
 };
 
@@ -68,18 +68,16 @@ fn test_validated_arithmetic_routing() {
     assert!(sum.is_some());
 
     // Test the in-place validated wrapper to save CUs.
-    let mut out = MaybeUninit::uninit();
-    let success = p1.add_assign(&p2, &mut out, Endianness::Little);
-    assert!(success);
-
-    // SAFETY: `add_assign` returned `true`, so `out` is fully initialized.
-    let out = unsafe { out.assume_init() };
+    let mut buffer = MaybeUninit::uninit();
+    let out = p1
+        .add_into(&p2, &mut buffer, Endianness::Little)
+        .expect("in-place add must succeed");
 
     // Verify both methods yielded the exact same underlying bytes.
     assert_eq!(sum.unwrap().to_bytes(), out.to_bytes());
 }
 
-/// The `_assign` contract permits `assume_init` only on a `true` return, which
+/// The `_into` contract returns an initialized reference only on success, which
 /// is sound only if the operation wrote every byte of the buffer. Reading even
 /// one uninitialized byte is undefined behavior, so this is a soundness
 /// property rather than a correctness nicety.
@@ -94,31 +92,47 @@ fn test_success_writes_full_buffer() {
         // Zero is a canonical scalar, so multiplication succeeds.
         let scalar = Scalar([0u8; 32]);
 
-        assert_full_write::<G1Point, _>("g1 add", |out| g1.add_assign(&g1, out, endianness));
-        assert_full_write::<G1Point, _>("g1 add_unchecked", |out| {
-            g1.add_assign_unchecked(&g1, out, endianness)
+        assert_full_write::<G1Point, _>("g1 add", |out| {
+            g1.add_into(&g1, out, endianness).is_some()
         });
-        assert_full_write::<G1Point, _>("g1 sub", |out| g1.sub_assign(&g1, out, endianness));
-        assert_full_write::<G1Point, _>("g1 mul", |out| g1.mul_assign(&scalar, out, endianness));
+        assert_full_write::<G1Point, _>("g1 add_unchecked", |out| {
+            g1.add_into_unchecked(&g1, out, endianness).is_some()
+        });
+        assert_full_write::<G1Point, _>("g1 sub", |out| {
+            g1.sub_into(&g1, out, endianness).is_some()
+        });
+        assert_full_write::<G1Point, _>("g1 mul", |out| {
+            g1.mul_into(&scalar, out, endianness).is_some()
+        });
         assert_full_write::<G1Point, _>("g1 decompress", |out| {
-            G1Compressed::infinity(endianness).decompress_assign(out, endianness)
+            G1Compressed::infinity(endianness)
+                .decompress_into(out, endianness)
+                .is_some()
         });
 
-        assert_full_write::<G2Point, _>("g2 add", |out| g2.add_assign(&g2, out, endianness));
-        assert_full_write::<G2Point, _>("g2 add_unchecked", |out| {
-            g2.add_assign_unchecked(&g2, out, endianness)
+        assert_full_write::<G2Point, _>("g2 add", |out| {
+            g2.add_into(&g2, out, endianness).is_some()
         });
-        assert_full_write::<G2Point, _>("g2 sub", |out| g2.sub_assign(&g2, out, endianness));
-        assert_full_write::<G2Point, _>("g2 mul", |out| g2.mul_assign(&scalar, out, endianness));
+        assert_full_write::<G2Point, _>("g2 add_unchecked", |out| {
+            g2.add_into_unchecked(&g2, out, endianness).is_some()
+        });
+        assert_full_write::<G2Point, _>("g2 sub", |out| {
+            g2.sub_into(&g2, out, endianness).is_some()
+        });
+        assert_full_write::<G2Point, _>("g2 mul", |out| {
+            g2.mul_into(&scalar, out, endianness).is_some()
+        });
         assert_full_write::<G2Point, _>("g2 decompress", |out| {
-            G2Compressed::infinity(endianness).decompress_assign(out, endianness)
+            G2Compressed::infinity(endianness)
+                .decompress_into(out, endianness)
+                .is_some()
         });
 
         // The 576-byte Gt buffer is the one most likely to be partially written
         // by an implementation that assembles the result coefficient by
         // coefficient.
         assert_full_write::<GtElement, _>("pairing", |out| {
-            pairing_assign(&g1, &g2, out, endianness).is_ok()
+            pairing_into(&g1, &g2, out, endianness).is_ok()
         });
     }
 }
@@ -126,21 +140,25 @@ fn test_success_writes_full_buffer() {
 /// On failure the output buffer is poisoned: the contract gives the caller no
 /// way to read it, so there is nothing to assert about its contents here.
 #[test]
-fn test_assign_reports_failure_and_poisons_out() {
+fn test_into_reports_failure_and_poisons_out() {
     let valid = G1Point::infinity(Endianness::Little);
     // An all-ones encoding is not a valid field element.
     let invalid = G1Point::from_bytes([0xFF; G1_UNCOMPRESSED_POINT_SIZE]);
 
     let mut out = MaybeUninit::uninit();
-    assert!(!valid.add_assign(&invalid, &mut out, Endianness::Little));
+    assert!(valid
+        .add_into(&invalid, &mut out, Endianness::Little)
+        .is_none());
     // Deliberately no `assume_init` on `out`.
 
     // The same contract holds when the failure originates in the syscall
-    // rather than in the crate's own `validate` call: `add_assign` rejects
-    // `invalid` before the group op runs, `add_assign_unchecked` carries it
-    // through to the syscall, and both must report `false`.
+    // rather than in the crate's own `validate` call: `add_into` rejects
+    // `invalid` before the group op runs, `add_into_unchecked` carries it
+    // through to the syscall, and both must report `None`.
     let mut out_unchecked = MaybeUninit::uninit();
-    assert!(!valid.add_assign_unchecked(&invalid, &mut out_unchecked, Endianness::Little));
+    assert!(valid
+        .add_into_unchecked(&invalid, &mut out_unchecked, Endianness::Little)
+        .is_none());
 
     // The allocating wrapper surfaces the same failure as `None`.
     assert!(valid.add(&invalid, Endianness::Little).is_none());
@@ -160,13 +178,15 @@ fn test_failure_leaves_buffer_unwritten() {
     let fill = G1Point::from_bytes([0xAB; G1_UNCOMPRESSED_POINT_SIZE]);
     let mut out = MaybeUninit::new(fill);
 
-    // Unchecked deliberately: `add_assign` would reject `invalid` in its own
+    // Unchecked deliberately: `add_into` would reject `invalid` in its own
     // `validate` call and return before the group op ever runs, which would pin
     // an early return in this crate rather than what the syscall does to `out`
     // on failure. The unchecked variant skips only the subgroup check — an
     // all-ones encoding is still not a field element, so the syscall itself
     // fails and the buffer is the syscall's to write or leave alone.
-    assert!(!valid.add_assign_unchecked(&invalid, &mut out, Endianness::Little));
+    assert!(valid
+        .add_into_unchecked(&invalid, &mut out, Endianness::Little)
+        .is_none());
 
     // SAFETY: `out` was initialized by `MaybeUninit::new`. This read is sound
     // regardless of what the syscall did; the assertion is about behavior, not
@@ -183,11 +203,9 @@ fn test_pairing_ergonomics_and_limits() {
     let gt_owned = pairing(&g1, &g2, Endianness::Little).expect("pairing must succeed");
 
     // Test Single Pairing Wrapper (In-Place)
-    let mut gt_out = MaybeUninit::uninit();
-    pairing_assign(&g1, &g2, &mut gt_out, Endianness::Little).expect("pairing must succeed");
-
-    // SAFETY: `pairing_assign` returned `Ok`, so `gt_out` is fully initialized.
-    let gt_out = unsafe { gt_out.assume_init() };
+    let mut buffer = MaybeUninit::uninit();
+    let gt_out =
+        pairing_into(&g1, &g2, &mut buffer, Endianness::Little).expect("pairing must succeed");
     assert_eq!(gt_owned.0, gt_out.0);
 }
 
@@ -225,10 +243,7 @@ fn test_pairing_check_identity() {
 
     // Pairing two infinity points should result in the multiplicative identity.
     // pairing_check safely evaluates this without exposing the GtElement.
-    let is_identity =
-        pairing_check(&[g1], &[g2], Endianness::Little).expect("Pairing execution failed");
-
-    assert!(is_identity);
+    assert_eq!(pairing_check(&[g1], &[g2], Endianness::Little), Ok(()));
 }
 
 /// `pairing_map` and `pairing_check` deliberately diverge on an empty batch,
@@ -244,7 +259,7 @@ fn test_empty_batch() {
         assert_eq!(gt, GtElement::identity(endianness));
 
         // `pairing_check` refuses to succeed vacuously: a zero-length batch
-        // asserts nothing, and reporting `Ok(true)` would be a verification
+        // asserts nothing, and reporting `Ok(())` would be a verification
         // bypass for any caller building its batch from instruction data. The
         // dedicated variant distinguishes this programmer error from a failed
         // verification.
@@ -385,8 +400,8 @@ fn test_g2_generator_is_canonical() {
     );
 }
 
-/// `e(G1, G2)` generates the target group, so it is not the identity. A
-/// `Ok(true)` here would mean the generators or the pairing are wrong.
+/// `e(G1, G2)` generates the target group, so it is not the identity. An
+/// `Ok(())` here would mean the generators or the pairing are wrong.
 #[test]
 fn test_generator_pairing_is_not_identity() {
     for endianness in [Endianness::Little, Endianness::Big] {
@@ -395,7 +410,7 @@ fn test_generator_pairing_is_not_identity() {
 
         assert_eq!(
             pairing_check(&[g1], &[g2], endianness),
-            Ok(false),
+            Err(Bls12381Error::VerificationFailed),
             "e(G1, G2) must not be the target group identity"
         );
     }
@@ -421,7 +436,7 @@ fn test_pairing_bilinearity() {
 
         assert_eq!(
             pairing_check(&[ap, neg_abp], &[bq, g2], endianness),
-            Ok(true),
+            Ok(()),
             "bilinearity check failed"
         );
     }
@@ -496,9 +511,7 @@ fn test_readme_accumulation_pattern() {
             // SAFETY: `acc` is initialized, by `new` above and by the previous
             // iteration's add.
             let lhs = unsafe { acc.assume_init_ref() };
-            if !lhs.add_assign_unchecked(p, &mut *scratch, e) {
-                return None;
-            }
+            lhs.add_into_unchecked(p, &mut *scratch, e)?;
             core::mem::swap(&mut acc, &mut scratch);
         }
 

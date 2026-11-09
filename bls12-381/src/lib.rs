@@ -5,18 +5,18 @@
 //!
 //! # Output buffer contract
 //!
-//! Every `_assign` method writes into a caller-supplied
-//! [`MaybeUninit`](core::mem::MaybeUninit) buffer and reports success as a
-//! `bool`:
+//! Every `_into` method writes into a caller-supplied
+//! [`MaybeUninit`](core::mem::MaybeUninit) buffer:
 //!
-//! - On `true`, the buffer is fully initialized and may be `assume_init`ed.
-//! - On `false`, treat it as uninitialized, even if it held a valid value
-//!   going in. A failed operation may write part of the buffer before
-//!   detecting the error, so it poisons its output.
+//! - On success, it returns a reference to the buffer, now fully initialized.
+//!   Callers can use that reference without `unsafe`.
+//! - On failure (`None` or `Err`), treat the buffer as uninitialized, even if
+//!   it held a valid value going in. A failed operation may write part of the
+//!   buffer before detecting the error, so it poisons its output.
 //!
-//! The `true` case is a soundness requirement: reading an uninitialized byte is
-//! undefined behavior. SIMD-0388 does not state that a syscall fills the buffer
-//! on success.
+//! The success case is a soundness requirement: reading an uninitialized byte
+//! is undefined behavior. SIMD-0388 does not state that a syscall fills the
+//! buffer on success.
 //!
 //! Nothing constrains a *failing* syscall, hence the poisoning rule above
 //! rather than a guarantee that the buffer is left untouched.
@@ -33,7 +33,7 @@
 //! # Aliasing
 //!
 //! SIMD-0388 does not specify whether the result pointer may alias an input
-//! pointer. This crate is unaffected: `_assign` methods take `&self` alongside
+//! pointer. This crate is unaffected: `_into` methods take `&self` alongside
 //! `&mut MaybeUninit<Self>`, so an aliasing call cannot be expressed in safe
 //! Rust.
 

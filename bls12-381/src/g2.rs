@@ -140,6 +140,7 @@ impl G2Point {
     /// test tripled what the comparison itself costs — against ~20 CU total
     /// for the whole array here.
     #[inline]
+    #[must_use]
     pub fn is_infinity(&self, endianness: Endianness) -> bool {
         match endianness {
             Endianness::Big => self.0 == G2_INFINITY_BE.0,
@@ -182,76 +183,79 @@ impl G2Point {
         unsafe { &*(bytes as *const [u8; G2_UNCOMPRESSED_POINT_SIZE] as *const Self) }
     }
 
-    /// Negates in place, skipping the subgroup check on `self`.
+    /// Negates into `out`, skipping the subgroup check on `self`.
     ///
     /// An off-subgroup input yields an off-subgroup result rather than an error.
     ///
-    /// On `true`, `out` is initialized and may be `assume_init`ed; on `false`
-    /// it is poisoned. See
-    /// [Output buffer contract](crate#output-buffer-contract).
+    /// Returns the initialized `out` on success. On `None`, `out` is poisoned.
+    /// See [Output buffer contract](crate#output-buffer-contract).
     #[inline]
-    pub fn neg_assign_unchecked(
+    #[must_use]
+    pub fn neg_into_unchecked<'o>(
         &self,
-        out: &mut MaybeUninit<Self>,
+        out: &'o mut MaybeUninit<Self>,
         endianness: Endianness,
-    ) -> bool {
-        infinity_ref(endianness).sub_assign_unchecked(self, out, endianness)
+    ) -> Option<&'o mut Self> {
+        infinity_ref(endianness).sub_into_unchecked(self, out, endianness)
     }
 
-    /// Allocating form of [`Self::neg_assign_unchecked`].
+    /// Allocating form of [`Self::neg_into_unchecked`].
     #[inline]
     pub fn neg_unchecked(&self, endianness: Endianness) -> Option<Self> {
         infinity_ref(endianness).sub_unchecked(self, endianness)
     }
 
-    /// Negates in place, validating `self` first.
+    /// Negates into `out`, validating `self` first.
     ///
     /// Issues two syscalls: validation, then subtraction from infinity.
     /// Infinity needs no validation of its own, and the subtraction syscall
     /// repeats the field and on-curve checks internally, so one validation
     /// covers the pair.
     ///
-    /// On `true`, `out` is initialized and may be `assume_init`ed; on `false`
-    /// it is poisoned. See
-    /// [Output buffer contract](crate#output-buffer-contract).
+    /// Returns the initialized `out` on success. On `None`, `out` is poisoned.
+    /// See [Output buffer contract](crate#output-buffer-contract).
     #[inline]
-    pub fn neg_assign(&self, out: &mut MaybeUninit<Self>, endianness: Endianness) -> bool {
+    #[must_use]
+    pub fn neg_into<'o>(
+        &self,
+        out: &'o mut MaybeUninit<Self>,
+        endianness: Endianness,
+    ) -> Option<&'o mut Self> {
         if !self.validate(endianness) {
-            return false;
+            return None;
         }
-        self.neg_assign_unchecked(out, endianness)
+        self.neg_into_unchecked(out, endianness)
     }
 
-    /// Allocating form of [`Self::neg_assign`].
+    /// Allocating form of [`Self::neg_into`].
     #[inline]
     pub fn neg(&self, endianness: Endianness) -> Option<Self> {
         let mut out = MaybeUninit::uninit();
-        if self.neg_assign(&mut out, endianness) {
-            // SAFETY: `neg_assign` returned `true`, so `out` is fully
-            // initialized.
+        if self.neg_into(&mut out, endianness).is_some() {
+            // SAFETY: `neg_into` succeeded, so `out` is fully initialized.
             Some(unsafe { out.assume_init() })
         } else {
             None
         }
     }
 
-    /// Adds in place, skipping the subgroup check on both operands.
+    /// Adds into `out`, skipping the subgroup check on both operands.
     ///
     /// The principal compute-unit optimization. The subgroup is closed under
     /// addition, so an accumulator built from validated points remains valid
     /// and re-validating it each iteration buys nothing: validate at the trust
     /// boundary and accumulate with this method. See the README for the loop.
     ///
-    /// On `true`, `out` is initialized and may be `assume_init`ed; on `false`
-    /// it is poisoned. See
-    /// [Output buffer contract](crate#output-buffer-contract).
+    /// Returns the initialized `out` on success. On `None`, `out` is poisoned.
+    /// See [Output buffer contract](crate#output-buffer-contract).
     #[inline]
-    pub fn add_assign_unchecked(
+    #[must_use]
+    pub fn add_into_unchecked<'o>(
         &self,
         other: &Self,
-        out: &mut MaybeUninit<Self>,
+        out: &'o mut MaybeUninit<Self>,
         endianness: Endianness,
-    ) -> bool {
+    ) -> Option<&'o mut Self> {
         #[cfg(any(target_os = "solana", target_arch = "bpf"))]
         {
             let curve_id = match endianness {
@@ -271,7 +275,12 @@ impl G2Point {
                     out.as_mut_ptr().cast::<u8>(),
                 )
             };
-            status == 0
+            if status == 0 {
+                // SAFETY: the syscall returned 0, so it wrote all of `out`.
+                Some(unsafe { out.assume_init_mut() })
+            } else {
+                None
+            }
         }
 
         #[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
@@ -284,78 +293,75 @@ impl G2Point {
                 Endianness::Big => solana_bls12_381_syscall::Endianness::BE,
             };
 
-            if let Some(res) = solana_bls12_381_syscall::bls12_381_g2_addition_unchecked(
+            solana_bls12_381_syscall::bls12_381_g2_addition_unchecked(
                 solana_bls12_381_syscall::Version::V0,
                 left_pod,
                 right_pod,
                 end,
-            ) {
-                out.write(Self(res.0));
-                true
-            } else {
-                false
-            }
+            )
+            .map(|res| out.write(Self(res.0)))
         }
     }
 
-    /// Allocating form of [`Self::add_assign_unchecked`].
+    /// Allocating form of [`Self::add_into_unchecked`].
     #[inline]
     pub fn add_unchecked(&self, other: &Self, endianness: Endianness) -> Option<Self> {
         let mut out = MaybeUninit::uninit();
-        if self.add_assign_unchecked(other, &mut out, endianness) {
-            // SAFETY: `add_assign_unchecked` returned `true`, so `out` is fully
-            // initialized.
+        if self
+            .add_into_unchecked(other, &mut out, endianness)
+            .is_some()
+        {
+            // SAFETY: `add_into_unchecked` succeeded, so `out` is fully initialized.
             Some(unsafe { out.assume_init() })
         } else {
             None
         }
     }
 
-    /// Adds in place, validating both operands first.
+    /// Adds into `out`, validating both operands first.
     ///
-    /// On `true`, `out` is initialized and may be `assume_init`ed; on `false`
-    /// it is poisoned. See
-    /// [Output buffer contract](crate#output-buffer-contract).
+    /// Returns the initialized `out` on success. On `None`, `out` is poisoned.
+    /// See [Output buffer contract](crate#output-buffer-contract).
     #[inline]
-    pub fn add_assign(
+    #[must_use]
+    pub fn add_into<'o>(
         &self,
         other: &Self,
-        out: &mut MaybeUninit<Self>,
+        out: &'o mut MaybeUninit<Self>,
         endianness: Endianness,
-    ) -> bool {
+    ) -> Option<&'o mut Self> {
         if !self.validate(endianness) || !other.validate(endianness) {
-            return false;
+            return None;
         }
-        self.add_assign_unchecked(other, out, endianness)
+        self.add_into_unchecked(other, out, endianness)
     }
 
-    /// Allocating form of [`Self::add_assign`].
+    /// Allocating form of [`Self::add_into`].
     #[inline]
     pub fn add(&self, other: &Self, endianness: Endianness) -> Option<Self> {
         let mut out = MaybeUninit::uninit();
-        if self.add_assign(other, &mut out, endianness) {
-            // SAFETY: `add_assign` returned `true`, so `out` is fully
-            // initialized.
+        if self.add_into(other, &mut out, endianness).is_some() {
+            // SAFETY: `add_into` succeeded, so `out` is fully initialized.
             Some(unsafe { out.assume_init() })
         } else {
             None
         }
     }
 
-    /// Subtracts in place, skipping the subgroup check on both operands.
+    /// Subtracts into `out`, skipping the subgroup check on both operands.
     ///
-    /// Carries the same caveat as [`Self::add_assign_unchecked`].
+    /// Carries the same caveat as [`Self::add_into_unchecked`].
     ///
-    /// On `true`, `out` is initialized and may be `assume_init`ed; on `false`
-    /// it is poisoned. See
-    /// [Output buffer contract](crate#output-buffer-contract).
+    /// Returns the initialized `out` on success. On `None`, `out` is poisoned.
+    /// See [Output buffer contract](crate#output-buffer-contract).
     #[inline]
-    pub fn sub_assign_unchecked(
+    #[must_use]
+    pub fn sub_into_unchecked<'o>(
         &self,
         other: &Self,
-        out: &mut MaybeUninit<Self>,
+        out: &'o mut MaybeUninit<Self>,
         endianness: Endianness,
-    ) -> bool {
+    ) -> Option<&'o mut Self> {
         #[cfg(any(target_os = "solana", target_arch = "bpf"))]
         {
             let curve_id = match endianness {
@@ -375,7 +381,12 @@ impl G2Point {
                     out.as_mut_ptr().cast::<u8>(),
                 )
             };
-            status == 0
+            if status == 0 {
+                // SAFETY: the syscall returned 0, so it wrote all of `out`.
+                Some(unsafe { out.assume_init_mut() })
+            } else {
+                None
+            }
         }
 
         #[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
@@ -388,80 +399,77 @@ impl G2Point {
                 Endianness::Big => solana_bls12_381_syscall::Endianness::BE,
             };
 
-            if let Some(res) = solana_bls12_381_syscall::bls12_381_g2_subtraction_unchecked(
+            solana_bls12_381_syscall::bls12_381_g2_subtraction_unchecked(
                 solana_bls12_381_syscall::Version::V0,
                 left_pod,
                 right_pod,
                 end,
-            ) {
-                out.write(Self(res.0));
-                true
-            } else {
-                false
-            }
+            )
+            .map(|res| out.write(Self(res.0)))
         }
     }
 
-    /// Allocating form of [`Self::sub_assign_unchecked`].
+    /// Allocating form of [`Self::sub_into_unchecked`].
     #[inline]
     pub fn sub_unchecked(&self, other: &Self, endianness: Endianness) -> Option<Self> {
         let mut out = MaybeUninit::uninit();
-        if self.sub_assign_unchecked(other, &mut out, endianness) {
-            // SAFETY: `sub_assign_unchecked` returned `true`, so `out` is fully
-            // initialized.
+        if self
+            .sub_into_unchecked(other, &mut out, endianness)
+            .is_some()
+        {
+            // SAFETY: `sub_into_unchecked` succeeded, so `out` is fully initialized.
             Some(unsafe { out.assume_init() })
         } else {
             None
         }
     }
 
-    /// Subtracts in place, validating both operands first.
+    /// Subtracts into `out`, validating both operands first.
     ///
-    /// On `true`, `out` is initialized and may be `assume_init`ed; on `false`
-    /// it is poisoned. See
-    /// [Output buffer contract](crate#output-buffer-contract).
+    /// Returns the initialized `out` on success. On `None`, `out` is poisoned.
+    /// See [Output buffer contract](crate#output-buffer-contract).
     #[inline]
-    pub fn sub_assign(
+    #[must_use]
+    pub fn sub_into<'o>(
         &self,
         other: &Self,
-        out: &mut MaybeUninit<Self>,
+        out: &'o mut MaybeUninit<Self>,
         endianness: Endianness,
-    ) -> bool {
+    ) -> Option<&'o mut Self> {
         if !self.validate(endianness) || !other.validate(endianness) {
-            return false;
+            return None;
         }
-        self.sub_assign_unchecked(other, out, endianness)
+        self.sub_into_unchecked(other, out, endianness)
     }
 
-    /// Allocating form of [`Self::sub_assign`].
+    /// Allocating form of [`Self::sub_into`].
     #[inline]
     pub fn sub(&self, other: &Self, endianness: Endianness) -> Option<Self> {
         let mut out = MaybeUninit::uninit();
-        if self.sub_assign(other, &mut out, endianness) {
-            // SAFETY: `sub_assign` returned `true`, so `out` is fully
-            // initialized.
+        if self.sub_into(other, &mut out, endianness).is_some() {
+            // SAFETY: `sub_into` succeeded, so `out` is fully initialized.
             Some(unsafe { out.assume_init() })
         } else {
             None
         }
     }
 
-    /// Multiplies by a scalar in place.
+    /// Multiplies by a scalar into `out`.
     ///
     /// The syscall validates the point itself, so there is no `_unchecked`
     /// variant and calling [`Self::validate`] beforehand pays for the check
     /// twice. The scalar must be canonical; see [`Scalar`].
     ///
-    /// On `true`, `out` is initialized and may be `assume_init`ed; on `false`
-    /// it is poisoned. See
-    /// [Output buffer contract](crate#output-buffer-contract).
+    /// Returns the initialized `out` on success. On `None`, `out` is poisoned.
+    /// See [Output buffer contract](crate#output-buffer-contract).
     #[inline]
-    pub fn mul_assign(
+    #[must_use]
+    pub fn mul_into<'o>(
         &self,
         scalar: &Scalar,
-        out: &mut MaybeUninit<Self>,
+        out: &'o mut MaybeUninit<Self>,
         endianness: Endianness,
-    ) -> bool {
+    ) -> Option<&'o mut Self> {
         #[cfg(any(target_os = "solana", target_arch = "bpf"))]
         {
             let curve_id = match endianness {
@@ -481,7 +489,12 @@ impl G2Point {
                     out.as_mut_ptr().cast::<u8>(),
                 )
             };
-            status == 0
+            if status == 0 {
+                // SAFETY: the syscall returned 0, so it wrote all of `out`.
+                Some(unsafe { out.assume_init_mut() })
+            } else {
+                None
+            }
         }
 
         #[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
@@ -494,27 +507,25 @@ impl G2Point {
                 Endianness::Big => solana_bls12_381_syscall::Endianness::BE,
             };
 
-            if let Some(res) = solana_bls12_381_syscall::bls12_381_g2_multiplication(
+            solana_bls12_381_syscall::bls12_381_g2_multiplication(
                 solana_bls12_381_syscall::Version::V0,
                 point_pod,
                 scalar_pod,
                 end,
-            ) {
-                out.write(Self(res.0));
-                true
-            } else {
-                false
-            }
+            )
+            .map(|res| out.write(Self(res.0)))
         }
     }
 
-    /// Allocating form of [`Self::mul_assign`].
+    /// Allocating form of [`Self::mul_into`].
     #[inline]
     pub fn mul(&self, scalar: &Scalar, endianness: Endianness) -> Option<Self> {
         let mut out = MaybeUninit::uninit();
-        if self.mul_assign(scalar, &mut out, endianness) {
-            // SAFETY: `mul_assign` returned `true`, so `out` is fully
-            // initialized.
+        // Reads `out` rather than copying through the returned reference: with
+        // `.copied()`, `mul_bounded` stops inlining its helpers, measured at 17
+        // to 62 CU per bounded multiplication.
+        if self.mul_into(scalar, &mut out, endianness).is_some() {
+            // SAFETY: `mul_into` succeeded, so `out` is fully initialized.
             Some(unsafe { out.assume_init() })
         } else {
             None
@@ -527,6 +538,7 @@ impl G2Point {
     /// The subgroup check dominates the cost. See the README for when to hoist
     /// this out of a loop.
     #[inline]
+    #[must_use]
     pub fn validate(&self, endianness: Endianness) -> bool {
         #[cfg(any(target_os = "solana", target_arch = "bpf"))]
         {
@@ -586,6 +598,7 @@ impl G2Compressed {
     ///
     /// Not `const fn`; see [`G2Point::is_infinity`].
     #[inline]
+    #[must_use]
     pub fn is_infinity(&self, endianness: Endianness) -> bool {
         match endianness {
             Endianness::Big => self.0 == G2_COMPRESSED_INFINITY_BE.0,
@@ -631,23 +644,24 @@ impl G2Compressed {
     /// Callers that intend to decompress should do so and match on `None`
     /// rather than pay for both.
     #[inline]
+    #[must_use]
     pub fn validate(&self, endianness: Endianness) -> bool {
         let mut out = MaybeUninit::uninit();
-        self.decompress_assign(&mut out, endianness)
+        self.decompress_into(&mut out, endianness).is_some()
     }
 
     /// Decompresses into an affine point, checking format, field, curve
     /// equation, and subgroup membership.
     ///
-    /// On `true`, `out` is initialized and may be `assume_init`ed; on `false`
-    /// it is poisoned. See
-    /// [Output buffer contract](crate#output-buffer-contract).
+    /// Returns the initialized `out` on success. On `None`, `out` is poisoned.
+    /// See [Output buffer contract](crate#output-buffer-contract).
     #[inline]
-    pub fn decompress_assign(
+    #[must_use]
+    pub fn decompress_into<'o>(
         &self,
-        out: &mut MaybeUninit<G2Point>,
+        out: &'o mut MaybeUninit<G2Point>,
         endianness: Endianness,
-    ) -> bool {
+    ) -> Option<&'o mut G2Point> {
         #[cfg(any(target_os = "solana", target_arch = "bpf"))]
         {
             let curve_id = match endianness {
@@ -664,7 +678,12 @@ impl G2Compressed {
                     out.as_mut_ptr().cast::<u8>(),
                 )
             };
-            status == 0
+            if status == 0 {
+                // SAFETY: the syscall returned 0, so it wrote all of `out`.
+                Some(unsafe { out.assume_init_mut() })
+            } else {
+                None
+            }
         }
 
         #[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
@@ -676,26 +695,21 @@ impl G2Compressed {
                 Endianness::Big => solana_bls12_381_syscall::Endianness::BE,
             };
 
-            if let Some(res) = solana_bls12_381_syscall::bls12_381_g2_decompress(
+            solana_bls12_381_syscall::bls12_381_g2_decompress(
                 solana_bls12_381_syscall::Version::V0,
                 pod,
                 end,
-            ) {
-                out.write(G2Point(res.0));
-                true
-            } else {
-                false
-            }
+            )
+            .map(|res| out.write(G2Point(res.0)))
         }
     }
 
-    /// Allocating form of [`Self::decompress_assign`].
+    /// Allocating form of [`Self::decompress_into`].
     #[inline]
     pub fn decompress(&self, endianness: Endianness) -> Option<G2Point> {
         let mut out = MaybeUninit::uninit();
-        if self.decompress_assign(&mut out, endianness) {
-            // SAFETY: `decompress_assign` returned `true`, so `out` is fully
-            // initialized.
+        if self.decompress_into(&mut out, endianness).is_some() {
+            // SAFETY: `decompress_into` succeeded, so `out` is fully initialized.
             Some(unsafe { out.assume_init() })
         } else {
             None
