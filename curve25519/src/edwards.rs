@@ -16,7 +16,7 @@ mod target_arch {
             scalar::PodScalar,
         },
         alloc::vec::Vec,
-        curve25519_dalek::{
+        solana_ed25519::{
             edwards::{CompressedEdwardsY, EdwardsPoint},
             scalar::Scalar,
             traits::VartimeMultiscalarMul,
@@ -253,7 +253,7 @@ mod tests {
     use {
         super::*,
         crate::scalar::PodScalar,
-        curve25519_dalek::{
+        solana_ed25519::{
             constants::ED25519_BASEPOINT_POINT as G, edwards::EdwardsPoint, traits::Identity,
         },
     };
