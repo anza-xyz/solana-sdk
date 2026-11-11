@@ -70,10 +70,12 @@ bincode = { workspace = true }
 bs58 = { workspace = true }
 serde = { workspace = true }
 solana-account = { workspace = true, features = ["bincode"] }
+solana-account-info = { workspace = true, features = ["bincode"] }
 solana-epoch-info = { workspace = true, features = ["serde"] }
 solana-epoch-rewards-hasher = { workspace = true }
 solana-fee-structure = { workspace = true, features = ["serde"] }
 solana-inflation = { workspace = true, features = ["serde"] }
+solana-instruction = { workspace = true, features = ["bincode"] }
 solana-keypair = { workspace = true, optional = true, features = ["seed-derivable"] }
 solana-message = { workspace = true, features = ["serde"] }
 solana-offchain-message = { workspace = true, optional = true, features = ["verify"] }
