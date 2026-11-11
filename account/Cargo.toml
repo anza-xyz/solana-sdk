@@ -48,6 +48,7 @@ wincode = { workspace = true, features = ["alloc"], optional = true }
 
 [dev-dependencies]
 solana-account = { path = ".", features = ["dev-context-only-utils"] }
+solana-account-info = { workspace = true, features = ["wincode"] }
 solana-pubkey = { workspace = true, features = ["std"] }
 solana-system-interface = { workspace = true }
 
