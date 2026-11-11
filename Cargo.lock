@@ -3242,6 +3242,7 @@ dependencies = [
  "solana-address",
  "solana-program-error",
  "solana-program-memory",
+ "wincode",
 ]
 
 [[package]]

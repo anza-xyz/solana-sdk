@@ -4,7 +4,7 @@
 
 extern crate alloc;
 
-#[cfg(feature = "bincode")]
+#[cfg(all(feature = "bincode", not(feature = "wincode")))]
 use alloc::boxed::Box;
 use {
     alloc::rc::Rc,
@@ -21,6 +21,23 @@ pub mod debug_account_data;
 
 /// Maximum number of bytes a program may add to an account during a single realloc
 pub const MAX_PERMITTED_DATA_INCREASE: usize = 1_024 * 10;
+
+#[cfg(feature = "wincode")]
+const WINCODE_PREALLOC_LIMIT: usize = 10 * 1024 * 1024;
+
+/// Wincode configuration used to en/decode account data, see [`WINCODE_CONFIG`].
+#[cfg(feature = "wincode")]
+pub type WincodeConfig = wincode::config::Configuration<true, WINCODE_PREALLOC_LIMIT>;
+
+/// The configuration used by [`AccountInfo::deserialize_data`] and
+/// [`AccountInfo::serialize_data`] with the `wincode` feature.
+///
+/// The wire format matches bincode byte-for-byte. The preallocation limit rises to the
+/// max account data length, so valid account data is never rejected.
+#[cfg(feature = "wincode")]
+pub const WINCODE_CONFIG: WincodeConfig = wincode::config::Configuration::default()
+    .with_preallocation_size_limit::<WINCODE_PREALLOC_LIMIT>(
+);
 
 /// Account information
 #[derive(Clone)]
@@ -227,14 +244,14 @@ impl<'a> AccountInfo<'a> {
         }
     }
 
-    #[cfg(feature = "bincode")]
+    #[cfg(all(feature = "bincode", not(feature = "wincode")))]
     pub fn deserialize_data<T: serde_core::de::DeserializeOwned>(
         &self,
     ) -> Result<T, bincode::Error> {
         bincode::deserialize(&self.data.borrow())
     }
 
-    #[cfg(feature = "bincode")]
+    #[cfg(all(feature = "bincode", not(feature = "wincode")))]
     pub fn serialize_data<T: serde_core::Serialize>(
         &self,
         state: &T,
@@ -243,6 +260,24 @@ impl<'a> AccountInfo<'a> {
             return Err(Box::new(bincode::ErrorKind::SizeLimit));
         }
         bincode::serialize_into(&mut self.data.borrow_mut()[..], state)
+    }
+
+    #[cfg(feature = "wincode")]
+    pub fn deserialize_data<T>(&self) -> wincode::ReadResult<T>
+    where
+        T: for<'de> wincode::SchemaRead<'de, WincodeConfig, Dst = T>,
+    {
+        wincode::config::deserialize(&self.data.borrow(), WINCODE_CONFIG)
+    }
+
+    /// Fails with `WriteSizeLimit` if `state` does not fit the account data,
+    /// possibly after writing a prefix of it.
+    #[cfg(feature = "wincode")]
+    pub fn serialize_data<T>(&self, state: &T) -> wincode::WriteResult<()>
+    where
+        T: wincode::SchemaWrite<WincodeConfig, Src = T>,
+    {
+        wincode::config::serialize_into(&mut self.data.borrow_mut()[..], state, WINCODE_CONFIG)
     }
 }
 
@@ -612,5 +647,25 @@ mod tests {
     #[test]
     fn test_layout_assumptions() {
         super::check_type_assumptions();
+    }
+
+    #[cfg(feature = "wincode")]
+    #[test]
+    fn test_wincode_data_roundtrip() {
+        let key = Address::new_unique();
+        let lamports = &mut 0;
+        let data = &mut [0u8; 32];
+        let info = AccountInfo::new(&key, false, true, lamports, data, &key, false);
+
+        let state = (42u64, vec![1u8, 2, 3]);
+        info.serialize_data(&state).unwrap();
+        assert_eq!(
+            info.deserialize_data::<(u64, alloc::vec::Vec<u8>)>()
+                .unwrap(),
+            state
+        );
+
+        let too_big = vec![0u8; 32];
+        assert!(info.serialize_data(&too_big).is_err());
     }
 }

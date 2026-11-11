@@ -16,6 +16,7 @@ rustdoc-args = ["--cfg=docsrs"]
 
 [features]
 bincode = ["dep:bincode", "dep:serde_core"]
+wincode = ["dep:wincode"]
 
 [dependencies]
 bincode = { workspace = true, optional = true }
@@ -23,9 +24,11 @@ serde_core = { workspace = true, optional = true }
 solana-address = { workspace = true, features = ["decode"] }
 solana-program-error = { workspace = true }
 solana-program-memory = { workspace = true }
+wincode = { workspace = true, optional = true }
 
 [dev-dependencies]
 solana-address = { workspace = true, features = ["atomic"] }
+wincode = { workspace = true, features = ["alloc"] }
 
 [lints]
 workspace = true
