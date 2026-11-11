@@ -8,7 +8,7 @@ use solana_define_syscall::definitions as syscalls;
 use {
     crate::{
         consts::ALT_BN128_G1_POINT_SIZE as G1_POINT_SIZE,
-        target_arch::{Endianness, G1, G2},
+        target_arch::{reject_flag_bits, Endianness, G1, G2},
         PodG1, PodG2,
     },
     ark_bn254::{self, Config},
@@ -43,6 +43,9 @@ pub enum VersionedPairing {
     V0,
     /// SIMD-0334 - Fix alt_bn128_pairing Syscall Length Check
     V1,
+    /// Reject field elements with either of the two most significant bits
+    /// set, as EIP-197 does (<https://github.com/anza-xyz/agave/issues/3379>).
+    V2,
 }
 
 /// The syscall implementation for the `alt_bn128_pairing` syscall.
@@ -73,8 +76,7 @@ pub fn alt_bn128_versioned_pairing(
                 return Err(AltBn128Error::InvalidInputData);
             }
         }
-        VersionedPairing::V1 =>
-        {
+        VersionedPairing::V1 | VersionedPairing::V2 => {
             #[allow(clippy::manual_is_multiple_of)]
             if input.len() % ALT_BN128_PAIRING_ELEMENT_SIZE != 0 {
                 return Err(AltBn128Error::InvalidInputData);
@@ -88,14 +90,24 @@ pub fn alt_bn128_versioned_pairing(
     for chunk in input.chunks(ALT_BN128_PAIRING_ELEMENT_SIZE).take(ele_len) {
         let (p_bytes, q_bytes) = chunk.split_at(G1_POINT_SIZE);
 
-        let g1 = match endianness {
-            Endianness::BE => PodG1::from_be_bytes(p_bytes)?.try_into()?,
-            Endianness::LE => PodG1::from_le_bytes(p_bytes)?.try_into()?,
+        let (g1_pod, g2_pod) = match endianness {
+            Endianness::BE => (
+                PodG1::from_be_bytes(p_bytes)?,
+                PodG2::from_be_bytes(q_bytes)?,
+            ),
+            Endianness::LE => (
+                PodG1::from_le_bytes(p_bytes)?,
+                PodG2::from_le_bytes(q_bytes)?,
+            ),
         };
-        let g2 = match endianness {
-            Endianness::BE => PodG2::from_be_bytes(q_bytes)?.try_into()?,
-            Endianness::LE => PodG2::from_le_bytes(q_bytes)?.try_into()?,
-        };
+
+        if matches!(version, VersionedPairing::V2) {
+            reject_flag_bits(&g1_pod.0)?;
+            reject_flag_bits(&g2_pod.0)?;
+        }
+
+        let g1: G1 = g1_pod.try_into()?;
+        let g2: G2 = g2_pod.try_into()?;
 
         vec_pairs.push((g1, g2));
     }
@@ -121,7 +133,7 @@ pub fn alt_bn128_versioned_pairing(
 pub fn alt_bn128_pairing_be(input: &[u8]) -> Result<Vec<u8>, AltBn128Error> {
     #[cfg(not(target_os = "solana"))]
     {
-        alt_bn128_versioned_pairing(VersionedPairing::V1, input, Endianness::BE)
+        alt_bn128_versioned_pairing(VersionedPairing::V2, input, Endianness::BE)
     }
     #[cfg(target_os = "solana")]
     {
@@ -179,7 +191,7 @@ pub fn alt_bn128_pairing(input: &[u8]) -> Result<Vec<u8>, AltBn128Error> {
 pub fn alt_bn128_pairing_le(input: &[u8]) -> Result<Vec<u8>, AltBn128Error> {
     #[cfg(not(target_os = "solana"))]
     {
-        alt_bn128_versioned_pairing(VersionedPairing::V1, input, Endianness::LE)
+        alt_bn128_versioned_pairing(VersionedPairing::V2, input, Endianness::LE)
     }
     #[cfg(target_os = "solana")]
     {
@@ -208,12 +220,56 @@ pub fn alt_bn128_pairing_le(input: &[u8]) -> Result<Vec<u8>, AltBn128Error> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use {
+        super::*,
+        ark_ec::AffineRepr,
+        ark_serialize::{CanonicalSerialize, Compress},
+    };
 
     #[test]
     fn alt_bn128_pairing_invalid_length() {
         let input = [0; 193];
         let result = alt_bn128_pairing_be(&input);
         assert!(result.is_err());
+    }
+
+    /// `(G1 generator, G2 generator)`, little-endian (the `ark-serialize`
+    /// layout).
+    fn generator_pair_le() -> [u8; ALT_BN128_PAIRING_ELEMENT_SIZE] {
+        let mut input = [0u8; ALT_BN128_PAIRING_ELEMENT_SIZE];
+        input[0] = 1;
+        input[32] = 2;
+        let g2 = G2::generator();
+        g2.x.serialize_with_mode(&mut input[64..128], Compress::No)
+            .unwrap();
+        g2.y.serialize_with_mode(&mut input[128..], Compress::No)
+            .unwrap();
+        input
+    }
+
+    #[test]
+    fn pairing_v2_rejects_flag_bits() {
+        let clean_le = generator_pair_le();
+        let expected =
+            alt_bn128_versioned_pairing(VersionedPairing::V1, &clean_le, Endianness::LE).unwrap();
+        assert_eq!(
+            alt_bn128_versioned_pairing(VersionedPairing::V2, &clean_le, Endianness::LE),
+            Ok(expected)
+        );
+
+        // Index 63 is the most significant byte of the G1 `y`, index 191 that
+        // of the G2 `y_c1`: the bytes `ark-serialize` reads flags from.
+        for (index, bit) in [(63, 0x80u8), (63, 0x40), (191, 0x80), (191, 0x40)] {
+            let mut flagged_le = clean_le;
+            flagged_le[index] |= bit;
+            assert!(
+                alt_bn128_versioned_pairing(VersionedPairing::V1, &flagged_le, Endianness::LE)
+                    .is_ok()
+            );
+            assert_eq!(
+                alt_bn128_versioned_pairing(VersionedPairing::V2, &flagged_le, Endianness::LE),
+                Err(AltBn128Error::InvalidInputData)
+            );
+        }
     }
 }
