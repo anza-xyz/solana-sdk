@@ -40,8 +40,6 @@ pub type WincodeConfig = wincode::config::Configuration<true, WINCODE_PREALLOC_L
 pub const WINCODE_CONFIG: WincodeConfig = wincode::config::Configuration::default()
     .with_preallocation_size_limit::<WINCODE_PREALLOC_LIMIT>(
 );
-#[cfg(all(test, feature = "wincode"))]
-const _: solana_account_info::WincodeConfig = WINCODE_CONFIG;
 
 // NOTE: `Account` and `AccountSharedData` are defined here, in the crate root, on
 // purpose. The frozen-abi digest of any downstream struct that has an

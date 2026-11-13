@@ -27,6 +27,7 @@ solana-program-memory = { workspace = true }
 wincode = { workspace = true, optional = true }
 
 [dev-dependencies]
+solana-account-info = { path = ".", features = ["wincode"] }
 solana-address = { workspace = true, features = ["atomic"] }
 wincode = { workspace = true, features = ["alloc"] }
 

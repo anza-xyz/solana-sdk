@@ -22,8 +22,9 @@ pub mod debug_account_data;
 /// Maximum number of bytes a program may add to an account during a single realloc
 pub const MAX_PERMITTED_DATA_INCREASE: usize = 1_024 * 10;
 
+/// Largest heap frame a program can request.
 #[cfg(feature = "wincode")]
-const WINCODE_PREALLOC_LIMIT: usize = 10 * 1024 * 1024;
+const WINCODE_PREALLOC_LIMIT: usize = 256 * 1024;
 
 /// Wincode configuration used to en/decode account data, see [`WINCODE_CONFIG`].
 #[cfg(feature = "wincode")]
@@ -32,8 +33,8 @@ pub type WincodeConfig = wincode::config::Configuration<true, WINCODE_PREALLOC_L
 /// The configuration used by [`AccountInfo::deserialize_data`] and
 /// [`AccountInfo::serialize_data`] with the `wincode` feature.
 ///
-/// The wire format matches bincode byte-for-byte. The preallocation limit rises to the
-/// max account data length, so valid account data is never rejected.
+/// The wire format matches bincode byte-for-byte. The preallocation limit caps each
+/// decoded collection at the largest heap a program can request.
 #[cfg(feature = "wincode")]
 pub const WINCODE_CONFIG: WincodeConfig = wincode::config::Configuration::default()
     .with_preallocation_size_limit::<WINCODE_PREALLOC_LIMIT>(
@@ -649,7 +650,6 @@ mod tests {
         super::check_type_assumptions();
     }
 
-    #[cfg(feature = "wincode")]
     #[test]
     fn test_wincode_data_roundtrip() {
         let key = Address::new_unique();
