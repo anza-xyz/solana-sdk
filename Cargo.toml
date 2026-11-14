@@ -111,6 +111,7 @@ members = [
     "transaction-error",
     "validator-exit",
     "vote-interface",
+    "vote-keys",
     "wincode-varint",
     "zero-copy",
 ]
