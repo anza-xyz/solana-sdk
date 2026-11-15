@@ -3274,7 +3274,7 @@ dependencies = [
  "solana-atomic-u64",
  "solana-cpi",
  "solana-define-syscall",
- "solana-ed25519 0.2.4 (git+https://github.com/2501babe/cryptography?branch=fast-oncrv)",
+ "solana-ed25519 0.2.4 (git+https://github.com/2501babe/cryptography?branch=20261115_isvalidvartime)",
  "solana-example-mocks",
  "solana-frozen-abi",
  "solana-frozen-abi-macro",
@@ -3569,7 +3569,7 @@ dependencies = [
 [[package]]
 name = "solana-ed25519"
 version = "0.2.4"
-source = "git+https://github.com/2501babe/cryptography?branch=fast-oncrv#67001445594ba5efe8cd4de0d1cecc80f1f66b18"
+source = "git+https://github.com/2501babe/cryptography?branch=20261115_isvalidvartime#cd18327c287934d1cc3ca8ef464464122821cb86"
 dependencies = [
  "cfg-if",
  "cpufeatures 0.3.0",

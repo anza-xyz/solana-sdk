@@ -66,7 +66,7 @@ solana-define-syscall = { workspace = true, optional = true }
 solana-sha256-hasher = { workspace = true, optional = true }
 
 [target.'cfg(not(any(target_os = "solana", target_arch = "bpf")))'.dependencies]
-solana-ed25519 = { git = "https://github.com/2501babe/cryptography", branch = "fast-oncrv", default-features = false, optional = true }
+solana-ed25519 = { git = "https://github.com/2501babe/cryptography", branch = "20261115_isvalidvartime", default-features = false, optional = true }
 solana-sha256-hasher = { workspace = true, features = ["sha2"], optional = true }
 
 [dev-dependencies]

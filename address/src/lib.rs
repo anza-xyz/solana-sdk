@@ -195,7 +195,7 @@ pub fn bytes_are_curve_point<T: AsRef<[u8]>>(bytes: T) -> bool {
             else {
                 return false;
             };
-            compressed_edwards_y.is_valid()
+            compressed_edwards_y.is_valid_vartime()
         }
 
         #[cfg(not(feature = "curve25519"))]
