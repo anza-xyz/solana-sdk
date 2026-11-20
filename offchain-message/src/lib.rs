@@ -1,13 +1,40 @@
 //! Off-chain message container for storing non-transaction messages.
 #![cfg_attr(docsrs, feature(doc_cfg))]
 use {
-    solana_address::Address, solana_hash::Hash, solana_sanitize::SanitizeError,
-    solana_signature::Signature, solana_signer::Signer,
+    num_enum::{IntoPrimitive, TryFromPrimitive},
+    solana_address::Address,
+    solana_hash::Hash,
+    solana_sanitize::SanitizeError,
+    solana_signature::Signature,
+    solana_signer::Signer,
 };
 
 mod offspec;
 
-pub use offspec::{is_printable_ascii, is_utf8, v0, MessageFormat, OffchainMessage};
+pub use offspec::{v0, OffchainMessage};
+
+/// Check if given bytes contain only printable ASCII characters
+pub fn is_printable_ascii(data: &[u8]) -> bool {
+    for &char in data {
+        if !(0x20..=0x7e).contains(&char) {
+            return false;
+        }
+    }
+    true
+}
+
+/// Check if given bytes contain valid UTF8 string
+pub fn is_utf8(data: &[u8]) -> bool {
+    std::str::from_utf8(data).is_ok()
+}
+
+#[repr(u8)]
+#[derive(Debug, PartialEq, Eq, Copy, Clone, TryFromPrimitive, IntoPrimitive)]
+pub enum MessageFormat {
+    RestrictedAscii,
+    LimitedUtf8,
+    ExtendedUtf8,
+}
 
 pub mod with_signers {
     pub mod v0 {

@@ -2,7 +2,7 @@
 //! It does not follow the off-chain message signing specification.
 //! For new code, use [`crate::OffchainMessageWithSigners`].
 use {
-    num_enum::{IntoPrimitive, TryFromPrimitive},
+    crate::{is_printable_ascii, is_utf8, MessageFormat},
     solana_hash::Hash,
     solana_sanitize::SanitizeError,
     solana_signature::Signature,
@@ -15,29 +15,6 @@ static_assertions::const_assert_eq!(OffchainMessage::HEADER_LEN, 17);
 static_assertions::const_assert_eq!(v0::OffchainMessage::MAX_LEN, 65515);
 #[cfg(test)]
 static_assertions::const_assert_eq!(v0::OffchainMessage::MAX_LEN_LEDGER, 1212);
-
-/// Check if given bytes contain only printable ASCII characters
-pub fn is_printable_ascii(data: &[u8]) -> bool {
-    for &char in data {
-        if !(0x20..=0x7e).contains(&char) {
-            return false;
-        }
-    }
-    true
-}
-
-/// Check if given bytes contain valid UTF8 string
-pub fn is_utf8(data: &[u8]) -> bool {
-    std::str::from_utf8(data).is_ok()
-}
-
-#[repr(u8)]
-#[derive(Debug, PartialEq, Eq, Copy, Clone, TryFromPrimitive, IntoPrimitive)]
-pub enum MessageFormat {
-    RestrictedAscii,
-    LimitedUtf8,
-    ExtendedUtf8,
-}
 
 #[allow(clippy::arithmetic_side_effects)]
 pub mod v0 {
