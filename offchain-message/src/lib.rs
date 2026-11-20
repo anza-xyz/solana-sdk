@@ -467,7 +467,7 @@ mod tests {
     //   [83..115)  signer 2           9hSR6S7WPtxmTojgo6GG3k4yDPecgJY292j7xrsUGWBu (secret key [2; 32])
     //   [115..117) message length     13 (u16 LE)
     //   [117..130) content            b"Hello, world!"
-    const KIT_V0_SERIALIZED: [u8; 130] = [
+    pub(crate) const KIT_V0_SERIALIZED: [u8; 130] = [
         255, 115, 111, 108, 97, 110, 97, 32, 111, 102, 102, 99, 104, 97, 105, 110, 0, 237, 73, 40,
         198, 40, 209, 194, 198, 234, 233, 3, 56, 144, 89, 149, 97, 41, 89, 39, 58, 92, 99, 249, 54,
         54, 193, 70, 20, 172, 135, 55, 209, 0, 2, 138, 136, 227, 221, 116, 9, 241, 149, 253, 82,
@@ -476,15 +476,6 @@ mod tests {
         138, 145, 180, 238, 55, 162, 93, 246, 15, 91, 143, 201, 179, 148, 13, 0, 72, 101, 108, 108,
         111, 44, 32, 119, 111, 114, 108, 100, 33,
     ];
-
-    #[test]
-    fn test_offchain_message_rejects_kit_v0_with_signers() {
-        // The first application domain byte (237) is read as the message format.
-        assert_eq!(
-            OffchainMessage::deserialize(&KIT_V0_SERIALIZED),
-            Err(SanitizeError::InvalidValue),
-        );
-    }
 
     #[test]
     fn test_offchain_message_kit_v0_parity() {

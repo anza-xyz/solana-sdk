@@ -301,4 +301,13 @@ mod tests {
         let signature = message.sign(&keypair).unwrap();
         assert!(message.verify(&keypair.pubkey(), &signature).unwrap());
     }
+
+    #[test]
+    fn test_offchain_message_rejects_kit_v0_with_signers() {
+        // The first application domain byte (237) is read as the message format.
+        assert_eq!(
+            OffchainMessage::deserialize(&crate::tests::KIT_V0_SERIALIZED),
+            Err(SanitizeError::InvalidValue),
+        );
+    }
 }
