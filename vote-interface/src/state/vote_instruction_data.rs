@@ -116,3 +116,51 @@ pub struct VoteAuthorizeCheckedWithSeedArgs {
     pub current_authority_derived_key_owner: Pubkey,
     pub current_authority_derived_key_seed: String,
 }
+
+// The message size is fixed:
+// "ALPENGLOW" (9) + Vote Pubkey (32) = 41 bytes
+// Note: The BLS Pubkey (48 bytes) is appended dynamically by the
+// solana-bls-signatures crate.
+const POP_MESSAGE_SIZE: usize = 9 + size_of::<Pubkey>();
+
+/// Create a proof of possession message for the vote account address
+///
+/// Can be used with a vote account's BLS keypair to generate a proof of
+/// possession, or to verify an existing proof of possession
+pub fn generate_pop_message(vote_account_pubkey: &Pubkey) -> [u8; POP_MESSAGE_SIZE] {
+    const LABEL_LEN: usize = 9;
+    const PUBKEY_LEN: usize = size_of::<Pubkey>();
+
+    const LABEL_START: usize = 0;
+    const LABEL_END: usize = LABEL_START + LABEL_LEN;
+
+    const PUBKEY_START: usize = LABEL_END;
+    const PUBKEY_END: usize = PUBKEY_START + PUBKEY_LEN;
+
+    // Make sure POP_MESSAGE_SIZE matches the layout at compile time
+    const _: () = assert!(PUBKEY_END == POP_MESSAGE_SIZE);
+
+    let mut message = [0u8; POP_MESSAGE_SIZE];
+
+    message[LABEL_START..LABEL_END].copy_from_slice(b"ALPENGLOW");
+    message[PUBKEY_START..PUBKEY_END].copy_from_slice(vote_account_pubkey.as_ref());
+
+    message
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn pop_message_bytes() {
+        let address_bytes = [101; 32];
+        let vote_account_address = Pubkey::new_from_array(address_bytes);
+        let message = generate_pop_message(&vote_account_address);
+        let expected_message = "ALPENGLOW"
+            .bytes()
+            .chain(vote_account_address.to_bytes())
+            .collect::<Vec<_>>();
+        assert_eq!(message.as_slice(), expected_message);
+    }
+}
