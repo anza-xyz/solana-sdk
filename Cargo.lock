@@ -4086,6 +4086,7 @@ name = "solana-offchain-message"
 version = "4.0.0"
 dependencies = [
  "num_enum",
+ "solana-address",
  "solana-hash",
  "solana-keypair",
  "solana-offchain-message",

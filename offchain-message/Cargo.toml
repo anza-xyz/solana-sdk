@@ -20,6 +20,7 @@ verify = ["dep:solana-pubkey", "solana-signature/verify"]
 
 [dependencies]
 num_enum = { workspace = true }
+solana-address = { workspace = true }
 solana-hash = { workspace = true }
 solana-packet = { workspace = true }
 solana-pubkey = { workspace = true, optional = true }
