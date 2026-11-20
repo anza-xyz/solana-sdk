@@ -465,7 +465,7 @@ unsafe impl<C: wincode::config::ConfigCore> wincode::SchemaWrite<C> for VoteStat
 }
 
 #[repr(C)]
-#[derive(Clone, Debug, Default, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, bytemuck::NoUninit)]
 #[cfg_attr(feature = "wincode", derive(wincode::SchemaWrite))]
 #[cfg_attr(feature = "stable-abi", derive(AbiExample, StableAbi, StableAbiSample))]
 pub struct AuthorizedVoter {
@@ -476,7 +476,7 @@ pub struct AuthorizedVoter {
 /// Stores the commission in basis-points.  It can be set above 100% but will be clamped to 100%
 /// for reward calculations.
 #[repr(transparent)]
-#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, bytemuck::NoUninit)]
 #[cfg_attr(feature = "stable-abi", derive(AbiExample, StableAbi, StableAbiSample))]
 #[cfg_attr(feature = "wincode", derive(wincode::SchemaWrite))]
 pub struct Commission(u16);
@@ -493,7 +493,7 @@ impl Commission {
 }
 
 #[repr(C)]
-#[derive(Clone, Debug, Default, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, bytemuck::NoUninit)]
 #[cfg_attr(feature = "wincode", derive(wincode::SchemaWrite))]
 #[cfg_attr(feature = "stable-abi", derive(AbiExample, StableAbi, StableAbiSample))]
 pub struct AccumulatedLamports {
@@ -789,8 +789,22 @@ fn accumulated_lamports_are_valid(data: &[AccumulatedLamports]) -> bool {
 }
 
 #[must_use]
+#[cfg(not(target_os = "solana"))]
 fn is_zero<T: Default + PartialEq>(items: &[T]) -> bool {
     items.iter().all(|b| b == &T::default())
+}
+
+#[must_use]
+#[cfg(target_os = "solana")]
+fn is_zero<T: bytemuck::NoUninit>(items: &[T]) -> bool {
+    // The reserved tail is the largest slice checked during validation.
+    static ZEROES: [u8; VOTE_STATE_V5_SIZE - size_of::<VoteStateV5>()] =
+        [0; VOTE_STATE_V5_SIZE - size_of::<VoteStateV5>()];
+    let bytes: &[u8] = bytemuck::cast_slice(items);
+    bytes.chunks(ZEROES.len()).all(|chunk| {
+        // SAFETY: Both slices contain at least chunk.len() initialized bytes.
+        unsafe { solana_program_memory::sol_memcmp(chunk, &ZEROES, chunk.len()) == 0 }
+    })
 }
 
 #[cfg(test)]
@@ -1430,18 +1444,10 @@ mod tests {
             pubkey: Pubkey::default(),
         });
         assert!(!authorized_voters_are_valid(&oversized));
+        assert!(!authorized_voters_are_valid(&[voters[0], voters[0]]));
+        assert!(!authorized_voters_are_valid(&[voters[1], voters[0]]));
         assert!(!authorized_voters_are_valid(&[
-            voters[0].clone(),
-            voters[0].clone()
-        ]));
-        assert!(!authorized_voters_are_valid(&[
-            voters[1].clone(),
-            voters[0].clone()
-        ]));
-        assert!(!authorized_voters_are_valid(&[
-            voters[0].clone(),
-            voters[2].clone(),
-            voters[1].clone(),
+            voters[0], voters[2], voters[1],
         ]));
     }
 
@@ -1460,11 +1466,11 @@ mod tests {
             std::array::from_fn(|_| AccumulatedLamports::default());
         assert!(!accumulated_lamports_are_valid(&oversized));
         for epoch in [entries[0].epoch, entries[0].epoch - 1] {
-            let mut invalid = entries.clone();
+            let mut invalid = entries;
             invalid[1].epoch = epoch;
             assert!(!accumulated_lamports_are_valid(&invalid));
         }
-        let mut invalid = entries.clone();
+        let mut invalid = entries;
         invalid[1].prev_lamports += 1;
         assert!(!accumulated_lamports_are_valid(&invalid));
     }
@@ -1518,22 +1524,22 @@ mod tests {
             );
         }
 
-        let marker = entries[2].clone();
-        assert!(!accumulated_lamports_are_valid(&[marker.clone(), marker]));
+        let marker = entries[2];
+        assert!(!accumulated_lamports_are_valid(&[marker, marker]));
         for corrupt in [
             |entry: &mut AccumulatedLamports| entry.epoch = 0,
             |entry: &mut AccumulatedLamports| entry.lamports = 0,
             |entry: &mut AccumulatedLamports| entry.prev_lamports = 0,
         ] {
-            let mut invalid = entries.clone();
+            let mut invalid = entries;
             corrupt(&mut invalid[2]);
             assert!(!accumulated_lamports_are_valid(&invalid));
         }
         for index in [0, 3] {
-            let mut invalid = entries.clone();
+            let mut invalid = entries;
             invalid[index + 1].prev_lamports += 1;
             assert!(!accumulated_lamports_are_valid(&invalid));
-            let mut invalid = entries.clone();
+            let mut invalid = entries;
             invalid[index].epoch = invalid[index + 1].epoch;
             assert!(!accumulated_lamports_are_valid(&invalid));
         }
@@ -1564,7 +1570,7 @@ mod tests {
                         epoch: 10,
                         pubkey: keys[2]
                     },
-                    original.authorized_voters[1].clone(),
+                    original.authorized_voters[1],
                     AuthorizedVoter {
                         epoch: 13,
                         pubkey: keys[1]

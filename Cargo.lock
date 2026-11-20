@@ -4872,6 +4872,7 @@ dependencies = [
  "solana-hash",
  "solana-instruction",
  "solana-instruction-error",
+ "solana-program-memory",
  "solana-pubkey",
  "solana-rent",
  "solana-sdk-ids",
