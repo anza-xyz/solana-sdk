@@ -368,8 +368,7 @@ fn read_prior_voters_into<T: AsRef<[u8]>>(
 // Merely updates the cursor to skip over this section.
 fn skip_prior_voters<T: AsRef<[u8]>>(cursor: &mut Cursor<T>) -> Result<(), InstructionError> {
     const PRIOR_VOTERS_SIZE: usize = MAX_ITEMS * core::mem::size_of::<(Pubkey, Epoch, Epoch)>() +
-            core::mem::size_of::<u64>() /* idx */ +
-            core::mem::size_of::<bool>() /* is_empty */;
+            core::mem::size_of::<u64>() /* idx */;
 
     cursor.consume(PRIOR_VOTERS_SIZE);
 
@@ -377,6 +376,9 @@ fn skip_prior_voters<T: AsRef<[u8]>>(cursor: &mut Cursor<T>) -> Result<(), Instr
     if cursor.position() as usize > bytes.len() {
         return Err(InstructionError::InvalidAccountData);
     }
+
+    // `is_empty` is read rather than skipped so an invalid bool is rejected.
+    read_bool(cursor)?;
 
     Ok(())
 }
@@ -485,6 +487,22 @@ mod tests {
 
         // Should fail because cursor position > bytes length.
         let result = skip_prior_voters(&mut cursor);
+        assert_eq!(result, Err(InstructionError::InvalidAccountData));
+    }
+
+    #[test]
+    fn test_skip_prior_voters_invalid_is_empty() {
+        // `is_empty` is the last byte and must be 0 or 1.
+        let mut buffer = vec![0u8; PRIOR_VOTERS_SIZE];
+        buffer[PRIOR_VOTERS_SIZE - 1] = 2;
+
+        let mut prior_voters = CircBuf::<(Pubkey, Epoch, Epoch)>::default();
+        let result =
+            read_prior_voters_into(&mut Cursor::new(&buffer[..]), &mut prior_voters as *mut _);
+        assert_eq!(result, Err(InstructionError::InvalidAccountData));
+
+        // Skipping must reject the same input.
+        let result = skip_prior_voters(&mut Cursor::new(&buffer[..]));
         assert_eq!(result, Err(InstructionError::InvalidAccountData));
     }
 
