@@ -1,3 +1,6 @@
+//! Off-chain message format that existed before [`crate::OffchainMessageWithSigners`].
+//! It does not follow the off-chain message signing specification.
+//! For new code, use [`crate::OffchainMessageWithSigners`].
 use {
     num_enum::{IntoPrimitive, TryFromPrimitive},
     solana_hash::Hash,
