@@ -156,6 +156,8 @@ pub mod v0 {
     }
 }
 
+/// For v1 messages and messages that comply with the offchain message specification
+/// use [`crate::OffchainMessageWithSigners`] instead.
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum OffchainMessage {
     V0(v0::OffchainMessage),
@@ -169,7 +171,7 @@ impl OffchainMessage {
     /// Construct a new OffchainMessage object from the given version and message
     ///
     /// For v1 messages and messages that comply with the offchain message specification
-    /// use [`OffchainMessageWithSigners::new`] instead.
+    /// use [`crate::OffchainMessageWithSigners::new`] instead.
     pub fn new(version: u8, message: &[u8]) -> Result<Self, SanitizeError> {
         match version {
             0 => Ok(Self::V0(v0::OffchainMessage::new(message)?)),
