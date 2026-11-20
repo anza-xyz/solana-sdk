@@ -136,9 +136,11 @@ pub mod with_signers {
 
             /// Deserialize the message from bytes that include a full header
             pub fn deserialize(data: &[u8]) -> Result<Self, SanitizeError> {
+                // validate data length
                 if data.len() < Self::HEADER_LEN {
                     return Err(SanitizeError::ValueOutOfBounds);
                 }
+                // decode header
                 let application_domain =
                     <[u8; 32]>::try_from(&data[..32]).map_err(|_| SanitizeError::InvalidValue)?;
                 let format =
@@ -147,13 +149,16 @@ pub mod with_signers {
                 let signers_end =
                     Self::HEADER_LEN.saturating_add(signer_count.saturating_mul(ADDRESS_BYTES));
                 let message_start = signers_end.saturating_add(Self::MESSAGE_LENGTH_LEN);
+                // check header
                 if data.len() < message_start {
                     return Err(SanitizeError::ValueOutOfBounds);
                 }
+                // signers
                 let signers = data[Self::HEADER_LEN..signers_end]
                     .chunks_exact(ADDRESS_BYTES)
                     .map(|bytes| Address::try_from(bytes).map_err(|_| SanitizeError::InvalidValue))
                     .collect::<Result<Vec<_>, _>>()?;
+                // message length
                 let message_len =
                     u16::from_le_bytes([data[signers_end], data[signers_end.saturating_add(1)]])
                         as usize;
@@ -161,6 +166,7 @@ pub mod with_signers {
                 if message.len() != message_len {
                     return Err(SanitizeError::InvalidValue);
                 }
+                // check format
                 Self::check(format, signers.len(), message)?;
                 Ok(Self {
                     application_domain,
