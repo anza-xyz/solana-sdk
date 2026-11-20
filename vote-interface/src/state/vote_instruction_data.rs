@@ -147,3 +147,20 @@ pub fn generate_pop_message(vote_account_pubkey: &Pubkey) -> [u8; POP_MESSAGE_SI
 
     message
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn pop_message_bytes() {
+        let address_bytes = [101; 32];
+        let vote_account_address = Pubkey::new_from_array(address_bytes);
+        let message = generate_pop_message(&vote_account_address);
+        let expected_message = "ALPENGLOW"
+            .bytes()
+            .chain(vote_account_address.to_bytes())
+            .collect::<Vec<_>>();
+        assert_eq!(message.as_slice(), expected_message);
+    }
+}
