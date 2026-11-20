@@ -2,11 +2,11 @@
 #![cfg_attr(docsrs, feature(doc_cfg))]
 use {
     num_enum::{IntoPrimitive, TryFromPrimitive},
+    solana_address::Address,
     solana_hash::Hash,
     solana_sanitize::SanitizeError,
     solana_signature::Signature,
     solana_signer::Signer,
-    solana_address::Address,
 };
 
 #[cfg(test)]
@@ -285,7 +285,7 @@ pub mod v1 {
 #[non_exhaustive]
 pub enum OffchainMessage {
     V0(v0::OffchainMessage),
-    V1(v1::OffchainMessage)
+    V1(v1::OffchainMessage),
 }
 
 impl OffchainMessage {
@@ -317,7 +317,7 @@ impl OffchainMessage {
             Self::V0(msg) => {
                 data.push(0);
                 msg.serialize(&mut data)?;
-            },
+            }
             Self::V1(msg) => {
                 data.push(1);
                 msg.serialize(&mut data)?;
