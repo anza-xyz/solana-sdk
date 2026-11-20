@@ -282,6 +282,7 @@ pub mod v1 {
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
+#[non_exhaustive]
 pub enum OffchainMessage {
     V0(v0::OffchainMessage),
     V1(v1::OffchainMessage)
@@ -491,6 +492,7 @@ mod tests {
         111, 44, 32, 119, 111, 114, 108, 100, 33,
     ];
 
+    // Just to prove the v0 format does not have parity with Kit
     #[test]
     fn test_offchain_message_rejects_kit_v0_with_signers() {
         // The first application domain byte (237) is read as the message format.
