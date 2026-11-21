@@ -1,3 +1,7 @@
+// The legacy derivation is deprecated but must stay covered, since it is the only
+// way to recover keys that were derived with it.
+#![allow(deprecated)]
+
 use solana_seed_phrase::{
     generate_seed_from_seed_phrase_and_passphrase, generate_seed_with_unicode_normalization,
 };
