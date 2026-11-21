@@ -44,6 +44,7 @@ no_std_crates=(
   -p solana-signature
   -p solana-sysvar-id
   -p solana-transaction-error
+  -p solana-vote-keys
   -p solana-zero-copy
 )
 
