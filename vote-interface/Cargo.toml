@@ -74,7 +74,7 @@ wincode = [
 [dependencies]
 arbitrary = { workspace = true, features = ["derive"], optional = true }
 bincode = { workspace = true, optional = true }
-bytemuck = { workspace = true, features = ["derive"] }
+bytemuck = { workspace = true }
 cfg_eval = { workspace = true, optional = true }
 num-derive = { workspace = true }
 num-traits = { workspace = true }

@@ -409,8 +409,8 @@ impl VoteStateV5 {
             )
             && self.rank_epoch == u64::MAX
             && self.rank == u16::MAX
-            && is_zero(&self.zeroed_head)
-            && is_zero(zeroed)
+            && bytes_are_zero(&self.zeroed_head)
+            && bytes_are_zero(zeroed)
     }
 }
 
@@ -471,7 +471,7 @@ unsafe impl<C: wincode::config::ConfigCore> wincode::SchemaWrite<C> for VoteStat
 }
 
 #[repr(C)]
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, bytemuck::NoUninit)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 #[cfg_attr(feature = "wincode", derive(wincode::SchemaWrite))]
 #[cfg_attr(feature = "stable-abi", derive(AbiExample, StableAbi, StableAbiSample))]
 pub struct AuthorizedVoter {
@@ -482,7 +482,7 @@ pub struct AuthorizedVoter {
 /// Stores the commission in basis-points.  It can be set above 100% but will be clamped to 100%
 /// for reward calculations.
 #[repr(transparent)]
-#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, bytemuck::NoUninit)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 #[cfg_attr(feature = "stable-abi", derive(AbiExample, StableAbi, StableAbiSample))]
 #[cfg_attr(feature = "wincode", derive(wincode::SchemaWrite))]
 pub struct Commission(u16);
@@ -499,7 +499,7 @@ impl Commission {
 }
 
 #[repr(C)]
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, bytemuck::NoUninit)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 #[cfg_attr(feature = "wincode", derive(wincode::SchemaWrite))]
 #[cfg_attr(feature = "stable-abi", derive(AbiExample, StableAbi, StableAbiSample))]
 pub struct AccumulatedLamports {
@@ -795,18 +795,28 @@ fn accumulated_lamports_are_valid(data: &[AccumulatedLamports]) -> bool {
 }
 
 #[must_use]
-#[cfg(not(target_os = "solana"))]
 fn is_zero<T: Default + PartialEq>(items: &[T]) -> bool {
     items.iter().all(|b| b == &T::default())
 }
 
 #[must_use]
+#[cfg(not(target_os = "solana"))]
+fn bytes_are_zero(bytes: &[u8]) -> bool {
+    // First compare u64 sized words and then the remaining tail byte by byte.
+    let mut words = bytes.chunks_exact(size_of::<u64>());
+    let chunks = words.by_ref().fold(0, |acc, word| {
+        acc | u64::from_ne_bytes(word.try_into().expect("u64 is 8 bytes"))
+    });
+    let tail = words.remainder().iter().fold(0, |acc, byte| acc | byte);
+    chunks | u64::from(tail) == 0
+}
+
+#[must_use]
 #[cfg(target_os = "solana")]
-fn is_zero<T: bytemuck::NoUninit>(items: &[T]) -> bool {
+fn bytes_are_zero(bytes: &[u8]) -> bool {
     // The reserved tail is the largest slice checked during validation.
     static ZEROES: [u8; VOTE_STATE_V5_SIZE - size_of::<VoteStateV5>()] =
         [0; VOTE_STATE_V5_SIZE - size_of::<VoteStateV5>()];
-    let bytes: &[u8] = bytemuck::cast_slice(items);
     bytes.chunks(ZEROES.len()).all(|chunk| {
         // SAFETY: Both slices contain at least chunk.len() initialized bytes.
         unsafe { solana_program_memory::sol_memcmp(chunk, &ZEROES, chunk.len()) == 0 }
@@ -823,6 +833,34 @@ mod tests {
 
     fn put<T: Pod>(buf: &mut [u8], off: usize, v: T) {
         buf[off..off + size_of::<T>()].copy_from_slice(bytemuck::bytes_of(&v));
+    }
+
+    #[test]
+    fn zero_bytes_checks_unaligned_words_and_remainders() {
+        let tail_len = VOTE_STATE_V5_SIZE - size_of::<VoteStateV5>();
+        for offset in 0..8 {
+            for len in (0..=17).chain([
+                tail_len - 1,
+                tail_len,
+                tail_len + 1,
+                2 * tail_len,
+                2 * tail_len + 1,
+            ]) {
+                let mut storage = Aligned([0; VOTE_STATE_V5_SIZE + 8]);
+                let bytes = &mut storage.0[offset..offset + len];
+                assert!(bytes_are_zero(bytes), "offset {offset}, length {len}");
+                for index in 0..len {
+                    for value in [1, 0x80] {
+                        bytes[index] = value;
+                        assert!(
+                            !bytes_are_zero(bytes),
+                            "offset {offset}, length {len}, index {index}, value {value}"
+                        );
+                    }
+                    bytes[index] = 0;
+                }
+            }
+        }
     }
 
     fn assert_state_round_trips(state: &VoteStateV5) {
