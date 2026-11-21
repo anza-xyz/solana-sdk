@@ -14,6 +14,7 @@ use {
 };
 
 pub mod vote_state_1_14_11;
+pub mod vote_state_v5;
 pub use vote_state_1_14_11::*;
 pub mod vote_state_versions;
 pub use vote_state_versions::*;
@@ -163,6 +164,7 @@ impl From<Lockout> for LandedVote {
 #[cfg_attr(feature = "wincode", derive(wincode::SchemaWrite, wincode::SchemaRead))]
 #[derive(Debug, Default, PartialEq, Eq, Clone)]
 #[cfg_attr(feature = "dev-context-only-utils", derive(Arbitrary))]
+#[repr(C)]
 pub struct BlockTimestamp {
     pub slot: Slot,
     pub timestamp: UnixTimestamp,
