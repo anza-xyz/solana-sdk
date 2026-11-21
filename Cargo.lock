@@ -4892,7 +4892,7 @@ dependencies = [
 
 [[package]]
 name = "solana-vote-keys"
-version = "0.0.0"
+version = "1.0.0"
 dependencies = [
  "arbitrary",
  "serde",
