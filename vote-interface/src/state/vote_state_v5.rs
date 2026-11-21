@@ -76,6 +76,11 @@ pub struct VoteStateV5 {
 }
 
 impl VoteStateV5 {
+    pub fn is_correct_size_and_initialized(data: &[u8]) -> bool {
+        data.len() == VOTE_STATE_V5_SIZE && data[..4] == [4, 0, 0, 0] // little-endian 4u32
+                                                                      // Always initialized
+    }
+
     /// Returns a mutable view returning error if the memory is not aligned.
     ///
     /// WARN: this assumes that the state is valid.  Future accesses may panic if not.
