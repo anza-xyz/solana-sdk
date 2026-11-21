@@ -241,15 +241,14 @@
 //!   Rust programmers are generally not directly exposed to the encoding format
 //!   as it is hidden behind APIs.
 //!
-//!   The [`Instruction::new_with_bincode`] function creates an `Instruction` by
-//!   serializing a value with bincode.
-//!   With the `wincode` feature, `Instruction::new_with_wincode` produces the
-//!   same bytes from a [wincode] schema without bincode.
+//!   This crate does not depend on bincode. The `wincode` feature produces the
+//!   same bytes from a [wincode] schema: `Instruction::new_with_wincode`
+//!   creates an `Instruction`, and `AccountInfo::{serialize_data,
+//!   deserialize_data}` encode and decode account data.
 //!
 //!   [Bincode]: https://docs.rs/bincode
 //!   [Serde]: https://serde.rs/
 //!   [wincode]: https://docs.rs/wincode
-//!   [`Instruction::new_with_bincode`]: instruction::Instruction::new_with_bincode
 //!
 //! - __[`Pack`]__, a Solana-specific serialization API that is used by many
 //!   older programs in the [Solana Program Library][spl] to define their
