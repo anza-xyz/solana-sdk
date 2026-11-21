@@ -64,7 +64,7 @@ pub struct VoteStateV5 {
     /// List of signers allowed to sign transactions along with the epoch when they became active.
     authorized_voters: [AuthorizedVoter; MAX_AUTHORIZED_VOTERS],
     /// List of lamports that the validator has accumulated in rewards but have not yet been paid out.
-    /// Entries are right aligned e.g. [oldest, newest, zeros]
+    /// Entries are packed from the left with trailing zeros
     accumulated_lamports: [AccumulatedLamports; MAX_ACCUMULATED_LAMPORTS],
     pub last_timestamp: BlockTimestamp,
     /// Reserved until rank support is introduced; must remain `u64::MAX`.
@@ -97,6 +97,7 @@ impl VoteStateV5 {
         // ptr is aligned, and all fields (integers, byte arrays, and structs of
         // those types) accept all bit patterns. The reference borrows data.
         let state = unsafe { &*ptr };
+        debug_assert!(state.validate(&data[size_of::<Self>()..]));
         Ok(state)
     }
 
