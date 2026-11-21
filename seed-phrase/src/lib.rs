@@ -8,10 +8,22 @@ use {hmac::Hmac, unicode_normalization::UnicodeNormalization};
 /// inputs are already in NFKD form, such as an English mnemonic with an ASCII
 /// passphrase, the seed matches BIP-39. Normalizing non-NFKD inputs can change
 /// the seed, so preserve the original input bytes when recovering existing keys.
+///
+/// This function is kept so that keys derived with it can still be recovered.
+/// For new derivations, use [`generate_seed_with_unicode_normalization`].
+#[deprecated(
+    since = "3.1.0",
+    note = "Does not apply BIP-39 NFKD normalization. Use `generate_seed_with_unicode_normalization` \
+            for new derivations; keep using this function only to recover keys derived with it"
+)]
 pub fn generate_seed_from_seed_phrase_and_passphrase(
     seed_phrase: &str,
     passphrase: &str,
 ) -> Vec<u8> {
+    derive_seed(seed_phrase, passphrase)
+}
+
+fn derive_seed(seed_phrase: &str, passphrase: &str) -> Vec<u8> {
     const PBKDF2_ROUNDS: u32 = 2048;
     const PBKDF2_BYTES: usize = 64;
 
@@ -40,5 +52,5 @@ pub fn generate_seed_from_seed_phrase_and_passphrase(
 pub fn generate_seed_with_unicode_normalization(seed_phrase: &str, passphrase: &str) -> Vec<u8> {
     let seed_phrase = seed_phrase.nfkd().collect::<String>();
     let passphrase = passphrase.nfkd().collect::<String>();
-    generate_seed_from_seed_phrase_and_passphrase(&seed_phrase, &passphrase)
+    derive_seed(&seed_phrase, &passphrase)
 }

@@ -7,7 +7,6 @@ pub use {
 };
 use {
     solana_ed25519::ed_sigs::SigningKey,
-    solana_seed_phrase::generate_seed_from_seed_phrase_and_passphrase,
     solana_signer::SignerError,
     std::{
         error,
@@ -294,10 +293,13 @@ pub fn keypair_from_seed(seed: &[u8]) -> Result<Keypair, Box<dyn error::Error>> 
 /// an ASCII passphrase, the seed matches BIP-39. Normalizing non-NFKD inputs can
 /// change the keypair, so preserve the original input bytes when recovering
 /// existing keys.
+#[allow(deprecated)]
 pub fn keypair_from_seed_phrase_and_passphrase(
     seed_phrase: &str,
     passphrase: &str,
 ) -> Result<Keypair, Box<dyn core::error::Error>> {
+    use solana_seed_phrase::generate_seed_from_seed_phrase_and_passphrase;
+
     keypair_from_seed(&generate_seed_from_seed_phrase_and_passphrase(
         seed_phrase,
         passphrase,
