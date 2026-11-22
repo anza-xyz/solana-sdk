@@ -13,6 +13,7 @@ It is primarily intended for use in the Solana Alpenglow consensus protocol, but
 - **Aggregate Verification & Screening:** Optimized multi-miller loop algorithms for verifying aggregated signatures against shared messages (multisig) or screening multiple distinct-message signatures via aggregate relations.
 - Supports aggregate screening of distinct-message signature sets. Note that `verify_distinct` and its variants provide screening guarantees only and do not imply individual signature validity per signer. See the API documentation for details.
 - **Parallelization:** Optional `rayon` integration to speed up multi-scalar multiplications (MSMs) and heavy verification loops.
+- **Run-time CPU Dispatch:** Optional `portable` feature that lets `blst` select its ADX-optimized arithmetic at run time. Without it, x86-64 builds with a baseline `target-cpu` (e.g., `x86-64-v2`) compile only the slower non-ADX code.
 - **Rogue-Key Attack Prevention:** Crate-provided aggregation APIs require `PopVerified` keys, and crate-provided `VerifySignature` implementations are limited to PoP-verified wrappers.
 
 ---
