@@ -167,3 +167,90 @@ fn alt_bn128_compression_pairing_test_input() {
         );
     });
 }
+
+// SIMD-0650: checks the pairing map output against an independent `ark-bn254`
+// computation and encoding of the target group element.
+#[test]
+fn alt_bn128_pairing_map_test() {
+    use {
+        ark_bn254::{Bn254, Fr, G1Affine, G2Affine},
+        ark_ec::{pairing::Pairing, AffineRepr, CurveGroup},
+        ark_ff::{BigInteger, Field, PrimeField},
+        ark_serialize::CanonicalSerialize,
+        std::ops::Mul,
+    };
+
+    let g1 = G1Affine::generator();
+    let g2 = G2Affine::generator();
+    let pairs = [
+        (
+            g1.mul(Fr::from(3u64)).into_affine(),
+            g2.mul(Fr::from(5u64)).into_affine(),
+        ),
+        (
+            g1.mul(Fr::from(7u64)).into_affine(),
+            g2.mul(Fr::from(11u64)).into_affine(),
+        ),
+        (G1Affine::zero(), g2),
+    ];
+
+    let encode_le = |pairs: &[(G1Affine, G2Affine)]| {
+        let mut input = Vec::new();
+        for (p, q) in pairs {
+            let mut pair = [0u8; ALT_BN128_PAIRING_MAP_ELEMENT_SIZE];
+            if !p.is_zero() {
+                p.x.serialize_uncompressed(&mut pair[..32]).unwrap();
+                p.y.serialize_uncompressed(&mut pair[32..64]).unwrap();
+            }
+            if !q.is_zero() {
+                q.x.serialize_uncompressed(&mut pair[64..128]).unwrap();
+                q.y.serialize_uncompressed(&mut pair[128..]).unwrap();
+            }
+            input.extend_from_slice(&pair);
+        }
+        input
+    };
+
+    for n in 0..=pairs.len() {
+        let pairs = &pairs[..n];
+        let gt = Bn254::multi_pairing(pairs.iter().map(|p| p.0), pairs.iter().map(|p| p.1)).0;
+
+        // c0, ..., c11 in tower order, each in little-endian
+        let expected_le: Vec<u8> = gt
+            .to_base_prime_field_elements()
+            .flat_map(|c| c.into_bigint().to_bytes_le())
+            .collect();
+        assert_eq!(expected_le.len(), ALT_BN128_PAIRING_MAP_OUTPUT_SIZE);
+        // c11, ..., c0, each in big-endian
+        let expected_be: Vec<u8> = expected_le.iter().rev().copied().collect();
+
+        let input_le = encode_le(pairs);
+        let input_be: Vec<u8> = input_le
+            .chunks_exact(ALT_BN128_PAIRING_MAP_ELEMENT_SIZE)
+            .flat_map(|pair| {
+                let g1 = convert_endianness::<32, 64>(pair[..64].try_into().unwrap());
+                let g2 = convert_endianness::<64, 128>(pair[64..].try_into().unwrap());
+                g1.into_iter().chain(g2)
+            })
+            .collect();
+
+        assert_eq!(alt_bn128_pairing_map_le(&input_le).unwrap(), expected_le);
+        assert_eq!(alt_bn128_pairing_map_be(&input_be).unwrap(), expected_be);
+    }
+
+    // e(3 G1, 5 G2) * e(7 G1, 11 G2) = e(92 G1, G2)
+    let combined = encode_le(&[(g1.mul(Fr::from(92u64)).into_affine(), g2)]);
+    assert_eq!(
+        alt_bn128_pairing_map_le(&encode_le(&pairs[..2])).unwrap(),
+        alt_bn128_pairing_map_le(&combined).unwrap(),
+    );
+
+    // a G2 point outside the prime-order subgroup is rejected
+    let off_subgroup = (1u64..)
+        .find_map(|x| {
+            let q = G2Affine::get_point_from_x_unchecked(ark_bn254::Fq2::from(x), false)?;
+            (!q.is_in_correct_subgroup_assuming_on_curve()).then_some(q)
+        })
+        .unwrap();
+    assert!(alt_bn128_pairing_map_le(&encode_le(&[(g1, off_subgroup)])).is_err());
+}

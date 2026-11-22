@@ -24,8 +24,11 @@ pub mod versioned {
             ALT_BN128_G2_MULTIPLICATION_INPUT_SIZE, ALT_BN128_G2_MUL_BE, ALT_BN128_G2_MUL_LE,
         },
         pairing::{
-            alt_bn128_versioned_pairing, VersionedPairing, ALT_BN128_PAIRING_BE,
-            ALT_BN128_PAIRING_ELEMENT_SIZE, ALT_BN128_PAIRING_LE, ALT_BN128_PAIRING_OUTPUT_SIZE,
+            alt_bn128_versioned_pairing, alt_bn128_versioned_pairing_map, VersionedPairing,
+            VersionedPairingMap, ALT_BN128_PAIRING_BE, ALT_BN128_PAIRING_ELEMENT_SIZE,
+            ALT_BN128_PAIRING_LE, ALT_BN128_PAIRING_MAP_BE, ALT_BN128_PAIRING_MAP_ELEMENT_SIZE,
+            ALT_BN128_PAIRING_MAP_LE, ALT_BN128_PAIRING_MAP_OUTPUT_SIZE,
+            ALT_BN128_PAIRING_OUTPUT_SIZE,
         },
         target_arch::Endianness,
     };
@@ -81,8 +84,11 @@ pub mod prelude {
             ALT_BN128_G2_MULTIPLICATION_INPUT_SIZE, ALT_BN128_G2_MUL_BE, ALT_BN128_G2_MUL_LE,
         },
         pairing::{
-            alt_bn128_pairing_be, alt_bn128_pairing_le, ALT_BN128_PAIRING_BE,
-            ALT_BN128_PAIRING_ELEMENT_SIZE, ALT_BN128_PAIRING_LE, ALT_BN128_PAIRING_OUTPUT_SIZE,
+            alt_bn128_pairing_be, alt_bn128_pairing_le, alt_bn128_pairing_map_be,
+            alt_bn128_pairing_map_le, ALT_BN128_PAIRING_BE, ALT_BN128_PAIRING_ELEMENT_SIZE,
+            ALT_BN128_PAIRING_LE, ALT_BN128_PAIRING_MAP_BE, ALT_BN128_PAIRING_MAP_ELEMENT_SIZE,
+            ALT_BN128_PAIRING_MAP_LE, ALT_BN128_PAIRING_MAP_OUTPUT_SIZE,
+            ALT_BN128_PAIRING_OUTPUT_SIZE,
         },
         AltBn128Error,
     };
@@ -108,6 +114,10 @@ mod consts {
 
     /// Elements in G2 is represented by 2 field-extension elements `(x, y)`.
     pub const ALT_BN128_G2_POINT_SIZE: usize = ALT_BN128_FQ2_SIZE * 2;
+
+    /// Elements in the target group (Gt) are elements of `Fq12` and are
+    /// represented by 12 field elements.
+    pub const ALT_BN128_GT_ELEMENT_SIZE: usize = ALT_BN128_FIELD_SIZE * 12;
 }
 
 // AltBn128Error must be removed once the

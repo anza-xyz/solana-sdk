@@ -226,10 +226,41 @@ pub fn check_pairing(name: &str, input: &[u8], expected: &[u8]) {
         Ok(&expected_le[..]),
         "{name}: little-endian result"
     );
+
+    // SIMD-0650: the pairing map accepts the same inputs and its output is the
+    // identity of the target group exactly when the pairing check succeeds.
+    let mut identity_le = [0u8; ALT_BN128_PAIRING_MAP_OUTPUT_SIZE];
+    identity_le[0] = 1;
+    let map_le = alt_bn128_pairing_map_le(&input_le).unwrap();
+    assert_eq!(map_le.len(), ALT_BN128_PAIRING_MAP_OUTPUT_SIZE);
+    assert_eq!(
+        map_le == identity_le,
+        expected_le[0] == 1,
+        "{name}: little-endian pairing map result"
+    );
+    // The big-endian encoding is the byte-reversal of the little-endian one.
+    let map_be = alt_bn128_pairing_map_be(input).unwrap();
+    assert!(
+        map_be.iter().eq(map_le.iter().rev()),
+        "{name}: big-endian pairing map result"
+    );
 }
 
 /// Checks an Ethereum pairing vector that the precompile rejects.
 pub fn check_pairing_fails(name: &str, input: &[u8]) {
+    assert!(
+        alt_bn128_pairing_map_be(input).is_err(),
+        "{name}: big-endian pairing map input must be rejected"
+    );
+    let map_input_le = if input.len().is_multiple_of(ALT_BN128_PAIRING_ELEMENT_SIZE) {
+        pairing_input_be_to_le(input)
+    } else {
+        input.to_vec()
+    };
+    assert!(
+        alt_bn128_pairing_map_le(&map_input_le).is_err(),
+        "{name}: little-endian pairing map input must be rejected"
+    );
     assert!(
         alt_bn128_pairing_be(input).is_err(),
         "{name}: big-endian input must be rejected"
