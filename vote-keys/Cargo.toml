@@ -2,7 +2,7 @@
 name = "solana-vote-keys"
 description = "Solana vote key types"
 documentation = "https://docs.rs/solana-vote-keys"
-version = "1.0.0"
+version = "1.0.1"
 rust-version = { workspace = true }
 authors = { workspace = true }
 repository = { workspace = true }
