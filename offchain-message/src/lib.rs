@@ -6,7 +6,8 @@ use {
     solana_hash::Hash,
     solana_sanitize::SanitizeError,
     solana_signature::Signature,
-    solana_signer::Signer,
+    solana_signer::{Signer, SignerError},
+    std::fmt,
 };
 
 mod offspec;
@@ -26,6 +27,43 @@ pub fn is_printable_ascii(data: &[u8]) -> bool {
 /// Check if given bytes contain valid UTF8 string
 pub fn is_utf8(data: &[u8]) -> bool {
     std::str::from_utf8(data).is_ok()
+}
+
+#[derive(Debug, PartialEq, Eq)]
+#[non_exhaustive]
+pub enum SignError {
+    Sanitize(SanitizeError),
+    Signer(SignerError),
+}
+
+impl std::error::Error for SignError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Self::Sanitize(e) => Some(e),
+            Self::Signer(e) => Some(e),
+        }
+    }
+}
+
+impl fmt::Display for SignError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Self::Sanitize(e) => write!(f, "sanitize error: {e}"),
+            Self::Signer(e) => write!(f, "signer error: {e}"),
+        }
+    }
+}
+
+impl From<SanitizeError> for SignError {
+    fn from(source: SanitizeError) -> Self {
+        Self::Sanitize(source)
+    }
+}
+
+impl From<SignerError> for SignError {
+    fn from(source: SignerError) -> Self {
+        Self::Signer(source)
+    }
 }
 
 #[repr(u8)]
@@ -435,8 +473,8 @@ impl OffchainMessageWithSigners {
     }
 
     /// Sign the message with provided keypair
-    pub fn sign(&self, signer: &dyn Signer) -> Result<Signature, SanitizeError> {
-        Ok(signer.sign_message(&self.serialize()?))
+    pub fn sign(&self, signer: &dyn Signer) -> Result<Signature, SignError> {
+        Ok(signer.try_sign_message(&self.serialize()?)?)
     }
 
     #[cfg(feature = "verify")]
