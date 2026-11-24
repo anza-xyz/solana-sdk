@@ -33,7 +33,7 @@ pub enum CommissionKind {
 #[cfg_attr(
     feature = "stable-abi",
     frozen_abi(
-        abi_digest = "Gfrj3vdfCYcrnQsTh3HawAmQREneuREg7VbYcrjQhGvT",
+        abi_digest = "9ez1GaXDf8tyJi3kMd7jKqp6cYWV3EEd1ar4zHUJ4Hrj",
         abi_serializer = ["bincode", "wincode"]
     ),
     derive(StableAbi, StableAbiSample)
@@ -227,6 +227,13 @@ pub enum VoteInstruction {
     ///   1. `[SIGNER, WRITE]` Source account for deposit funds
     ///   2. `[]` System program, used to transfer the deposit
     DepositDelegatorRewards { deposit: u64 },
+
+    /// Set or update the physical location of the validator.
+    ///
+    /// # Account references
+    ///   0. `[WRITE]` Vote account to be updated with the new location
+    ///   1. `[SIGNER]` Vote account withdraw authority
+    UpdateLocation { x: i32, y: i32, z: i32 },
 }
 
 #[cfg(all(feature = "bincode", not(feature = "wincode")))]
@@ -540,6 +547,26 @@ pub fn update_commission_bps(
             kind,
             commission_bps,
         },
+        account_metas,
+    )
+}
+
+#[cfg(any(feature = "bincode", feature = "wincode"))]
+pub fn update_location(
+    vote_pubkey: &Pubkey,
+    authorized_withdrawer_pubkey: &Pubkey,
+    x: i32,
+    y: i32,
+    z: i32,
+) -> Instruction {
+    let account_metas = vec![
+        AccountMeta::new(*vote_pubkey, false),
+        AccountMeta::new_readonly(*authorized_withdrawer_pubkey, true),
+    ];
+
+    create_instruction(
+        id(),
+        &VoteInstruction::UpdateLocation { x, y, z },
         account_metas,
     )
 }
