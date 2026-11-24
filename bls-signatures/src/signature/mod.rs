@@ -41,8 +41,9 @@ pub use bytes::{
 #[cfg(not(target_os = "solana"))]
 pub use {
     points::{
-        AddToSignatureProjective, AsSignatureAffine, AsSignatureProjective, SignatureAffine,
-        SignatureAffineUnchecked, SignatureProjective,
+        AddToSignatureProjective, AddToSignatureProjectiveUnchecked, AsSignatureAffine,
+        AsSignatureProjective, SignatureAffine, SignatureAffineUnchecked, SignatureProjective,
+        SignatureProjectiveUnchecked,
     },
     verify::VerifiableSignature,
 };
@@ -62,6 +63,7 @@ mod tests {
                 PubkeyCompressed, PubkeyProjective, VerifySignature,
             },
         },
+        blstrs::G2Affine,
         core::{iter::empty, str::FromStr},
         std::{string::ToString, vec::Vec},
     };
@@ -757,6 +759,141 @@ mod tests {
         let mut acc = SignatureProjective::identity();
         unchecked_comp.add_to_accumulator(&mut acc).unwrap();
         assert_eq!(acc, sig_proj);
+    }
+
+    // A point on the curve that is outside of the prime-order subgroup G2.
+    fn point_outside_subgroup() -> SignatureAffineUnchecked {
+        (0..=u8::MAX)
+            .find_map(|x| {
+                let mut bytes = [0u8; BLS_SIGNATURE_COMPRESSED_SIZE];
+                bytes[0] = 0x80; // compression flag
+                bytes[BLS_SIGNATURE_COMPRESSED_SIZE - 1] = x;
+                SignatureAffineUnchecked::try_from(SignatureCompressed(bytes))
+                    .ok()
+                    .filter(|point| point.verify_subgroup().is_err())
+            })
+            .expect("a small x-coordinate should give a curve point outside of G2")
+    }
+
+    #[test]
+    fn test_signature_unchecked_aggregate() {
+        let message = b"unchecked_aggregate_test";
+        let signatures: Vec<SignatureProjective> =
+            (0..4).map(|_| Keypair::new().sign(message)).collect();
+        let expected = SignatureProjective::aggregate(signatures.iter()).unwrap();
+
+        let uncompressed: Vec<Signature> = signatures.iter().map(Signature::from).collect();
+        let compressed: Vec<SignatureCompressed> =
+            signatures.iter().map(SignatureCompressed::from).collect();
+        let unchecked: Vec<SignatureAffineUnchecked> = signatures
+            .iter()
+            .map(SignatureAffineUnchecked::from)
+            .collect();
+
+        let from_uncompressed = SignatureProjectiveUnchecked::aggregate(uncompressed.iter())
+            .unwrap()
+            .verify_subgroup()
+            .unwrap();
+        assert_eq!(from_uncompressed, expected);
+
+        let from_compressed = SignatureProjectiveUnchecked::aggregate(compressed.iter())
+            .unwrap()
+            .verify_subgroup()
+            .unwrap();
+        assert_eq!(from_compressed, expected);
+
+        let from_unchecked = SignatureProjectiveUnchecked::aggregate(unchecked.iter())
+            .unwrap()
+            .verify_subgroup()
+            .unwrap();
+        assert_eq!(from_unchecked, expected);
+
+        let mut aggregate_with = SignatureProjectiveUnchecked::identity();
+        aggregate_with
+            .aggregate_with(uncompressed[..2].iter())
+            .unwrap();
+        aggregate_with
+            .aggregate_with(compressed[2..].iter())
+            .unwrap();
+        assert_eq!(aggregate_with.verify_subgroup().unwrap(), expected);
+
+        assert_eq!(
+            SignatureProjectiveUnchecked::aggregate(empty::<&Signature>()).unwrap_err(),
+            BlsError::EmptyAggregation
+        );
+        assert_eq!(
+            SignatureProjectiveUnchecked::identity()
+                .verify_subgroup()
+                .unwrap(),
+            SignatureProjective::identity()
+        );
+    }
+
+    #[test]
+    fn test_signature_unchecked_aggregate_rejects_invalid_points() {
+        let signature = Keypair::new().sign(b"unchecked_aggregate_test");
+        let signature_bytes = Signature::from(signature);
+        let outside = point_outside_subgroup();
+        let outside_bytes = Signature(outside.0.to_uncompressed());
+
+        // A point outside of G2 is added, but the sum fails the subgroup check.
+        let alone = SignatureProjectiveUnchecked::aggregate([&outside_bytes].into_iter()).unwrap();
+        assert_eq!(
+            alone.verify_subgroup().unwrap_err(),
+            BlsError::VerificationFailed
+        );
+
+        let with_valid =
+            SignatureProjectiveUnchecked::aggregate([&signature_bytes, &outside_bytes].into_iter())
+                .unwrap();
+        assert_eq!(
+            with_valid.verify_subgroup().unwrap_err(),
+            BlsError::VerificationFailed
+        );
+
+        // A point off the curve is never added.
+        let mut off_curve_bytes = signature_bytes;
+        off_curve_bytes.0[BLS_SIGNATURE_AFFINE_SIZE - 1] ^= 1;
+        let mut aggregate = SignatureProjectiveUnchecked::identity();
+        assert_eq!(
+            aggregate
+                .aggregate_with([&off_curve_bytes].into_iter())
+                .unwrap_err(),
+            BlsError::PointConversion
+        );
+        assert_eq!(aggregate, SignatureProjectiveUnchecked::identity());
+    }
+
+    #[test]
+    fn test_signature_unchecked_aggregate_accepts_cancelling_points() {
+        let message = b"unchecked_aggregate_test";
+        let keypair0 = Keypair::new();
+        let keypair1 = Keypair::new();
+        let signature0 = keypair0.sign(message);
+        let signature1 = keypair1.sign(message);
+        let outside = point_outside_subgroup();
+
+        // Move the two signatures out of G2 in opposite directions.
+        let shifted0 = SignatureAffineUnchecked(G2Affine::from(signature0.0 + outside.0));
+        let shifted1 = SignatureAffineUnchecked(G2Affine::from(signature1.0 - outside.0));
+        assert!(shifted0.verify_subgroup().is_err());
+        assert!(shifted1.verify_subgroup().is_err());
+
+        // Neither input is a valid signature, but their sum is a valid aggregate.
+        let aggregate = SignatureProjectiveUnchecked::aggregate([&shifted0, &shifted1].into_iter())
+            .unwrap()
+            .verify_subgroup()
+            .unwrap();
+        assert_eq!(
+            aggregate,
+            SignatureProjective::aggregate([&signature0, &signature1].into_iter()).unwrap()
+        );
+
+        let aggregate_pubkey =
+            PubkeyProjective::aggregate([&keypair0.public, &keypair1.public].into_iter()).unwrap();
+        aggregate_pubkey
+            .verify_signature(&aggregate, message)
+            .unwrap();
     }
 
     #[test]

@@ -5,7 +5,9 @@ use {
         keypair::Keypair,
         pubkey::{PopVerified, Pubkey, PubkeyProjective, VerifyPop, VerifySignature},
         scalar::Scalar,
-        signature::{Signature, SignatureAffineUnchecked, SignatureProjective},
+        signature::{
+            Signature, SignatureAffineUnchecked, SignatureProjective, SignatureProjectiveUnchecked,
+        },
     },
     std::hint::black_box,
 };
@@ -52,6 +54,19 @@ fn bench_aggregate(c: &mut Criterion) {
         group.bench_function(format!("{num_validators} signature aggregation"), |b| {
             b.iter(|| black_box(SignatureProjective::aggregate(signature_bytes.iter())));
         });
+
+        // Benchmark for aggregating multiple signatures with one subgroup check on the sum
+        group.bench_function(
+            format!("{num_validators} unchecked signature aggregation"),
+            |b| {
+                b.iter(|| {
+                    black_box(
+                        SignatureProjectiveUnchecked::aggregate(signature_bytes.iter())
+                            .and_then(|aggregate| aggregate.verify_subgroup()),
+                    )
+                });
+            },
+        );
 
         // Benchmark for aggregating multiple signatures with scalars (MSM)
         group.bench_function(
