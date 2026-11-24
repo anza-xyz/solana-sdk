@@ -153,7 +153,8 @@ impl_add_to_accumulator!(
 /// A sum that passes the check says nothing about its inputs: signatures
 /// outside of G2 are accepted when their components outside of G2 cancel. Use
 /// this only when the aggregate is the only signature that gets verified and
-/// used afterwards, and never treat the inputs as individually valid.
+/// used afterwards, and never treat the inputs, or the sum of a subset of
+/// them, as valid.
 #[cfg(not(target_os = "solana"))]
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct SignatureProjectiveUnchecked(pub(crate) G2Projective);
@@ -198,6 +199,19 @@ impl AddToSignatureProjectiveUnchecked for SignatureAffineUnchecked {
         acc: &mut SignatureProjectiveUnchecked,
     ) -> Result<(), BlsError> {
         // Efficient mixed addition (Projective += Affine)
+        acc.0 += self.0;
+        Ok(())
+    }
+}
+
+#[cfg(not(target_os = "solana"))]
+impl AddToSignatureProjectiveUnchecked for SignatureProjectiveUnchecked {
+    #[allow(clippy::arithmetic_side_effects)]
+    fn add_to_unchecked_accumulator(
+        &self,
+        acc: &mut SignatureProjectiveUnchecked,
+    ) -> Result<(), BlsError> {
+        // Projective += Projective
         acc.0 += self.0;
         Ok(())
     }

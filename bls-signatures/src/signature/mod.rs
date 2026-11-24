@@ -817,6 +817,14 @@ mod tests {
             .unwrap();
         assert_eq!(aggregate_with.verify_subgroup().unwrap(), expected);
 
+        let first_half = SignatureProjectiveUnchecked::aggregate(uncompressed[..2].iter()).unwrap();
+        let second_half =
+            SignatureProjectiveUnchecked::aggregate(uncompressed[2..].iter()).unwrap();
+        let merged =
+            SignatureProjectiveUnchecked::aggregate([&first_half, &second_half].into_iter())
+                .unwrap();
+        assert_eq!(merged.verify_subgroup().unwrap(), expected);
+
         assert_eq!(
             SignatureProjectiveUnchecked::aggregate(empty::<&Signature>()).unwrap_err(),
             BlsError::EmptyAggregation
@@ -835,6 +843,7 @@ mod tests {
         let signature_bytes = Signature::from(signature);
         let outside = point_outside_subgroup();
         let outside_bytes = Signature(outside.0.to_uncompressed());
+        let outside_compressed = SignatureCompressed(outside.0.to_compressed());
 
         // A point outside of G2 is added, but the sum fails the subgroup check.
         let alone = SignatureProjectiveUnchecked::aggregate([&outside_bytes].into_iter()).unwrap();
@@ -842,6 +851,9 @@ mod tests {
             alone.verify_subgroup().unwrap_err(),
             BlsError::VerificationFailed
         );
+        let alone_compressed =
+            SignatureProjectiveUnchecked::aggregate([&outside_compressed].into_iter()).unwrap();
+        assert_eq!(alone_compressed, alone);
 
         let with_valid =
             SignatureProjectiveUnchecked::aggregate([&signature_bytes, &outside_bytes].into_iter())
