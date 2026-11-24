@@ -150,11 +150,16 @@ impl_add_to_accumulator!(
 /// [`Self::verify_subgroup`], which is the only way to turn the sum into a
 /// `SignatureProjective`.
 ///
-/// A sum that passes the check says nothing about its inputs: signatures
-/// outside of G2 are accepted when their components outside of G2 cancel. Use
-/// this only when the aggregate is the only signature that gets verified and
-/// used afterwards, and never treat the inputs, or the sum of a subset of
-/// them, as valid.
+/// Every point on the curve is the sum of a point in G2 and a point whose
+/// order divides the cofactor. A sum that passes the check equals the sum of
+/// the G2 parts of its inputs, so verifying it is as strong as verifying an
+/// aggregate of checked signatures.
+///
+/// It says nothing about the inputs themselves: signatures outside of G2 are
+/// accepted when their parts outside of G2 cancel, and the checked conversions
+/// still reject them. Use this only when the aggregate is the only signature
+/// that gets verified and used afterwards, and never treat the inputs, or the
+/// sum of a subset of them, as valid.
 #[cfg(not(target_os = "solana"))]
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct SignatureProjectiveUnchecked(pub(crate) G2Projective);
@@ -170,6 +175,9 @@ impl SignatureProjectiveUnchecked {
     ///
     /// Returns a validated `SignatureProjective` on success.
     pub fn verify_subgroup(&self) -> Result<SignatureProjective, BlsError> {
+        // `blst_p2_in_g2` is a membership test only for points on the curve,
+        // which every way of constructing this type guarantees.
+        //
         // SAFETY: The point is a valid, initialized `blst_p2` that outlives
         // the call, and blst only reads it.
         if unsafe { blst::blst_p2_in_g2(self.0.as_ref()) } {
