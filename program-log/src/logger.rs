@@ -118,7 +118,7 @@ pub fn log_message(message: &[u8]) {
     }
     #[cfg(all(not(any(target_os = "solana", target_arch = "bpf")), feature = "std"))]
     {
-        let message = core::str::from_utf8(message).unwrap();
+        let message = std::string::String::from_utf8_lossy(message);
         std::println!("{message}");
     }
 
