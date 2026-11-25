@@ -4869,6 +4869,7 @@ version = "7.4.0"
 dependencies = [
  "arbitrary",
  "bincode",
+ "bytemuck",
  "cfg_eval",
  "num-derive",
  "num-traits",
@@ -4882,6 +4883,8 @@ dependencies = [
  "solana-frozen-abi-macro",
  "solana-instruction",
  "solana-instruction-error",
+ "solana-nullable",
+ "solana-program-memory",
  "solana-pubkey",
  "solana-rent",
  "solana-sdk-ids",

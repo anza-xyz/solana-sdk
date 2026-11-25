@@ -1,4 +1,6 @@
-use crate::state::{vote_state_1_14_11::VoteState1_14_11, VoteStateV3, VoteStateV4};
+use crate::state::{
+    vote_state_1_14_11::VoteState1_14_11, vote_state_v5::VoteStateV5, VoteStateV3, VoteStateV4,
+};
 #[cfg(test)]
 use arbitrary::{Arbitrary, Unstructured};
 #[cfg(feature = "stable-abi")]
@@ -139,7 +141,8 @@ impl VoteStateVersions {
     }
 
     pub fn is_correct_size_and_initialized(data: &[u8]) -> bool {
-        VoteStateV4::is_correct_size_and_initialized(data)
+        VoteStateV5::is_correct_size_and_initialized(data)
+            || VoteStateV4::is_correct_size_and_initialized(data)
             || VoteStateV3::is_correct_size_and_initialized(data)
             || VoteState1_14_11::is_correct_size_and_initialized(data)
     }
