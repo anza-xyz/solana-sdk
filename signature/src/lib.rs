@@ -84,7 +84,8 @@ impl Signature {
 
 #[cfg(any(test, feature = "verify"))]
 impl Signature {
-    // Once SIMD-0376 cleanup lands, [`Self::verify`] should call this method.
+    // The strict rules behind [`Self::verify`]. To be removed once
+    // [`Self::verify`] moves to `verify_simd0376_verbose`.
     // Tracked in https://github.com/anza-xyz/solana-sdk/issues/819.
     pub(self) fn verify_verbose(
         &self,
@@ -97,9 +98,8 @@ impl Signature {
         publickey.verify_dalek(&signature, message_bytes)
     }
 
-    // To be removed as part of the SIMD-0376 cleanup.
-    // Tracked in https://github.com/anza-xyz/solana-sdk/issues/819.
-    pub(self) fn verify_non_strict_verbose(
+    // The SIMD-0376 rules behind [`Self::verify_simd0376`].
+    pub(self) fn verify_simd0376_verbose(
         &self,
         pubkey_bytes: &[u8],
         message_bytes: &[u8],
@@ -116,24 +116,43 @@ impl Signature {
     /// is the exact message that was signed. Returns `false` if verification
     /// fails or the public key cannot be parsed.
     ///
-    /// Will switch to the SIMD-0376 path as part of the SIMD-0376
-    /// cleanup, tracked in <https://github.com/anza-xyz/solana-sdk/issues/819>.
+    /// Applies the strict Ed25519 rules of `ed25519-dalek`'s `verify_strict`:
+    /// the cofactorless verification equation, with small-order points
+    /// rejected. This will change to the rules of [`Self::verify_simd0376`]
+    /// once the SIMD-0376 migration is complete, tracked in
+    /// <https://github.com/anza-xyz/solana-sdk/issues/819>.
     pub fn verify(&self, pubkey_bytes: &[u8], message_bytes: &[u8]) -> bool {
         self.verify_verbose(pubkey_bytes, message_bytes).is_ok()
     }
 
-    /// Verifies this signature using SIMD-0376 Ed25519 rules: the cofactored
-    /// verification equation, with non-canonical encodings and small-order
-    /// points rejected.
+    /// Verifies this signature against `message_bytes` using `pubkey_bytes`,
+    /// under [SIMD-0376] Ed25519 rules.
     ///
     /// `pubkey_bytes` is the signer's Ed25519 public key, and `message_bytes`
-    /// is the exact message that was signed.
+    /// is the exact message that was signed. Returns `false` if verification
+    /// fails or the public key cannot be parsed.
     ///
-    /// To be removed as part of the SIMD-0376 cleanup, tracked in
-    /// <https://github.com/anza-xyz/solana-sdk/issues/819>.
-    pub fn verify_non_strict(&self, pubkey_bytes: &[u8], message_bytes: &[u8]) -> bool {
-        self.verify_non_strict_verbose(pubkey_bytes, message_bytes)
+    /// SIMD-0376 uses the cofactored verification equation and rejects
+    /// non-canonical encodings and small-order points. It accepts every
+    /// signature that [`Self::verify`] currently accepts, plus signatures
+    /// whose public key or `R` has a torsion component. It is stricter than
+    /// ZIP-215, which also accepts non-canonical encodings and small-order
+    /// points.
+    ///
+    /// [SIMD-0376]: https://github.com/solana-foundation/solana-improvement-documents/blob/main/proposals/0376-verify-strict.md
+    pub fn verify_simd0376(&self, pubkey_bytes: &[u8], message_bytes: &[u8]) -> bool {
+        self.verify_simd0376_verbose(pubkey_bytes, message_bytes)
             .is_ok()
+    }
+
+    /// Verifies this signature under SIMD-0376 Ed25519 rules.
+    ///
+    /// The name is historical: these rules are not ZIP-215, and they reject
+    /// the non-canonical encodings and small-order points that ZIP-215
+    /// accepts.
+    #[deprecated(since = "3.7.0", note = "Use `verify_simd0376` instead")]
+    pub fn verify_non_strict(&self, pubkey_bytes: &[u8], message_bytes: &[u8]) -> bool {
+        self.verify_simd0376(pubkey_bytes, message_bytes)
     }
 }
 
@@ -175,7 +194,7 @@ impl Signature {
     /// `pubkey_bytes` is the signer's public key, and `message_bytes` is the
     /// exact message that was signed. The iterator must know its exact length.
     ///
-    /// Accepts exactly the batches in which [`Self::verify_non_strict`]
+    /// Accepts exactly the batches in which [`Self::verify_simd0376`]
     /// accepts every item, except with negligible probability, regardless of
     /// the batch size. This differs from the current strict [`Self::verify`]
     /// and [`Self::batch_verify`] paths.
@@ -192,7 +211,7 @@ impl Signature {
         if signature_data.len() == 1 {
             let (signature, pubkey_bytes, message_bytes) =
                 signature_data.into_iter().next().unwrap();
-            return signature.verify_non_strict(pubkey_bytes, message_bytes);
+            return signature.verify_simd0376(pubkey_bytes, message_bytes);
         }
 
         let mut batch = solana_ed25519::ed_sigs::batch::Verifier::new();
@@ -601,11 +620,11 @@ mod tests {
     fn test_verify_rules() {
         let (messages, pubkeys, signatures) = torsion_data(1);
         assert!(!signatures[0].verify(&pubkeys[0], &messages[0]));
-        assert!(signatures[0].verify_non_strict(&pubkeys[0], &messages[0]));
+        assert!(signatures[0].verify_simd0376(&pubkeys[0], &messages[0]));
 
         let (messages, pubkeys, signatures) = small_order_data(1);
         assert!(!signatures[0].verify(&pubkeys[0], &messages[0]));
-        assert!(!signatures[0].verify_non_strict(&pubkeys[0], &messages[0]));
+        assert!(!signatures[0].verify_simd0376(&pubkeys[0], &messages[0]));
     }
 
     #[test]
