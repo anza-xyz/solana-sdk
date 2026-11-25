@@ -212,6 +212,31 @@ mod target_arch {
     pub(crate) type G1 = ark_bn254::g1::G1Affine;
     pub(crate) type G2 = ark_bn254::g2::G2Affine;
 
+    /// The two most significant bits of a serialized base field element.
+    ///
+    /// The base field modulus is a 254-bit number, so under EIP-196/197 an
+    /// element with either of these bits set is out of range and the whole
+    /// input is rejected. `ark-serialize` instead reads the bits of the last
+    /// coordinate as point flags (`YIsNegative`, `PointAtInfinity`) and
+    /// strips them, which lets such inputs through and can even turn a valid
+    /// point into the point at infinity. See
+    /// <https://github.com/anza-xyz/agave/issues/3379>.
+    const FIELD_FLAG_BITS_MASK: u8 = 0xC0;
+
+    /// Rejects a little-endian pod encoding, a sequence of 32-byte field
+    /// elements, in which any element has one of the
+    /// [`FIELD_FLAG_BITS_MASK`] bits set.
+    pub(crate) fn reject_flag_bits(pod_bytes: &[u8]) -> Result<(), AltBn128Error> {
+        let has_flag_bits = pod_bytes
+            .chunks_exact(FIELD_SIZE)
+            .any(|element| element[FIELD_SIZE - 1] & FIELD_FLAG_BITS_MASK != 0);
+        if has_flag_bits {
+            Err(AltBn128Error::InvalidInputData)
+        } else {
+            Ok(())
+        }
+    }
+
     impl PodG1 {
         /// Takes in an EIP-197 (big-endian) byte encoding of a group element in G1 and constructs a
         /// `PodG1` struct that encodes the same bytes in little-endian.
