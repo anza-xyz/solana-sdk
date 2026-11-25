@@ -4,7 +4,10 @@ use {
     crate::{
         error::BlsError,
         scalar::Scalar,
-        signature::points::{AddToSignatureProjective, SignatureProjective},
+        signature::points::{
+            AddToSignatureProjective, AddToSignatureProjectiveUnchecked, SignatureProjective,
+            SignatureProjectiveUnchecked,
+        },
     },
     blstrs::{G2Projective, Scalar as BlstrsScalar},
 };
@@ -139,6 +142,38 @@ impl SignatureProjective {
             return Err(BlsError::EmptyAggregation);
         }
 
+        Ok(aggregate)
+    }
+}
+
+impl SignatureProjectiveUnchecked {
+    /// Aggregate a list of signatures into an existing aggregate, checking
+    /// only that each signature is a point on the curve
+    pub fn aggregate_with<'a, S: AddToSignatureProjectiveUnchecked + ?Sized + 'a>(
+        &mut self,
+        signatures: impl Iterator<Item = &'a S>,
+    ) -> Result<(), BlsError> {
+        for signature in signatures {
+            signature.add_to_unchecked_accumulator(self)?;
+        }
+        Ok(())
+    }
+
+    /// Aggregate a list of signatures, checking only that each signature is a
+    /// point on the curve
+    #[allow(clippy::arithmetic_side_effects)]
+    pub fn aggregate<'a, S: AddToSignatureProjectiveUnchecked + ?Sized + 'a>(
+        signatures: impl Iterator<Item = &'a S>,
+    ) -> Result<SignatureProjectiveUnchecked, BlsError> {
+        let mut aggregate = SignatureProjectiveUnchecked::identity();
+        let mut count = 0;
+        for signature in signatures {
+            signature.add_to_unchecked_accumulator(&mut aggregate)?;
+            count += 1;
+        }
+        if count == 0 {
+            return Err(BlsError::EmptyAggregation);
+        }
         Ok(aggregate)
     }
 }
