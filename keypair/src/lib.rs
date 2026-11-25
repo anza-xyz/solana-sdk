@@ -293,6 +293,18 @@ pub fn keypair_from_seed(seed: &[u8]) -> Result<Keypair, Box<dyn error::Error>> 
 /// an ASCII passphrase, the seed matches BIP-39. Normalizing non-NFKD inputs can
 /// change the keypair, so preserve the original input bytes when recovering
 /// existing keys.
+///
+/// This function is kept so that keys derived with it can still be recovered.
+/// For new derivations, use
+/// `Keypair::from_seed_phrase_and_passphrase_with_unicode_normalization`.
+#[deprecated(
+    since = "4.1.0",
+    note = "Does not apply BIP-39 NFKD normalization. Use \
+            `Keypair::from_seed_phrase_and_passphrase_with_unicode_normalization` (with the \
+            `seed-derivable` feature) or \
+            `keypair_from_seed(&generate_seed_with_unicode_normalization(..))` for new \
+            derivations; keep using this function only to recover keys derived with it"
+)]
 #[allow(deprecated)]
 pub fn keypair_from_seed_phrase_and_passphrase(
     seed_phrase: &str,
@@ -463,6 +475,9 @@ mod tests {
         foo(Keypair::new());
     }
 
+    // The deprecated function must stay covered, since it is the only way to
+    // recover keys that were derived with it.
+    #[allow(deprecated)]
     #[test]
     fn test_keypair_from_seed_phrase_and_passphrase() {
         let mnemonic = Mnemonic::new(MnemonicType::Words12, Language::English);

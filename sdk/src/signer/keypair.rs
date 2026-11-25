@@ -1,4 +1,5 @@
 #[deprecated(since = "2.2.0", note = "Use `solana-keypair` crate instead")]
+#[allow(deprecated)]
 pub use solana_keypair::{
     keypair_from_seed, keypair_from_seed_phrase_and_passphrase, read_keypair, read_keypair_file,
     seed_derivable::keypair_from_seed_and_derivation_path, write_keypair, write_keypair_file,

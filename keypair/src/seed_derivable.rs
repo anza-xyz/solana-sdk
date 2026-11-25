@@ -1,7 +1,7 @@
 //! Implementation of the SeedDerivable trait for Keypair
 
 use {
-    crate::{keypair_from_seed, keypair_from_seed_phrase_and_passphrase, Keypair},
+    crate::{keypair_from_seed, Keypair},
     solana_derivation_path::DerivationPath,
     solana_ed25519::ed_sigs::{Bip32DerivationError, ExtendedSigningKey},
     solana_seed_derivable::SeedDerivable,
@@ -20,11 +20,12 @@ impl SeedDerivable for Keypair {
         keypair_from_seed_and_derivation_path(seed, derivation_path)
     }
 
+    #[allow(deprecated)]
     fn from_seed_phrase_and_passphrase(
         seed_phrase: &str,
         passphrase: &str,
     ) -> Result<Self, Box<dyn error::Error>> {
-        keypair_from_seed_phrase_and_passphrase(seed_phrase, passphrase)
+        crate::keypair_from_seed_phrase_and_passphrase(seed_phrase, passphrase)
     }
 }
 
