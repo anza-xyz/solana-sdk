@@ -3548,9 +3548,9 @@ dependencies = [
 
 [[package]]
 name = "solana-ed25519"
-version = "0.2.4"
+version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ff4c7caf3fe3d70815869a5838ee45b4d2b009eaacea1790ef3cd9b3c89edbbd"
+checksum = "60c3b53755a74abeaa7f53be4a2c0711b066fef5432d04791bf4066e96c6998a"
 dependencies = [
  "cfg-if",
  "cpufeatures 0.3.0",
@@ -5050,7 +5050,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "32497e9a4c7b38532efcdebeef879707aa9f794296a4f0244f6f69e9bc8574bd"
 dependencies = [
  "fastrand",
- "getrandom 0.3.4",
+ "getrandom 0.4.3",
  "once_cell",
  "rustix",
  "windows-sys 0.61.2",

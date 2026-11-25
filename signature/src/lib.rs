@@ -107,7 +107,7 @@ impl Signature {
         let publickey = solana_ed25519::ed_sigs::VerificationKey::try_from(pubkey_bytes)?;
         let signature = solana_ed25519::ed_sigs::Signature::from_slice(self.as_ref())
             .map_err(|_| solana_ed25519::ed_sigs::Error::InvalidSignature)?;
-        publickey.verify_zebra(&signature, message_bytes)
+        publickey.verify_simd0376(&signature, message_bytes)
     }
 
     /// Verifies this signature against `message_bytes` using `pubkey_bytes`.
@@ -116,13 +116,15 @@ impl Signature {
     /// is the exact message that was signed. Returns `false` if verification
     /// fails or the public key cannot be parsed.
     ///
-    /// Will switch to the zebra (ZIP-215) path as part of the SIMD-0376
+    /// Will switch to the SIMD-0376 path as part of the SIMD-0376
     /// cleanup, tracked in <https://github.com/anza-xyz/solana-sdk/issues/819>.
     pub fn verify(&self, pubkey_bytes: &[u8], message_bytes: &[u8]) -> bool {
         self.verify_verbose(pubkey_bytes, message_bytes).is_ok()
     }
 
-    /// Verifies this signature using ZIP-215-compatible Ed25519 rules.
+    /// Verifies this signature using SIMD-0376 Ed25519 rules: the cofactored
+    /// verification equation, with non-canonical encodings and small-order
+    /// points rejected.
     ///
     /// `pubkey_bytes` is the signer's Ed25519 public key, and `message_bytes`
     /// is the exact message that was signed.
@@ -145,7 +147,7 @@ impl Signature {
     /// `pubkey_bytes` is the signer's public key, and `message_bytes` is the
     /// exact message that was signed. The iterator must know its exact length.
     ///
-    /// Uses ZIP-215-compatible Ed25519 rules, matching
+    /// Uses SIMD-0376 Ed25519 rules, matching
     /// [`Self::verify_non_strict`] rather than the current strict
     /// [`Self::verify`] path.
     ///
@@ -497,7 +499,41 @@ mod tests {
     }
 
     #[test]
-    fn test_batch_verify_accepts_zip215_valid_signatures() {
+    fn test_batch_verify_accepts_simd0376_valid_signatures() {
+        // SIMD-0376 torsion vector from `solana-ed25519`: an honest key `A`
+        // (RFC 8032 section 7.1 TEST 1) and an `R` with an order-8 torsion
+        // component, over the message `SIMD-0376`. It satisfies the cofactored
+        // equation but not the cofactorless one.
+        let pubkey = [
+            0xd7, 0x5a, 0x98, 0x01, 0x82, 0xb1, 0x0a, 0xb7, 0xd5, 0x4b, 0xfe, 0xd3, 0xc9, 0x64,
+            0x07, 0x3a, 0x0e, 0xe1, 0x72, 0xf3, 0xda, 0xa6, 0x23, 0x25, 0xaf, 0x02, 0x1a, 0x68,
+            0xf7, 0x07, 0x51, 0x1a,
+        ];
+        let signature = Signature::from([
+            0xd6, 0xe6, 0x91, 0x41, 0xa5, 0x92, 0x12, 0x17, 0xa6, 0x96, 0xa5, 0xed, 0x42, 0x29,
+            0x2e, 0xd0, 0x14, 0xa1, 0xab, 0x5e, 0x7a, 0x98, 0x22, 0x68, 0xf0, 0xd0, 0x71, 0x6d,
+            0xa8, 0xd0, 0x5a, 0x55, 0xd5, 0x1b, 0x33, 0x03, 0xa8, 0x58, 0xf9, 0x9f, 0x17, 0xe0,
+            0x41, 0x8a, 0xe4, 0x7d, 0x41, 0x98, 0x78, 0x77, 0x40, 0xe3, 0xd2, 0xb0, 0xbc, 0x56,
+            0xa6, 0xa7, 0xf6, 0xd7, 0x7a, 0xeb, 0x17, 0x0a,
+        ]);
+        let signatures = [signature; 9];
+        let pubkeys = [pubkey; 9];
+        let messages: [Vec<u8>; 9] = core::array::from_fn(|_| b"SIMD-0376".to_vec());
+
+        assert!(!signatures[0].verify(&pubkeys[0], &messages[0]));
+        assert!(signatures[0].verify_non_strict(&pubkeys[0], &messages[0]));
+        assert!(Signature::batch_verify(batch_verify_items(
+            &signatures,
+            &pubkeys,
+            &messages,
+        )));
+    }
+
+    #[test]
+    fn test_small_order_signatures_are_rejected() {
+        // The identity point as both `A` and `R`, with `s = 0`, satisfies the
+        // cofactored equation for every message. ZIP-215 accepts it; SIMD-0376
+        // rejects small-order points.
         let mut signature = [0; SIGNATURE_BYTES];
         signature[0] = 1;
         let signatures = [Signature::from(signature); 9];
@@ -507,8 +543,8 @@ mod tests {
         let messages: [Vec<u8>; 9] = core::array::from_fn(|_| b"message".to_vec());
 
         assert!(!signatures[0].verify(&pubkeys[0], &messages[0]));
-        assert!(signatures[0].verify_non_strict(&pubkeys[0], &messages[0]));
-        assert!(Signature::batch_verify(batch_verify_items(
+        assert!(!signatures[0].verify_non_strict(&pubkeys[0], &messages[0]));
+        assert!(!Signature::batch_verify(batch_verify_items(
             &signatures,
             &pubkeys,
             &messages,
