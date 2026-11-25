@@ -81,14 +81,18 @@ pub fn encode_base2(bit_vec: &BitVec<u8, Lsb0>) -> Result<Vec<u8>, EncodeError> 
         return Err(EncodeError::LengthExceedsLimit);
     }
 
-    let raw_slice = bit_vec.as_raw_slice();
     let capacity = HEADER_LEN
-        .checked_add(raw_slice.len())
+        .checked_add(num_bits.div_ceil(8))
         .ok_or(EncodeError::ArithmeticOverflow)?;
     let mut result = Vec::with_capacity(capacity);
     result.push(Version::Base2 as u8);
     result.extend_from_slice(&(num_bits as u16).to_le_bytes());
-    result.extend_from_slice(raw_slice);
+    // Read the bits themselves rather than the backing storage: the storage
+    // may start at a non-zero bit offset, and bits past `len()` (for example,
+    // left behind by `truncate`) are not guaranteed to be zero. Each chunk is
+    // loaded into the low bits of a byte, so the padding bits that `decode`
+    // requires to be zero are always zero.
+    result.extend(bit_vec.chunks(8).map(|chunk| chunk.load_le::<u8>()));
 
     Ok(result)
 }
@@ -110,9 +114,6 @@ pub fn encode_base3(
         return Err(EncodeError::LengthExceedsLimit);
     }
 
-    let base_bytes = bit_vec_base.as_raw_slice();
-    let fallback_bytes = bit_vec_fallback.as_raw_slice();
-
     let num_chunks = num_bits.div_ceil(BASE3_SYMBOLS_PER_BYTE);
     let capacity = HEADER_LEN
         .checked_add(num_chunks)
@@ -122,24 +123,21 @@ pub fn encode_base3(
     result.push(Version::Base3 as u8);
     result.extend_from_slice(&(num_bits as u16).to_le_bytes());
 
-    for chunk_index in 0..num_chunks {
+    // Iterate over the bits themselves rather than the backing storage, which
+    // may start at a non-zero bit offset.
+    for (base_chunk, fallback_chunk) in bit_vec_base
+        .chunks(BASE3_SYMBOLS_PER_BYTE)
+        .zip(bit_vec_fallback.chunks(BASE3_SYMBOLS_PER_BYTE))
+    {
         let mut block_num: u8 = 0;
-        let start_bit = chunk_index
-            .checked_mul(BASE3_SYMBOLS_PER_BYTE)
-            .ok_or(EncodeError::ArithmeticOverflow)?;
-        let end_bit = start_bit
-            .checked_add(BASE3_SYMBOLS_PER_BYTE)
-            .ok_or(EncodeError::ArithmeticOverflow)?
-            .min(num_bits);
 
         // Process bits in reverse order to simplify packing
-        for i in (start_bit..end_bit).rev() {
-            let byte_idx = i / 8;
-            let bit_idx = i % 8;
-
-            let base_bit = (base_bytes.get(byte_idx).unwrap_or(&0) >> bit_idx) & 1 == 1;
-            let fallback_bit = (fallback_bytes.get(byte_idx).unwrap_or(&0) >> bit_idx) & 1 == 1;
-
+        for (base_bit, fallback_bit) in base_chunk
+            .iter()
+            .by_vals()
+            .zip(fallback_chunk.iter().by_vals())
+            .rev()
+        {
             let chunk_num = match (base_bit, fallback_bit) {
                 (false, false) => 0u8,
                 (true, false) => 1u8,
@@ -337,6 +335,55 @@ mod tests {
         } else {
             panic!("Decoded into the wrong type");
         }
+    }
+
+    #[test]
+    fn test_base2_round_trip_with_dirty_unused_bits() {
+        // `truncate` only shortens the length; the dropped bits stay set in the
+        // backing storage and are still visible through `as_raw_slice`.
+        let mut original = bitvec![u8, Lsb0; 1; 16];
+        original.truncate(11);
+        assert_eq!(original.as_raw_slice(), &[0xff, 0xff]);
+
+        let encoded = encode_base2(&original).unwrap();
+        assert_eq!(encoded, vec![Version::Base2 as u8, 11, 0, 0xff, 0x07]);
+        assert_eq!(decode(&encoded, 11).unwrap(), Decoded::Base2(original));
+    }
+
+    #[test]
+    fn test_base2_round_trip_unaligned() {
+        // A bit-vector copied from a sub-slice keeps the source's bit offset, so
+        // its first bit is not bit 0 of its first storage byte.
+        let source = bitvec![u8, Lsb0; 0, 0, 0, 1, 0, 1, 1, 0, 0, 1, 1];
+        let original = source[3..].to_bitvec();
+        assert_eq!(original, bits![u8, Lsb0; 1, 0, 1, 1, 0, 0, 1, 1]);
+
+        let encoded = encode_base2(&original).unwrap();
+        assert_eq!(encoded, vec![Version::Base2 as u8, 8, 0, 0b1100_1101]);
+        assert_eq!(decode(&encoded, 8).unwrap(), Decoded::Base2(original));
+    }
+
+    #[test]
+    fn test_base3_round_trip_unaligned() {
+        let source_base = bitvec![u8, Lsb0; 0, 0, 0, 1, 0, 0, 1, 0, 0, 1];
+        let source_fallback = bitvec![u8, Lsb0; 0, 0, 0, 0, 1, 0, 0, 1, 0, 0];
+        let base = source_base[3..].to_bitvec();
+        let fallback = source_fallback[3..].to_bitvec();
+
+        let aligned_base = bitvec![u8, Lsb0; 1, 0, 0, 1, 0, 0, 1];
+        let aligned_fallback = bitvec![u8, Lsb0; 0, 1, 0, 0, 1, 0, 0];
+        assert_eq!(base, aligned_base);
+        assert_eq!(fallback, aligned_fallback);
+
+        let encoded = encode_base3(&base, &fallback).unwrap();
+        assert_eq!(
+            encoded,
+            encode_base3(&aligned_base, &aligned_fallback).unwrap()
+        );
+        assert_eq!(
+            decode(&encoded, 7).unwrap(),
+            Decoded::Base3(aligned_base, aligned_fallback)
+        );
     }
 
     #[test]
