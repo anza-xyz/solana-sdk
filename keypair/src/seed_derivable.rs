@@ -20,12 +20,14 @@ impl SeedDerivable for Keypair {
         keypair_from_seed_and_derivation_path(seed, derivation_path)
     }
 
-    #[allow(deprecated)]
     fn from_seed_phrase_and_passphrase(
         seed_phrase: &str,
         passphrase: &str,
     ) -> Result<Self, Box<dyn error::Error>> {
-        crate::keypair_from_seed_phrase_and_passphrase(seed_phrase, passphrase)
+        crate::keypair_from_seed_phrase_and_passphrase_without_unicode_normalization(
+            seed_phrase,
+            passphrase,
+        )
     }
 }
 

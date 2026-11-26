@@ -10,20 +10,33 @@ use {hmac::Hmac, unicode_normalization::UnicodeNormalization};
 /// the seed, so preserve the original input bytes when recovering existing keys.
 ///
 /// This function is kept so that keys derived with it can still be recovered.
-/// For new derivations, use [`generate_seed_with_unicode_normalization`].
+/// For new derivations, use [`generate_seed_with_unicode_normalization`]. To
+/// keep the raw-bytes behavior on purpose, use
+/// [`generate_seed_without_unicode_normalization`], which derives the same seed.
 #[deprecated(
     since = "3.1.0",
     note = "Does not apply BIP-39 NFKD normalization. Use `generate_seed_with_unicode_normalization` \
-            for new derivations; keep using this function only to recover keys derived with it"
+            for new derivations, or `generate_seed_without_unicode_normalization` to keep this \
+            behavior explicitly"
 )]
 pub fn generate_seed_from_seed_phrase_and_passphrase(
     seed_phrase: &str,
     passphrase: &str,
 ) -> Vec<u8> {
-    derive_seed(seed_phrase, passphrase)
+    generate_seed_without_unicode_normalization(seed_phrase, passphrase)
 }
 
-fn derive_seed(seed_phrase: &str, passphrase: &str) -> Vec<u8> {
+/// Derives a 64-byte seed from the raw UTF-8 mnemonic and passphrase, without
+/// applying BIP-39's Unicode NFKD normalization.
+///
+/// This is the explicit name for the behavior of the deprecated
+/// [`generate_seed_from_seed_phrase_and_passphrase`] and derives the same seed.
+/// When both inputs are already in NFKD form, such as an English mnemonic with
+/// an ASCII passphrase, the seed matches BIP-39. Normalizing non-NFKD inputs can
+/// change the seed, so use this function to recover keys derived without
+/// normalization. For new derivations, use
+/// [`generate_seed_with_unicode_normalization`].
+pub fn generate_seed_without_unicode_normalization(seed_phrase: &str, passphrase: &str) -> Vec<u8> {
     const PBKDF2_ROUNDS: u32 = 2048;
     const PBKDF2_BYTES: usize = 64;
 
@@ -42,8 +55,9 @@ fn derive_seed(seed_phrase: &str, passphrase: &str) -> Vec<u8> {
 /// Derives a 64-byte seed after Unicode NFKD normalization of both inputs.
 ///
 /// This does not validate the mnemonic's words or checksum.
-/// This can produce a different seed from the legacy
-/// [`generate_seed_from_seed_phrase_and_passphrase`] for non-NFKD inputs.
+/// This can produce a different seed from
+/// [`generate_seed_without_unicode_normalization`] (and the deprecated
+/// [`generate_seed_from_seed_phrase_and_passphrase`]) for non-NFKD inputs.
 ///
 /// After normalization, mnemonic words must be separated by single spaces, with
 /// no leading or trailing whitespace, to match other BIP-39 implementations.
@@ -52,5 +66,5 @@ fn derive_seed(seed_phrase: &str, passphrase: &str) -> Vec<u8> {
 pub fn generate_seed_with_unicode_normalization(seed_phrase: &str, passphrase: &str) -> Vec<u8> {
     let seed_phrase = seed_phrase.nfkd().collect::<String>();
     let passphrase = passphrase.nfkd().collect::<String>();
-    derive_seed(&seed_phrase, &passphrase)
+    generate_seed_without_unicode_normalization(&seed_phrase, &passphrase)
 }
