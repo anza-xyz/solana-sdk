@@ -134,8 +134,9 @@ impl Signature {
     ///
     /// SIMD-0376 uses the cofactored verification equation and rejects
     /// non-canonical encodings and small-order points. It accepts every
-    /// signature that [`Self::verify`] currently accepts, plus signatures
-    /// whose public key or `R` has a torsion component. It is stricter than
+    /// signature that [`Self::verify`] currently accepts with a canonically
+    /// encoded public key and `R`, plus signatures whose public key or `R`
+    /// has a torsion component. It is stricter than
     /// ZIP-215, which also accepts non-canonical encodings and small-order
     /// points.
     ///
