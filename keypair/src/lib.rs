@@ -490,20 +490,6 @@ mod tests {
         foo(Keypair::new());
     }
 
-    // The deprecated function must stay covered, since it is the only way to
-    // recover keys that were derived with it.
-    #[allow(deprecated)]
-    #[test]
-    fn test_keypair_from_seed_phrase_and_passphrase() {
-        let mnemonic = Mnemonic::new(MnemonicType::Words12, Language::English);
-        let passphrase = "42";
-        let seed = Seed::new(&mnemonic, passphrase);
-        let expected_keypair = keypair_from_seed(seed.as_bytes()).unwrap();
-        let keypair =
-            keypair_from_seed_phrase_and_passphrase(mnemonic.phrase(), passphrase).unwrap();
-        assert_eq!(keypair.pubkey(), expected_keypair.pubkey());
-    }
-
     // Compares against the deprecated function, which must keep deriving the same keypair.
     #[allow(deprecated)]
     #[test]
