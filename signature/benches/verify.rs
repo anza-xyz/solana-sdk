@@ -78,6 +78,18 @@ fn bench_verify(c: &mut Criterion) {
             });
         });
 
+        group.bench_with_input(
+            BenchmarkId::new("batch_simd0376", size),
+            &data,
+            |b, data| {
+                b.iter(|| {
+                    assert!(Signature::batch_verify_simd0376(black_box(signature_data(
+                        data
+                    ))));
+                });
+            },
+        );
+
         #[cfg(feature = "parallel")]
         group.bench_with_input(
             BenchmarkId::new("par_individual", size),
@@ -101,6 +113,19 @@ fn bench_verify(c: &mut Criterion) {
                 assert!(Signature::par_batch_verify(black_box(signature_data(data))));
             });
         });
+
+        #[cfg(feature = "parallel")]
+        group.bench_with_input(
+            BenchmarkId::new("par_batch_simd0376", size),
+            &data,
+            |b, data| {
+                b.iter(|| {
+                    assert!(Signature::par_batch_verify_simd0376(black_box(
+                        signature_data(data)
+                    )));
+                });
+            },
+        );
     }
 
     group.finish();

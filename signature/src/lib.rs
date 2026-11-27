@@ -84,7 +84,8 @@ impl Signature {
 
 #[cfg(any(test, feature = "verify"))]
 impl Signature {
-    // Once SIMD-0376 cleanup lands, [`Self::verify`] should call this method.
+    // The strict rules behind [`Self::verify`]. To be removed once
+    // [`Self::verify`] moves to `verify_simd0376_verbose`.
     // Tracked in https://github.com/anza-xyz/solana-sdk/issues/819.
     pub(self) fn verify_verbose(
         &self,
@@ -97,9 +98,8 @@ impl Signature {
         publickey.verify_dalek(&signature, message_bytes)
     }
 
-    // To be removed as part of the SIMD-0376 cleanup.
-    // Tracked in https://github.com/anza-xyz/solana-sdk/issues/819.
-    pub(self) fn verify_non_strict_verbose(
+    // The SIMD-0376 rules behind [`Self::verify_simd0376`].
+    pub(self) fn verify_simd0376_verbose(
         &self,
         pubkey_bytes: &[u8],
         message_bytes: &[u8],
@@ -107,7 +107,7 @@ impl Signature {
         let publickey = solana_ed25519::ed_sigs::VerificationKey::try_from(pubkey_bytes)?;
         let signature = solana_ed25519::ed_sigs::Signature::from_slice(self.as_ref())
             .map_err(|_| solana_ed25519::ed_sigs::Error::InvalidSignature)?;
-        publickey.verify_zebra(&signature, message_bytes)
+        publickey.verify_simd0376(&signature, message_bytes)
     }
 
     /// Verifies this signature against `message_bytes` using `pubkey_bytes`.
@@ -116,43 +116,94 @@ impl Signature {
     /// is the exact message that was signed. Returns `false` if verification
     /// fails or the public key cannot be parsed.
     ///
-    /// Will switch to the zebra (ZIP-215) path as part of the SIMD-0376
-    /// cleanup, tracked in <https://github.com/anza-xyz/solana-sdk/issues/819>.
+    /// Applies the strict Ed25519 rules of `ed25519-dalek`'s `verify_strict`:
+    /// the cofactorless verification equation, with small-order points
+    /// rejected. This will change to the rules of [`Self::verify_simd0376`]
+    /// once the SIMD-0376 migration is complete, tracked in
+    /// <https://github.com/anza-xyz/solana-sdk/issues/819>.
     pub fn verify(&self, pubkey_bytes: &[u8], message_bytes: &[u8]) -> bool {
         self.verify_verbose(pubkey_bytes, message_bytes).is_ok()
     }
 
-    /// Verifies this signature using ZIP-215-compatible Ed25519 rules.
+    /// Verifies this signature against `message_bytes` using `pubkey_bytes`,
+    /// under [SIMD-0376] Ed25519 rules.
     ///
     /// `pubkey_bytes` is the signer's Ed25519 public key, and `message_bytes`
-    /// is the exact message that was signed.
+    /// is the exact message that was signed. Returns `false` if verification
+    /// fails or the public key cannot be parsed.
     ///
-    /// To be removed as part of the SIMD-0376 cleanup, tracked in
-    /// <https://github.com/anza-xyz/solana-sdk/issues/819>.
-    pub fn verify_non_strict(&self, pubkey_bytes: &[u8], message_bytes: &[u8]) -> bool {
-        self.verify_non_strict_verbose(pubkey_bytes, message_bytes)
+    /// SIMD-0376 uses the cofactored verification equation and rejects
+    /// non-canonical encodings and small-order points. It accepts every
+    /// signature that [`Self::verify`] currently accepts with a canonically
+    /// encoded public key and `R`, plus signatures whose public key or `R`
+    /// has a torsion component. It is stricter than
+    /// ZIP-215, which also accepts non-canonical encodings and small-order
+    /// points.
+    ///
+    /// [SIMD-0376]: https://github.com/solana-foundation/solana-improvement-documents/blob/main/proposals/0376-verify-strict.md
+    pub fn verify_simd0376(&self, pubkey_bytes: &[u8], message_bytes: &[u8]) -> bool {
+        self.verify_simd0376_verbose(pubkey_bytes, message_bytes)
             .is_ok()
+    }
+
+    /// Verifies this signature under SIMD-0376 Ed25519 rules.
+    ///
+    /// The name is historical: these rules are not ZIP-215, and they reject
+    /// the non-canonical encodings and small-order points that ZIP-215
+    /// accepts.
+    #[deprecated(since = "3.7.0", note = "Use `verify_simd0376` instead")]
+    pub fn verify_non_strict(&self, pubkey_bytes: &[u8], message_bytes: &[u8]) -> bool {
+        self.verify_simd0376(pubkey_bytes, message_bytes)
     }
 }
 
 #[cfg(any(test, feature = "batch-verify"))]
 impl Signature {
-    /// Batch-verifies signatures over their corresponding public keys and
-    /// messages.
+    /// Verifies signatures over their corresponding public keys and messages,
+    /// using the same rules as [`Self::verify`].
     ///
     /// Each iterator item is a tuple of `(signature, pubkey_bytes,
     /// message_bytes)`, where `signature` is the Ed25519 signature to verify,
     /// `pubkey_bytes` is the signer's public key, and `message_bytes` is the
     /// exact message that was signed. The iterator must know its exact length.
     ///
-    /// Uses ZIP-215-compatible Ed25519 rules, matching
-    /// [`Self::verify_non_strict`] rather than the current strict
-    /// [`Self::verify`] path.
+    /// Returns `true` if and only if [`Self::verify`] accepts every item, so
+    /// the result does not depend on how the signatures are grouped. The
+    /// strict rules that [`Self::verify`] currently applies use the
+    /// cofactorless verification equation, which cannot be checked in a
+    /// batched multiscalar multiplication, so each signature is verified
+    /// individually. See [`Self::batch_verify_simd0376`] for true batch
+    /// verification.
+    ///
+    /// Will switch to [`Self::batch_verify_simd0376`] when [`Self::verify`]
+    /// switches to the SIMD-0376 rules, tracked in
+    /// <https://github.com/anza-xyz/solana-sdk/issues/819>.
+    pub fn batch_verify<'a>(
+        signature_data: impl ExactSizeIterator<Item = SignatureData<'a>>,
+    ) -> bool {
+        let mut signature_data = signature_data;
+        signature_data.all(|(signature, pubkey_bytes, message_bytes)| {
+            signature.verify(pubkey_bytes, message_bytes)
+        })
+    }
+
+    /// Batch-verifies signatures over their corresponding public keys and
+    /// messages, using SIMD-0376 Ed25519 rules.
+    ///
+    /// Each iterator item is a tuple of `(signature, pubkey_bytes,
+    /// message_bytes)`, where `signature` is the Ed25519 signature to verify,
+    /// `pubkey_bytes` is the signer's public key, and `message_bytes` is the
+    /// exact message that was signed. The iterator must know its exact length.
+    ///
+    /// Accepts exactly the batches in which [`Self::verify_simd0376`]
+    /// accepts every item, except with negligible probability, regardless of
+    /// the batch size. This differs from the current strict [`Self::verify`]
+    /// and [`Self::batch_verify`] paths.
     ///
     /// Returns `false` if any signature fails to verify, any public key or
     /// signature cannot be parsed, randomness cannot be obtained, or batch
     /// verification fails.
-    pub fn batch_verify<'a>(
+    pub fn batch_verify_simd0376<'a>(
         signature_data: impl ExactSizeIterator<Item = SignatureData<'a>>,
     ) -> bool {
         if signature_data.len() == 0 {
@@ -161,7 +212,7 @@ impl Signature {
         if signature_data.len() == 1 {
             let (signature, pubkey_bytes, message_bytes) =
                 signature_data.into_iter().next().unwrap();
-            return signature.verify(pubkey_bytes, message_bytes);
+            return signature.verify_simd0376(pubkey_bytes, message_bytes);
         }
 
         let mut batch = solana_ed25519::ed_sigs::batch::Verifier::new();
@@ -181,36 +232,61 @@ impl Signature {
         batch.verify().is_ok()
     }
 
-    /// Parallel batch-verifies signatures over their corresponding public keys
-    /// and messages.
+    /// Parallel version of [`Self::batch_verify`], with the same verification
+    /// rules as [`Self::verify`].
     ///
     /// Each iterator item is a tuple of `(signature, pubkey_bytes,
     /// message_bytes)`, where `signature` is the Ed25519 signature to verify,
     /// `pubkey_bytes` is the signer's public key, and `message_bytes` is the
     /// exact message that was signed. The iterator must know its exact length.
     ///
-    /// Returns `false` under the same conditions as [`Self::batch_verify`] and
-    /// uses the same verification semantics for each chunk.
+    /// Returns the same result as [`Self::batch_verify`], regardless of the
+    /// number of threads.
     #[cfg(feature = "parallel")]
     pub fn par_batch_verify<'a>(
-        signature_data: impl ExactSizeIterator<Item = (&'a Signature, &'a [u8], &'a [u8])>,
+        signature_data: impl ExactSizeIterator<Item = SignatureData<'a>>,
     ) -> bool {
-        // for small number of signatures, the overhead of parallelization is not worth it
-        if signature_data.len() <= 16 {
-            return Self::batch_verify(signature_data);
-        }
+        Self::par_chunks_all(signature_data, |chunk| {
+            Self::batch_verify(chunk.iter().copied())
+        })
+    }
 
+    /// Parallel version of [`Self::batch_verify_simd0376`], with the same
+    /// SIMD-0376 verification rules.
+    ///
+    /// Each iterator item is a tuple of `(signature, pubkey_bytes,
+    /// message_bytes)`, where `signature` is the Ed25519 signature to verify,
+    /// `pubkey_bytes` is the signer's public key, and `message_bytes` is the
+    /// exact message that was signed. The iterator must know its exact length.
+    ///
+    /// Returns `false` under the same conditions as
+    /// [`Self::batch_verify_simd0376`], regardless of the number of threads.
+    #[cfg(feature = "parallel")]
+    pub fn par_batch_verify_simd0376<'a>(
+        signature_data: impl ExactSizeIterator<Item = SignatureData<'a>>,
+    ) -> bool {
+        Self::par_chunks_all(signature_data, |chunk| {
+            Self::batch_verify_simd0376(chunk.iter().copied())
+        })
+    }
+
+    /// Splits `signature_data` into one chunk per thread and returns whether
+    /// `verify_chunk` accepts all of them.
+    #[cfg(feature = "parallel")]
+    fn par_chunks_all<'a>(
+        signature_data: impl ExactSizeIterator<Item = SignatureData<'a>>,
+        verify_chunk: impl Fn(&[SignatureData<'a>]) -> bool + Send + Sync,
+    ) -> bool {
         let signatures = signature_data.collect::<Vec<_>>();
 
-        if signatures.is_empty() {
-            return true;
+        // for small number of signatures, the overhead of parallelization is not worth it
+        if signatures.len() <= 16 {
+            return verify_chunk(&signatures);
         }
 
         let chunk_size = signatures.len().div_ceil(rayon::current_num_threads());
 
-        signatures
-            .par_chunks(chunk_size)
-            .all(|signatures| Self::batch_verify(signatures.iter().copied()))
+        signatures.par_chunks(chunk_size).all(verify_chunk)
     }
 }
 
@@ -477,61 +553,165 @@ mod tests {
         assert_eq!(signature.as_array().as_ptr(), signature.0.as_ptr());
     }
 
+    const TORSION_PUBKEY: [u8; 32] = [
+        0xd7, 0x5a, 0x98, 0x01, 0x82, 0xb1, 0x0a, 0xb7, 0xd5, 0x4b, 0xfe, 0xd3, 0xc9, 0x64, 0x07,
+        0x3a, 0x0e, 0xe1, 0x72, 0xf3, 0xda, 0xa6, 0x23, 0x25, 0xaf, 0x02, 0x1a, 0x68, 0xf7, 0x07,
+        0x51, 0x1a,
+    ];
+    const TORSION_SIGNATURE: [u8; SIGNATURE_BYTES] = [
+        0xd6, 0xe6, 0x91, 0x41, 0xa5, 0x92, 0x12, 0x17, 0xa6, 0x96, 0xa5, 0xed, 0x42, 0x29, 0x2e,
+        0xd0, 0x14, 0xa1, 0xab, 0x5e, 0x7a, 0x98, 0x22, 0x68, 0xf0, 0xd0, 0x71, 0x6d, 0xa8, 0xd0,
+        0x5a, 0x55, 0xd5, 0x1b, 0x33, 0x03, 0xa8, 0x58, 0xf9, 0x9f, 0x17, 0xe0, 0x41, 0x8a, 0xe4,
+        0x7d, 0x41, 0x98, 0x78, 0x77, 0x40, 0xe3, 0xd2, 0xb0, 0xbc, 0x56, 0xa6, 0xa7, 0xf6, 0xd7,
+        0x7a, 0xeb, 0x17, 0x0a,
+    ];
+    const TORSION_MESSAGE: &[u8] = b"SIMD-0376";
+
+    /// SIMD-0376 torsion vector from `solana-ed25519`: an honest key `A`
+    /// (RFC 8032 section 7.1 TEST 1) and an `R` with an order-8 torsion
+    /// component. It satisfies the cofactored equation but not the
+    /// cofactorless one, so the SIMD-0376 rules accept it and the strict
+    /// rules reject it.
+    fn torsion_data(size: usize) -> (Vec<Vec<u8>>, Vec<[u8; 32]>, Vec<Signature>) {
+        (
+            std::vec![TORSION_MESSAGE.to_vec(); size],
+            std::vec![TORSION_PUBKEY; size],
+            std::vec![Signature::from(TORSION_SIGNATURE); size],
+        )
+    }
+
+    /// The identity point as both `A` and `R`, with `s = 0`. It satisfies the
+    /// cofactored equation for every message. ZIP-215 accepts it; both the
+    /// strict and the SIMD-0376 rules reject small-order points.
+    fn small_order_data(size: usize) -> (Vec<Vec<u8>>, Vec<[u8; 32]>, Vec<Signature>) {
+        let mut signature = [0; SIGNATURE_BYTES];
+        signature[0] = 1;
+        let mut pubkey = [0; 32];
+        pubkey[0] = 1;
+        (
+            std::vec![b"message".to_vec(); size],
+            std::vec![pubkey; size],
+            std::vec![Signature::from(signature); size],
+        )
+    }
+
+    // Sizes on both sides of the single-item and parallelization thresholds.
+    const BATCH_SIZES: [usize; 7] = [0, 1, 2, 9, 16, 17, 40];
+
     #[test]
     fn test_batch_verify() {
-        let (messages, pubkeys, signatures) = batch_verify_data(9);
+        for size in BATCH_SIZES {
+            let (messages, pubkeys, signatures) = batch_verify_data(size);
+            let items = || batch_verify_items(&signatures, &pubkeys, &messages);
+            assert!(Signature::batch_verify(items()));
+            assert!(Signature::batch_verify_simd0376(items()));
 
-        assert!(Signature::batch_verify(batch_verify_items(
-            &signatures,
-            &pubkeys,
-            &messages,
-        )));
-
-        let mut bad_messages = messages;
-        bad_messages[1] = b"not-world".to_vec();
-        assert!(!Signature::batch_verify(batch_verify_items(
-            &signatures,
-            &pubkeys,
-            &bad_messages,
-        )));
+            let Some(last) = size.checked_sub(1) else {
+                continue;
+            };
+            let mut bad_messages = messages.clone();
+            bad_messages[last] = b"not-world".to_vec();
+            let bad_items = || batch_verify_items(&signatures, &pubkeys, &bad_messages);
+            assert!(!Signature::batch_verify(bad_items()));
+            assert!(!Signature::batch_verify_simd0376(bad_items()));
+        }
     }
 
     #[test]
-    fn test_batch_verify_accepts_zip215_valid_signatures() {
-        let mut signature = [0; SIGNATURE_BYTES];
-        signature[0] = 1;
-        let signatures = [Signature::from(signature); 9];
-        let mut pubkey = [0; 32];
-        pubkey[0] = 1;
-        let pubkeys = [pubkey; 9];
-        let messages: [Vec<u8>; 9] = core::array::from_fn(|_| b"message".to_vec());
-
+    fn test_verify_rules() {
+        let (messages, pubkeys, signatures) = torsion_data(1);
         assert!(!signatures[0].verify(&pubkeys[0], &messages[0]));
-        assert!(signatures[0].verify_non_strict(&pubkeys[0], &messages[0]));
-        assert!(Signature::batch_verify(batch_verify_items(
-            &signatures,
-            &pubkeys,
-            &messages,
-        )));
+        assert!(signatures[0].verify_simd0376(&pubkeys[0], &messages[0]));
+
+        let (messages, pubkeys, signatures) = small_order_data(1);
+        assert!(!signatures[0].verify(&pubkeys[0], &messages[0]));
+        assert!(!signatures[0].verify_simd0376(&pubkeys[0], &messages[0]));
+    }
+
+    #[test]
+    fn test_batch_verify_matches_verify() {
+        for size in BATCH_SIZES.into_iter().filter(|size| *size > 0) {
+            let (messages, pubkeys, signatures) = torsion_data(size);
+            let items = || batch_verify_items(&signatures, &pubkeys, &messages);
+            assert!(!Signature::batch_verify(items()));
+            assert!(Signature::batch_verify_simd0376(items()));
+
+            let (messages, pubkeys, signatures) = small_order_data(size);
+            let items = || batch_verify_items(&signatures, &pubkeys, &messages);
+            assert!(!Signature::batch_verify(items()));
+            assert!(!Signature::batch_verify_simd0376(items()));
+        }
+    }
+
+    #[test]
+    fn test_batch_verify_rejects_single_strict_invalid_signature() {
+        // One signature that only the SIMD-0376 rules accept, among honest
+        // ones, at each position.
+        let size = 9;
+        for position in 0..size {
+            let (mut messages, mut pubkeys, mut signatures) = batch_verify_data(size);
+            messages[position] = TORSION_MESSAGE.to_vec();
+            pubkeys[position] = TORSION_PUBKEY;
+            signatures[position] = Signature::from(TORSION_SIGNATURE);
+            let items = || batch_verify_items(&signatures, &pubkeys, &messages);
+            assert!(!Signature::batch_verify(items()));
+            assert!(Signature::batch_verify_simd0376(items()));
+        }
+    }
+
+    #[cfg(feature = "parallel")]
+    fn with_threads<T: Send>(threads: usize, f: impl FnOnce() -> T + Send) -> T {
+        rayon::ThreadPoolBuilder::new()
+            .num_threads(threads)
+            .build()
+            .unwrap()
+            .install(f)
     }
 
     #[cfg(feature = "parallel")]
     #[test]
     fn test_par_batch_verify() {
-        let (messages, pubkeys, signatures) = batch_verify_data(9);
+        for size in BATCH_SIZES {
+            let (messages, pubkeys, signatures) = batch_verify_data(size);
+            let items = || batch_verify_items(&signatures, &pubkeys, &messages);
+            assert!(Signature::par_batch_verify(items()));
+            assert!(Signature::par_batch_verify_simd0376(items()));
 
-        assert!(Signature::par_batch_verify(batch_verify_items(
-            &signatures,
-            &pubkeys,
-            &messages,
-        )));
+            let Some(last) = size.checked_sub(1) else {
+                continue;
+            };
+            let mut bad_messages = messages.clone();
+            bad_messages[last] = b"not-world".to_vec();
+            let bad_items = || batch_verify_items(&signatures, &pubkeys, &bad_messages);
+            assert!(!Signature::par_batch_verify(bad_items()));
+            assert!(!Signature::par_batch_verify_simd0376(bad_items()));
+        }
+    }
 
-        let mut bad_messages = messages;
-        bad_messages[1] = b"not-world".to_vec();
-        assert!(!Signature::par_batch_verify(batch_verify_items(
-            &signatures,
-            &pubkeys,
-            &bad_messages,
-        )));
+    #[cfg(feature = "parallel")]
+    #[test]
+    fn test_par_batch_verify_is_independent_of_thread_count() {
+        // 17 items on 5 threads leaves a final chunk of a single item.
+        for threads in [1, 2, 4, 5, 8, 12, 17, 32] {
+            for size in [17, 40] {
+                let (messages, pubkeys, signatures) = torsion_data(size);
+                let items = || batch_verify_items(&signatures, &pubkeys, &messages);
+                assert!(!with_threads(threads, || Signature::par_batch_verify(
+                    items()
+                )));
+                assert!(with_threads(threads, || {
+                    Signature::par_batch_verify_simd0376(items())
+                }));
+
+                let (messages, pubkeys, signatures) = small_order_data(size);
+                let items = || batch_verify_items(&signatures, &pubkeys, &messages);
+                assert!(!with_threads(threads, || Signature::par_batch_verify(
+                    items()
+                )));
+                assert!(!with_threads(threads, || {
+                    Signature::par_batch_verify_simd0376(items())
+                }));
+            }
+        }
     }
 }

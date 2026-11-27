@@ -3274,7 +3274,7 @@ dependencies = [
  "solana-atomic-u64",
  "solana-cpi",
  "solana-define-syscall",
- "solana-ed25519 0.3.0",
+ "solana-ed25519",
  "solana-example-mocks",
  "solana-frozen-abi",
  "solana-frozen-abi-macro",
@@ -3548,9 +3548,9 @@ dependencies = [
 
 [[package]]
 name = "solana-ed25519"
-version = "0.2.4"
+version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ff4c7caf3fe3d70815869a5838ee45b4d2b009eaacea1790ef3cd9b3c89edbbd"
+checksum = "60c3b53755a74abeaa7f53be4a2c0711b066fef5432d04791bf4066e96c6998a"
 dependencies = [
  "cfg-if",
  "cpufeatures 0.3.0",
@@ -3564,22 +3564,6 @@ dependencies = [
  "sha2 0.11.0",
  "subtle",
  "zeroize",
-]
-
-[[package]]
-name = "solana-ed25519"
-version = "0.3.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "60c3b53755a74abeaa7f53be4a2c0711b066fef5432d04791bf4066e96c6998a"
-dependencies = [
- "cfg-if",
- "cpufeatures 0.3.0",
- "curve25519-dalek-derive",
- "ed25519",
- "hashbrown 0.15.5",
- "rustc_version",
- "sha2 0.11.0",
- "subtle",
 ]
 
 [[package]]
@@ -3934,7 +3918,7 @@ dependencies = [
  "serde_json",
  "solana-address",
  "solana-derivation-path",
- "solana-ed25519 0.2.4",
+ "solana-ed25519",
  "solana-keypair",
  "solana-seed-derivable",
  "solana-seed-phrase",
@@ -4610,7 +4594,7 @@ dependencies = [
  "serde-big-array",
  "serde_derive",
  "serde_json",
- "solana-ed25519 0.2.4",
+ "solana-ed25519",
  "solana-frozen-abi",
  "solana-frozen-abi-macro",
  "solana-pubkey",
