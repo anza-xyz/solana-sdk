@@ -1,5 +1,5 @@
 use solana_seed_phrase::{
-    generate_seed_from_seed_phrase_and_passphrase, generate_seed_with_unicode_normalization,
+    generate_seed_with_unicode_normalization, generate_seed_without_unicode_normalization,
 };
 
 const ENGLISH_MNEMONIC: &str =
@@ -57,17 +57,6 @@ fn mnemonic_is_nfkd_normalized() {
 }
 
 #[test]
-fn legacy_derivation_matches_nfkd_inputs() {
-    for passphrase in ["TREZOR", "cafe\u{301}"] {
-        assert_eq!(
-            generate_seed_from_seed_phrase_and_passphrase(ENGLISH_MNEMONIC, passphrase),
-            generate_seed_with_unicode_normalization(ENGLISH_MNEMONIC, passphrase),
-            "passphrase {passphrase:?}"
-        );
-    }
-}
-
-#[test]
 fn mnemonic_whitespace_is_preserved() {
     let canonical_seed = generate_seed_with_unicode_normalization(ENGLISH_MNEMONIC, "TREZOR");
     for mnemonic in [
@@ -79,15 +68,44 @@ fn mnemonic_whitespace_is_preserved() {
         assert_ne!(seed, canonical_seed, "mnemonic {mnemonic:?}");
         assert_eq!(
             seed,
-            generate_seed_from_seed_phrase_and_passphrase(&mnemonic, "TREZOR"),
+            generate_seed_without_unicode_normalization(&mnemonic, "TREZOR"),
             "mnemonic {mnemonic:?}"
         );
     }
 }
 
+// The deprecated function is a wrapper and must keep deriving the same seed.
+#[allow(deprecated)]
 #[test]
-fn legacy_derivation_preserves_raw_utf8() {
-    let seed = generate_seed_from_seed_phrase_and_passphrase(ENGLISH_MNEMONIC, "café");
+fn without_unicode_normalization_matches_legacy_derivation() {
+    for (mnemonic, passphrase) in [
+        (ENGLISH_MNEMONIC, "TREZOR"),
+        (ENGLISH_MNEMONIC, "café"),
+        (ENGLISH_MNEMONIC, "cafe\u{301}"),
+        ("  abandon\u{3000}abandon ", "Ⅳ"),
+    ] {
+        assert_eq!(
+            generate_seed_without_unicode_normalization(mnemonic, passphrase),
+            solana_seed_phrase::generate_seed_from_seed_phrase_and_passphrase(mnemonic, passphrase),
+            "mnemonic {mnemonic:?}, passphrase {passphrase:?}"
+        );
+    }
+}
+
+#[test]
+fn without_unicode_normalization_matches_nfkd_inputs() {
+    for passphrase in ["TREZOR", "cafe\u{301}"] {
+        assert_eq!(
+            generate_seed_without_unicode_normalization(ENGLISH_MNEMONIC, passphrase),
+            generate_seed_with_unicode_normalization(ENGLISH_MNEMONIC, passphrase),
+            "passphrase {passphrase:?}"
+        );
+    }
+}
+
+#[test]
+fn without_unicode_normalization_preserves_raw_utf8() {
+    let seed = generate_seed_without_unicode_normalization(ENGLISH_MNEMONIC, "café");
     assert_eq!(
         hex::encode(&seed),
         "3f71749629d237c8505c83d334e9a05d9430650ee41a5da768cb4bfe1ebd0882d4ee4fe800aed9a22d8769a9bd404eedec49dcdb80b4e07e624312de775e995e"

@@ -7,7 +7,6 @@ pub use {
 };
 use {
     solana_ed25519::ed_sigs::SigningKey,
-    solana_seed_phrase::generate_seed_from_seed_phrase_and_passphrase,
     solana_signer::SignerError,
     std::{
         error,
@@ -290,18 +289,48 @@ pub fn keypair_from_seed(seed: &[u8]) -> Result<Keypair, Box<dyn error::Error>> 
 }
 
 /// Derives a keypair from the raw UTF-8 mnemonic and passphrase, without applying BIP-39's Unicode NFKD normalization.
+///
+/// This is the explicit name for the behavior of the deprecated
+/// [`keypair_from_seed_phrase_and_passphrase`] and derives the same keypair.
+/// When both inputs are already in NFKD form, such as an English mnemonic with
+/// an ASCII passphrase, the seed matches BIP-39. Normalizing non-NFKD inputs can
+/// change the keypair, so use this function to recover keys derived without
+/// normalization. For new derivations, use
+/// `Keypair::from_seed_phrase_and_passphrase_with_unicode_normalization`.
+pub fn keypair_from_seed_phrase_and_passphrase_without_unicode_normalization(
+    seed_phrase: &str,
+    passphrase: &str,
+) -> Result<Keypair, Box<dyn core::error::Error>> {
+    keypair_from_seed(
+        &solana_seed_phrase::generate_seed_without_unicode_normalization(seed_phrase, passphrase),
+    )
+}
+
+/// Derives a keypair from the raw UTF-8 mnemonic and passphrase, without applying BIP-39's Unicode NFKD normalization.
 /// When both inputs are already in NFKD form, such as an English mnemonic with
 /// an ASCII passphrase, the seed matches BIP-39. Normalizing non-NFKD inputs can
 /// change the keypair, so preserve the original input bytes when recovering
 /// existing keys.
+///
+/// This function is kept so that keys derived with it can still be recovered.
+/// For new derivations, use
+/// `Keypair::from_seed_phrase_and_passphrase_with_unicode_normalization`. To
+/// keep the raw-bytes behavior on purpose, use
+/// [`keypair_from_seed_phrase_and_passphrase_without_unicode_normalization`].
+#[deprecated(
+    since = "4.1.0",
+    note = "Does not apply BIP-39 NFKD normalization. Use \
+            `Keypair::from_seed_phrase_and_passphrase_with_unicode_normalization` (with the \
+            `seed-derivable` feature) or \
+            `keypair_from_seed(&generate_seed_with_unicode_normalization(..))` for new \
+            derivations, or `keypair_from_seed_phrase_and_passphrase_without_unicode_normalization` \
+            to keep this behavior explicitly"
+)]
 pub fn keypair_from_seed_phrase_and_passphrase(
     seed_phrase: &str,
     passphrase: &str,
 ) -> Result<Keypair, Box<dyn core::error::Error>> {
-    keypair_from_seed(&generate_seed_from_seed_phrase_and_passphrase(
-        seed_phrase,
-        passphrase,
-    ))
+    keypair_from_seed_phrase_and_passphrase_without_unicode_normalization(seed_phrase, passphrase)
 }
 
 #[cfg(test)]
@@ -461,15 +490,42 @@ mod tests {
         foo(Keypair::new());
     }
 
+    // Compares against the deprecated function, which must keep deriving the same keypair.
+    #[allow(deprecated)]
     #[test]
-    fn test_keypair_from_seed_phrase_and_passphrase() {
+    fn test_keypair_from_seed_phrase_and_passphrase_without_unicode_normalization() {
         let mnemonic = Mnemonic::new(MnemonicType::Words12, Language::English);
-        let passphrase = "42";
-        let seed = Seed::new(&mnemonic, passphrase);
+
+        // Matches BIP-39 when the inputs are already in NFKD form.
+        let seed = Seed::new(&mnemonic, "42");
         let expected_keypair = keypair_from_seed(seed.as_bytes()).unwrap();
-        let keypair =
-            keypair_from_seed_phrase_and_passphrase(mnemonic.phrase(), passphrase).unwrap();
+        let keypair = keypair_from_seed_phrase_and_passphrase_without_unicode_normalization(
+            mnemonic.phrase(),
+            "42",
+        )
+        .unwrap();
         assert_eq!(keypair.pubkey(), expected_keypair.pubkey());
+
+        // Uses the raw bytes of a non-NFKD passphrase: same keypair as the deprecated
+        // function, different keypair from the normalizing derivation.
+        let passphrase = "café";
+        let without_normalization =
+            keypair_from_seed_phrase_and_passphrase_without_unicode_normalization(
+                mnemonic.phrase(),
+                passphrase,
+            )
+            .unwrap();
+        let deprecated =
+            keypair_from_seed_phrase_and_passphrase(mnemonic.phrase(), passphrase).unwrap();
+        let normalized = keypair_from_seed(
+            &solana_seed_phrase::generate_seed_with_unicode_normalization(
+                mnemonic.phrase(),
+                passphrase,
+            ),
+        )
+        .unwrap();
+        assert_eq!(without_normalization.pubkey(), deprecated.pubkey());
+        assert_ne!(without_normalization.pubkey(), normalized.pubkey());
     }
 
     #[cfg(feature = "seed-derivable")]
