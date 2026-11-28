@@ -405,6 +405,47 @@ mod tests {
     }
 
     #[test]
+    fn test_logger_with_precision_truncated_digits() {
+        // The digits do not fit in the buffer, so the output is a
+        // truncated prefix of the formatted value.
+        let mut logger = Logger::<5>::default();
+
+        // 1234567.89
+        logger.append_with_args(123_456_789u64, &[Argument::Precision(2)]);
+        assert!(&*logger == "1234@".as_bytes());
+
+        logger.clear();
+
+        // -1234567.89
+        logger.append_with_args(-123_456_789i64, &[Argument::Precision(2)]);
+        assert!(&*logger == "-123@".as_bytes());
+
+        logger.clear();
+
+        // 0.123456789
+        logger.append_with_args(123_456_789u64, &[Argument::Precision(9)]);
+        assert!(&*logger == "0.12@".as_bytes());
+
+        logger.clear();
+
+        // 12345.6789
+        logger.append_with_args(123_456_789u64, &[Argument::Precision(4)]);
+        assert!(&*logger == "1234@".as_bytes());
+
+        let mut logger = Logger::<7>::default();
+
+        // 12345.6789
+        logger.append_with_args(123_456_789u64, &[Argument::Precision(4)]);
+        assert!(&*logger == "12345.@".as_bytes());
+
+        let mut logger = Logger::<2>::default();
+
+        // 1.23
+        logger.append_with_args(123u64, &[Argument::Precision(2)]);
+        assert!(&*logger == "1@".as_bytes());
+    }
+
+    #[test]
     fn test_logger_with_truncate() {
         let mut logger = Logger::<10>::default();
 
