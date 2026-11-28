@@ -273,13 +273,13 @@ macro_rules! impl_log_for_unsigned_integer {
                             }
                             // If padding is needed to satisfy the precision, add leading zeros
                             // and a decimal point.
-                            else if precision >= digits_to_write {
+                            else if precision >= written {
                                 // Prefix.
                                 (ptr as *mut u8).write(b'0');
 
                                 if length > 2 {
                                     (ptr.add(1) as *mut u8).write(b'.');
-                                    let padding = min(length - 2, precision - digits_to_write);
+                                    let padding = min(length - 2, precision - written);
 
                                     // Precision padding.
                                     (ptr.add(2) as *mut u8).write_bytes(b'0', padding);
@@ -288,7 +288,7 @@ macro_rules! impl_log_for_unsigned_integer {
 
                                     // If there is still space, copy (part of) the number.
                                     if current < length {
-                                        let remaining = min(digits_to_write, length - current);
+                                        let remaining = min(written, length - current);
 
                                         // Number part.
                                         copy_nonoverlapping(source, ptr.add(current), remaining);
@@ -298,25 +298,27 @@ macro_rules! impl_log_for_unsigned_integer {
                             // No padding is needed, calculate the integer and fractional
                             // parts and add a decimal point.
                             else {
-                                let integer_part = digits_to_write - precision;
+                                let integer_part = min(written - precision, length);
 
                                 // Integer part of the number.
                                 copy_nonoverlapping(source, ptr, integer_part);
 
-                                // Decimal point.
-                                (ptr.add(integer_part) as *mut u8).write(b'.');
-                                let current = integer_part + 1;
+                                if integer_part < length {
+                                    // Decimal point.
+                                    (ptr.add(integer_part) as *mut u8).write(b'.');
+                                    let current = integer_part + 1;
 
-                                // If there is still space, copy (part of) the remaining.
-                                if current < length {
-                                    let remaining = min(precision, length - current);
+                                    // If there is still space, copy (part of) the remaining.
+                                    if current < length {
+                                        let remaining = min(precision, length - current);
 
-                                    // Fractional part of the number.
-                                    copy_nonoverlapping(
-                                        source.add(integer_part),
-                                        ptr.add(current),
-                                        remaining,
-                                    );
+                                        // Fractional part of the number.
+                                        copy_nonoverlapping(
+                                            source.add(integer_part),
+                                            ptr.add(current),
+                                            remaining,
+                                        );
+                                    }
                                 }
                             }
                         }
