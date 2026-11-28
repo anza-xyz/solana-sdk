@@ -18,6 +18,7 @@ bytemuck = ["dep:bytemuck"]
 borsh = ["dep:borsh"]
 serde = ["dep:serde"]
 serde-with = ["serde", "dep:serde_with"]
+stable-abi = ["solana-frozen-abi-macro/stable-abi", "solana-frozen-abi/stable-abi"]
 wincode = ["dep:wincode"]
 
 [dependencies]
@@ -25,6 +26,8 @@ borsh = { workspace = true, optional = true }
 bytemuck = { workspace = true, optional = true }
 serde = { workspace = true, optional = true }
 serde_with = { workspace = true, optional = true }
+solana-frozen-abi = { workspace = true, optional = true }
+solana-frozen-abi-macro = { workspace = true, optional = true }
 wincode = { workspace = true, optional = true }
 
 [dev-dependencies]

@@ -11,6 +11,8 @@ use crate::Nullable;
 use bytemuck::{Pod, Zeroable};
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
+#[cfg(feature = "stable-abi")]
+use solana_frozen_abi_macro::{StableAbi, StableAbiSample};
 #[cfg(feature = "wincode")]
 use wincode::{SchemaRead, SchemaWrite};
 #[cfg(feature = "borsh")]
@@ -25,6 +27,7 @@ use {
 /// This can be used when a specific value of `T` indicates that its value is
 /// `None`.
 #[repr(transparent)]
+#[cfg_attr(feature = "stable-abi", derive(StableAbi, StableAbiSample))]
 #[cfg_attr(
     feature = "borsh",
     derive(BorshDeserialize, BorshSerialize, BorshSchema)
